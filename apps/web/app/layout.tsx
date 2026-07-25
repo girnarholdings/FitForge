@@ -59,10 +59,16 @@ export const metadata: Metadata = {
   },
 };
 
+/*
+ * `viewportFit: 'cover'` emits `viewport-fit=cover` — REQUIRED for
+ * `env(safe-area-inset-*)` to report anything other than 0 on iOS, which every
+ * bottom-pinned CTA in the app depends on to clear the home indicator.
+ */
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: 'cover',
   themeColor: '#0A0D14',
 };
 

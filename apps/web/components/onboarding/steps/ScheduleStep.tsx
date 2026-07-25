@@ -33,8 +33,9 @@ export function ScheduleStep() {
   const selectedDays = new Set(draft.preferred_days);
 
   const setDays = (n: number) => {
-    // re-derive an evenly-spaced weekday pattern to match the new count (§2.2 autofill)
-    patch({ days_per_week: n, preferred_days: evenlySpacedWeekdays(n) });
+    // re-derive an evenly-spaced weekday pattern to match the new count (§2.2 autofill), and drop
+    // any previously chosen split so the next screen re-recommends for the new frequency (WS-5).
+    patch({ days_per_week: n, preferred_days: evenlySpacedWeekdays(n), split_slug: null });
   };
 
   const toggleDay = (idx: number) => {

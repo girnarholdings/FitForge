@@ -51,7 +51,7 @@ test.describe('exercises', () => {
     const subsCard = page.locator('div.rounded-card', { hasText: 'Swap / similar' }).first();
     await expect(subsCard.locator('a[href^="/exercises/"]').first()).toBeVisible();
 
-    await page.screenshot({ path: 'tests/screenshots/exercise-detail.png', fullPage: true });
+    // NOTE: exercise-detail.png is captured by screenshots.spec.ts at 390x664.
 
     // "See all" opens the full swap sheet (titled "Swap <exercise>").
     await page.getByRole('button', { name: 'See all' }).click();
@@ -80,5 +80,106 @@ test.describe('exercises', () => {
     // Removing it restores the full list.
     await activeChip.click();
     expect(await exerciseCount(page)).toBe(total);
+  });
+});
+
+/**
+ * WS-3 / WS-4 — the library has to be REACHABLE, each exercise has to explain how it is
+ * performed, and the plan's aggregated muscle volume has to render for a freshly onboarded user.
+ */
+test.describe('exercise library access, how-to, and aggregated targeting', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetDemo(page);
+    await completeOnboarding(page);
+  });
+
+  test('Exercises is reachable from the mobile bottom tab bar (WS-4)', async ({ page }) => {
+    await page.goto('/today');
+
+    // The bottom tab bar is the mobile primary nav; Exercises used to be missing from it.
+    const tabBar = page.getByRole('navigation', { name: 'Primary' });
+    await expect(tabBar).toBeVisible();
+
+    const exercisesTab = tabBar.getByRole('link', { name: 'Exercises' });
+    await expect(exercisesTab).toBeVisible();
+    await exercisesTab.click();
+
+    await page.waitForURL(/\/exercises\/?$/);
+    await expect(page.getByRole('heading', { name: 'Exercises' })).toBeVisible();
+    // ...and it reads as the current tab.
+    await expect(tabBar.getByRole('link', { name: 'Exercises' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+
+    // Settings left the tab bar but is still one tap away via the mobile top-bar gear.
+    await page.getByTestId('mobile-settings').click();
+    await page.waitForURL(/\/settings/);
+    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  });
+
+  test('exercise detail explains how to perform the movement with pose frames (WS-3)', async ({
+    page,
+  }) => {
+    await page.goto('/exercises/barbell-back-squat/');
+
+    const howTo = page.getByTestId('how-to-perform');
+    await expect(howTo).toBeVisible();
+    await expect(howTo.getByText('How to perform')).toBeVisible();
+
+    // Self-authored SVG pose frames (no external assets). The animated loop is hidden under
+    // prefers-reduced-motion by design, so assert the always-present static strip.
+    await expect(page.getByTestId('pose-frames')).toBeVisible();
+    await expect(page.getByTestId('pose-strip')).toBeVisible();
+    await expect(page.getByTestId('pose-frame-0')).toBeVisible();
+    await expect(page.getByTestId('pose-frame-0').locator('svg')).toBeVisible();
+
+    // Numbered execution steps derived from the authored instructions.
+    const steps = page.getByTestId('howto-steps').locator('li');
+    expect(await steps.count()).toBeGreaterThanOrEqual(2);
+    await expect(steps.first()).not.toBeEmpty();
+
+    // Set-up / breathing / tempo coaching lines.
+    await expect(howTo.getByText('Set up')).toBeVisible();
+    await expect(howTo.getByText(/Breathing/)).toBeVisible();
+    await expect(howTo.getByText(/Tempo/)).toBeVisible();
+  });
+
+  test('the aggregated targeting view renders real muscle volume for the plan (WS-4)', async ({
+    page,
+  }) => {
+    await page.goto('/exercises');
+
+    await page.getByTestId('exercises-tab-targets').click();
+
+    const volume = page.getByTestId('muscle-volume');
+    await expect(volume).toBeVisible();
+    // It must be the REAL aggregate, not the "nothing to aggregate yet" fallback.
+    await expect(volume).not.toContainText('Nothing to aggregate yet');
+    await expect(volume.getByText(/sets a week across/)).toBeVisible();
+
+    const bars = page.getByTestId('muscle-volume-bars');
+    await expect(bars).toBeVisible();
+    const rows = bars.locator('li');
+    expect(await rows.count()).toBeGreaterThan(2);
+
+    // Every row carries a weighted sets-per-week number and at least one is non-zero.
+    const numbers = await bars.locator('span.tabular').allInnerTexts();
+    expect(numbers.length).toBeGreaterThan(0);
+    expect(numbers.some((t) => parseFloat(t) > 0)).toBe(true);
+
+    // The heat silhouette renders alongside the bars.
+    await expect(volume.locator('svg').first()).toBeVisible();
+
+    // Drilling into a muscle jumps back to the Library filtered to it.
+    const firstRow = bars.locator('button[data-testid^="muscle-volume-row-"]').first();
+    const muscleName = (await firstRow.locator('span.font-semibold').first().innerText()).trim();
+    await firstRow.click();
+    await expect(page.getByTestId('exercise-search')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: muscleName, exact: true }).first(),
+    ).toBeVisible();
+    const filtered = await exerciseCount(page);
+    expect(filtered).toBeGreaterThan(0);
   });
 });

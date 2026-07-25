@@ -29,6 +29,8 @@ export const ONBOARDING_STEPS = [
   'goals',
   'experience',
   'schedule',
+  // WS-5: choose a named program from the split library (or let FitForge pick).
+  'split',
   'location',
   'equipment',
   'exercise_prefs',

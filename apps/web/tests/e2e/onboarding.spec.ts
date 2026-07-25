@@ -88,9 +88,13 @@ test.describe('onboarding', () => {
     await page.getByTestId('onboarding-continue').click();
     await page.waitForURL(/schedule/);
     await page.getByTestId('onboarding-continue').click();
+    // NEW step (WS-5): the split library preselects the best-matching program on mount.
+    await page.waitForURL(/split/);
+    await page.getByTestId('onboarding-continue').click();
     await page.waitForURL(/location/);
     await page.getByText('Home gym').click();
     await page.getByTestId('onboarding-continue').click();
+    // Equipment is a swipe deck now; the intro phase still carries the shell CTA.
     await page.waitForURL(/equipment/);
     await page.getByTestId('onboarding-continue').click();
     await page.waitForURL(/exercise_prefs/);

@@ -29,6 +29,9 @@
       ]
     ],
     "instructions": "Set the bar across your upper back, brace your core, and unrack it. Push your hips back and bend your knees to lower until your thighs are at least parallel to the floor. Drive through your whole foot to stand back up, keeping your chest tall throughout. Keep the weight moderate until the movement feels smooth and controlled.",
+    "setup": "Bar racked at upper-chest height: step under it, grip just outside your shoulders, stand it up and take two steps back with feet shoulder-width, toes slightly out.",
+    "tempo": "Lower for 2–3 seconds without bouncing, then stand up in about 1 second.",
+    "breathing": "Big breath in at the top, brace and hold it through the rep, exhale once you're standing.",
     "form_cues": [
       "Brace your core hard before you unrack, like bracing for a punch",
       "Break at the hips and knees together, sitting between your feet",
@@ -40,7 +43,8 @@
       "Letting the knees cave inward on the way up",
       "Rounding the lower back at the bottom by dropping the chest",
       "Cutting depth short and never reaching parallel"
-    ]
+    ],
+    "pose_pattern": "squat-back"
   },
   {
     "slug": "goblet-squat",
@@ -66,6 +70,9 @@
       ]
     ],
     "instructions": "Hold a single dumbbell or kettlebell against your chest with both hands. Sit down between your hips, keeping your elbows inside your knees and your torso upright. Stand back up by pushing through your feet. It is a great squat to learn form because the front load naturally keeps you balanced.",
+    "setup": "Hold one dumbbell or kettlebell vertically against your chest with both hands, elbows tucked in, feet shoulder-width and toes slightly out.",
+    "tempo": "Lower for 2–3 seconds without bouncing, then stand up in about 1 second.",
+    "breathing": "Big breath in at the top, brace and hold it through the rep, exhale once you're standing.",
     "form_cues": [
       "Hold the weight tight against your chest, elbows down",
       "Sit straight down between your hips",
@@ -76,7 +83,9 @@
     "common_mistakes": [
       "Leaning forward and letting the weight drift away from the chest",
       "Rising onto the toes instead of staying flat-footed"
-    ]
+    ],
+    "pose_pattern": "squat-goblet",
+    "pose_badge": "Weight at the chest"
   },
   {
     "slug": "front-squat",
@@ -107,6 +116,9 @@
       ]
     ],
     "instructions": "Rest the bar on the front of your shoulders with your elbows pointing forward and high. Squat straight down while fighting to keep your torso vertical and elbows up. Drive back up through your feet without letting the bar roll forward. The upright position places more emphasis on the quads and demands solid core control.",
+    "setup": "Rack the bar across the front of your shoulders with your elbows high and pointing forward, feet shoulder-width, toes slightly out.",
+    "tempo": "Lower for 2–3 seconds without bouncing, then stand up in about 1 second.",
+    "breathing": "Big breath in at the top, brace and hold it through the rep, exhale once you're standing.",
     "form_cues": [
       "Keep your elbows high and pointing forward the whole rep",
       "Squat straight down, fighting to stay upright",
@@ -117,7 +129,9 @@
     "common_mistakes": [
       "Dropping the elbows, which pitches you forward",
       "Losing the upper-back brace so the bar rolls down"
-    ]
+    ],
+    "pose_pattern": "squat-front",
+    "pose_badge": "Front rack"
   },
   {
     "slug": "bodyweight-squat",
@@ -137,6 +151,9 @@
     ],
     "equipment": [],
     "instructions": "Stand with your feet about shoulder-width apart and your arms out for balance. Push your hips back and bend your knees to lower as far as feels comfortable, keeping your heels down. Stand back up by squeezing your legs and glutes. Perfect as a warm-up or a no-equipment option anywhere.",
+    "setup": "Stand tall with feet shoulder-width and toes slightly out, arms free in front of you as a counterbalance.",
+    "tempo": "Lower for 2–3 seconds without bouncing, then stand up in about 1 second.",
+    "breathing": "Big breath in at the top, brace and hold it through the rep, exhale once you're standing.",
     "form_cues": [
       "Set feet about shoulder-width, toes slightly out",
       "Push your hips back as you bend your knees",
@@ -147,7 +164,8 @@
     "common_mistakes": [
       "Letting the heels lift as you descend",
       "Rushing reps and bouncing out of the bottom"
-    ]
+    ],
+    "pose_pattern": "squat-bw"
   },
   {
     "slug": "leg-press",
@@ -172,6 +190,9 @@
       ]
     ],
     "instructions": "Sit in the machine with your feet flat and about shoulder-width on the platform. Lower the weight by bending your knees toward your chest in a controlled way, then press it back up without locking your knees hard. Keep your lower back against the pad the whole time. It lets you train your legs heavily with the back fully supported.",
+    "setup": "Sit deep in the seat with your lower back and hips flat against the pad, feet shoulder-width in the middle of the platform.",
+    "tempo": "Lower for 2–3 seconds without bouncing, then stand up in about 1 second.",
+    "breathing": "Big breath in at the top, brace and hold it through the rep, exhale once you're standing.",
     "form_cues": [
       "Set feet shoulder-width and flat on the platform",
       "Lower under control until your knees near your chest",
@@ -182,7 +203,8 @@
     "common_mistakes": [
       "Letting the lower back round off the pad at the bottom",
       "Locking the knees out hard and fast at the top"
-    ]
+    ],
+    "pose_pattern": "leg-press"
   },
   {
     "slug": "hack-squat",
@@ -206,6 +228,9 @@
       ]
     ],
     "instructions": "Position your shoulders and back against the machine pads with your feet on the platform. Release the safeties and lower under control until your thighs reach about parallel. Push back up through your feet, keeping your back flat against the pad. The fixed path lets you focus on driving with your quads.",
+    "setup": "Shoulders under the pads, back flat on the sled, feet shoulder-width and set slightly forward on the platform.",
+    "tempo": "Lower for 2–3 seconds without bouncing, then stand up in about 1 second.",
+    "breathing": "Big breath in at the top, brace and hold it through the rep, exhale once you're standing.",
     "form_cues": [
       "Set your back and shoulders flat against the pads",
       "Lower under control to about parallel",
@@ -216,7 +241,9 @@
     "common_mistakes": [
       "Bouncing out of the bottom",
       "Letting the knees cave as you press up"
-    ]
+    ],
+    "pose_pattern": "squat-machine",
+    "pose_badge": "Machine, shoulder pads"
   },
   {
     "slug": "bulgarian-split-squat",
@@ -244,6 +271,9 @@
       ]
     ],
     "instructions": "Rest the top of your rear foot on a bench and stand tall on your front leg. Lower straight down by bending your front knee until your thigh is roughly parallel, keeping most of your weight on the front foot. Drive back up through the front heel. Add dumbbells once the bodyweight version feels stable.",
+    "setup": "Stand about a stride in front of a bench and rest the top of your rear foot on it, front foot far enough forward that the shin stays vertical.",
+    "tempo": "2 seconds down, 1 second up, no pause at the bottom.",
+    "breathing": "Inhale as you lower, exhale as you drive back up.",
     "form_cues": [
       "Set your rear foot on the bench, stand tall on the front leg",
       "Lower straight down, not forward",
@@ -254,7 +284,8 @@
     "common_mistakes": [
       "Pushing off the back foot instead of loading the front leg",
       "Letting the front knee cave inward"
-    ]
+    ],
+    "pose_pattern": "split-squat"
   },
   {
     "slug": "walking-lunge",
@@ -279,6 +310,9 @@
       ]
     ],
     "instructions": "Step forward into a lunge and lower your back knee toward the floor while keeping your front shin fairly vertical. Push off the front foot and bring your back leg through into the next step. Keep your torso tall and your steps even on both sides. Hold dumbbells at your sides to make it harder.",
+    "setup": "Stand tall with a dumbbell in each hand, arms relaxed at your sides, and clear a few metres of floor in front of you.",
+    "tempo": "2 seconds down, 1 second up, no pause at the bottom.",
+    "breathing": "Inhale as you lower, exhale as you drive back up.",
     "form_cues": [
       "Take a controlled step and lower the back knee toward the floor",
       "Keep the front shin fairly vertical",
@@ -289,7 +323,9 @@
     "common_mistakes": [
       "Over-striding so the front knee shoots past the toes",
       "Leaning the torso forward and losing balance"
-    ]
+    ],
+    "pose_pattern": "lunge",
+    "pose_badge": "Step forward each rep"
   },
   {
     "slug": "step-up",
@@ -313,6 +349,9 @@
       ]
     ],
     "instructions": "Place one whole foot on a sturdy bench or box at about knee height. Drive through that foot to stand all the way up, letting the working leg do the work rather than pushing off the floor. Lower yourself back down with control and repeat. Switch legs each set or alternate as you go.",
+    "setup": "Stand facing a bench or box at roughly knee height and place one whole foot flat on top of it.",
+    "tempo": "2 seconds down, 1 second up, no pause at the bottom.",
+    "breathing": "Inhale as you lower, exhale as you drive back up.",
     "form_cues": [
       "Plant your whole foot on the box at about knee height",
       "Drive through the top foot to stand fully up",
@@ -323,7 +362,8 @@
     "common_mistakes": [
       "Bouncing off the bottom foot for momentum",
       "Not standing all the way up at the top"
-    ]
+    ],
+    "pose_pattern": "step-up"
   },
   {
     "slug": "conventional-deadlift",
@@ -353,6 +393,9 @@
       ]
     ],
     "instructions": "Stand with the bar over your mid-foot, hinge down, and grip it just outside your knees. Brace your core, keep your back flat, and stand up by pushing the floor away and driving your hips forward. Lower the bar under control by pushing your hips back first. Keep the bar close to your body the entire lift.",
+    "setup": "Bar over mid-foot with feet hip-width and shins almost touching it; hinge down and take a shoulder-width grip with a flat back.",
+    "tempo": "3 seconds down, a brief pause, then drive up in about 1 second.",
+    "breathing": "Breathe in and brace before each rep; exhale at the top, never mid-lift.",
     "form_cues": [
       "Set the bar over your mid-foot and grip just outside the knees",
       "Brace your core and set a flat back before you pull",
@@ -364,7 +407,8 @@
       "Rounding the lower back off the floor",
       "Letting the hips shoot up first so it becomes a stiff-leg pull",
       "Jerking the bar off the floor instead of building tension"
-    ]
+    ],
+    "pose_pattern": "deadlift"
   },
   {
     "slug": "romanian-deadlift",
@@ -390,6 +434,9 @@
       ]
     ],
     "instructions": "Start standing with the weight in front of your thighs and a soft bend in your knees. Push your hips back and let the weight travel down your legs until you feel a stretch in your hamstrings, keeping your back flat. Drive your hips forward to return to standing. The knees stay mostly still so the hamstrings and glutes do the work.",
+    "setup": "Start standing with the bar or dumbbells against your thighs, knees softly bent, shoulders pulled back and down.",
+    "tempo": "3 seconds down, a brief pause, then drive up in about 1 second.",
+    "breathing": "Breathe in and brace before each rep; exhale at the top, never mid-lift.",
     "form_cues": [
       "Keep a soft, fixed bend in the knees",
       "Push your hips back to lower the bar",
@@ -400,7 +447,8 @@
     "common_mistakes": [
       "Turning it into a squat by bending the knees too much",
       "Rounding the back as you chase extra range"
-    ]
+    ],
+    "pose_pattern": "rdl"
   },
   {
     "slug": "kettlebell-swing",
@@ -425,6 +473,9 @@
       ]
     ],
     "instructions": "Hinge at your hips and hike the kettlebell back between your legs like a snap pass. Snap your hips forward to swing the bell up to about chest height, letting the momentum come from your hips rather than your arms. Let it swing back down and immediately hinge into the next rep. Keep your back flat and your core braced on every swing.",
+    "setup": "Kettlebell about a foot in front of you, feet slightly wider than your shoulders; hinge, grip it and hike it back between your legs.",
+    "tempo": "Snap up fast, let the bell float, then absorb it back — about one rep per second.",
+    "breathing": "Sharp exhale as your hips snap through, inhale as the bell swings back.",
     "form_cues": [
       "Hike the bell back between your legs like a pass",
       "Snap your hips forward to float the bell up",
@@ -435,7 +486,8 @@
     "common_mistakes": [
       "Squatting the swing instead of hinging",
       "Lifting the bell with the arms and shoulders"
-    ]
+    ],
+    "pose_pattern": "kb-swing"
   },
   {
     "slug": "good-morning",
@@ -463,6 +515,9 @@
       ]
     ],
     "instructions": "Set a barbell across your upper back as you would for a squat. With a soft knee bend, push your hips back and hinge your torso toward parallel with the floor while keeping your back flat. Drive your hips forward to return upright. Start light and prioritize a smooth hinge, since the long lever makes this deceptively challenging.",
+    "setup": "Bar racked on your upper back as for a squat, feet hip-width, knees softly bent and core braced hard.",
+    "tempo": "3 seconds down, a brief pause, then drive up in about 1 second.",
+    "breathing": "Breathe in and brace before each rep; exhale at the top, never mid-lift.",
     "form_cues": [
       "Set the bar on your upper back as for a squat",
       "Soft knees, then push the hips straight back",
@@ -473,7 +528,9 @@
     "common_mistakes": [
       "Going too heavy too soon on a long lever",
       "Rounding the back as you lower"
-    ]
+    ],
+    "pose_pattern": "good-morning",
+    "pose_badge": "Bar on the back"
   },
   {
     "slug": "barbell-hip-thrust",
@@ -504,6 +561,9 @@
       ]
     ],
     "instructions": "Sit on the floor with your upper back against a bench and the barbell over your hips, padded for comfort. Drive through your heels to lift your hips until your body forms a straight line from shoulders to knees. Squeeze your glutes hard at the top, then lower with control. Keep your chin tucked and ribs down so the movement comes from your hips.",
+    "setup": "Sit on the floor with your shoulder blades against a bench and a padded bar over your hips, feet flat and set so your shins are vertical at the top.",
+    "tempo": "1 second up, 1 second squeeze at the top, 2 seconds down.",
+    "breathing": "Exhale as you drive your hips up, inhale as you lower.",
     "form_cues": [
       "Rest your upper back on the bench, bar padded over the hips",
       "Drive through your heels to lift the hips",
@@ -514,7 +574,8 @@
     "common_mistakes": [
       "Arching the lower back instead of finishing with the glutes",
       "Not reaching a full hip lockout at the top"
-    ]
+    ],
+    "pose_pattern": "hip-thrust"
   },
   {
     "slug": "glute-bridge",
@@ -534,6 +595,9 @@
     ],
     "equipment": [],
     "instructions": "Lie on your back with your knees bent and feet flat, hip-width apart. Press through your heels to lift your hips until your body is straight from shoulders to knees, squeezing your glutes at the top. Lower back down with control. A simple, joint-friendly way to feel and strengthen the glutes with no equipment.",
+    "setup": "Lie on your back with knees bent, feet flat and hip-width, heels about a hand's length from your glutes.",
+    "tempo": "1 second up, 1 second squeeze at the top, 2 seconds down.",
+    "breathing": "Exhale as you drive your hips up, inhale as you lower.",
     "form_cues": [
       "Feet flat and hip-width, knees bent",
       "Press through your heels to lift the hips",
@@ -544,7 +608,8 @@
     "common_mistakes": [
       "Pushing through the toes instead of the heels",
       "Over-arching the lower back at the top"
-    ]
+    ],
+    "pose_pattern": "glute-bridge"
   },
   {
     "slug": "leg-curl",
@@ -566,6 +631,9 @@
       ]
     ],
     "instructions": "Set the machine so the pad rests just above your heels and your knees line up with the pivot. Curl your heels toward your glutes by bending your knees, pausing briefly at the top. Lower under control without letting the weight slam down. It isolates the hamstrings, which most other leg exercises train only as helpers.",
+    "setup": "Set the pad just above your heels with the machine's pivot in line with your knee joint, then hold the handles and keep your hips down.",
+    "tempo": "1 second up, 1 second squeeze, 2–3 seconds down.",
+    "breathing": "Exhale on the effort, inhale on the way back.",
     "form_cues": [
       "Line your knees up with the machine's pivot",
       "Curl your heels toward your glutes",
@@ -576,7 +644,8 @@
     "common_mistakes": [
       "Lifting the hips off the pad to cheat the weight up",
       "Using momentum and skipping the lowering phase"
-    ]
+    ],
+    "pose_pattern": "leg-curl"
   },
   {
     "slug": "leg-extension",
@@ -598,6 +667,9 @@
       ]
     ],
     "instructions": "Sit in the machine with the pad on top of your lower shins and your knees at the pivot point. Straighten your legs to lift the weight, squeezing your quads at the top. Lower with control back to the start. A straightforward way to directly target the quads and add volume to leg day.",
+    "setup": "Sit right back into the seat with the pad resting on the front of your shins and your knees lined up with the machine's pivot.",
+    "tempo": "1 second up, 1 second squeeze, 2–3 seconds down.",
+    "breathing": "Exhale on the effort, inhale on the way back.",
     "form_cues": [
       "Line your knees up with the pivot point",
       "Straighten your legs to lift the pad",
@@ -608,7 +680,8 @@
     "common_mistakes": [
       "Swinging the weight up with momentum",
       "Slamming the stack down between reps"
-    ]
+    ],
+    "pose_pattern": "leg-extension"
   },
   {
     "slug": "standing-calf-raise",
@@ -631,6 +704,9 @@
       ]
     ],
     "instructions": "Stand tall with the balls of your feet on a step or platform and your heels free to drop. Rise up as high as you can onto your toes, pausing at the top. Lower slowly until you feel a stretch in your calves. Hold a dumbbell or use a machine to add load once bodyweight feels easy.",
+    "setup": "Stand with the balls of your feet on the edge of the platform, heels hanging free, knees straight but not locked.",
+    "tempo": "1 second up, 1 second squeeze at the top, 3 seconds down into the stretch.",
+    "breathing": "Exhale as you rise, inhale as you lower.",
     "form_cues": [
       "Balls of feet on the step, heels free",
       "Rise as high as you can onto your toes",
@@ -641,7 +717,8 @@
     "common_mistakes": [
       "Bouncing through short, fast reps",
       "Skipping the stretch at the bottom"
-    ]
+    ],
+    "pose_pattern": "calf-raise"
   },
   {
     "slug": "bench-press",
@@ -672,6 +749,9 @@
       ]
     ],
     "instructions": "Lie on the bench with your eyes under the bar and grip it a bit wider than shoulder-width. Unrack, lower the bar to your mid-chest with your elbows tucked at a moderate angle, then press it back up over your chest. Keep your feet planted and your shoulder blades pinned back. Use a spotter or safeties when going heavy.",
+    "setup": "Lie back with your eyes under the bar, shoulder blades pinched down and back, feet flat on the floor, grip a little wider than shoulder-width.",
+    "tempo": "2 seconds down, touch, then press up in about 1 second.",
+    "breathing": "Inhale on the way down, exhale as you press.",
     "form_cues": [
       "Pin your shoulder blades back and down",
       "Grip a bit wider than shoulder-width",
@@ -684,7 +764,8 @@
       "Flaring the elbows straight out to 90 degrees",
       "Bouncing the bar off the chest",
       "Letting the hips lift off the bench"
-    ]
+    ],
+    "pose_pattern": "bench-press"
   },
   {
     "slug": "dumbbell-bench-press",
@@ -712,6 +793,9 @@
       ]
     ],
     "instructions": "Lie back on a flat bench with a dumbbell in each hand at chest level. Press the dumbbells up until your arms are straight, then lower them under control to a comfortable stretch. The dumbbells let each side work independently and allow a natural, shoulder-friendly path. A great pressing option when you have no spotter.",
+    "setup": "Sit on the bench with the dumbbells on your thighs, then kick them up as you lie back, ending with arms extended and elbows about 45 degrees from your ribs.",
+    "tempo": "2 seconds down, touch, then press up in about 1 second.",
+    "breathing": "Inhale on the way down, exhale as you press.",
     "form_cues": [
       "Start with dumbbells at chest level, elbows tucked",
       "Press up until your arms are straight",
@@ -722,7 +806,9 @@
     "common_mistakes": [
       "Letting the dumbbells drift too far apart or clank together",
       "Over-lowering and straining the shoulders"
-    ]
+    ],
+    "pose_pattern": "bench-press",
+    "pose_badge": "Dumbbells, 45° elbows"
   },
   {
     "slug": "incline-dumbbell-press",
@@ -750,6 +836,9 @@
       ]
     ],
     "instructions": "Set an adjustable bench to a low incline of around thirty degrees and sit back with a dumbbell in each hand. Press the weights up and slightly together, then lower them under control to the sides of your upper chest. The incline shifts more work to the upper chest and front shoulders. Keep the angle modest to avoid turning it into a shoulder press.",
+    "setup": "Set the bench to about 30 degrees, sit back with your shoulder blades pinned to the pad and the dumbbells at chest height.",
+    "tempo": "2 seconds down, touch, then press up in about 1 second.",
+    "breathing": "Inhale on the way down, exhale as you press.",
     "form_cues": [
       "Set a low incline of about 30 degrees",
       "Press up and slightly together",
@@ -760,7 +849,9 @@
     "common_mistakes": [
       "Setting the bench too upright, turning it into a shoulder press",
       "Flaring the elbows and stressing the shoulders"
-    ]
+    ],
+    "pose_pattern": "incline-press",
+    "pose_badge": "Bench at 30°"
   },
   {
     "slug": "push-up",
@@ -782,6 +873,9 @@
     ],
     "equipment": [],
     "instructions": "Start in a plank with your hands a bit wider than your shoulders and your body in a straight line. Lower your chest toward the floor by bending your elbows to about forty-five degrees. Press back up while keeping your core tight so your hips do not sag. Drop to your knees if needed to keep good form.",
+    "setup": "Hands under your shoulders, feet together, body in one straight line from your ears to your heels.",
+    "tempo": "2 seconds down, touch, then press up in about 1 second.",
+    "breathing": "Inhale on the way down, exhale as you press.",
     "form_cues": [
       "Hands slightly wider than the shoulders",
       "Body in a straight line, core tight",
@@ -792,7 +886,8 @@
     "common_mistakes": [
       "Letting the hips sag or pike up",
       "Only doing half reps and not touching the chest down"
-    ]
+    ],
+    "pose_pattern": "push-up"
   },
   {
     "slug": "machine-chest-press",
@@ -817,6 +912,9 @@
       ]
     ],
     "instructions": "Adjust the seat so the handles line up with the middle of your chest. Press the handles forward until your arms are nearly straight, then return with control to a comfortable stretch. Keep your back against the pad and shoulders down. The guided path makes it a safe, easy way to learn pressing or push close to failure alone.",
+    "setup": "Adjust the seat so the handles sit at mid-chest height, back flat on the pad, feet planted.",
+    "tempo": "2 seconds down, touch, then press up in about 1 second.",
+    "breathing": "Inhale on the way down, exhale as you press.",
     "form_cues": [
       "Set the seat so handles are at mid-chest",
       "Press forward to nearly straight arms",
@@ -827,7 +925,8 @@
     "common_mistakes": [
       "Setting the seat too high or low so the path feels off",
       "Shrugging the shoulders up to the ears"
-    ]
+    ],
+    "pose_pattern": "seated-press"
   },
   {
     "slug": "cable-fly",
@@ -851,6 +950,9 @@
       ]
     ],
     "instructions": "Set the pulleys to about chest height and grab a handle in each hand, standing in a slight staggered stance. With a soft bend in your elbows, bring your hands together in front of your chest in a wide hugging arc. Return slowly to feel a stretch across your chest. Keep the elbow angle fixed so it stays an isolation movement.",
+    "setup": "Set both pulleys at shoulder height, take a handle in each hand and step forward into a split stance with a slight forward lean.",
+    "tempo": "2 seconds down, touch, then press up in about 1 second.",
+    "breathing": "Inhale on the way down, exhale as you press.",
     "form_cues": [
       "Set pulleys around chest height, slight stagger stance",
       "Keep a soft, fixed bend in the elbows",
@@ -861,7 +963,8 @@
     "common_mistakes": [
       "Bending and straightening the elbows so it becomes a press",
       "Using too much weight and losing the arc"
-    ]
+    ],
+    "pose_pattern": "cable-fly"
   },
   {
     "slug": "pec-deck-fly",
@@ -883,6 +986,9 @@
       ]
     ],
     "instructions": "Sit with your back flat against the pad and forearms or hands on the machine pads. Squeeze your arms together in front of you until the pads nearly meet, focusing on contracting your chest. Return slowly under control to a gentle stretch. The fixed path makes it easy to feel the chest working without balancing a weight.",
+    "setup": "Set the seat so the handles sit at chest height, back flat on the pad, elbows softly bent against the pads.",
+    "tempo": "2 seconds down, touch, then press up in about 1 second.",
+    "breathing": "Inhale on the way down, exhale as you press.",
     "form_cues": [
       "Back flat against the pad, forearms on the pads",
       "Squeeze your arms together in front of you",
@@ -893,7 +999,8 @@
     "common_mistakes": [
       "Using momentum to slam the pads together",
       "Shrugging the shoulders forward instead of squeezing the chest"
-    ]
+    ],
+    "pose_pattern": "pec-deck"
   },
   {
     "slug": "dip",
@@ -918,6 +1025,9 @@
       ]
     ],
     "instructions": "Support yourself on parallel bars with your arms straight. Lower your body by bending your elbows until your shoulders are roughly level with your elbows, leaning forward slightly to bias the chest. Press back up to the top. Keep the range of motion controlled and add weight with a belt once bodyweight dips feel easy.",
+    "setup": "Grip the parallel bars and press up to a straight-arm support with a slight forward lean and your legs bent behind you.",
+    "tempo": "2 seconds down, then press up in about 1 second.",
+    "breathing": "Inhale and brace before each rep, exhale through the top half of the press.",
     "form_cues": [
       "Start supported with straight arms",
       "Lean forward slightly to bias the chest",
@@ -928,7 +1038,8 @@
     "common_mistakes": [
       "Dropping too deep and straining the shoulders",
       "Bouncing at the bottom instead of controlling it"
-    ]
+    ],
+    "pose_pattern": "dip"
   },
   {
     "slug": "overhead-press",
@@ -956,6 +1067,9 @@
       ]
     ],
     "instructions": "Hold the bar at shoulder height with your grip just outside your shoulders and your core braced. Press the bar straight overhead, moving your head slightly back then forward as it clears your face. Lock it out overhead with the bar over your mid-foot, then lower under control. Squeeze your glutes and abs to keep your lower back from arching.",
+    "setup": "Bar at collarbone height with a grip just outside your shoulders and elbows slightly in front of it, feet hip-width, glutes and abs tight.",
+    "tempo": "2 seconds down, then press up in about 1 second.",
+    "breathing": "Inhale and brace before each rep, exhale through the top half of the press.",
     "form_cues": [
       "Grip just outside the shoulders, core braced",
       "Press straight up, moving your head back then through",
@@ -966,7 +1080,8 @@
     "common_mistakes": [
       "Leaning back and turning it into an incline press",
       "Pressing around the face instead of moving the head back"
-    ]
+    ],
+    "pose_pattern": "overhead-press"
   },
   {
     "slug": "seated-dumbbell-shoulder-press",
@@ -994,6 +1109,9 @@
       ]
     ],
     "instructions": "Sit on an upright bench with a dumbbell in each hand at shoulder height. Press the weights overhead until your arms are nearly straight, then lower them under control back to your shoulders. Keep your core tight and avoid over-arching your back. The seated position gives you support so you can focus on the shoulders.",
+    "setup": "Sit upright with the backrest close to vertical and the dumbbells at ear height, palms facing forward.",
+    "tempo": "2 seconds down, then press up in about 1 second.",
+    "breathing": "Inhale and brace before each rep, exhale through the top half of the press.",
     "form_cues": [
       "Start with dumbbells at shoulder height",
       "Press overhead to nearly straight arms",
@@ -1004,7 +1122,8 @@
     "common_mistakes": [
       "Arching the lower back off the bench",
       "Clanking the dumbbells together overhead"
-    ]
+    ],
+    "pose_pattern": "shoulder-press-seated"
   },
   {
     "slug": "machine-shoulder-press",
@@ -1029,6 +1148,9 @@
       ]
     ],
     "instructions": "Set the seat so the handles start near shoulder height. Press up until your arms are almost straight, then lower with control. Keep your back against the pad and your shoulders relaxed down away from your ears. The guided path makes it a beginner-friendly way to build overhead pressing strength.",
+    "setup": "Set the seat so the handles start at shoulder height, back flat against the pad, feet planted.",
+    "tempo": "2 seconds down, then press up in about 1 second.",
+    "breathing": "Inhale and brace before each rep, exhale through the top half of the press.",
     "form_cues": [
       "Set the seat so handles start near shoulder height",
       "Press up to almost straight arms",
@@ -1039,7 +1161,9 @@
     "common_mistakes": [
       "Shrugging the shoulders up during the press",
       "Setting the seat so the start position strains the shoulders"
-    ]
+    ],
+    "pose_pattern": "shoulder-press-seated",
+    "pose_badge": "Machine handles"
   },
   {
     "slug": "lateral-raise",
@@ -1062,6 +1186,9 @@
       ]
     ],
     "instructions": "Stand with a light dumbbell in each hand and a slight bend in your elbows. Raise your arms out to the sides until they reach about shoulder height, leading with your elbows. Lower slowly under control. Use light weight and smooth reps, since momentum quickly takes the work away from the side delts.",
+    "setup": "Stand tall with a light dumbbell in each hand at your sides, elbows very slightly bent and shoulders pulled down.",
+    "tempo": "1 second up, a brief pause, 2–3 seconds down.",
+    "breathing": "Exhale as you raise, inhale as you lower.",
     "form_cues": [
       "Slight bend in the elbows, light weight",
       "Raise out to the sides to shoulder height",
@@ -1072,7 +1199,8 @@
     "common_mistakes": [
       "Swinging the body to heave the weight up",
       "Going too heavy so the traps take over"
-    ]
+    ],
+    "pose_pattern": "lateral-raise"
   },
   {
     "slug": "cable-lateral-raise",
@@ -1094,6 +1222,9 @@
       ]
     ],
     "instructions": "Set a pulley to the lowest position and stand side-on with the handle in your outside hand. Raise your arm out to the side to about shoulder height with a slight elbow bend. Lower slowly against the constant cable tension. The cable keeps the side delt loaded through the whole range, including the bottom.",
+    "setup": "Set the pulley at its lowest setting, stand side-on to the stack and take the handle in your outside hand across your body.",
+    "tempo": "1 second up, a brief pause, 2–3 seconds down.",
+    "breathing": "Exhale as you raise, inhale as you lower.",
     "form_cues": [
       "Stand side-on, handle in the outside hand",
       "Raise out to about shoulder height",
@@ -1104,7 +1235,9 @@
     "common_mistakes": [
       "Using momentum from a low pulley",
       "Letting the torso sway to help the lift"
-    ]
+    ],
+    "pose_pattern": "lateral-raise",
+    "pose_badge": "One arm at a time"
   },
   {
     "slug": "face-pull",
@@ -1130,6 +1263,9 @@
       ]
     ],
     "instructions": "Set a rope or band at about face height and hold one end in each hand. Pull toward your face, spreading your hands apart and driving your elbows high and back. Squeeze your rear shoulders and upper back, then return with control. A great low-fatigue move for shoulder health and posture.",
+    "setup": "Set a rope or band at upper-chest to head height, take an overhand grip with thumbs pointing back and step away until the cable is tight.",
+    "tempo": "1 second up, a brief pause, 2–3 seconds down.",
+    "breathing": "Exhale as you raise, inhale as you lower.",
     "form_cues": [
       "Set the rope at about face height",
       "Pull toward your face, spreading the hands apart",
@@ -1140,7 +1276,8 @@
     "common_mistakes": [
       "Using too much weight and turning it into a row",
       "Letting the elbows drop instead of staying high"
-    ]
+    ],
+    "pose_pattern": "face-pull"
   },
   {
     "slug": "rear-delt-fly",
@@ -1165,6 +1302,9 @@
       ]
     ],
     "instructions": "Hinge forward at your hips with a light dumbbell in each hand hanging below you, or use the reverse setting on a pec deck. With a slight elbow bend, raise your arms out to the sides until they reach shoulder level. Squeeze your rear delts and upper back, then lower slowly. Keep the weight light so the small rear delts do the work.",
+    "setup": "Hinge forward to about 45 degrees with light dumbbells hanging under your chest and your elbows softly bent.",
+    "tempo": "1 second up, a brief pause, 2–3 seconds down.",
+    "breathing": "Exhale as you raise, inhale as you lower.",
     "form_cues": [
       "Hinge forward, light dumbbells hanging below",
       "Slight elbow bend, raise out to the sides",
@@ -1175,7 +1315,8 @@
     "common_mistakes": [
       "Using too much weight so the back takes over",
       "Jerking the weights up with momentum"
-    ]
+    ],
+    "pose_pattern": "rear-delt-fly"
   },
   {
     "slug": "pull-up",
@@ -1201,6 +1342,9 @@
       ]
     ],
     "instructions": "Hang from a bar with an overhand grip a bit wider than your shoulders. Pull your chest toward the bar by driving your elbows down and squeezing your back, until your chin clears the bar. Lower yourself all the way down under control. Use a band or the assisted version if you cannot yet do full reps.",
+    "setup": "Hang from the bar with an overhand grip just outside shoulder-width and your shoulders pulled down away from your ears.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Overhand grip, slightly wider than shoulders",
       "Drive your elbows down and squeeze the back",
@@ -1211,7 +1355,9 @@
     "common_mistakes": [
       "Kipping or swinging to cheat reps",
       "Not lowering to a full stretch each rep"
-    ]
+    ],
+    "pose_pattern": "pull-up",
+    "pose_badge": "Overhand grip"
   },
   {
     "slug": "chin-up",
@@ -1235,6 +1381,9 @@
       ]
     ],
     "instructions": "Hang from a bar with an underhand grip about shoulder-width apart. Pull yourself up by driving your elbows down until your chin passes the bar, keeping your core tight. Lower all the way down with control. The underhand grip brings the biceps in more, which usually makes it a little easier than a pull-up.",
+    "setup": "Hang from the bar with an underhand, shoulder-width grip, ribs down and shoulders set.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Underhand grip about shoulder-width",
       "Drive elbows down until the chin passes the bar",
@@ -1245,7 +1394,9 @@
     "common_mistakes": [
       "Swinging the legs for momentum",
       "Doing partial reps and skipping the full hang"
-    ]
+    ],
+    "pose_pattern": "pull-up",
+    "pose_badge": "Underhand grip"
   },
   {
     "slug": "lat-pulldown",
@@ -1270,6 +1421,9 @@
       ]
     ],
     "instructions": "Sit at the machine and secure your thighs under the pad with a grip slightly wider than your shoulders. Pull the bar down to your upper chest by driving your elbows down and back, leaning back only slightly. Let the bar rise under control to a full stretch. It builds the same pulling strength as a pull-up with adjustable load.",
+    "setup": "Set the thigh pad snug, take a grip a little wider than your shoulders and sit tall with a small backward lean.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Secure your thighs, grip slightly wider than shoulders",
       "Pull the bar to your upper chest",
@@ -1280,7 +1434,8 @@
     "common_mistakes": [
       "Leaning way back and heaving with the whole body",
       "Pulling the bar behind the neck"
-    ]
+    ],
+    "pose_pattern": "lat-pulldown"
   },
   {
     "slug": "band-assisted-pull-up",
@@ -1307,6 +1462,9 @@
       ]
     ],
     "instructions": "Loop a resistance band over the bar and place one foot or knee in the bottom of it. Pull yourself up as in a normal pull-up while the band gives you a boost from the bottom. Lower under control and let the band help only where you are weakest. Use a lighter band as you get stronger.",
+    "setup": "Loop a band over the bar and put one knee or foot in it, then hang with an overhand grip and your shoulders set.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Loop the band on the bar, foot or knee in it",
       "Pull up as in a normal pull-up",
@@ -1317,7 +1475,9 @@
     "common_mistakes": [
       "Using a band so thick you barely work",
       "Bouncing off the band's rebound at the bottom"
-    ]
+    ],
+    "pose_pattern": "pull-up",
+    "pose_badge": "Band under one foot"
   },
   {
     "slug": "barbell-row",
@@ -1347,6 +1507,9 @@
       ]
     ],
     "instructions": "Hinge forward at your hips with a flat back and hold the bar with an overhand grip. Row the bar toward your lower ribs by driving your elbows back and squeezing your shoulder blades. Lower under control without rounding your back. Keep your torso angle steady so your back muscles, not momentum, do the work.",
+    "setup": "Hinge to about 45 degrees with the bar hanging at knee height, knees softly bent, back flat and grip about shoulder-width.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Hinge to a flat-back, torso near 45 degrees",
       "Row the bar to your lower ribs",
@@ -1357,7 +1520,8 @@
     "common_mistakes": [
       "Standing up with each rep to use momentum",
       "Rounding the lower back under load"
-    ]
+    ],
+    "pose_pattern": "row-bent"
   },
   {
     "slug": "dumbbell-row",
@@ -1385,6 +1549,9 @@
       ]
     ],
     "instructions": "Put one hand and knee on a bench with your back flat and a dumbbell in the other hand. Row the dumbbell up toward your hip by driving your elbow back and squeezing your back. Lower it under control to a full stretch. The bench support makes it easy to focus on one side at a time with a good range of motion.",
+    "setup": "Place one hand and the same-side knee on a bench so your back is flat and roughly parallel to the floor, dumbbell hanging under your shoulder.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Brace one hand and knee on the bench, flat back",
       "Row the dumbbell toward your hip",
@@ -1395,7 +1562,8 @@
     "common_mistakes": [
       "Twisting the torso to swing the weight up",
       "Rowing to the chest instead of the hip"
-    ]
+    ],
+    "pose_pattern": "row-onearm"
   },
   {
     "slug": "seated-cable-row",
@@ -1422,6 +1590,9 @@
       ]
     ],
     "instructions": "Sit tall with your feet on the platform and a slight bend in your knees, holding the handle. Pull it toward your stomach by driving your elbows back and squeezing your shoulder blades together. Return with control, letting your arms stretch forward without slumping. Keep your torso mostly upright and steady throughout.",
+    "setup": "Sit tall with your feet on the platform and knees softly bent, arms extended and already holding tension on the cable.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Sit tall, slight knee bend, chest up",
       "Pull the handle to your stomach",
@@ -1432,7 +1603,8 @@
     "common_mistakes": [
       "Leaning way back and using the lower back",
       "Rounding forward and yanking with the arms"
-    ]
+    ],
+    "pose_pattern": "row-seated"
   },
   {
     "slug": "inverted-row",
@@ -1461,6 +1633,9 @@
       ]
     ],
     "instructions": "Set a bar or straps at about waist height and hang underneath with your body straight and heels on the floor. Pull your chest up to the bar by driving your elbows back and squeezing your upper back. Lower yourself under control while keeping your body in a rigid line. Raise or lower your feet to make it easier or harder.",
+    "setup": "Set a bar or straps at hip height, hang underneath with straight arms, body in one line and heels on the floor.",
+    "tempo": "Pull in 1 second, squeeze for 1, lower for 2–3.",
+    "breathing": "Exhale as you pull, inhale as you lower.",
     "form_cues": [
       "Set the bar at about waist height",
       "Hang underneath with a straight body",
@@ -1471,7 +1646,8 @@
     "common_mistakes": [
       "Letting the hips sag so the body bends",
       "Not pulling the chest all the way to the bar"
-    ]
+    ],
+    "pose_pattern": "inverted-row"
   },
   {
     "slug": "barbell-curl",
@@ -1496,6 +1672,9 @@
       ]
     ],
     "instructions": "Stand tall holding the bar with an underhand, shoulder-width grip and your elbows at your sides. Curl the bar up by bending your elbows, keeping your upper arms still. Lower under control all the way down. Avoid swinging your body, since letting the biceps do the work is what builds them.",
+    "setup": "Stand tall holding the bar at shoulder width with an underhand grip and your elbows pinned against your ribs.",
+    "tempo": "1 second up, 2–3 seconds down, no swinging.",
+    "breathing": "Exhale as you curl, inhale as you lower.",
     "form_cues": [
       "Underhand shoulder-width grip, elbows at sides",
       "Curl by bending only the elbows",
@@ -1506,7 +1685,8 @@
     "common_mistakes": [
       "Swinging the body to heave the bar up",
       "Letting the elbows drift forward"
-    ]
+    ],
+    "pose_pattern": "curl"
   },
   {
     "slug": "dumbbell-curl",
@@ -1530,6 +1710,9 @@
       ]
     ],
     "instructions": "Stand with a dumbbell in each hand, palms facing forward and elbows at your sides. Curl the weights up by bending your elbows and squeezing your biceps at the top. Lower them slowly and fully. You can alternate arms or curl both together, keeping your upper arms from drifting forward.",
+    "setup": "Stand tall with a dumbbell in each hand, palms facing forward, elbows tucked to your sides.",
+    "tempo": "1 second up, 2–3 seconds down, no swinging.",
+    "breathing": "Exhale as you curl, inhale as you lower.",
     "form_cues": [
       "Palms forward, elbows pinned to the sides",
       "Curl up and squeeze at the top",
@@ -1540,7 +1723,8 @@
     "common_mistakes": [
       "Rocking the torso for momentum",
       "Cutting the range short at the bottom"
-    ]
+    ],
+    "pose_pattern": "curl"
   },
   {
     "slug": "hammer-curl",
@@ -1564,6 +1748,9 @@
       ]
     ],
     "instructions": "Hold a dumbbell in each hand with your palms facing each other, like holding a hammer. Curl the weights up while keeping that neutral grip the whole way. Lower slowly under control. The neutral grip hits the biceps and brings in more of the forearm than a standard curl.",
+    "setup": "Stand tall with a dumbbell in each hand and your palms facing in towards your legs.",
+    "tempo": "1 second up, 2–3 seconds down, no swinging.",
+    "breathing": "Exhale as you curl, inhale as you lower.",
     "form_cues": [
       "Neutral grip, palms facing each other",
       "Curl up while keeping the neutral grip",
@@ -1574,7 +1761,9 @@
     "common_mistakes": [
       "Swinging the dumbbells up with the body",
       "Letting the wrists rotate out of neutral"
-    ]
+    ],
+    "pose_pattern": "curl",
+    "pose_badge": "Neutral grip"
   },
   {
     "slug": "cable-curl",
@@ -1596,6 +1785,9 @@
       ]
     ],
     "instructions": "Attach a bar to a low pulley and hold it with an underhand grip, elbows at your sides. Curl the bar up by bending your elbows, keeping your upper arms fixed. Lower under control against the steady cable tension. The constant tension keeps the biceps loaded even at the bottom of each rep.",
+    "setup": "Attach a straight or EZ bar to the low pulley, step back a pace and stand tall with your elbows at your sides.",
+    "tempo": "1 second up, 2–3 seconds down, no swinging.",
+    "breathing": "Exhale as you curl, inhale as you lower.",
     "form_cues": [
       "Underhand grip on a low pulley, elbows at sides",
       "Curl by bending only the elbows",
@@ -1606,7 +1798,9 @@
     "common_mistakes": [
       "Leaning back to help the weight up",
       "Letting the elbows flare forward"
-    ]
+    ],
+    "pose_pattern": "curl",
+    "pose_badge": "Low pulley"
   },
   {
     "slug": "triceps-pushdown",
@@ -1629,6 +1823,9 @@
       ]
     ],
     "instructions": "Stand facing a high pulley and grab the bar or rope with your elbows tucked at your sides. Push the handle down until your arms are fully straight, squeezing your triceps at the bottom. Let it rise under control without letting your elbows flare out. Keep your upper arms still so the movement comes only from your elbows.",
+    "setup": "Set the pulley above head height, take the bar or rope with your elbows tucked in, and lean in very slightly.",
+    "tempo": "1 second to lock out, 2–3 seconds back, elbows still.",
+    "breathing": "Exhale as you extend, inhale on the way back.",
     "form_cues": [
       "Elbows tucked at your sides",
       "Push down to fully straight arms",
@@ -1639,7 +1836,8 @@
     "common_mistakes": [
       "Letting the elbows flare out and away from the body",
       "Leaning over the bar to press with the chest"
-    ]
+    ],
+    "pose_pattern": "pushdown"
   },
   {
     "slug": "skull-crusher",
@@ -1665,6 +1863,9 @@
       ]
     ],
     "instructions": "Lie on a bench holding an EZ-bar or dumbbells over your chest with straight arms. Bend only your elbows to lower the weight toward your forehead or just behind your head. Straighten your arms to press it back up, keeping your upper arms still. Control the descent to keep tension on the triceps and your elbows happy.",
+    "setup": "Lie on the bench holding an EZ bar or dumbbells straight over your chest with a shoulder-width grip.",
+    "tempo": "1 second to lock out, 2–3 seconds back, elbows still.",
+    "breathing": "Exhale as you extend, inhale on the way back.",
     "form_cues": [
       "Arms straight over the chest to start",
       "Bend only the elbows to lower the bar",
@@ -1675,7 +1876,8 @@
     "common_mistakes": [
       "Letting the elbows flare wide",
       "Moving the upper arms and turning it into a press"
-    ]
+    ],
+    "pose_pattern": "skull-crusher"
   },
   {
     "slug": "overhead-triceps-extension",
@@ -1698,6 +1900,9 @@
       ]
     ],
     "instructions": "Hold a dumbbell or cable rope overhead with your arms straight and elbows pointing up. Lower the weight behind your head by bending only your elbows. Straighten your arms to press it back overhead, squeezing the triceps at the top. The overhead position gives the long head of the triceps a strong stretch.",
+    "setup": "Stand or sit tall and press the weight overhead with both hands so your upper arms finish beside your ears.",
+    "tempo": "1 second to lock out, 2–3 seconds back, elbows still.",
+    "breathing": "Exhale as you extend, inhale on the way back.",
     "form_cues": [
       "Weight overhead, arms straight, elbows up",
       "Lower behind the head by bending the elbows",
@@ -1708,7 +1913,8 @@
     "common_mistakes": [
       "Letting the elbows flare out to the sides",
       "Using too much weight and losing control at the stretch"
-    ]
+    ],
+    "pose_pattern": "triceps-overhead"
   },
   {
     "slug": "plank",
@@ -1729,6 +1935,9 @@
     ],
     "equipment": [],
     "instructions": "Rest on your forearms and toes with your body in a straight line from head to heels. Squeeze your abs, glutes, and quads to keep your hips from sagging or rising. Breathe steadily and hold the position for time. Stop the set when you can no longer keep a straight line rather than pushing into a sag.",
+    "setup": "Forearms under your shoulders and elbows shoulder-width, feet together, hips level.",
+    "tempo": "Hold 20–60 seconds with the body rigid; add time only while the line stays perfect.",
+    "breathing": "Breathe shallow and continuously; never hold your breath.",
     "form_cues": [
       "Forearms and toes down, body in a straight line",
       "Squeeze abs, glutes, and quads together",
@@ -1739,7 +1948,8 @@
     "common_mistakes": [
       "Letting the hips sag toward the floor",
       "Piking the hips up to make it easier"
-    ]
+    ],
+    "pose_pattern": "plank"
   },
   {
     "slug": "dead-bug",
@@ -1759,6 +1969,9 @@
     ],
     "equipment": [],
     "instructions": "Lie on your back with your arms reaching toward the ceiling and knees bent over your hips. Slowly lower your opposite arm and leg toward the floor while pressing your lower back into the ground. Return to the start and switch sides. Move slowly and keep your core braced so your back stays flat the whole time.",
+    "setup": "Lie on your back with your arms straight up over your shoulders and your hips and knees bent to 90 degrees.",
+    "tempo": "3 seconds out, 3 seconds back, alternating sides.",
+    "breathing": "Exhale slowly as you extend, inhale as you return.",
     "form_cues": [
       "Arms up, knees bent over the hips",
       "Press your lower back into the floor",
@@ -1769,7 +1982,8 @@
     "common_mistakes": [
       "Letting the lower back arch off the floor",
       "Moving too fast and losing the brace"
-    ]
+    ],
+    "pose_pattern": "dead-bug"
   },
   {
     "slug": "hanging-leg-raise",
@@ -1794,6 +2008,9 @@
       ]
     ],
     "instructions": "Hang from a bar with straight arms and a still torso. Raise your legs in front of you by curling your pelvis up, lifting your knees or straight legs toward your chest. Lower them under control without swinging. Bend your knees to make it easier and keep the movement smooth to avoid using momentum.",
+    "setup": "Hang from the bar with straight arms, shoulders pulled down, legs together and still.",
+    "tempo": "2 seconds up, 2 seconds down, no momentum.",
+    "breathing": "Exhale hard as you crunch, inhale as you return.",
     "form_cues": [
       "Hang with straight arms and a still torso",
       "Curl your pelvis up to start the lift",
@@ -1804,7 +2021,8 @@
     "common_mistakes": [
       "Swinging the body to fling the legs up",
       "Only lifting from the hip flexors without curling the pelvis"
-    ]
+    ],
+    "pose_pattern": "hanging-leg-raise"
   },
   {
     "slug": "cable-crunch",
@@ -1828,6 +2046,9 @@
       ]
     ],
     "instructions": "Kneel in front of a high pulley holding a rope beside your head. Crunch down by rounding your spine and bringing your elbows toward your thighs, driving the motion with your abs. Return under control without letting your hips do the work. The cable lets you add resistance to train your abs like any other muscle.",
+    "setup": "Kneel about a stride in front of a high pulley and hold the rope beside your ears with your hips fixed under you.",
+    "tempo": "2 seconds up, 2 seconds down, no momentum.",
+    "breathing": "Exhale hard as you crunch, inhale as you return.",
     "form_cues": [
       "Kneel and hold the rope beside your head",
       "Crunch down by rounding the spine",
@@ -1838,7 +2059,8 @@
     "common_mistakes": [
       "Hinging at the hips instead of crunching the spine",
       "Pulling with the arms instead of the abs"
-    ]
+    ],
+    "pose_pattern": "cable-crunch"
   },
   {
     "slug": "ab-wheel-rollout",
@@ -1863,6 +2085,9 @@
       ]
     ],
     "instructions": "Kneel and hold the ab wheel on the floor beneath your shoulders. Roll it forward as far as you can control while keeping your core braced and your back from arching. Pull it back to the start by contracting your abs. Start with a short range and build up, since rolling out too far too soon strains the lower back.",
+    "setup": "Kneel with the wheel directly under your shoulders, arms straight and back flat — put a pad under your knees.",
+    "tempo": "3 seconds out, pause, then pull back in 2 — only as far as you can keep the ribs down.",
+    "breathing": "Exhale as you roll out, inhale as you return.",
     "form_cues": [
       "Kneel with the wheel under your shoulders",
       "Brace hard and roll forward only as far as you can control",
@@ -1873,7 +2098,8 @@
     "common_mistakes": [
       "Rolling out too far and letting the back arch",
       "Pulling back with the hips instead of the abs"
-    ]
+    ],
+    "pose_pattern": "rollout"
   },
   {
     "slug": "russian-twist",
@@ -1898,6 +2124,9 @@
       ]
     ],
     "instructions": "Sit on the floor leaning back slightly with your knees bent and feet lifted or lightly touching down. Hold a weight at your chest and rotate your torso to tap it toward each side. Move with control and turn from your midsection rather than just swinging your arms. Keep your chest up and your back from rounding.",
+    "setup": "Sit with your knees bent and heels light on the floor, lean back to about 45 degrees and hold the weight at your chest.",
+    "tempo": "2 seconds up, 2 seconds down, no momentum.",
+    "breathing": "Exhale hard as you crunch, inhale as you return.",
     "form_cues": [
       "Lean back slightly, knees bent, chest up",
       "Hold the weight at your chest",
@@ -1908,7 +2137,8 @@
     "common_mistakes": [
       "Swinging only the arms while the torso stays still",
       "Rounding the back and losing the braced posture"
-    ]
+    ],
+    "pose_pattern": "russian-twist"
   },
   {
     "slug": "farmers-carry",
@@ -1935,6 +2165,9 @@
       ]
     ],
     "instructions": "Pick up a heavy dumbbell or kettlebell in each hand and stand tall with your shoulders back. Walk in a straight line with short, controlled steps, keeping your core braced and torso upright. Set the weights down safely when your grip or posture starts to fade. It builds grip, core stability, and full-body sturdiness at once.",
+    "setup": "Stand between two heavy dumbbells or kettlebells, hinge down, grip them and stand tall with your shoulders back.",
+    "tempo": "Walk at a steady, controlled pace for time or distance rather than for speed.",
+    "breathing": "Short, steady breaths — stay braced but keep breathing.",
     "form_cues": [
       "Pick up heavy weights, stand tall, shoulders back",
       "Brace your core and keep the torso upright",
@@ -1945,7 +2178,8 @@
     "common_mistakes": [
       "Leaning or twisting as you walk",
       "Letting the shoulders round forward under the load"
-    ]
+    ],
+    "pose_pattern": "carry"
   },
   {
     "slug": "treadmill-run",
@@ -1970,6 +2204,9 @@
       ]
     ],
     "instructions": "Start with a few minutes of walking to warm up, then build to a steady running pace you can sustain. Keep your posture tall and your steps light and quick rather than over-striding. Use the pace and incline to match an easy conversational effort or harder intervals. Cool down with a slower walk at the end.",
+    "setup": "Start the belt at an easy speed with about a 1% incline and stand tall in the middle of the deck with the safety clip attached.",
+    "tempo": "Hold a pace you could sustain for the whole session, or alternate hard and easy blocks.",
+    "breathing": "Breathe rhythmically through nose and mouth; if you can't speak a short sentence, ease off.",
     "form_cues": [
       "Warm up with a few minutes of walking",
       "Build to a steady, sustainable pace",
@@ -1980,7 +2217,8 @@
     "common_mistakes": [
       "Over-striding and landing hard on the heels",
       "Holding the rails, which wrecks your natural gait"
-    ]
+    ],
+    "pose_pattern": "run"
   },
   {
     "slug": "stationary-bike-ride",
@@ -2004,6 +2242,9 @@
       ]
     ],
     "instructions": "Set the seat height so your knee has a slight bend at the bottom of the pedal stroke. Pedal at a steady cadence, adjusting the resistance to keep the effort where you want it. Keep your upper body relaxed and let your legs drive the work. A low-impact way to build endurance or add easy conditioning.",
+    "setup": "Set the saddle so your knee is only slightly bent at the bottom of the pedal stroke, hands relaxed on the bars.",
+    "tempo": "Hold a pace you could sustain for the whole session, or alternate hard and easy blocks.",
+    "breathing": "Breathe rhythmically through nose and mouth; if you can't speak a short sentence, ease off.",
     "form_cues": [
       "Set seat height for a slight knee bend at the bottom",
       "Pedal at a steady cadence",
@@ -2014,7 +2255,8 @@
     "common_mistakes": [
       "Setting the seat too low and stressing the knees",
       "Cranking resistance so high your form breaks down"
-    ]
+    ],
+    "pose_pattern": "bike"
   },
   {
     "slug": "rowing-erg",
@@ -2039,6 +2281,9 @@
       ]
     ],
     "instructions": "Strap in and start each stroke by driving with your legs, then lean back slightly and pull the handle to your lower ribs. Reverse the order on the way back: arms out, hinge forward, then bend your knees. Keep a smooth rhythm with a strong drive and a relaxed recovery. It trains your legs, back, and heart all together.",
+    "setup": "Strap your feet in and sit at the catch: shins vertical, arms straight, shoulders just in front of your hips.",
+    "tempo": "Drive legs–back–arms in about 1 second, recover arms–back–legs in 2.",
+    "breathing": "Exhale on the drive, inhale on the recovery.",
     "form_cues": [
       "Drive with the legs first each stroke",
       "Then lean back slightly and pull to the lower ribs",
@@ -2049,7 +2294,8 @@
     "common_mistakes": [
       "Pulling with the arms before the legs drive",
       "Rounding the back at the catch"
-    ]
+    ],
+    "pose_pattern": "row-erg"
   },
   {
     "slug": "jump-rope",
@@ -2069,6 +2315,9 @@
     ],
     "equipment": [],
     "instructions": "Hold the handles with your elbows near your sides and turn the rope mostly with your wrists. Jump just high enough to clear the rope, landing softly on the balls of your feet. Start with short sets and build up your rhythm and endurance over time. A cheap, portable way to get your heart rate up fast.",
+    "setup": "Handles at hip height, elbows close to your ribs, feet together and knees soft.",
+    "tempo": "Small, quick bounces — aim for 120–140 turns per minute in 30–60 second blocks.",
+    "breathing": "Breathe rhythmically through nose and mouth; if you can't speak a short sentence, ease off.",
     "form_cues": [
       "Elbows near the sides, turn the rope with the wrists",
       "Jump just high enough to clear the rope",
@@ -2079,6 +2328,7 @@
     "common_mistakes": [
       "Jumping too high and tiring out fast",
       "Swinging the whole arms instead of the wrists"
-    ]
+    ],
+    "pose_pattern": "jump-rope"
   }
 ]

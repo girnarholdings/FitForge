@@ -1,9 +1,18 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui';
 import { useOnboarding } from './OnboardingProvider';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
+
+/**
+ * The shell publishes its bottom dock node here; `OnboardingFooter` portals into it. That keeps
+ * the CTA a REAL third flex zone of the 100svh shell — it can never overlap the step body the way
+ * a `position: sticky` footer inside the scroll region did (the equipment grid used to disappear
+ * underneath it). Falls back to an in-flow sticky bar if no dock is mounted.
+ */
+export const OnboardingDockContext = React.createContext<HTMLElement | null>(null);
 
 export interface OnboardingFooterProps {
   step: OnboardingStep;
@@ -29,11 +38,12 @@ export function OnboardingFooter({
   onContinue,
 }: OnboardingFooterProps) {
   const { commitAndNext, saving, error } = useOnboarding();
+  const dock = React.useContext(OnboardingDockContext);
 
   const handle = () => (onContinue ? onContinue() : commitAndNext(step));
 
-  return (
-    <div className="sticky bottom-0 mt-6 space-y-2 bg-gradient-to-t from-surface via-surface to-transparent pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+  const bar = (
+    <>
       {error && (
         <p role="alert" className="text-center text-sm text-danger">
           {error}
@@ -62,6 +72,11 @@ export function OnboardingFooter({
           Skip for now
         </Button>
       )}
-    </div>
+    </>
   );
+
+  if (dock) return createPortal(bar, dock);
+
+  // Fallback (shell dock not mounted yet / footer used outside the shell).
+  return <div className="cta-dock sticky bottom-0 mt-auto px-6">{bar}</div>;
 }

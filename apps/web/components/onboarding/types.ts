@@ -51,11 +51,21 @@ export interface OnboardingDraft {
   session_minutes: number | null;
   preferred_days: number[];
 
+  // step 4b · split — a slug from SPLIT_LIBRARY (@fitforge/shared/rules), or 'auto' to let
+  // FitForge derive the week from days/week (the pre-split behaviour).
+  split_slug: string | null;
+
   // step 5 · location
   training_location: TrainingLocation | null;
 
   // step 6 · equipment
+  /** everything the user has access to (an up-swiped "love it" item is also a "have it") */
   equipment_slugs: string[];
+  /**
+   * Subset of `equipment_slugs` the user actively enjoys (swipe-deck up-gesture). A *preference*
+   * signal on top of availability — plan generation can bias toward these.
+   */
+  loved_equipment_slugs: string[];
 
   // step 7 · exercises you enjoy
   favorites: NamedRef[];
@@ -95,8 +105,10 @@ export function emptyDraft(): OnboardingDraft {
     days_per_week: null,
     session_minutes: null,
     preferred_days: [],
+    split_slug: null,
     training_location: null,
     equipment_slugs: [],
+    loved_equipment_slugs: [],
     favorites: [],
     body_areas: [],
     movement_exclusions: [],

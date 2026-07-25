@@ -6,10 +6,15 @@
  */
 import * as React from 'react';
 import Link from 'next/link';
+import { getSplit, AUTO_SPLIT_SLUG } from '@fitforge/shared/rules';
+import type { GoalType, ExperienceLevel } from '@fitforge/shared/types';
 import { Card, CardTitle, CardDescription, Button } from '@/components/ui';
-import { DumbbellIcon, PlusIcon } from '@/components/ui/icons';
-import { useActiveRoutine } from '@/lib/demo/useDemo';
+import { DumbbellIcon, PlusIcon, RepeatIcon } from '@/components/ui/icons';
+import { useActiveRoutine, useDemoState } from '@/lib/demo/useDemo';
+import { applySplit } from '@/lib/demo/generate';
 import { WEEKDAY_LABELS } from '@/components/features/_mock/data';
+import { DayStrip, daysLabel, levelLabel } from './SplitCard';
+import { SplitLibrarySheet } from './SplitLibrarySheet';
 
 const GOAL_LABEL: Record<string, string> = {
   strength: 'Strength',
@@ -21,7 +26,28 @@ const GOAL_LABEL: Record<string, string> = {
 
 export function RoutineList() {
   const routine = useActiveRoutine();
+  const state = useDemoState();
   const totalExercises = routine.days.reduce((n, d) => n + d.exercises.length, 0);
+
+  const [browsing, setBrowsing] = React.useState(false);
+  const splitSlug = state.draft.split_slug ?? null;
+  const split = getSplit(splitSlug);
+
+  const profile = React.useMemo(
+    () => ({
+      days_per_week: state.profile?.days_per_week ?? state.draft.days_per_week ?? null,
+      session_minutes: state.profile?.session_minutes ?? state.draft.session_minutes ?? null,
+      experience_level: (state.profile?.experience_level ??
+        state.draft.experience_level ??
+        'beginner') as ExperienceLevel,
+      primary_goal: (state.profile?.primary_goal ??
+        state.draft.primary_goal ??
+        'general_health') as GoalType,
+      equipment_slugs: state.draft.equipment_slugs ?? [],
+      training_location: state.profile?.training_location ?? state.draft.training_location ?? null,
+    }),
+    [state.profile, state.draft],
+  );
 
   return (
     <div className="space-y-5">
@@ -56,6 +82,50 @@ export function RoutineList() {
                   {routine.days.length} days · {totalExercises} exercises
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* Active split — what program the week is actually running (WS-5) */}
+          <div
+            className="mt-3 rounded-xl border border-border bg-surface p-3"
+            data-testid="active-split"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Training split
+                </p>
+                <p
+                  className="mt-0.5 truncate text-sm font-semibold text-foreground"
+                  data-testid="active-split-name"
+                >
+                  {split ? split.name : 'Auto — built from your schedule'}
+                </p>
+                {split ? (
+                  <>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {daysLabel(split)} · {levelLabel(split.levels)}
+                    </p>
+                    <DayStrip split={split} className="mt-1" />
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                      {split.progression}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                    {routine.days.map((d) => d.focus).join(' · ')}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setBrowsing(true)}
+                data-testid="change-split"
+                className="flex shrink-0 items-center gap-1 rounded-chip border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-semibold text-accent transition-colors hover:border-accent"
+              >
+                <RepeatIcon size={13} />
+                Change
+              </button>
             </div>
           </div>
 
@@ -94,11 +164,14 @@ export function RoutineList() {
                 Edit routine
               </Button>
             </Link>
-            <Link href="/settings">
-              <Button size="sm" variant="ghost">
-                Re-generate
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setBrowsing(true)}
+              data-testid="change-split-cta"
+            >
+              Change split
+            </Button>
           </div>
         </div>
       </Card>
@@ -116,6 +189,15 @@ export function RoutineList() {
           </div>
         </Card>
       </Link>
+
+      <SplitLibrarySheet
+        open={browsing}
+        onClose={() => setBrowsing(false)}
+        value={splitSlug ?? AUTO_SPLIT_SLUG}
+        onSelect={(slug) => applySplit(slug === AUTO_SPLIT_SLUG ? null : slug)}
+        profile={profile}
+        title="Change your split"
+      />
     </div>
   );
 }

@@ -8,11 +8,20 @@ import { TargetIcon, AppleIcon, SwapIcon, type IconProps } from '@/components/ui
 import { LogoLockup, LandingHero } from '@/components/illustrations';
 import { getState, resetDemo } from '@/lib/demo/store';
 
-/** Marketing landing (§5.2). Dark-first, one gold accent, mobile-first — the start of onboarding. */
-const VALUE_ROWS: { Icon: (p: IconProps) => React.ReactElement; title: string; body: string }[] = [
-  { Icon: TargetIcon, title: 'A plan tuned to you', body: 'Built from your goals, schedule, and gear.' },
-  { Icon: AppleIcon, title: 'Macros, explained', body: 'Calorie and protein targets that make sense.' },
-  { Icon: SwapIcon, title: 'Smart substitutions', body: 'Swap any exercise for an equal alternative.' },
+/**
+ * Marketing landing (§5.2) — a SINGLE-VIEWPORT composition.
+ *
+ * Phone-first budget at 390 × 664 (iPhone Safari, URL bar + toolbar visible):
+ *   header ~42 · headline ~69 · subhead ~49 · hero (flexes, 96–220) · value
+ *   row ~71 · docked CTA ~146  →  fits with the hero absorbing the slack.
+ * The hero art is the only elastic element, so on shorter phones (SE, 568px)
+ * it shrinks instead of pushing the CTA off-screen. If a device is smaller
+ * still, `.scroll-region` scrolls and the `.cta-dock` stays pinned.
+ */
+const VALUE_ROWS: { Icon: (p: IconProps) => React.ReactElement; title: string }[] = [
+  { Icon: TargetIcon, title: 'A plan tuned to you' },
+  { Icon: AppleIcon, title: 'Macros, explained' },
+  { Icon: SwapIcon, title: 'Smart substitutions' },
 ];
 
 export default function LandingPage() {
@@ -35,49 +44,51 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-14 sm:max-w-md">
-      <header className="flex items-center justify-between">
-        <LogoLockup size={22} />
+    <main className="screen mx-auto w-full max-w-[430px] sm:max-w-md">
+      <header className="safe-top flex flex-none items-center justify-between px-6 pb-1">
+        <LogoLockup size={20} />
         <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-accent-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent">
           <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Local
         </span>
       </header>
 
-      <section className="mt-10">
-        <h1 className="font-display text-[2.75rem] font-bold leading-[1.05] tracking-tight text-foreground">
-          Your personal trainer.
-          <br />
-          <span className="text-gradient-gold">Forged around you.</span>
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          Training plans, macro targets, and a muscle-smart exercise library — free and
-          offline-friendly.
-        </p>
-      </section>
+      <div className="scroll-region flex flex-col px-6">
+        <section className="flex-none pt-2">
+          <h1 className="font-display text-[clamp(1.6rem,7.4vw,2.5rem)] font-bold leading-[1.06] tracking-tight text-foreground">
+            Your personal trainer.
+            <br />
+            <span className="text-gradient-gold">Forged around you.</span>
+          </h1>
+          <p className="mt-2 text-[0.9375rem] leading-snug text-muted-foreground">
+            Plans, macro targets, and a muscle-smart exercise library — free and offline-friendly.
+          </p>
+        </section>
 
-      <div className="mt-6">
-        <LandingHero width={360} className="mx-auto" />
+        {/* Elastic zone: the hero takes whatever height is left and no more. The
+            absolute inner box lets the art shrink without contributing height. */}
+        <div className="relative my-2 min-h-[96px] flex-1">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <LandingHero style={{ height: '100%', width: 'auto', maxWidth: '100%' }} />
+          </div>
+        </div>
+
+        <ul className="grid flex-none grid-cols-3 gap-2 pb-2">
+          {VALUE_ROWS.map(({ Icon, title }) => (
+            <li key={title} className="flex flex-col items-center gap-1.5 text-center">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-muted text-accent">
+                <Icon size={18} />
+              </span>
+              <p className="text-[11px] font-semibold leading-tight text-foreground">{title}</p>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <ul className="mt-4 space-y-3">
-        {VALUE_ROWS.map(({ Icon, title, body }) => (
-          <li key={title} className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-muted text-accent">
-              <Icon size={20} />
-            </span>
-            <div>
-              <p className="font-semibold text-foreground">{title}</p>
-              <p className="text-sm text-muted-foreground">{body}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <footer className="mt-10 space-y-3">
+      <footer className="cta-dock px-6">
         {/* Render CTAs only after hydration so the returning-user swap doesn't flash (§5.2). */}
-        <div className={mounted ? '' : 'invisible'}>
+        <div className={`flex flex-col gap-2 ${mounted ? '' : 'invisible'}`}>
           {returning ? (
-            <div className="space-y-3">
+            <>
               <Link href="/today" className="block">
                 <Button size="lg" block glow>
                   Continue your plan
@@ -86,9 +97,9 @@ export default function LandingPage() {
               <Button size="lg" variant="ghost" block onClick={() => setConfirmReset(true)}>
                 Start over
               </Button>
-            </div>
+            </>
           ) : (
-            <div className="space-y-3">
+            <>
               <Link href="/onboarding/welcome" className="block">
                 <Button size="lg" block glow>
                   Start in Local Mode
@@ -99,16 +110,12 @@ export default function LandingPage() {
                   I have an account
                 </Button>
               </Link>
-            </div>
+            </>
           )}
         </div>
       </footer>
 
-      <Sheet
-        open={confirmReset}
-        onClose={() => setConfirmReset(false)}
-        title="Start over?"
-      >
+      <Sheet open={confirmReset} onClose={() => setConfirmReset(false)} title="Start over?">
         <p className="text-sm text-muted-foreground">
           This erases your Local Mode data — plan, logs, and meals stored in this browser — and
           restarts onboarding. This cannot be undone.

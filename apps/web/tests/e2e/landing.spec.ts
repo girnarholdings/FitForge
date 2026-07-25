@@ -14,7 +14,7 @@ test.describe('landing', () => {
     await expect(page.getByRole('button', { name: 'Start in Local Mode' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'I have an account' })).toBeVisible();
 
-    await page.screenshot({ path: 'tests/screenshots/landing.png', fullPage: true });
+    // NOTE: landing.png is captured by screenshots.spec.ts at the canonical 390x664 viewport.
   });
 
   test('"Start in Local Mode" navigates into onboarding', async ({ page }) => {

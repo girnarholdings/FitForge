@@ -2,8 +2,11 @@
 
 /**
  * Authed app shell (§2.3): bottom tab bar on mobile, left sidebar on ≥md.
- * Tabs: Today · Workouts · Nutrition · Progress · Settings. The exercises catalog is a secondary
- * destination surfaced in the sidebar (desktop) and linked from Today / Workouts on mobile.
+ *
+ * Mobile tabs: Today · Workouts · Exercises · Nutrition · Progress. The exercise library is a
+ * first-class destination (user feedback: "exercises are really hard to get to"), so it lives in
+ * the thumb-zone tab bar. Settings moves out of the five-slot bar and is reached from the gear
+ * button in the sticky mobile top bar — the desktop sidebar still lists every destination.
  *
  * Fresh-visit gating (§5.3): a client-side guard — if the Local Mode store is missing or
  * onboarding is not complete, redirect into `/onboarding/welcome`. The check reads the store
@@ -40,14 +43,20 @@ interface NavItem {
   primary: boolean;
 }
 
+/**
+ * `primary` = shown in the mobile bottom tab bar (max 5, thumb zone). The sidebar renders the
+ * full list. Settings is intentionally NOT primary — it is reached from the mobile top bar gear.
+ */
 const NAV: NavItem[] = [
   { href: '/today', label: 'Today', Icon: HomeIcon, match: ['/today', '/workout'], primary: true },
   { href: '/routines', label: 'Workouts', Icon: DumbbellIcon, match: ['/routines'], primary: true },
+  { href: '/exercises', label: 'Exercises', Icon: BookIcon, match: ['/exercises'], primary: true },
   { href: '/nutrition', label: 'Nutrition', Icon: AppleIcon, match: ['/nutrition'], primary: true },
   { href: '/progress', label: 'Progress', Icon: TrendingUpIcon, match: ['/progress'], primary: true },
-  { href: '/settings', label: 'Settings', Icon: SettingsIcon, match: ['/settings'], primary: true },
-  { href: '/exercises', label: 'Exercises', Icon: BookIcon, match: ['/exercises'], primary: false },
+  { href: '/settings', label: 'Settings', Icon: SettingsIcon, match: ['/settings'], primary: false },
 ];
+
+const SETTINGS_ITEM = NAV.find((i) => i.href === '/settings')!;
 
 function isActive(pathname: string, item: NavItem): boolean {
   return item.match.some((m) => pathname === m || pathname.startsWith(m + '/'));
@@ -131,10 +140,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar carries the brand + Local chip (sidebar carries it on desktop). */}
-        <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
+        {/* Mobile top bar carries the brand + Local chip + Settings (which is off the tab bar). */}
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
           <LogoLockup size={18} />
-          <LocalChip onClick={() => setExplain(true)} />
+          <div className="flex items-center gap-2">
+            <LocalChip onClick={() => setExplain(true)} />
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              data-testid="mobile-settings"
+              aria-current={isActive(pathname, SETTINGS_ITEM) ? 'page' : undefined}
+              className={cn(
+                'grid h-9 w-9 place-items-center rounded-full border border-border transition-colors',
+                isActive(pathname, SETTINGS_ITEM)
+                  ? 'border-transparent bg-accent-muted text-accent'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              <SettingsIcon size={18} />
+            </Link>
+          </div>
         </div>
         <main className="mx-auto w-full max-w-[720px] flex-1 px-4 pb-28 pt-4 md:px-8 md:pb-10 md:pt-8">
           {children}
@@ -150,24 +175,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV.filter((i) => i.primary).map((item) => {
             const active = isActive(pathname, item);
             return (
-              <li key={item.href} className="flex-1">
+              <li key={item.href} className="min-w-0 flex-1">
                 <Link
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold transition-colors',
+                    'flex flex-col items-center gap-1 px-0.5 py-2.5 text-[10px] font-semibold leading-none transition-colors',
                     active ? 'text-accent' : 'text-muted-foreground',
                   )}
                 >
                   <span
                     className={cn(
-                      'grid h-8 w-14 place-items-center rounded-full transition-colors',
+                      'grid h-8 w-12 place-items-center rounded-full transition-colors',
                       active ? 'bg-accent-muted' : 'bg-transparent',
                     )}
                   >
                     <item.Icon size={22} />
                   </span>
-                  {item.label}
+                  <span className="max-w-full truncate">{item.label}</span>
                 </Link>
               </li>
             );

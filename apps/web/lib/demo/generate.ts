@@ -12,7 +12,8 @@
 import {
   computeNutritionTargets,
   suggestOnboardingDefaults,
-  buildDayPlan,
+  planDays,
+  getSplit,
   restSeconds,
   splitNameForDays,
   type RoleSlot,
@@ -30,7 +31,7 @@ import {
   type Difficulty,
 } from '@/components/features/_mock/data';
 import type { OnboardingDraft } from '@/components/onboarding/types';
-import { update } from './store';
+import { getState, update } from './store';
 import { DEMO_ROUTINE_ID, demoDayId } from './ids';
 
 export { DEMO_ROUTINE_ID, demoDayId };
@@ -98,7 +99,10 @@ export function routineForDraft(draft: Partial<OnboardingDraft>): Routine {
   const favoriteSlugs = new Set<string>((draft.favorites ?? []).map((f) => f.slug));
   const ceiling = DIFFICULTY_RANK[experience as Difficulty] ?? 0;
 
-  const plan = buildDayPlan(daysPerWeek, sessionMinutes, preferredDays);
+  // A chosen split (§ WS-5 SPLIT_LIBRARY) supplies the week's day structure. With no split — or
+  // the explicit 'auto' sentinel — `planDays` is exactly the old days-per-week behaviour.
+  const split = getSplit(draft.split_slug ?? null);
+  const plan = planDays({ daysPerWeek, sessionMinutes, preferredDays, split });
 
   const days: RoutineDay[] = plan.map((planned, dayIdx) => {
     const usedSlugs = new Set<string>();
@@ -168,8 +172,8 @@ export function routineForDraft(draft: Partial<OnboardingDraft>): Routine {
 
   return {
     id: DEMO_ROUTINE_ID,
-    name: `${splitNameForDays(daysPerWeek)} — ${daysPerWeek}-day plan`,
-    description: 'Generated from your onboarding answers.',
+    name: split ? split.name : `${splitNameForDays(daysPerWeek)} — ${daysPerWeek}-day plan`,
+    description: split ? split.description : 'Generated from your onboarding answers.',
     goal,
     source: 'generated',
     is_active: true,
@@ -243,5 +247,20 @@ export function finalizeOnboarding(draft: Partial<OnboardingDraft>): Routine {
     targets,
   }));
 
+  return routine;
+}
+
+/**
+ * Switch the active training split AFTER onboarding (Workouts → "Change split") and rebuild the
+ * routine from the stored draft. Everything else the user told us — equipment, exclusions, liked
+ * exercises, session length, preferred weekdays — is honoured exactly as during onboarding.
+ *
+ * `slug` may be a SPLIT_LIBRARY slug or `'auto'` / null to go back to the automatic day plan.
+ */
+export function applySplit(slug: string | null): Routine {
+  const state = getState();
+  const draft: Partial<OnboardingDraft> = { ...state.draft, split_slug: slug };
+  const routine = routineForDraft(draft);
+  update((s) => ({ ...s, draft, routine }));
   return routine;
 }

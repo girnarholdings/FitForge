@@ -126,12 +126,82 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+html,
+body {
+  /* No rubber-band chaining to the page behind a scroll region (iOS). */
+  overscroll-behavior-y: none;
+}
+
 body {
   background-color: var(--surface);
   color: var(--foreground);
   font-family: var(--font-sans);
-  min-height: 100dvh;
+  /* svh = the SMALL viewport (URL bar EXPANDED) — the only unit that can never
+     overflow on first paint in iOS Safari. 100vh is the LARGE viewport there. */
+  min-height: 100vh; /* fallback for pre-Safari-15.4 */
+  min-height: 100svh;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PHONE-FIRST LAYOUT PRIMITIVES  (target: 390 × 664 CSS px — iPhone Safari
+   with the URL bar + toolbar visible).
+
+   `.screen` is a bounded 3-zone shell: [fixed header] / [.scroll-region] /
+   [.cta-dock]. Because the shell owns the height, the page itself never
+   scrolls, so the URL bar never collapses mid-gesture and the primary CTA
+   is permanently parked in the thumb zone.
+
+   Unit policy: `svh` for shells (never overflows), `vh` as the legacy
+   fallback, and NEVER `dvh` for anything whose height is animated — dvh
+   changes as the URL bar slides and visibly jitters.
+   ─────────────────────────────────────────────────────────────────────────── */
+.screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* fallback */
+  min-height: 100svh;
+  height: 100vh; /* fallback */
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* The ONE region allowed to scroll inside a `.screen`. */
+.scroll-region {
+  flex: 1 1 auto;
+  min-height: 0; /* lets it actually shrink inside the flex column */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Bottom-pinned primary action. Sits OUTSIDE the scroll region, so it can
+   never cover content, and clears the home indicator. */
+.cta-dock {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  background-color: var(--surface);
+  box-shadow: 0 -14px 22px -14px rgba(0, 0, 0, 0.75);
+}
+:root[data-theme='light'] .cta-dock {
+  box-shadow: 0 -14px 22px -14px rgba(20, 23, 31, 0.18);
+}
+/* A dock with nothing portalled into it must not reserve padding/shadow. NOTE: these
+   primitives are UNLAYERED, so they beat Tailwind's layered utilities — never pair
+   `.cta-dock` with `empty:hidden`, `.scroll-region` with `flex-*`, or `.safe-top`
+   with `pt-*` on the same element; the primitive wins. */
+.cta-dock:empty {
+  display: none;
+}
+
+/* Notch / status-bar clearance for the top zone of a `.screen`. */
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
 }
 
 /* Respect users who prefer reduced motion. */

@@ -30,10 +30,70 @@ export async function enterDemo(page: Page): Promise<void> {
 const cont = (page: Page) => page.getByTestId('onboarding-continue').click();
 
 /**
+ * Answer the equipment step's Tinder-style swipe deck using its ACCESSIBLE BUTTONS (never drag
+ * gestures — those are pointer-physics dependent and flaky in CI).
+ *
+ * Flow: intro → `equipment-start-swiping` → deck. The deck interleaves category interstitial
+ * cards (which expose `equipment-category-*` actions) with item cards (which expose
+ * `swipe-action-left/right/up`). We answer `count` item cards, taking "have all" on the first
+ * category card so the run is quick, then land on the review screen.
+ *
+ * Leaves the page on the equipment REVIEW screen, where `onboarding-continue` is available.
+ */
+export async function answerEquipmentDeck(page: Page, count = 3): Promise<void> {
+  await expect(page.getByTestId('equipment-intro-screen')).toBeVisible();
+  await page.getByTestId('equipment-start-swiping').click();
+  await expect(page.getByTestId('equipment-deck-screen')).toBeVisible();
+
+  const dirs = ['right', 'up', 'left'] as const;
+  for (let i = 0; i < count; i++) {
+    const categoryAll = page.getByTestId('equipment-category-all');
+    if (await categoryAll.isVisible().catch(() => false)) {
+      // An interstitial for a ≥3-item category — "Show me one by one" keeps the deck on items.
+      await page.getByTestId('equipment-category-one-by-one').click();
+    }
+    const action = page.getByTestId(`swipe-action-${dirs[i % dirs.length]}`);
+    if (!(await action.isVisible().catch(() => false))) break;
+    await action.click();
+    // The card fly-out animation must settle before the next click targets the new top card.
+    await page.waitForTimeout(400);
+  }
+
+  await page.getByTestId('equipment-deck-review').click();
+  await expect(page.getByTestId('equipment-review-screen')).toBeVisible();
+}
+
+/**
+ * Walk onboarding as far as the EQUIPMENT step (goals → experience → schedule → split → location),
+ * leaving the page on `/onboarding/equipment` with the "Home gym" preset already seeded.
+ */
+export async function advanceToEquipment(page: Page): Promise<void> {
+  await enterDemo(page);
+  await page.getByText('Lose fat').click();
+  await cont(page);
+  await page.waitForURL(/\/onboarding\/experience/);
+  await page.getByText('Intermediate').click();
+  await cont(page);
+  await page.waitForURL(/\/onboarding\/schedule/);
+  await cont(page);
+  await page.waitForURL(/\/onboarding\/split/);
+  await cont(page);
+  await page.waitForURL(/\/onboarding\/location/);
+  await page.getByText('Home gym').click();
+  await cont(page);
+  await page.waitForURL(/\/onboarding\/equipment/);
+}
+
+export interface OnboardingHooks {
+  /** Runs on the split step, before Continue — e.g. to pick a specific program. */
+  onSplit?: (page: Page) => Promise<void>;
+}
+
+/**
  * Complete the FULL onboarding wizard with real answers, exercising every step, and land on
  * `/today` with a generated routine + non-zero nutrition targets persisted to the store.
  */
-export async function completeOnboarding(page: Page): Promise<void> {
+export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}): Promise<void> {
   await enterDemo(page);
 
   // 2 · Goals — pick a primary goal.
@@ -50,16 +110,25 @@ export async function completeOnboarding(page: Page): Promise<void> {
   await page.waitForURL(/\/onboarding\/schedule/);
   await cont(page);
 
-  // 5 · Location — home gym.
+  // 5 · Split (NEW, WS-5) — the best-matching program is preselected on mount, so Continue alone
+  // advances. Assert something was actually chosen before moving on.
+  await page.waitForURL(/\/onboarding\/split/);
+  await expect(page.getByTestId('onboarding-continue')).toBeEnabled();
+  if (hooks.onSplit) await hooks.onSplit(page);
+  await cont(page);
+
+  // 6 · Location — home gym.
   await page.waitForURL(/\/onboarding\/location/);
   await page.getByText('Home gym').click();
   await cont(page);
 
-  // 6 · Equipment — location preset applied; continue.
+  // 7 · Equipment — now a SWIPE DECK (WS-1). Walk it via the accessible buttons, then continue
+  // from the review screen.
   await page.waitForURL(/\/onboarding\/equipment/);
+  await answerEquipmentDeck(page);
   await cont(page);
 
-  // 7 · Exercise prefs — add a favorite from the suggestion chips.
+  // 8 · Exercise prefs — add a favorite from the suggestion chips.
   await page.waitForURL(/\/onboarding\/exercise_prefs/);
   const popular = page
     .locator('section')
@@ -69,7 +138,7 @@ export async function completeOnboarding(page: Page): Promise<void> {
   }
   await cont(page);
 
-  // 8 · Exclusions — protect a body area + exclude an exercise and accept a substitution.
+  // 9 · Exclusions — protect a body area + exclude an exercise and accept a substitution.
   await page.waitForURL(/\/onboarding\/exclusions/);
   await page.getByRole('button', { name: 'Knees' }).click();
   const avoid = page.getByRole('combobox', { name: 'Search exercises to avoid' });
@@ -88,23 +157,23 @@ export async function completeOnboarding(page: Page): Promise<void> {
   }
   await cont(page);
 
-  // 9 · Body metrics — medians pre-filled; set sex and continue.
+  // 10 · Body metrics — medians pre-filled; set sex and continue.
   await page.waitForURL(/\/onboarding\/body_metrics/);
   await page.getByRole('button', { name: 'Male', exact: true }).click();
   await cont(page);
 
-  // 10 · Nutrition prefs — diet + allergy.
+  // 11 · Nutrition prefs — diet + allergy.
   await page.waitForURL(/\/onboarding\/nutrition_prefs/);
   await page.getByText('Vegetarian', { exact: true }).click();
   await page.getByRole('button', { name: 'Tree nut' }).click();
   await cont(page);
 
-  // 11 · Targets review — computed by the shared macros rule.
+  // 12 · Targets review — computed by the shared macros rule.
   await page.waitForURL(/\/onboarding\/targets_review/);
   await expect(page.getByText('kcal / day')).toBeVisible();
   await cont(page);
 
-  // 12 · Plan preview — routine generated; "Start plan" → /today.
+  // 13 · Plan preview — routine generated; "Start plan" → /today.
   await page.waitForURL(/\/onboarding\/plan_preview/);
   await expect(page.getByTestId('onboarding-continue')).toBeEnabled();
   await cont(page);
