@@ -18,6 +18,7 @@ import {
   useDemoState,
 } from '@/lib/demo/useDemo';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
+import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
 
 export function TodayView() {
   const routine = useActiveRoutine();
@@ -123,6 +124,9 @@ export function TodayView() {
           </Link>
         </Card>
       )}
+
+      {/* Ask your coach — the knowledge base is one tap from home (§KB). */}
+      <CoachEntryCard />
 
       {/* Nutrition ring */}
       <Card className="shadow-[var(--shadow-card)]">

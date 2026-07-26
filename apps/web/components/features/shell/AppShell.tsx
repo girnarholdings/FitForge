@@ -8,6 +8,10 @@
  * the thumb-zone tab bar. Settings moves out of the five-slot bar and is reached from the gear
  * button in the sticky mobile top bar — the desktop sidebar still lists every destination.
  *
+ * Coach (the knowledge base + ask surface) deliberately does NOT displace a primary tab: it is a
+ * gold-accented item at the top of the desktop sidebar and a dedicated button in the mobile top
+ * bar, with a third entry point on Today itself.
+ *
  * Fresh-visit gating (§5.3): a client-side guard — if the Local Mode store is missing or
  * onboarding is not complete, redirect into `/onboarding/welcome`. The check reads the store
  * directly (not the reactive snapshot) so hydration's server→client snapshot swap can't trigger a
@@ -23,6 +27,7 @@ import {
   TrendingUpIcon,
   SettingsIcon,
   BookIcon,
+  ChatIcon,
   type IconProps,
 } from '@/components/ui/icons';
 import { Sheet } from '@/components/ui';
@@ -41,6 +46,8 @@ interface NavItem {
   /** also treat these path prefixes as "active" for this tab */
   match: string[];
   primary: boolean;
+  /** render with the gold "forged" treatment in the sidebar (Coach only) */
+  accent?: boolean;
 }
 
 /**
@@ -53,10 +60,19 @@ const NAV: NavItem[] = [
   { href: '/exercises', label: 'Exercises', Icon: BookIcon, match: ['/exercises'], primary: true },
   { href: '/nutrition', label: 'Nutrition', Icon: AppleIcon, match: ['/nutrition'], primary: true },
   { href: '/progress', label: 'Progress', Icon: TrendingUpIcon, match: ['/progress'], primary: true },
+  {
+    href: '/coach',
+    label: 'Coach',
+    Icon: ChatIcon,
+    match: ['/coach'],
+    primary: false,
+    accent: true,
+  },
   { href: '/settings', label: 'Settings', Icon: SettingsIcon, match: ['/settings'], primary: false },
 ];
 
 const SETTINGS_ITEM = NAV.find((i) => i.href === '/settings')!;
+const COACH_ITEM = NAV.find((i) => i.href === '/coach')!;
 
 function isActive(pathname: string, item: NavItem): boolean {
   return item.match.some((m) => pathname === m || pathname.startsWith(m + '/'));
@@ -114,8 +130,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
                   active
                     ? 'bg-accent-muted text-accent'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    : item.accent
+                      ? 'border-gradient-gold text-accent-soft hover:text-accent'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
+                data-testid={item.accent ? 'nav-coach-desktop' : undefined}
               >
                 <item.Icon size={20} />
                 {item.label}
@@ -145,6 +164,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <LogoLockup size={18} />
           <div className="flex items-center gap-2">
             <LocalChip onClick={() => setExplain(true)} />
+            <Link
+              href="/coach"
+              aria-label="Coach"
+              data-testid="mobile-coach"
+              aria-current={isActive(pathname, COACH_ITEM) ? 'page' : undefined}
+              className={cn(
+                'grid h-9 w-9 place-items-center rounded-full border transition-colors',
+                isActive(pathname, COACH_ITEM)
+                  ? 'border-transparent bg-accent-muted text-accent'
+                  : 'border-[color-mix(in_srgb,var(--accent)_45%,transparent)] text-accent-soft hover:bg-accent-muted hover:text-accent',
+              )}
+            >
+              <ChatIcon size={18} />
+            </Link>
             <Link
               href="/settings"
               aria-label="Settings"

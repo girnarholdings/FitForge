@@ -137,6 +137,20 @@ export const SparkleIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const ChatIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9.5L4.5 20Z" />
+    <path d="M8 8.5h8M8 12h5" />
+  </Svg>
+);
+
+export const SendIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4.5 12 20 4.5 15.5 20l-4-6.5Z" />
+    <path d="M11.5 13.5 20 4.5" />
+  </Svg>
+);
+
 export const TargetIcon = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="8.5" />

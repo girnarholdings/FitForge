@@ -397,7 +397,14 @@
       "replace an exercise",
       "alternative exercise",
       "can't do this movement",
-      "exercise swap rules"
+      "exercise swap rules",
+      "no bench",
+      "don't have a bench",
+      "without a bench",
+      "missing equipment",
+      "don't have the machine",
+      "no rack",
+      "without a machine"
     ],
     "answer": "Match three things: the muscle being trained, the movement pattern (push, pull, squat, hinge), and roughly the same rep range. Barbell bench, dumbbell press, machine press, and push-ups are all interchangeable for chest, for instance. If you're avoiding a movement because it hurts rather than because equipment is missing, choose a pain-free variation and see a professional if the issue persists.",
     "followups": [
