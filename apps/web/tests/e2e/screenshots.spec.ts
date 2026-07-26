@@ -72,6 +72,20 @@ test.describe('screenshots @ 390x664', () => {
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${SHOTS}/exercises-catalog.png` });
 
+    // Multi-select muscle filter — several muscles picked in one visit to the body map.
+    // The sticky footer keeps the running selection and the result count on screen at 390x664.
+    const picker = page.getByTestId('muscle-map-picker');
+    await page.getByTestId('muscle-filter-open').click();
+    for (const m of ['Chest', 'Triceps', 'Calves']) {
+      await picker.getByRole('button', { name: m, exact: true }).first().dispatchEvent('click');
+    }
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${SHOTS}/muscle-multi-sheet.png` });
+    await page.getByTestId('map-done').click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${SHOTS}/muscle-multi-catalog.png` });
+    await page.getByTestId('exercise-clear-all').click();
+
     // Aggregated targeting — the "Plan targets" tab.
     await page.getByTestId('exercises-tab-targets').click();
     await expect(page.getByTestId('muscle-volume-bars')).toBeVisible();

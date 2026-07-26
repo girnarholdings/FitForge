@@ -152,7 +152,11 @@ export function ExerciseCatalog() {
   const [query, setQuery] = React.useState('');
   const [category, setCategory] = React.useState<string | null>(null);
   const [equipment, setEquipment] = React.useState<string | null>(null);
-  const [muscle, setMuscle] = React.useState<string | null>(null);
+  /**
+   * Muscle filter is MULTI-select: pick chest + triceps and you get everything that trains
+   * either one (OR, not AND — AND would return almost nothing on a 59-row catalog).
+   */
+  const [muscles, setMuscles] = React.useState<MuscleSlug[]>([]);
   const [pattern, setPattern] = React.useState<string | null>(null);
   const [difficulty, setDifficulty] = React.useState<string | null>(null);
   const [grouping, setGrouping] = React.useState<Grouping>('body');
@@ -188,14 +192,15 @@ export function ExerciseCatalog() {
         if (pattern && ex.movement_pattern !== pattern) return false;
         if (difficulty && ex.difficulty !== difficulty) return false;
         if (
-          muscle &&
-          !ex.primary_muscles.includes(muscle) &&
-          !ex.secondary_muscles.includes(muscle)
+          muscles.length > 0 &&
+          !muscles.some(
+            (m) => ex.primary_muscles.includes(m) || ex.secondary_muscles.includes(m),
+          )
         )
           return false;
         return true;
       }),
-    [all, query, category, equipment, pattern, difficulty, muscle],
+    [all, query, category, equipment, pattern, difficulty, muscles],
   );
 
   const sorted = React.useMemo(
@@ -204,14 +209,14 @@ export function ExerciseCatalog() {
   );
 
   const sheetFilterCount =
-    (equipment ? 1 : 0) + (muscle ? 1 : 0) + (pattern ? 1 : 0) + (difficulty ? 1 : 0);
+    (equipment ? 1 : 0) + muscles.length + (pattern ? 1 : 0) + (difficulty ? 1 : 0);
   const anyFilter = sheetFilterCount > 0 || category !== null || query.trim() !== '';
 
   const clearAll = () => {
     setQuery('');
     setCategory(null);
     setEquipment(null);
-    setMuscle(null);
+    setMuscles([]);
     setPattern(null);
     setDifficulty(null);
   };
@@ -249,14 +254,30 @@ export function ExerciseCatalog() {
       }));
   }, [sorted, grouping]);
 
+  /** Toggle one muscle in/out of the selection. Used by the map sheet — it deliberately does
+   *  NOT close the sheet, so several muscles can be tapped in one visit. */
+  const toggleMuscle = React.useCallback((slug: MuscleSlug) => {
+    setMuscles((prev) => (prev.includes(slug) ? prev.filter((m) => m !== slug) : [...prev, slug]));
+  }, []);
+
+  /** Drill-in from the Plan targets view: replaces the selection with just that muscle. */
   const focusMuscle = (slug: MuscleSlug) => {
     setTab('library');
-    setMuscle(slug);
+    setMuscles([slug]);
     setCategory(null);
     setQuery('');
     setMapOpen(false);
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' });
   };
+
+  /** Card subtitle. One muscle reads as a sentence; several read as a count plus the list,
+   *  which the card truncates with an ellipsis rather than wrapping. */
+  const muscleSummary =
+    muscles.length === 0
+      ? null
+      : muscles.length === 1
+        ? `Showing ${MUSCLE_NAMES[muscles[0]!] ?? muscles[0]} exercises`
+        : `${muscles.length} muscles · ${muscles.map((m) => MUSCLE_NAMES[m] ?? m).join(', ')}`;
 
   return (
     <div className="space-y-4">
@@ -333,20 +354,14 @@ export function ExerciseCatalog() {
             className="flex w-full items-center gap-3 rounded-card border border-border bg-surface-2 p-3 text-left transition-colors hover:border-accent/60"
           >
             <span className="grid h-14 w-14 shrink-0 place-items-center rounded-sm bg-muted/60">
-              <MuscleMapThumb
-                primary={muscle ? [muscle as MuscleSlug] : []}
-                secondary={[]}
-                height={48}
-              />
+              <MuscleMapThumb primary={muscles} secondary={[]} height={48} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                 <BodyIcon size={16} className="text-accent" /> Browse by muscle
               </span>
               <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                {muscle
-                  ? `Showing ${MUSCLE_NAMES[muscle as MuscleSlug] ?? muscle} exercises`
-                  : 'Tap the body map to filter to what you want to train'}
+                {muscleSummary ?? 'Tap the body map to filter to what you want to train'}
               </span>
             </span>
             <ChevronRightIcon size={18} className="shrink-0 text-muted-foreground" />
@@ -401,12 +416,12 @@ export function ExerciseCatalog() {
 
           {/* Active filters (the ones that live behind the sheet / map) + clear-all */}
           {anyFilter && (
-            <div className="flex flex-wrap items-center gap-2">
-              {muscle && (
-                <ActiveChip onClear={() => setMuscle(null)}>
-                  {MUSCLE_NAMES[muscle as MuscleSlug] ?? muscle}
+            <div className="flex flex-wrap items-center gap-2" data-testid="active-filters">
+              {muscles.map((m) => (
+                <ActiveChip key={m} onClear={() => toggleMuscle(m)}>
+                  {MUSCLE_NAMES[m] ?? m}
                 </ActiveChip>
-              )}
+              ))}
               {equipment && (
                 <ActiveChip onClear={() => setEquipment(null)}>
                   {EQUIPMENT_FACETS.find((f) => f.slug === equipment)?.name ?? equipment}
@@ -540,33 +555,71 @@ export function ExerciseCatalog() {
       {/* Interactive muscle-map filter (P1-6) */}
       <Sheet open={mapOpen} onClose={() => setMapOpen(false)} title="Filter by muscle">
         <p className="mb-3 text-sm text-muted-foreground">
-          Tap a muscle on the front or back to filter the catalog.
+          Tap as many muscles as you like — you&rsquo;ll get every exercise that trains{' '}
+          <span className="font-semibold text-foreground">any</span> of them.
         </p>
-        <div className="flex justify-center">
+        <div className="flex justify-center" data-testid="muscle-map-picker">
           <MuscleMap
             view="both"
-            height={300}
+            height={260}
             interactive
-            primary={muscle ? [muscle as MuscleSlug] : []}
-            onMuscleClick={focusMuscle}
+            primary={muscles}
+            onMuscleClick={toggleMuscle}
           />
         </div>
-        <div className="mt-4 flex gap-2">
-          {muscle && (
-            <Button variant="secondary" className="flex-1" onClick={() => setMuscle(null)}>
-              Clear muscle
+
+        {/*
+         * Sticky footer. The map + orientation control + muscle rail are taller than an iPhone's
+         * 85dvh sheet, so a static action row sat below the fold and the running selection was
+         * invisible while you were picking. Pinning it to the scrollport keeps the read-back and
+         * the result count on screen for every tap.
+         */}
+        <div className="sticky bottom-0 -mx-5 mt-3 border-t border-border bg-surface px-5 pb-1 pt-3">
+          <div className="mb-3 min-h-8" data-testid="map-selection">
+            {muscles.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No muscles selected — showing everything.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {muscles.map((m) => (
+                  <ActiveChip key={m} onClear={() => toggleMuscle(m)}>
+                    {MUSCLE_NAMES[m] ?? m}
+                  </ActiveChip>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            {muscles.length > 0 && (
+              <Button
+                variant="secondary"
+                className="flex-1"
+                data-testid="map-clear-muscles"
+                onClick={() => setMuscles([])}
+              >
+                Clear all
+              </Button>
+            )}
+            <Button className="flex-1" data-testid="map-done" onClick={() => setMapOpen(false)}>
+              Show {sorted.length}
             </Button>
-          )}
-          <Button className="flex-1" onClick={() => setMapOpen(false)}>
-            Done
-          </Button>
+          </div>
         </div>
       </Sheet>
 
       {/* Secondary filters */}
       <Sheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters">
         <div className="space-y-4">
-          <FilterRow label="Muscle" facets={MUSCLE_FACETS} value={muscle} onChange={setMuscle} />
+          <MultiFilterRow
+            label="Muscle"
+            hint="Pick any number"
+            facets={MUSCLE_FACETS}
+            values={muscles}
+            onToggle={(slug) => toggleMuscle(slug as MuscleSlug)}
+            onClear={() => setMuscles([])}
+          />
           <FilterRow
             label="Equipment"
             facets={EQUIPMENT_FACETS}
@@ -592,7 +645,7 @@ export function ExerciseCatalog() {
             className="flex-1"
             onClick={() => {
               setEquipment(null);
-              setMuscle(null);
+              setMuscles([]);
               setPattern(null);
               setDifficulty(null);
             }}
@@ -775,6 +828,42 @@ function TagPill({ children }: { children: React.ReactNode }) {
     <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
       {children}
     </span>
+  );
+}
+
+/** Multi-select sibling of `FilterRow` — "All" clears, every other chip toggles independently. */
+function MultiFilterRow({
+  label,
+  hint,
+  facets,
+  values,
+  onToggle,
+  onClear,
+}: {
+  label: string;
+  hint?: string;
+  facets: { slug: string; name: string }[];
+  values: readonly string[];
+  onToggle: (slug: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+        {hint && <span className="ml-1.5 font-medium normal-case tracking-normal">· {hint}</span>}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Chip selected={values.length === 0} onClick={onClear}>
+          All
+        </Chip>
+        {facets.map((f) => (
+          <Chip key={f.slug} selected={values.includes(f.slug)} onClick={() => onToggle(f.slug)}>
+            {f.name}
+          </Chip>
+        ))}
+      </div>
+    </div>
   );
 }
 

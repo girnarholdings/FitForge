@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { resetDemo, completeOnboarding } from './helpers';
 
 async function exerciseCount(page: import('@playwright/test').Page): Promise<number> {
-  const text = await page.getByText(/^\d+ exercises?$/).innerText();
+  const text = await page.getByTestId('exercise-count').innerText();
   return parseInt(text, 10);
 }
 
@@ -58,27 +58,89 @@ test.describe('exercises', () => {
     await expect(page.getByText(`Swap ${name}`)).toBeVisible();
   });
 
-  test('muscle-map filter narrows the catalog by a tapped muscle', async ({ page }) => {
+  /**
+   * The body-shape filter is MULTI-select: several muscles can be tapped in one visit to the
+   * map, the sheet stays open while you pick, and the result set is the UNION (OR) of them —
+   * an AND across muscles would return near-nothing on a 59-row catalog.
+   */
+  test('muscle-map filter is multi-select and unions the tapped muscles', async ({ page }) => {
     await page.goto('/exercises');
     const total = await exerciseCount(page);
 
-    // Open the interactive front/back muscle map and tap a muscle.
-    // "Calves" is deliberately absent from the text muscle-facet chips, so the only
-    // button with this name is the map path, then (after selection) the active chip.
-    await page.getByTestId('muscle-filter-open').click();
-    await expect(page.getByText('Tap a muscle on the front or back')).toBeVisible();
+    const sheetMap = page.getByTestId('muscle-map-picker');
+    const selection = page.getByTestId('map-selection');
     // dispatchEvent avoids SVG hit-testing (mirrored muscle groups have a centre gap).
-    await page.getByRole('button', { name: 'Calves', exact: true }).first().dispatchEvent('click');
+    const tapMuscle = (name: string) =>
+      sheetMap.getByRole('button', { name, exact: true }).first().dispatchEvent('click');
 
-    // The sheet closes and a removable active-muscle chip appears; the list narrows.
-    const activeChip = page.getByRole('button', { name: 'Calves', exact: true });
-    await expect(activeChip).toBeVisible();
-    const filtered = await exerciseCount(page);
-    expect(filtered).toBeGreaterThan(0);
-    expect(filtered).toBeLessThan(total);
+    await page.getByTestId('muscle-filter-open').click();
+    await expect(page.getByText(/tap as many muscles as you like/i)).toBeVisible();
+    await expect(selection).toContainText('No muscles selected');
 
-    // Removing it restores the full list.
-    await activeChip.click();
+    // 1 · first muscle — the sheet must STAY OPEN so a second one can be picked.
+    await tapMuscle('Calves');
+    await expect(sheetMap).toBeVisible();
+    await expect(selection.getByRole('button', { name: 'Calves', exact: true })).toBeVisible();
+
+    await page.getByTestId('map-done').click();
+    const calvesOnly = await exerciseCount(page);
+    expect(calvesOnly).toBeGreaterThan(0);
+    expect(calvesOnly).toBeLessThan(total);
+
+    // 2 · add a second, unrelated muscle. The count must GROW (union), not collapse.
+    await page.getByTestId('muscle-filter-open').click();
+    await tapMuscle('Chest');
+    await expect(selection.getByRole('button', { name: 'Calves', exact: true })).toBeVisible();
+    await expect(selection.getByRole('button', { name: 'Chest', exact: true })).toBeVisible();
+    await page.getByTestId('map-done').click();
+
+    const both = await exerciseCount(page);
+    expect(both).toBeGreaterThan(calvesOnly);
+    expect(both).toBeLessThanOrEqual(total);
+
+    // Each selection is its own removable chip, and the Filters badge counts them all.
+    // (Scope to the active-filter row: "Chest" is also a body-part category chip.)
+    const active = page.getByTestId('active-filters');
+    await expect(page.getByTestId('exercise-filters-open')).toContainText('2');
+    await expect(active.getByRole('button', { name: 'Calves', exact: true })).toBeVisible();
+    await expect(active.getByRole('button', { name: 'Chest', exact: true })).toBeVisible();
+
+    // 3 · removing one chip leaves the other filter in place…
+    await active.getByRole('button', { name: 'Chest', exact: true }).click();
+    expect(await exerciseCount(page)).toBe(calvesOnly);
+
+    // …and removing the last one restores the full list.
+    await active.getByRole('button', { name: 'Calves', exact: true }).click();
+    expect(await exerciseCount(page)).toBe(total);
+  });
+
+  test('tapping the same muscle twice deselects it, and Clear all empties the selection', async ({
+    page,
+  }) => {
+    await page.goto('/exercises');
+    const total = await exerciseCount(page);
+
+    const sheetMap = page.getByTestId('muscle-map-picker');
+    const selection = page.getByTestId('map-selection');
+    const tapMuscle = (name: string) =>
+      sheetMap.getByRole('button', { name, exact: true }).first().dispatchEvent('click');
+
+    await page.getByTestId('muscle-filter-open').click();
+    await tapMuscle('Calves');
+    await expect(selection.getByRole('button', { name: 'Calves', exact: true })).toBeVisible();
+
+    // Tap it again → toggled back off.
+    await tapMuscle('Calves');
+    await expect(selection).toContainText('No muscles selected');
+
+    // Two muscles, then Clear all wipes both at once.
+    await tapMuscle('Calves');
+    await tapMuscle('Chest');
+    await page.getByTestId('map-clear-muscles').click();
+    await expect(selection).toContainText('No muscles selected');
+    await expect(page.getByTestId('map-clear-muscles')).toBeHidden();
+
+    await page.getByTestId('map-done').click();
     expect(await exerciseCount(page)).toBe(total);
   });
 });

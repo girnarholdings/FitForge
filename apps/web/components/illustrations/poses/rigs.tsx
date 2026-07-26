@@ -159,7 +159,15 @@ function benchPressRig(id: string, label: string, incline: boolean): Rig {
     id,
     label,
     view: 'side',
-    tilt: incline ? { deg: -24, cx: 58, cy: 82 } : undefined,
+    /**
+     * INCLINE = the HEAD END IS RAISED. The figure lies head-left (head x≈28), feet-right
+     * (toe x≈94) about a pivot at x=58, and SVG rotation is CLOCKWISE-positive (y grows
+     * downward), so a POSITIVE angle lifts the head and drops the feet — a true incline.
+     * The previous negative angle drove the head DOWN and the hips UP, i.e. it drew a
+     * DECLINE press under an "Incline press" label. 30° is the standard incline-bench
+     * setting for upper-chest emphasis.
+     */
+    tilt: incline ? { deg: 30, cx: 58, cy: 82 } : undefined,
     scenery: <Pad x1={24} x2={80} y={72} />,
     frames: [
       {
