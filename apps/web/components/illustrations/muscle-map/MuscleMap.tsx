@@ -20,10 +20,29 @@ import { BODY_OUTLINE, ABS_CROSSLINES } from './outline';
 const RATIO = 200 / 440;
 const MIRROR = 'scale(-1,1) translate(-200,0)';
 
+/**
+ * ADDITIVE extension to the frozen {@link MuscleMapProps} contract (types.ts stays untouched):
+ * `heatColors` paints each muscle with an explicit CSS colour instead of the gold opacity ramp.
+ * That is what powers the "% of weekly goal" yellow→orange→red gradient. Every existing caller
+ * passing `primary` / `secondary` / `heat` behaves exactly as before.
+ *
+ * Precedence per muscle: `heatColors` ▸ `heat` ▸ `primary` ▸ `secondary` ▸ inert.
+ */
+export interface MuscleMapExtendedProps extends MuscleMapProps {
+  /** per-muscle CSS colour (any valid SVG `fill`, including `var(--…)`) */
+  heatColors?: Partial<Record<MuscleSlug, string>>;
+  /** the muscle currently selected — drawn with a gold ring */
+  selected?: MuscleSlug | null;
+  /** accessible label override (heat modes otherwise get a generic one) */
+  ariaLabel?: string;
+}
+
 interface MuscleStyle {
   fill: string;
   opacity: number;
   highlighted: boolean;
+  /** true when the fill came from `heatColors` (non-inert) — those get a crisper outline */
+  colored: boolean;
 }
 
 function styleFor(
@@ -31,19 +50,38 @@ function styleFor(
   primary: Set<MuscleSlug>,
   secondary: Set<MuscleSlug>,
   heat: MuscleMapProps['heat'],
+  heatColors?: MuscleMapExtendedProps['heatColors'],
 ): MuscleStyle {
+  const explicit = heatColors?.[slug];
+  if (explicit) {
+    const inert = explicit === 'var(--muscle-base)';
+    return { fill: explicit, opacity: inert ? 1 : 0.92, highlighted: !inert, colored: !inert };
+  }
   if (heat && heat[slug] != null) {
     const v = Math.max(0, Math.min(1, heat[slug] as number));
-    return { fill: 'var(--accent)', opacity: 0.15 + 0.75 * v, highlighted: true };
+    return { fill: 'var(--accent)', opacity: 0.15 + 0.75 * v, highlighted: true, colored: false };
   }
-  if (primary.has(slug)) return { fill: 'var(--accent)', opacity: 0.95, highlighted: true };
-  if (secondary.has(slug)) return { fill: 'var(--accent)', opacity: 0.38, highlighted: true };
-  return { fill: 'var(--muscle-base)', opacity: 1, highlighted: false };
+  if (primary.has(slug))
+    return { fill: 'var(--accent)', opacity: 0.95, highlighted: true, colored: false };
+  if (secondary.has(slug))
+    return { fill: 'var(--accent)', opacity: 0.38, highlighted: true, colored: false };
+  return { fill: 'var(--muscle-base)', opacity: 1, highlighted: false, colored: false };
 }
 
 /** Pick the auto view: the one with the most primary paths; ties → front. */
-function autoView(primary: Set<MuscleSlug>, heat: MuscleMapProps['heat']): MuscleView {
-  const keys = primary.size > 0 ? [...primary] : heat ? (Object.keys(heat) as MuscleSlug[]) : [];
+function autoView(
+  primary: Set<MuscleSlug>,
+  heat: MuscleMapProps['heat'],
+  heatColors?: MuscleMapExtendedProps['heatColors'],
+): MuscleView {
+  const keys =
+    primary.size > 0
+      ? [...primary]
+      : heat && Object.keys(heat).length > 0
+        ? (Object.keys(heat) as MuscleSlug[])
+        : heatColors
+          ? (Object.keys(heatColors) as MuscleSlug[])
+          : [];
   let front = 0;
   let back = 0;
   for (const slug of keys) {
@@ -55,7 +93,13 @@ function autoView(primary: Set<MuscleSlug>, heat: MuscleMapProps['heat']): Muscl
   return back > front ? 'back' : 'front';
 }
 
-function composeAriaLabel(primary: MuscleSlug[], secondary: MuscleSlug[], heat?: MuscleMapProps['heat']): string {
+function composeAriaLabel(
+  primary: MuscleSlug[],
+  secondary: MuscleSlug[],
+  heat?: MuscleMapProps['heat'],
+  heatColors?: MuscleMapExtendedProps['heatColors'],
+): string {
+  if (heatColors && Object.keys(heatColors).length > 0) return 'Muscle heat map';
   if (heat && Object.keys(heat).length > 0) return 'Muscle activity map';
   const parts: string[] = [];
   if (primary.length) parts.push(`primary: ${primary.map((m) => MUSCLE_NAMES[m]).join(', ')}`);
@@ -68,6 +112,8 @@ interface ViewFigureProps {
   primary: Set<MuscleSlug>;
   secondary: Set<MuscleSlug>;
   heat: MuscleMapProps['heat'];
+  heatColors?: MuscleMapExtendedProps['heatColors'];
+  selected?: MuscleSlug | null;
   interactive: boolean;
   labels: boolean;
   thumb: boolean;
@@ -82,6 +128,8 @@ function ViewFigure({
   primary,
   secondary,
   heat,
+  heatColors,
+  selected,
   interactive,
   labels,
   thumb,
@@ -94,10 +142,15 @@ function ViewFigure({
     (MUSCLE_PATHS[slug] ?? []).some((p) => p.view === view),
   );
   // Draw unhighlighted first, highlighted on top so gold never gets overdrawn.
-  const styled = slugsInView.map((slug) => ({ slug, style: styleFor(slug, primary, secondary, heat) }));
+  const styled = slugsInView.map((slug) => ({
+    slug,
+    style: styleFor(slug, primary, secondary, heat, heatColors),
+  }));
   const ordered = [
-    ...styled.filter((s) => !s.style.highlighted),
-    ...styled.filter((s) => s.style.highlighted),
+    ...styled.filter((s) => !s.style.highlighted && s.slug !== selected),
+    ...styled.filter((s) => s.style.highlighted && s.slug !== selected),
+    // the selected muscle always paints last so its gold ring is never clipped by a neighbour
+    ...styled.filter((s) => s.slug === selected),
   ];
 
   const vb = labels ? '-66 0 332 440' : '0 0 200 440';
@@ -106,12 +159,16 @@ function ViewFigure({
   const renderMuscle = (slug: MuscleSlug, style: MuscleStyle) => {
     const paths = (MUSCLE_PATHS[slug] ?? []).filter((p) => p.view === view);
     const isHover = interactive && hovered === slug;
-    const stroke = isHover
-      ? 'var(--accent)'
-      : thumb && !style.highlighted
-        ? 'none'
-        : 'var(--muscle-line)';
-    const strokeWidth = isHover ? 1.6 : 1;
+    const isSelected = selected === slug;
+    const stroke =
+      isHover || isSelected
+        ? 'var(--accent)'
+        : thumb && !style.highlighted
+          ? 'none'
+          : style.colored
+            ? 'var(--body-outline)'
+            : 'var(--muscle-line)';
+    const strokeWidth = isSelected ? 2 : isHover ? 1.6 : 1;
     const shapes = paths.flatMap((p, i) => {
       const el = (
         <path
@@ -122,6 +179,7 @@ function ViewFigure({
           stroke={stroke}
           strokeWidth={strokeWidth}
           strokeLinejoin="round"
+          className="motion-safe:transition-[fill,fill-opacity] motion-safe:duration-500"
         />
       );
       if (p.side === 'center') return [el];
@@ -136,6 +194,7 @@ function ViewFigure({
           stroke={stroke}
           strokeWidth={strokeWidth}
           strokeLinejoin="round"
+          className="motion-safe:transition-[fill,fill-opacity] motion-safe:duration-500"
         />,
       ];
     });
@@ -147,6 +206,8 @@ function ViewFigure({
         role="button"
         tabIndex={0}
         aria-label={MUSCLE_NAMES[slug]}
+        aria-pressed={isSelected || undefined}
+        data-testid={`muscle-map-shape-${slug}`}
         className="cursor-pointer outline-none"
         onClick={() => onMuscleClick?.(slug)}
         onKeyDown={(e) => {
@@ -265,19 +326,22 @@ export function MuscleMap({
   secondary = [],
   view = 'auto',
   heat,
+  heatColors,
+  selected = null,
+  ariaLabel: ariaLabelProp,
   height = 260,
   interactive = false,
   onMuscleClick,
   labels = false,
   className,
-}: MuscleMapProps) {
+}: MuscleMapExtendedProps) {
   const [hovered, setHovered] = React.useState<MuscleSlug | null>(null);
   const primarySet = React.useMemo(() => new Set(primary), [primary]);
   const secondarySet = React.useMemo(() => new Set(secondary), [secondary]);
 
   const resolved: MuscleView | 'both' =
-    view === 'auto' ? autoView(primarySet, heat) : view;
-  const ariaLabel = composeAriaLabel(primary, secondary, heat);
+    view === 'auto' ? autoView(primarySet, heat, heatColors) : view;
+  const ariaLabel = ariaLabelProp ?? composeAriaLabel(primary, secondary, heat, heatColors);
 
   const figure = (v: MuscleView) => (
     <ViewFigure
@@ -286,6 +350,8 @@ export function MuscleMap({
       primary={primarySet}
       secondary={secondarySet}
       heat={heat}
+      heatColors={heatColors}
+      selected={selected}
       interactive={interactive}
       labels={labels}
       thumb={false}

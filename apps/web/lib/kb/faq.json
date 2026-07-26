@@ -1,0 +1,1464 @@
+[
+  {
+    "id": "gs-how-many-days",
+    "category": "getting-started",
+    "question": "How many days a week should I work out?",
+    "aliases": [
+      "workout frequency",
+      "how often should I train",
+      "days per week gym",
+      "train every day",
+      "how many times a week lift"
+    ],
+    "answer": "For most people, 3-4 strength sessions per week is the sweet spot: enough stimulus to make steady progress, with enough recovery in between. Beginners do great on 3 full-body days; more advanced lifters often use 4-6 days with a split. The best schedule is the one you can actually stick to every week, so pick a number you can sustain rather than the maximum you can imagine.",
+    "followups": [
+      "gs-best-split",
+      "re-rest-days",
+      "gs-workout-length"
+    ],
+    "personalize": "Tailor to the user's stated available days, experience level, and current split."
+  },
+  {
+    "id": "gs-workout-length",
+    "category": "getting-started",
+    "question": "How long should my workouts be?",
+    "aliases": [
+      "workout duration",
+      "how long in the gym",
+      "45 minutes enough",
+      "is 30 minutes enough",
+      "2 hour workouts"
+    ],
+    "answer": "Most effective strength workouts take 45-75 minutes: a short warm-up plus 4-8 exercises with solid rest between sets. Longer isn't better; quality sets and progressive effort matter far more than time spent. If you're short on time, 30 focused minutes on compound lifts still drives real progress.",
+    "followups": [
+      "gs-how-many-days",
+      "ts-warmup"
+    ],
+    "personalize": "Adjust based on the user's session-time preference and number of exercises in their routine."
+  },
+  {
+    "id": "gs-best-split",
+    "category": "getting-started",
+    "question": "What training split should I use?",
+    "aliases": [
+      "full body vs split",
+      "push pull legs",
+      "upper lower",
+      "bro split",
+      "best workout split"
+    ],
+    "answer": "The split matters much less than consistency and effort. A good rule of thumb: 2-3 days per week suits full-body training, 4 days suits upper/lower, and 5-6 days suits push/pull/legs. All of them work if each muscle gets trained about twice per week with enough hard sets, so choose based on your schedule, not internet debates.",
+    "followups": [
+      "gs-how-many-days",
+      "app-change-split",
+      "gs-reps-sets"
+    ],
+    "personalize": "Recommend based on the user's available days and current split setting; mention how to change it in the app."
+  },
+  {
+    "id": "gs-how-long-results",
+    "category": "getting-started",
+    "question": "How long until I see results?",
+    "aliases": [
+      "when will I see progress",
+      "how fast results",
+      "results timeline",
+      "how long to build muscle",
+      "when does it start working"
+    ],
+    "answer": "Expect strength gains within 2-4 weeks (mostly your nervous system learning the movements), visible muscle changes around 8-12 weeks, and changes others notice around 3-6 months. Fat loss shows on the scale within weeks if your nutrition is in a deficit, but photos and measurements reveal it sooner than the mirror. Consistency over months beats intensity over days, so judge progress in monthly blocks, not daily ones.",
+    "followups": [
+      "bc-muscle-gain-rate",
+      "bc-fat-loss-rate",
+      "pp-track-progress"
+    ],
+    "personalize": "Frame the timeline around the user's goal (fat loss vs muscle gain) and training age."
+  },
+  {
+    "id": "gs-first-time",
+    "category": "getting-started",
+    "question": "I've never lifted weights before. Where do I start?",
+    "aliases": [
+      "total beginner",
+      "new to the gym",
+      "first workout",
+      "starting from scratch",
+      "never exercised"
+    ],
+    "answer": "Start with 2-3 full-body sessions per week built around simple compound movements: a squat pattern, a hinge, a push, a pull, and a carry or core exercise. Use light weights you can control for 8-12 reps, focus on learning the movement, and add a little weight or a rep each week. You do not need to feel destroyed after a session; finishing feeling like you could have done a bit more is exactly right for the first couple of months.",
+    "followups": [
+      "gs-reps-sets",
+      "ts-form-check",
+      "dm-gym-anxiety"
+    ],
+    "personalize": "Point to the user's generated beginner routine and their available equipment."
+  },
+  {
+    "id": "gs-machines-vs-free-weights",
+    "category": "getting-started",
+    "question": "Are machines or free weights better?",
+    "aliases": [
+      "machines vs dumbbells",
+      "are machines effective",
+      "should I only use machines",
+      "free weights better"
+    ],
+    "answer": "Both build muscle effectively; research shows similar growth when effort and progression are matched. Machines are great for beginners because they guide the movement path, while free weights train balance and carry over better to daily life. A practical mix: learn the big free-weight basics over time, and use machines freely for isolation work or when you want a safer way to push close to failure.",
+    "followups": [
+      "gs-first-time",
+      "se-substitute-exercise"
+    ],
+    "personalize": "Depends on what equipment the user's gym or home setup actually has."
+  },
+  {
+    "id": "gs-reps-sets",
+    "category": "getting-started",
+    "question": "How many sets and reps should I do?",
+    "aliases": [
+      "rep ranges",
+      "sets per exercise",
+      "how many reps to build muscle",
+      "3 sets of 10",
+      "volume per muscle"
+    ],
+    "answer": "A reliable default is 2-4 sets of 6-12 reps per exercise, with roughly 10-20 hard sets per muscle group per week. Muscle grows across a wide rep range (about 5-30 reps) as long as sets are taken close to failure, so the range matters less than honest effort. Beginners should start at the low end of volume and add sets gradually as recovery allows.",
+    "followups": [
+      "ts-rpe-rir",
+      "pp-progressive-overload"
+    ],
+    "personalize": "Reference the sets/reps already programmed in the user's routine and their goal (strength vs size)."
+  },
+  {
+    "id": "gs-missed-workout",
+    "category": "getting-started",
+    "question": "I missed a workout. What should I do?",
+    "aliases": [
+      "skipped a session",
+      "missed a day",
+      "fell behind schedule",
+      "make up a workout",
+      "missed the gym this week"
+    ],
+    "answer": "Just pick up where you left off; one missed session has essentially zero effect on long-term progress. Don't try to cram two workouts into one or punish yourself with extra volume. If you regularly miss the same day, that's a scheduling problem, not a discipline problem: move the session or drop to a split with fewer days.",
+    "followups": [
+      "gs-consistency",
+      "gs-how-many-days"
+    ],
+    "personalize": "If the user misses often, suggest adjusting their split to fewer days in the app."
+  },
+  {
+    "id": "gs-consistency",
+    "category": "getting-started",
+    "question": "How do I stay consistent and motivated?",
+    "aliases": [
+      "losing motivation",
+      "how to build the habit",
+      "can't stick to it",
+      "keep quitting the gym",
+      "staying on track"
+    ],
+    "answer": "Motivation fades for everyone; systems keep you going. Schedule workouts like appointments, keep sessions short enough that starting feels easy, and track your lifts so you can see numbers climb even when the mirror is slow. A 'minimum viable workout' rule helps: on low-energy days, commit to just the first exercise, and you'll usually finish the rest.",
+    "followups": [
+      "gs-missed-workout",
+      "pp-track-progress"
+    ],
+    "personalize": "Anchor advice to the user's logged streaks and history in the app."
+  },
+  {
+    "id": "gs-time-of-day",
+    "category": "getting-started",
+    "question": "Does it matter what time of day I work out?",
+    "aliases": [
+      "morning vs evening workout",
+      "best time to train",
+      "workout before bed",
+      "fasted morning training"
+    ],
+    "answer": "The best time to train is whenever you can do it consistently; the performance difference between morning and evening is small and mostly disappears once your body adapts to a regular slot. Training very late can disrupt some people's sleep, and early sessions may need a longer warm-up. Pick the slot that fits your life and protect it.",
+    "followups": [
+      "gs-consistency",
+      "re-sleep"
+    ],
+    "personalize": "None needed beyond the user's schedule preference."
+  },
+  {
+    "id": "ts-warmup",
+    "category": "technique-safety",
+    "question": "Do I need to warm up, and how?",
+    "aliases": [
+      "warm up routine",
+      "warming up before lifting",
+      "stretch before workout",
+      "how long warm up"
+    ],
+    "answer": "Yes, but keep it short and specific: 3-5 minutes of light cardio to raise your temperature, then 1-3 progressively heavier warm-up sets of your first exercise before your working weight. Long static-stretching routines before lifting aren't necessary and don't prevent injury. Later exercises in the session usually need only one light set or none at all.",
+    "followups": [
+      "re-stretching",
+      "ts-form-check"
+    ],
+    "personalize": "Suggest warm-up sets based on the first exercise and working weight in the user's routine."
+  },
+  {
+    "id": "ts-breathing",
+    "category": "technique-safety",
+    "question": "How should I breathe while lifting?",
+    "aliases": [
+      "breathing technique",
+      "when to exhale",
+      "holding breath lifting",
+      "bracing core"
+    ],
+    "answer": "The simple rule: exhale during the hard part (lifting the weight), inhale during the easier lowering part. On heavier compound lifts, many lifters take a breath into the belly, brace the core like preparing for a light poke to the stomach, and exhale at the top of the rep. Avoid extended breath-holding through multiple reps, especially if you're new or feel light-headed.",
+    "followups": [
+      "ts-tempo",
+      "ts-form-check"
+    ],
+    "personalize": "None usually needed."
+  },
+  {
+    "id": "ts-tempo",
+    "category": "technique-safety",
+    "question": "How fast should I do my reps?",
+    "aliases": [
+      "rep speed",
+      "tempo training",
+      "slow negatives",
+      "lifting fast vs slow"
+    ],
+    "answer": "Control the lowering phase over roughly 1-3 seconds, then lift with intent; you don't need to count precise tempos. The key is that the muscle, not momentum, moves the weight through a full range of motion. Deliberately slow reps aren't superior for growth, but sloppy fast reps that bounce or swing are wasted effort.",
+    "followups": [
+      "ts-breathing",
+      "gs-reps-sets"
+    ],
+    "personalize": "None usually needed."
+  },
+  {
+    "id": "ts-rpe-rir",
+    "category": "technique-safety",
+    "question": "What do RPE and RIR mean?",
+    "aliases": [
+      "rate of perceived exertion",
+      "reps in reserve",
+      "RPE 8 meaning",
+      "how hard should sets be",
+      "effort scale"
+    ],
+    "answer": "RIR is 'reps in reserve': how many more reps you could have done before failing. RPE is a 1-10 effort scale where RPE 10 means nothing left and RPE 8 means about 2 reps left (RPE = 10 minus RIR). Most working sets should land around RPE 7-9, i.e. 1-3 reps shy of failure: hard enough to grow, controlled enough to recover and keep good form.",
+    "followups": [
+      "ts-failure",
+      "gs-reps-sets"
+    ],
+    "personalize": "Explain relative to whether the user's routine logs RPE or target reps."
+  },
+  {
+    "id": "ts-failure",
+    "category": "technique-safety",
+    "question": "Should I train to failure?",
+    "aliases": [
+      "going to failure",
+      "max out every set",
+      "leave reps in the tank",
+      "how close to failure"
+    ],
+    "answer": "You need to train close to failure to grow, but rarely all the way to it. Stopping 1-3 reps short delivers nearly the same muscle stimulus with less fatigue and injury risk, letting you do more quality work across the week. Save true failure for the last set of safe isolation exercises (like curls or machine work), not heavy squats or deadlifts.",
+    "followups": [
+      "ts-rpe-rir",
+      "pp-progressive-overload"
+    ],
+    "personalize": "Beginners should stay further from failure while learning form; note the user's experience level."
+  },
+  {
+    "id": "ts-pain-vs-soreness",
+    "category": "technique-safety",
+    "question": "How do I tell the difference between pain and normal soreness?",
+    "aliases": [
+      "is this pain normal",
+      "sore or injured",
+      "sharp pain lifting",
+      "joint pain workout",
+      "should it hurt"
+    ],
+    "answer": "Normal soreness is a dull, broad ache in the muscle that appears 24-48 hours after training and eases with movement. Warning signs are different: sharp or stabbing pain, pain in a joint rather than muscle, pain during the exercise itself, swelling, or anything that alters how you move. For warning-sign pain, stop the aggravating exercise; if it persists more than a few days, worsens, or limits daily activities, see a doctor or physical therapist rather than training through it.",
+    "followups": [
+      "re-doms",
+      "se-injury-workaround"
+    ],
+    "personalize": "Never diagnose; if the user has logged injuries, remind them of their exclusions."
+  },
+  {
+    "id": "ts-form-check",
+    "category": "technique-safety",
+    "question": "How do I know if my form is correct?",
+    "aliases": [
+      "check my form",
+      "am I doing this right",
+      "bad technique",
+      "learn proper form"
+    ],
+    "answer": "Film your sets from the side at an angle and compare them to a reputable demo of the same lift; most form errors are obvious on video even to beginners. Good general signs: the target muscle does the work, the bar or weight moves on a consistent path, and the last reps look like the first ones, just slower. If a lift consistently feels wrong or causes joint pain, drop the weight, shorten the range, or switch to an easier variation while you learn.",
+    "followups": [
+      "ts-tempo",
+      "gs-machines-vs-free-weights"
+    ],
+    "personalize": "Point to the exercise demo/notes for the specific movements in the user's routine."
+  },
+  {
+    "id": "ts-gear",
+    "category": "technique-safety",
+    "question": "Do I need a lifting belt, straps, or special shoes?",
+    "aliases": [
+      "lifting belt when",
+      "wrist straps",
+      "weightlifting shoes",
+      "gloves for gym",
+      "gear for lifting"
+    ],
+    "answer": "For your first year or so: no. Flat, stable shoes (or even sturdy sneakers) are the only thing worth having early on. A belt becomes useful for heavy squats and deadlifts once you're lifting substantial loads, and straps help when grip limits your back exercises, but neither replaces learning to brace and grip first.",
+    "followups": [
+      "ts-breathing",
+      "gs-first-time"
+    ],
+    "personalize": "Only relevant once the user's logged lifts get heavy relative to bodyweight."
+  },
+  {
+    "id": "ts-knees-past-toes",
+    "category": "technique-safety",
+    "question": "Is it bad if my knees go past my toes when I squat?",
+    "aliases": [
+      "knees over toes",
+      "squat depth safe",
+      "are deep squats bad",
+      "squatting bad for knees"
+    ],
+    "answer": "No, this is an old myth. Knees traveling past the toes is normal and necessary for deep squats, lunges, and stairs; healthy knees adapt to this loading and generally get stronger for it. Squat to a depth you can control with heels down and a stable spine, and progress load gradually; if you have an existing knee condition, get personal guidance from a physio rather than avoiding the movement forever.",
+    "followups": [
+      "ts-form-check",
+      "ts-pain-vs-soreness"
+    ],
+    "personalize": "Adjust if the user has logged a knee limitation."
+  },
+  {
+    "id": "se-home-no-gym",
+    "category": "equipment-substitutions",
+    "question": "Can I build muscle at home without a gym?",
+    "aliases": [
+      "home workout no equipment",
+      "bodyweight only gains",
+      "no gym membership",
+      "train at home effectively"
+    ],
+    "answer": "Yes. Muscle responds to challenging sets near failure, and push-ups, rows on a table or with bands, split squats, and similar moves can absolutely provide that, especially for beginners and intermediates. The main challenge is progression: as reps get high, use harder variations (elevated feet, single-leg, slower lowering) or add cheap equipment like adjustable dumbbells or bands. Expect progress to be very real, just requiring more creativity than a barbell gym.",
+    "followups": [
+      "se-dumbbells-only",
+      "se-bands",
+      "pp-progressive-overload"
+    ],
+    "personalize": "Generate substitutions from the user's saved equipment list."
+  },
+  {
+    "id": "se-dumbbells-only",
+    "category": "equipment-substitutions",
+    "question": "What can I do with only dumbbells?",
+    "aliases": [
+      "dumbbell only routine",
+      "just a pair of dumbbells",
+      "home dumbbell workout",
+      "no barbell"
+    ],
+    "answer": "A pair of dumbbells covers nearly everything: goblet squats, Romanian deadlifts, floor or bench presses, rows, overhead presses, lunges, and curls. Adjustable dumbbells extend progression for years. When the weight becomes too light, slow the lowering phase, add reps, use single-arm or single-leg versions, or shorten rest periods to keep sets challenging.",
+    "followups": [
+      "se-home-no-gym",
+      "pp-when-add-weight"
+    ],
+    "personalize": "Tailor to the actual dumbbell weights the user owns."
+  },
+  {
+    "id": "se-machine-taken",
+    "category": "equipment-substitutions",
+    "question": "The machine or rack I need is taken. What do I do?",
+    "aliases": [
+      "equipment busy",
+      "gym is crowded",
+      "someone on my machine",
+      "swap exercise order"
+    ],
+    "answer": "Swap in a substitute that trains the same muscle through a similar pattern; for example, dumbbell press for a taken bench, leg press for squats, or cable rows for a machine row. You can also reorder your workout and come back to that station later. The muscle doesn't know the brand of resistance, so a one-day substitution costs you nothing.",
+    "followups": [
+      "se-substitute-exercise",
+      "gs-machines-vs-free-weights"
+    ],
+    "personalize": "Offer in-app exercise swaps matched to the user's routine and gym equipment."
+  },
+  {
+    "id": "se-substitute-exercise",
+    "category": "equipment-substitutions",
+    "question": "How do I substitute an exercise I can't do?",
+    "aliases": [
+      "replace an exercise",
+      "alternative exercise",
+      "can't do this movement",
+      "exercise swap rules"
+    ],
+    "answer": "Match three things: the muscle being trained, the movement pattern (push, pull, squat, hinge), and roughly the same rep range. Barbell bench, dumbbell press, machine press, and push-ups are all interchangeable for chest, for instance. If you're avoiding a movement because it hurts rather than because equipment is missing, choose a pain-free variation and see a professional if the issue persists.",
+    "followups": [
+      "se-machine-taken",
+      "app-edit-routine",
+      "ts-pain-vs-soreness"
+    ],
+    "personalize": "Use the user's equipment list and any excluded exercises to suggest specific swaps."
+  },
+  {
+    "id": "se-travel",
+    "category": "equipment-substitutions",
+    "question": "How do I train while traveling?",
+    "aliases": [
+      "hotel workout",
+      "vacation training",
+      "on the road gym",
+      "keep gains while traveling"
+    ],
+    "answer": "Short trips need almost nothing: muscle takes weeks to fade, not days, so a week off is fine. For longer trips, two or three short full-body sessions using hotel dumbbells, bands, or bodyweight will fully maintain your progress; maintenance takes far less work than building. Aim for a few hard sets per muscle and enjoy the trip.",
+    "followups": [
+      "se-home-no-gym",
+      "gs-missed-workout"
+    ],
+    "personalize": "Offer a condensed travel version of the user's current routine."
+  },
+  {
+    "id": "se-bands",
+    "category": "equipment-substitutions",
+    "question": "Are resistance bands actually effective?",
+    "aliases": [
+      "bands vs weights",
+      "resistance band muscle growth",
+      "do bands build muscle",
+      "band workouts work"
+    ],
+    "answer": "Yes, when sets are taken close to failure, bands build muscle comparably to free weights, and studies back this up. Their quirk is that resistance increases as the band stretches, so tension is lightest at the bottom of a movement. They shine for home training, travel, warm-ups, and exercises like rows, presses, and pull-aparts; pair them with bodyweight moves for a complete setup.",
+    "followups": [
+      "se-home-no-gym",
+      "se-travel"
+    ],
+    "personalize": "Relevant if bands are in the user's equipment list."
+  },
+  {
+    "id": "se-injury-workaround",
+    "category": "equipment-substitutions",
+    "question": "Can I keep training with a sore or injured body part?",
+    "aliases": [
+      "train around injury",
+      "hurt my shoulder can I still lift",
+      "working out injured",
+      "bad back exercises"
+    ],
+    "answer": "Often you can keep training everything that doesn't hurt; if a shoulder is bothering you, legs and core are usually fair game, and staying active tends to help overall recovery. However, this app can't diagnose injuries or prescribe rehab. If you have real pain, get it assessed by a doctor or physical therapist first, then tell the app which movements to exclude so your plan works around them.",
+    "followups": [
+      "ts-pain-vs-soreness",
+      "se-substitute-exercise",
+      "app-edit-routine"
+    ],
+    "personalize": "Reference the user's logged injuries/exclusions; never suggest exercises for the affected area."
+  },
+  {
+    "id": "pp-progressive-overload",
+    "category": "progression-plateaus",
+    "question": "What is progressive overload?",
+    "aliases": [
+      "how to progress",
+      "getting stronger over time",
+      "overload principle",
+      "keep making gains"
+    ],
+    "answer": "Progressive overload means gradually asking more of your muscles over time: more weight, more reps, more sets, or better form and range of motion. It's the single non-negotiable driver of long-term progress; a workout that never gets harder stops producing change. The easiest system is double progression: work within a rep range, and when you hit the top of it on all sets, add a little weight and start again at the bottom.",
+    "followups": [
+      "pp-when-add-weight",
+      "pp-how-much-add",
+      "gs-reps-sets"
+    ],
+    "personalize": "Show how the user's own logs demonstrate (or stall on) overload."
+  },
+  {
+    "id": "pp-when-add-weight",
+    "category": "progression-plateaus",
+    "question": "When should I add weight to an exercise?",
+    "aliases": [
+      "when to go heavier",
+      "increase the weight",
+      "ready for more weight",
+      "how to know when to progress"
+    ],
+    "answer": "Add weight when you can complete all prescribed sets at the top of your rep range with solid form and roughly 1-2 reps still in reserve. If your plan says 3x8-12 and you hit 12, 12, 12 comfortably, it's time. If you only hit the top on the first set, keep the weight and chase reps on the later sets first.",
+    "followups": [
+      "pp-how-much-add",
+      "pp-progressive-overload"
+    ],
+    "personalize": "Apply to the user's actual logged sets and target rep ranges."
+  },
+  {
+    "id": "pp-how-much-add",
+    "category": "progression-plateaus",
+    "question": "How much weight should I add at a time?",
+    "aliases": [
+      "weight jumps",
+      "smallest increase",
+      "add 5 pounds",
+      "increment size"
+    ],
+    "answer": "Small jumps win: about 2.5-5 lb (1-2.5 kg) on upper-body lifts and 5-10 lb (2.5-5 kg) on lower-body lifts. Expect reps to drop slightly after a jump, then build back up. On dumbbells and machines with big gaps between weights, add reps or slow the lowering phase until the next increment is manageable.",
+    "followups": [
+      "pp-when-add-weight",
+      "pp-plateau"
+    ],
+    "personalize": "Mention the equipment increments the user has available."
+  },
+  {
+    "id": "pp-plateau",
+    "category": "progression-plateaus",
+    "question": "I've stopped making progress. What should I do?",
+    "aliases": [
+      "hit a plateau",
+      "stalling on lifts",
+      "no progress anymore",
+      "stuck at same weight",
+      "not getting stronger"
+    ],
+    "answer": "First check the boring basics, because they cause most plateaus: are you sleeping 7+ hours, eating enough protein and calories, and actually training close to failure with more weight or reps than last month? If the basics are solid, try a deload week, then return and progress with smaller jumps or a different rep range. True plateaus after years of training are normal; apparent plateaus after months usually trace back to recovery or effort.",
+    "followups": [
+      "pp-deload",
+      "re-sleep",
+      "nu-calories"
+    ],
+    "personalize": "Review the user's recent logs, sleep/nutrition notes, and time on current program."
+  },
+  {
+    "id": "pp-deload",
+    "category": "progression-plateaus",
+    "question": "What is a deload and when do I need one?",
+    "aliases": [
+      "deload week",
+      "take a light week",
+      "planned recovery week",
+      "feeling beat up from training"
+    ],
+    "answer": "A deload is a planned easy week, typically using about half your normal sets or 60-70% of your usual weights, that lets accumulated fatigue clear while you keep practicing the movements. Take one when strength stalls for a few weeks, joints feel achy, sleep and motivation dip, or roughly every 6-10 hard weeks. You won't lose muscle in a light week; lifters usually come back stronger.",
+    "followups": [
+      "pp-plateau",
+      "re-overtraining"
+    ],
+    "personalize": "Suggest timing based on how many consecutive hard weeks the user has logged."
+  },
+  {
+    "id": "pp-change-program",
+    "category": "progression-plateaus",
+    "question": "How often should I change my program?",
+    "aliases": [
+      "switch routines",
+      "muscle confusion",
+      "bored of my program",
+      "new program when",
+      "program hopping"
+    ],
+    "answer": "Stick with a program for at least 8-12 weeks as long as it's still producing progress; 'muscle confusion' is marketing, and constantly switching prevents the repeated practice that drives gains. Change programs when progress stalls despite good recovery, your goal changes, or boredom genuinely threatens your consistency. Small swaps of an exercise or two can freshen things up without abandoning the plan.",
+    "followups": [
+      "pp-plateau",
+      "app-change-split"
+    ],
+    "personalize": "Note how long the user has run their current routine and whether their logs still show progression."
+  },
+  {
+    "id": "pp-track-progress",
+    "category": "progression-plateaus",
+    "question": "What should I track besides the scale?",
+    "aliases": [
+      "measure progress",
+      "progress photos",
+      "how to know it's working",
+      "tracking without scale"
+    ],
+    "answer": "Track your lifts (weight x reps is the most honest progress signal), monthly waist and other tape measurements, and progress photos in consistent lighting every 4 weeks. How clothes fit and your energy in daily life count too. The scale is just one noisy input; strength climbing while your waist holds or shrinks means you're winning regardless of what it says.",
+    "followups": [
+      "bc-scale-fluctuations",
+      "gs-how-long-results"
+    ],
+    "personalize": "Point to the metrics the app is already logging for the user."
+  },
+  {
+    "id": "nu-calories",
+    "category": "nutrition",
+    "question": "How many calories should I eat?",
+    "aliases": [
+      "calorie target",
+      "how much to eat",
+      "TDEE",
+      "maintenance calories",
+      "calorie deficit how big"
+    ],
+    "answer": "A rough starting point: bodyweight in pounds x 14-16 for maintenance, then subtract about 300-500 calories to lose fat or add 200-300 to gain muscle. Every formula is an estimate, so treat it as a first guess: track your weight trend for 2-3 weeks and adjust intake up or down based on what actually happens. General guidance only; for medical conditions or a history of disordered eating, work with a registered dietitian.",
+    "followups": [
+      "nu-protein",
+      "nu-cut-or-bulk",
+      "bc-deficit-not-losing"
+    ],
+    "personalize": "Compute from the user's weight, activity level, and goal; reference their in-app calorie target."
+  },
+  {
+    "id": "nu-protein",
+    "category": "nutrition",
+    "question": "How much protein do I need?",
+    "aliases": [
+      "protein per day",
+      "grams of protein",
+      "protein for muscle",
+      "protein target",
+      "1g per pound"
+    ],
+    "answer": "Aim for roughly 0.7-1 gram per pound of bodyweight per day (1.6-2.2 g/kg); if you carry a lot of body fat, base it on your goal weight instead. Spreading it across 3-4 meals of 25-40 g each makes the total easier to hit and is mildly better for muscle. More than this range isn't harmful for healthy people but adds no extra muscle benefit.",
+    "followups": [
+      "nu-protein-sources",
+      "nu-protein-powder",
+      "nu-calories"
+    ],
+    "personalize": "Calculate the gram target from the user's bodyweight and goal."
+  },
+  {
+    "id": "nu-protein-sources",
+    "category": "nutrition",
+    "question": "What are good protein sources, including vegetarian options?",
+    "aliases": [
+      "high protein foods",
+      "vegetarian protein",
+      "vegan protein",
+      "protein without meat",
+      "cheap protein"
+    ],
+    "answer": "Strong options: chicken, lean beef, fish, eggs, Greek yogurt, and cottage cheese. Vegetarian and vegan lifters do fine with tofu, tempeh, seitan, lentils, beans, edamame, and protein powders (whey, or pea/soy blends for vegans); plant-based eaters may want to aim at the higher end of the protein range since plant proteins are slightly less efficiently used. Build each meal around one of these and the daily target takes care of itself.",
+    "followups": [
+      "nu-protein",
+      "nu-protein-powder"
+    ],
+    "personalize": "Filter suggestions by the user's dietary preference (vegetarian/vegan/allergies)."
+  },
+  {
+    "id": "nu-macros",
+    "category": "nutrition",
+    "question": "What are macros and do I need to track them?",
+    "aliases": [
+      "macronutrients explained",
+      "counting macros",
+      "carbs fats protein split",
+      "do I need to track food"
+    ],
+    "answer": "Macros are protein, carbohydrates, and fat, the three calorie-providing nutrients. For most goals you only need two numbers: total calories and protein; let carbs and fats fall where your preferences take them. Full macro tracking is a useful short-term learning tool, but it's not required forever; many people track carefully for a month, learn portion sizes, then loosely maintain.",
+    "followups": [
+      "nu-calories",
+      "nu-protein"
+    ],
+    "personalize": "Match to whether the user has set macro targets in the app or only calories."
+  },
+  {
+    "id": "nu-meal-timing",
+    "category": "nutrition",
+    "question": "Does meal timing matter? Should I eat before working out?",
+    "aliases": [
+      "eating before workout",
+      "fasted training",
+      "meal frequency",
+      "when to eat",
+      "breakfast before gym"
+    ],
+    "answer": "Daily totals of calories and protein matter far more than timing. That said, a meal with carbs and protein 1-3 hours before training helps most people perform better, and training fully fasted is fine if you feel good doing it. Meal frequency (2 meals vs 6) is personal preference; pick the pattern that controls your hunger.",
+    "followups": [
+      "nu-post-workout",
+      "nu-calories"
+    ],
+    "personalize": "Adjust to when the user trains relative to their eating schedule."
+  },
+  {
+    "id": "nu-post-workout",
+    "category": "nutrition",
+    "question": "Do I need protein right after my workout?",
+    "aliases": [
+      "anabolic window",
+      "post workout shake",
+      "protein within 30 minutes",
+      "eating after training"
+    ],
+    "answer": "The famous 30-minute 'anabolic window' is largely a myth; research shows the opportunity to support muscle lasts several hours around training. If you ate protein within a few hours before lifting, there's no rush afterward, though a post-workout meal or shake is a convenient way to hit your daily target. Total daily protein remains the thing that actually matters.",
+    "followups": [
+      "nu-protein",
+      "nu-meal-timing"
+    ],
+    "personalize": "None usually needed."
+  },
+  {
+    "id": "nu-supplements",
+    "category": "nutrition",
+    "question": "What supplements are actually worth taking?",
+    "aliases": [
+      "best supplements",
+      "do supplements work",
+      "what should I take",
+      "supplement stack beginner"
+    ],
+    "answer": "Only a few have solid evidence: creatine monohydrate (3-5 g daily), protein powder if food alone doesn't hit your target, and caffeine before training if you tolerate it. Vitamin D can make sense where sun is scarce, ideally confirmed by a doctor. Almost everything else, including fat burners, BCAAs, and testosterone boosters, is poorly supported; food, sleep, and training drive the vast majority of results.",
+    "followups": [
+      "nu-creatine",
+      "nu-protein-powder"
+    ],
+    "personalize": "Check any user-stated goal, budget, or dietary restrictions; advise consulting a doctor if they take medications."
+  },
+  {
+    "id": "nu-creatine",
+    "category": "nutrition",
+    "question": "Should I take creatine? Is it safe?",
+    "aliases": [
+      "creatine monohydrate",
+      "creatine side effects",
+      "creatine loading",
+      "does creatine work",
+      "creatine water weight"
+    ],
+    "answer": "Creatine monohydrate is the most-studied sports supplement and shows consistent, modest benefits for strength and muscle, with a strong safety record in healthy people. Take 3-5 g daily, any time of day; no loading phase or cycling is needed. Expect a couple of pounds of water weight inside the muscle, which is normal. If you have kidney disease or other medical conditions, check with your doctor first.",
+    "followups": [
+      "nu-supplements",
+      "bc-scale-fluctuations"
+    ],
+    "personalize": "Flag the initial scale jump if the user closely tracks weight."
+  },
+  {
+    "id": "nu-protein-powder",
+    "category": "nutrition",
+    "question": "Do I need protein powder?",
+    "aliases": [
+      "whey protein necessary",
+      "protein shakes",
+      "shakes vs food",
+      "which protein powder"
+    ],
+    "answer": "No, it's just convenient food. Powder earns its place when hitting your protein target from whole food is hard on time, budget, or appetite; nutritionally, a whey shake and a chicken breast serve the same purpose. If you use one, whey or a pea/soy blend with around 20-25 g protein per scoop is all you need; fancy formulas add cost, not results.",
+    "followups": [
+      "nu-protein",
+      "nu-supplements"
+    ],
+    "personalize": "Depends on how far the user's logged intake sits from their protein target."
+  },
+  {
+    "id": "nu-cut-or-bulk",
+    "category": "nutrition",
+    "question": "Should I cut or bulk first?",
+    "aliases": [
+      "lose fat or build muscle first",
+      "bulking vs cutting",
+      "skinny fat what to do",
+      "lean bulk"
+    ],
+    "answer": "A practical rule: if you're carrying noticeable extra fat, start with a moderate cut; if you're lean and want size, do a lean bulk with a small surplus of 200-300 calories. If you're new to lifting or somewhere in between ('skinny fat'), eat around maintenance with high protein and train hard, and you'll likely recomp: losing fat and gaining muscle simultaneously. Whatever you pick, avoid extreme deficits or aggressive bulks; both backfire.",
+    "followups": [
+      "bc-recomp",
+      "nu-calories",
+      "bc-fat-loss-rate"
+    ],
+    "personalize": "Base the recommendation on the user's goal, training age, and current stats."
+  },
+  {
+    "id": "nu-hydration",
+    "category": "nutrition",
+    "question": "How much water should I drink?",
+    "aliases": [
+      "water intake",
+      "hydration for lifting",
+      "gallon of water a day",
+      "am I drinking enough"
+    ],
+    "answer": "A reasonable target is around 2-3 liters of total fluid daily, more with hard training, heat, or lots of sweating; the classic check is urine that's pale yellow. You don't need a gallon jug, and other drinks and food count toward the total. Sip through the day rather than chugging around workouts.",
+    "followups": [
+      "bc-scale-fluctuations",
+      "re-doms"
+    ],
+    "personalize": "None usually needed."
+  },
+  {
+    "id": "nu-alcohol",
+    "category": "nutrition",
+    "question": "Will alcohol ruin my gains?",
+    "aliases": [
+      "drinking and muscle",
+      "beer after workout",
+      "alcohol fat loss",
+      "can I drink and still progress"
+    ],
+    "answer": "Moderate, occasional drinking won't erase your progress, but alcohol does work against you three ways: it adds easy calories, degrades sleep quality, and in larger amounts blunts muscle recovery. A drink or two now and then fits any sensible plan; frequent heavy nights will noticeably slow both fat loss and muscle gain. If you drink, try to keep it away from your hardest training days.",
+    "followups": [
+      "re-sleep",
+      "nu-calories"
+    ],
+    "personalize": "None usually needed; keep tone non-judgmental."
+  },
+  {
+    "id": "nu-cheat-meals",
+    "category": "nutrition",
+    "question": "Will one bad day of eating ruin my progress?",
+    "aliases": [
+      "cheat meal",
+      "blew my diet",
+      "overate this weekend",
+      "cheat day damage",
+      "fell off my diet"
+    ],
+    "answer": "No. Fat gain requires a sustained surplus over weeks; one big day mostly adds temporary water and food weight that clears in a few days. The real risk is psychological: treating one slip as failure and abandoning the plan. Log it if you can, return to normal eating at the next meal, and judge your week by its average, not its worst day.",
+    "followups": [
+      "bc-scale-fluctuations",
+      "gs-consistency"
+    ],
+    "personalize": "None usually needed; keep tone reassuring."
+  },
+  {
+    "id": "re-rest-days",
+    "category": "recovery",
+    "question": "How many rest days do I need?",
+    "aliases": [
+      "days off training",
+      "is it ok to lift every day",
+      "rest between workouts",
+      "recovery days per week"
+    ],
+    "answer": "Most lifters do best with 1-3 full rest days per week, and each muscle generally wants about 48 hours before being hit hard again. Rest days are when adaptation actually happens; training is the stimulus, recovery is the growth. If you love daily movement, make some days light: walking, mobility, or easy cardio all count as rest from lifting.",
+    "followups": [
+      "re-active-recovery",
+      "gs-how-many-days",
+      "re-overtraining"
+    ],
+    "personalize": "Align with the split and weekly schedule the user runs."
+  },
+  {
+    "id": "re-doms",
+    "category": "recovery",
+    "question": "Why am I so sore, and can I train while sore?",
+    "aliases": [
+      "muscle soreness",
+      "DOMS",
+      "sore two days later",
+      "too sore to work out",
+      "soreness means growth"
+    ],
+    "answer": "Delayed-onset muscle soreness (DOMS) peaks 24-48 hours after unfamiliar or hard training and fades as your body adapts; it is not a measure of workout quality, and its absence doesn't mean a wasted session. Training mildly sore muscles is fine and light movement usually helps. If soreness is severe enough to change how you move, train a different body part or go light that day.",
+    "followups": [
+      "ts-pain-vs-soreness",
+      "re-active-recovery"
+    ],
+    "personalize": "Reassure new users that early soreness fades sharply after the first weeks."
+  },
+  {
+    "id": "re-sleep",
+    "category": "recovery",
+    "question": "How much does sleep actually matter for my results?",
+    "aliases": [
+      "sleep and muscle growth",
+      "training on no sleep",
+      "how many hours sleep",
+      "sleep for recovery"
+    ],
+    "answer": "Enormously; it's the most underrated training variable. Aim for 7-9 hours: short sleep measurably reduces strength, slows muscle gain, increases hunger, and shifts weight loss away from fat and toward muscle. If you're chronically under-slept, fixing that will likely do more for your progress than any program or supplement change.",
+    "followups": [
+      "re-overtraining",
+      "pp-plateau"
+    ],
+    "personalize": "If the user reports poor sleep, favor lower training volume recommendations."
+  },
+  {
+    "id": "re-stretching",
+    "category": "recovery",
+    "question": "Should I stretch before or after workouts?",
+    "aliases": [
+      "static stretching",
+      "flexibility routine",
+      "does stretching prevent injury",
+      "stretching necessary"
+    ],
+    "answer": "Save long static stretches for after training or separate sessions; before lifting, use dynamic movements and warm-up sets instead, since long pre-lift static stretching can slightly reduce strength and doesn't prevent injury. Stretching is worthwhile if you want more flexibility or simply enjoy it, but it isn't mandatory for muscle growth. Lifting through a full range of motion maintains and even improves flexibility on its own.",
+    "followups": [
+      "ts-warmup",
+      "re-active-recovery"
+    ],
+    "personalize": "None usually needed."
+  },
+  {
+    "id": "re-overtraining",
+    "category": "recovery",
+    "question": "How do I know if I'm overtraining?",
+    "aliases": [
+      "overtraining symptoms",
+      "too much exercise",
+      "always tired from gym",
+      "burned out from training"
+    ],
+    "answer": "True overtraining is rare, but overreaching is common: watch for strength dropping for 2+ weeks, persistently poor sleep, elevated resting heart rate, irritability, nagging aches, and dread of workouts you used to enjoy. The fix is simple: a deload week or a few easy days, more sleep, and enough food. If deep fatigue persists for weeks despite genuine rest, see a doctor to rule out other causes.",
+    "followups": [
+      "pp-deload",
+      "re-sleep",
+      "re-rest-days"
+    ],
+    "personalize": "Check the user's logged frequency and recent performance trend."
+  },
+  {
+    "id": "re-active-recovery",
+    "category": "recovery",
+    "question": "What should I do on rest days?",
+    "aliases": [
+      "active recovery ideas",
+      "rest day activity",
+      "should I do nothing on rest days",
+      "walking on off days"
+    ],
+    "answer": "Anything easy and enjoyable: walking, cycling at a relaxed pace, swimming, mobility work, or genuinely nothing at all. Light movement can reduce soreness and keeps daily calorie burn up without cutting into recovery. The only rule is that it should leave you feeling fresher, not more tired, for your next lifting session.",
+    "followups": [
+      "re-rest-days",
+      "ca-steps"
+    ],
+    "personalize": "None usually needed."
+  },
+  {
+    "id": "ca-how-much",
+    "category": "cardio",
+    "question": "How much cardio should I do?",
+    "aliases": [
+      "cardio per week",
+      "do I need cardio",
+      "cardio while lifting",
+      "minimum cardio"
+    ],
+    "answer": "For health, target roughly 150 minutes of moderate cardio per week, in whatever chunks fit your life; brisk walking counts. For fat loss, cardio is a helpful supplement to a calorie deficit, not a replacement for one. Two or three easy 20-40 minute sessions, or simply a high daily step count, covers most lifters' needs without hurting gym performance.",
+    "followups": [
+      "ca-interference",
+      "ca-steps",
+      "ca-zone2"
+    ],
+    "personalize": "Scale to the user's goal: more emphasis for fat-loss or endurance goals, minimal effective dose for pure muscle gain."
+  },
+  {
+    "id": "ca-interference",
+    "category": "cardio",
+    "question": "Will cardio kill my gains?",
+    "aliases": [
+      "interference effect",
+      "cardio and muscle loss",
+      "running ruins lifting",
+      "cardio while bulking"
+    ],
+    "answer": "At normal amounts, no. The 'interference effect' only becomes meaningful with high volumes of intense endurance work layered on top of lifting. Moderate cardio, especially walking, cycling, or anything low impact, doesn't measurably reduce muscle growth and improves the conditioning that lets you train harder. To be extra safe, keep intense cardio on separate days from heavy leg training, or do it after lifting.",
+    "followups": [
+      "ca-how-much",
+      "ca-before-after"
+    ],
+    "personalize": "None usually needed unless the user runs seriously alongside lifting."
+  },
+  {
+    "id": "ca-before-after",
+    "category": "cardio",
+    "question": "Should I do cardio before or after lifting?",
+    "aliases": [
+      "cardio order",
+      "run before or after weights",
+      "treadmill first or last",
+      "same day cardio and weights"
+    ],
+    "answer": "Do whichever matters most to your goal first, while you're fresh. For most lifters that means weights first, then cardio, since fatigued lifting compromises both performance and form. A short 5-minute easy warm-up jog beforehand is fine and doesn't count as 'cardio first.'",
+    "followups": [
+      "ca-interference",
+      "ts-warmup"
+    ],
+    "personalize": "Flip the order if the user's primary goal is endurance."
+  },
+  {
+    "id": "ca-zone2",
+    "category": "cardio",
+    "question": "What is zone 2 cardio?",
+    "aliases": [
+      "zone 2 training",
+      "low intensity cardio",
+      "conversational pace",
+      "heart rate zones"
+    ],
+    "answer": "Zone 2 is easy, steady cardio at an intensity where you can still hold a conversation, roughly 60-70% of max heart rate. It builds your aerobic base and heart health with very little recovery cost, which makes it the friendliest cardio to combine with lifting. If you can only speak in short gasps, you've left zone 2; slow down, even if the pace feels almost embarrassingly easy.",
+    "followups": [
+      "ca-how-much",
+      "ca-hiit-liss"
+    ],
+    "personalize": "Estimate the user's zone from age if no heart-rate data is available."
+  },
+  {
+    "id": "ca-steps",
+    "category": "cardio",
+    "question": "How many steps a day should I aim for?",
+    "aliases": [
+      "10000 steps",
+      "daily step goal",
+      "walking for fat loss",
+      "steps count as cardio"
+    ],
+    "answer": "Somewhere between 7,000 and 10,000 steps daily is a great target; health benefits climb steeply up to that range and level off after. The famous 10,000 number came from marketing, not science, so don't stress the exact figure. Walking is the most sustainable fat-loss tool there is: low effort, no recovery cost, and easy to stack onto ordinary life.",
+    "followups": [
+      "ca-how-much",
+      "re-active-recovery"
+    ],
+    "personalize": "Set the target relative to the user's current average rather than an absolute number."
+  },
+  {
+    "id": "ca-hiit-liss",
+    "category": "cardio",
+    "question": "Is HIIT or steady-state cardio better for fat loss?",
+    "aliases": [
+      "HIIT vs LISS",
+      "intervals or steady state",
+      "best cardio for fat loss",
+      "afterburn effect"
+    ],
+    "answer": "Calorie for calorie, they produce similar fat loss; the 'afterburn' from HIIT is real but small. HIIT saves time while costing more recovery; steady-state takes longer but barely interferes with lifting. Since fat loss is decided by your overall calorie balance, pick whichever you'll actually do consistently, or mix both.",
+    "followups": [
+      "ca-zone2",
+      "bc-fat-loss-rate"
+    ],
+    "personalize": "Consider the user's schedule and how much lifting volume they're recovering from."
+  },
+  {
+    "id": "bc-fat-loss-rate",
+    "category": "body-composition",
+    "question": "How fast can I lose fat?",
+    "aliases": [
+      "safe weight loss rate",
+      "pounds per week",
+      "how quickly to cut",
+      "lose 20 pounds how long"
+    ],
+    "answer": "A sustainable pace is 0.5-1% of bodyweight per week, roughly 1-2 lb for most people; heavier individuals can safely sit at the top of that range, leaner ones at the bottom. Faster than that usually costs muscle, energy, and adherence. Expect a quick first-week drop (mostly water) followed by a slower steady trend; judge by the multi-week average.",
+    "followups": [
+      "nu-calories",
+      "bc-scale-fluctuations",
+      "bc-deficit-not-losing"
+    ],
+    "personalize": "Convert the percentage into actual pounds/kg from the user's current weight."
+  },
+  {
+    "id": "bc-muscle-gain-rate",
+    "category": "body-composition",
+    "question": "How fast can I build muscle?",
+    "aliases": [
+      "muscle gain per month",
+      "how much muscle in a year",
+      "newbie gains",
+      "realistic muscle growth"
+    ],
+    "answer": "Realistic natural rates: men might gain roughly 1-2 lb of muscle per month in their first year, women about half that, with the rate halving each subsequent year of proper training. 'Newbie gains' are real, so your first year is your fastest; don't waste it program-hopping. Anyone promising dramatically faster results is selling something.",
+    "followups": [
+      "gs-how-long-results",
+      "nu-cut-or-bulk",
+      "pp-progressive-overload"
+    ],
+    "personalize": "Frame expectations by the user's training age and sex."
+  },
+  {
+    "id": "bc-recomp",
+    "category": "body-composition",
+    "question": "Can I lose fat and build muscle at the same time?",
+    "aliases": [
+      "body recomposition",
+      "recomp possible",
+      "gain muscle while cutting",
+      "burn fat build muscle together"
+    ],
+    "answer": "Yes, in the right circumstances: beginners, people returning after a layoff, and those with higher body fat recomp readily by lifting hard, keeping protein around 1 g per pound, and eating at or slightly below maintenance. The leaner and more trained you are, the slower recomposition gets, which is when dedicated cut and gain phases become more efficient. Expect the scale to move little during a recomp; use measurements and photos instead.",
+    "followups": [
+      "nu-cut-or-bulk",
+      "pp-track-progress"
+    ],
+    "personalize": "Assess likelihood from the user's training age and body-fat situation."
+  },
+  {
+    "id": "bc-spot-reduction",
+    "category": "body-composition",
+    "question": "How do I lose belly fat specifically?",
+    "aliases": [
+      "spot reduction",
+      "target belly fat",
+      "lose arm fat",
+      "crunches for belly fat",
+      "reduce fat in one area"
+    ],
+    "answer": "You can't choose where fat comes off; spot reduction is one of fitness's most persistent myths. Crunches strengthen abs but don't burn the fat covering them. The only route is overall fat loss through a calorie deficit, with lifting to keep muscle, and your genetics decide the order areas lean out; stubborn spots are usually last to go, not impossible.",
+    "followups": [
+      "bc-abs",
+      "bc-fat-loss-rate",
+      "nu-calories"
+    ],
+    "personalize": "None usually needed; keep tone kind, this is often asked with frustration."
+  },
+  {
+    "id": "bc-scale-fluctuations",
+    "category": "body-composition",
+    "question": "Why did the scale jump up overnight?",
+    "aliases": [
+      "weight fluctuation",
+      "gained 3 pounds in a day",
+      "water weight",
+      "scale went up after workout",
+      "daily weight changes"
+    ],
+    "answer": "Day-to-day weight swings of 1-5 lb are normal and almost never fat, which takes a sustained ~3,500-calorie surplus per pound. Salt, carbs, new or hard training (muscles hold water while repairing), hormonal cycles, and simple digestive contents all move the number. Weigh under consistent conditions and follow the 7-day average; single readings are noise.",
+    "followups": [
+      "bc-deficit-not-losing",
+      "pp-track-progress"
+    ],
+    "personalize": "Relevant hormone-cycle context for female users tracking daily weight."
+  },
+  {
+    "id": "bc-deficit-not-losing",
+    "category": "body-composition",
+    "question": "I'm eating in a deficit but not losing weight. Why?",
+    "aliases": [
+      "not losing weight in calorie deficit",
+      "weight loss stalled",
+      "diet not working",
+      "plateau weight loss",
+      "eating 1500 and not losing"
+    ],
+    "answer": "The usual causes, in order: untracked calories (oils, sauces, bites, drinks add up fast), a deficit estimate that's simply off for your body, or water retention masking fat loss, which is very common in the first weeks of a new program and around hormonal cycles. Give any change 3-4 weeks of consistent tracking and use the weekly average weight before concluding it isn't working. If the average truly hasn't moved in a month, trim intake by 100-200 calories or add daily steps. If you're doing everything right for months with no change, checking in with a doctor is reasonable.",
+    "followups": [
+      "bc-scale-fluctuations",
+      "nu-calories",
+      "ca-steps"
+    ],
+    "personalize": "Review the user's logging consistency and trend data before suggesting a calorie change."
+  },
+  {
+    "id": "bc-abs",
+    "category": "body-composition",
+    "question": "How do I get visible abs?",
+    "aliases": [
+      "six pack",
+      "ab workouts for definition",
+      "how to get a flat stomach",
+      "abs are made in the kitchen"
+    ],
+    "answer": "Abs become visible at low body fat, typically around 10-15% for men and 16-22% for women, so the main work is fat loss through a calorie deficit. Training the abs directly with weighted exercises makes them thicker and more visible once lean, so do both. There's no ab exercise that reveals them without the fat-loss part; that's the honest version of 'abs are made in the kitchen.'",
+    "followups": [
+      "bc-spot-reduction",
+      "bc-fat-loss-rate"
+    ],
+    "personalize": "Set expectations from the user's current body-fat estimate and goal."
+  },
+  {
+    "id": "bc-weight-up-lifting",
+    "category": "body-composition",
+    "question": "I started lifting and gained weight. Is that bad?",
+    "aliases": [
+      "gaining weight after starting gym",
+      "heavier since lifting",
+      "muscle weighs more than fat",
+      "scale up but clothes fit better"
+    ],
+    "answer": "Almost always this is water and glycogen stored inside recovering muscles plus a bit of new muscle, not fat, especially in your first weeks of training. Muscle is denser than fat, so you can gain weight while your waist shrinks and clothes fit better. Trust measurements, photos, and strength numbers over the scale during this phase.",
+    "followups": [
+      "bc-scale-fluctuations",
+      "pp-track-progress",
+      "bc-recomp"
+    ],
+    "personalize": "Reassure especially fat-loss-goal users who see an early scale rise."
+  },
+  {
+    "id": "dm-women-bulky",
+    "category": "demographics",
+    "question": "Will lifting weights make me bulky?",
+    "aliases": [
+      "women getting bulky",
+      "don't want big muscles",
+      "lifting makes women look manly",
+      "afraid of bulking up"
+    ],
+    "answer": "No. Building noticeable muscle takes years of dedicated training and eating, and women's lower testosterone makes accidental bulk essentially impossible; physique athletes work extremely hard for looks that never happen by accident. What lifting actually delivers is the firm, defined appearance most people mean by 'toned,' plus stronger bones and a higher-calorie-burning body. If you ever felt you were getting bigger than you like, you could simply ease off; muscle doesn't sneak up on anyone.",
+    "followups": [
+      "dm-toned",
+      "dm-women-training",
+      "bc-muscle-gain-rate"
+    ],
+    "personalize": "None usually needed; this is a reassurance answer."
+  },
+  {
+    "id": "dm-toned",
+    "category": "demographics",
+    "question": "How do I get toned instead of big?",
+    "aliases": [
+      "toning workouts",
+      "lean not bulky",
+      "light weights high reps for toning",
+      "definition not size"
+    ],
+    "answer": "'Toned' is just muscle you can see: some muscle built through real resistance training, with low enough body fat to show it. There's no special toning zone of light weights and high reps; challenging sets build the shape, and nutrition reveals it. So train the same way anyone builds muscle, manage calories for your fat-loss or maintenance goal, and 'toned' is exactly what you'll get.",
+    "followups": [
+      "dm-women-bulky",
+      "bc-abs",
+      "nu-calories"
+    ],
+    "personalize": "Connect to the user's goal setting (e.g., 'lean/tone' goals map to standard hypertrophy training plus calorie control)."
+  },
+  {
+    "id": "dm-women-training",
+    "category": "demographics",
+    "question": "Should women train differently than men?",
+    "aliases": [
+      "female workout plan",
+      "women's training program",
+      "do women need different exercises",
+      "training for women"
+    ],
+    "answer": "Mostly no: muscles respond to the same training regardless of sex, so the core principles of progressive overload, effort, and recovery are identical. Women often recover slightly faster between sets and tolerate higher reps well, and many simply emphasize different muscle groups by preference, but these are tweaks, not different systems. Any program built on the basics works; 'women's workouts' with tiny pink dumbbells are marketing.",
+    "followups": [
+      "dm-women-bulky",
+      "dm-period-training"
+    ],
+    "personalize": "Emphasize whatever muscle-group priorities the user selected."
+  },
+  {
+    "id": "dm-period-training",
+    "category": "demographics",
+    "question": "Should I train during my period?",
+    "aliases": [
+      "working out on period",
+      "menstrual cycle and lifting",
+      "cycle syncing workouts",
+      "period cramps exercise"
+    ],
+    "answer": "If you feel up to it, training during your period is safe and many people find it eases cramps and lifts mood; there's no evidence you must avoid it. Energy and strength can dip at different cycle phases for some, so it's fine to autoregulate: go lighter on rough days and push on good ones. Rigid 'cycle syncing' programs aren't well supported by research; your own daily energy is the better guide. For severe pain or symptoms that regularly disrupt life, talk with a healthcare provider.",
+    "followups": [
+      "dm-women-training",
+      "bc-scale-fluctuations"
+    ],
+    "personalize": "Keep advice general; never speculate about the user's cycle or symptoms."
+  },
+  {
+    "id": "dm-older-start",
+    "category": "demographics",
+    "question": "Am I too old to start lifting weights?",
+    "aliases": [
+      "lifting over 50",
+      "start gym at 60",
+      "too old for weights",
+      "strength training seniors",
+      "building muscle when older"
+    ],
+    "answer": "No; studies show people in their 60s, 70s, and beyond build meaningful muscle and strength, and lifting is one of the best things you can do for bone density, balance, and independence as you age. Start conservatively: lighter weights, controlled form, 2-3 sessions weekly, and progress a bit more gradually than a younger lifter would. If you have heart conditions, joint problems, or take regular medications, get your doctor's okay before starting, then train with confidence.",
+    "followups": [
+      "dm-older-tips",
+      "gs-first-time"
+    ],
+    "personalize": "Adjust starting intensity and progression pace based on the user's age and reported conditions."
+  },
+  {
+    "id": "dm-older-tips",
+    "category": "demographics",
+    "question": "How should older adults adjust their training?",
+    "aliases": [
+      "training over 60",
+      "joint friendly exercises",
+      "recovery when older",
+      "lifting modifications older adults"
+    ],
+    "answer": "The principles stay the same; the dials move: slightly longer warm-ups, more gradual weight increases, an extra rest day when needed, and joint-friendly variations (machines, dumbbells, controlled tempos) where barbells feel harsh. Prioritize protein, since older bodies need a bit more per meal to trigger muscle building, and include some balance and power work like sit-to-stands. Consistency and patience beat intensity at every age, but especially here.",
+    "followups": [
+      "dm-older-start",
+      "nu-protein",
+      "re-rest-days"
+    ],
+    "personalize": "Substitute joint-friendly variations for any movements the user flags as uncomfortable."
+  },
+  {
+    "id": "dm-gym-anxiety",
+    "category": "demographics",
+    "question": "I feel self-conscious and intimidated at the gym. Any advice?",
+    "aliases": [
+      "gym anxiety",
+      "embarrassed at the gym",
+      "everyone is watching me",
+      "scared to go to the gym",
+      "gymtimidation"
+    ],
+    "answer": "Nearly everyone feels this at first, and here's the liberating truth: experienced gym-goers are focused on their own workouts and mostly respect anyone putting in effort. Practical helps: go at quieter hours, walk in with a written plan so you never stand around wondering, start in less trafficked areas like the dumbbell or machine sections, and use headphones as a comfort barrier. The anxiety fades fast with familiarity, usually within a few weeks of regular visits.",
+    "followups": [
+      "gs-first-time",
+      "dm-too-unfit",
+      "gs-consistency"
+    ],
+    "personalize": "Remind the user their app routine doubles as that written plan."
+  },
+  {
+    "id": "dm-too-unfit",
+    "category": "demographics",
+    "question": "Am I too out of shape to start?",
+    "aliases": [
+      "too unfit for the gym",
+      "need to lose weight before lifting",
+      "get fit before joining gym",
+      "too weak to start"
+    ],
+    "answer": "You cannot be too out of shape to start; you can only start at the level that fits you today, and every machine, dumbbell, and bodyweight exercise scales down that far. The idea of 'getting in shape before the gym' is backwards; the gym is where that happens. Begin with what's comfortable, even ten minutes, and let consistency compound. If you have significant health conditions, a quick okay from your doctor is smart, and then begin.",
+    "followups": [
+      "gs-first-time",
+      "dm-gym-anxiety"
+    ],
+    "personalize": "Point to the app's ability to generate a very low entry-level routine."
+  },
+  {
+    "id": "dm-pregnancy",
+    "category": "demographics",
+    "question": "Can I work out while pregnant?",
+    "aliases": [
+      "exercise during pregnancy",
+      "lifting while pregnant",
+      "pregnant gym safe",
+      "postpartum training"
+    ],
+    "answer": "Exercise during pregnancy is generally beneficial for many people, and health bodies broadly encourage staying active, but this is squarely a question for your doctor or midwife, because the right answer depends on your specific pregnancy. This app can't provide pregnancy or postpartum training guidance. Please get personalized clearance and recommendations from your healthcare provider, and consider a prenatal-certified trainer for programming.",
+    "followups": [
+      "se-injury-workaround",
+      "dm-women-training"
+    ],
+    "personalize": "Do not personalize; always defer to the user's healthcare provider."
+  },
+  {
+    "id": "app-local-mode",
+    "category": "app",
+    "question": "Where is my data stored? What is Local Mode?",
+    "aliases": [
+      "local mode explained",
+      "where is my workout data",
+      "data stored on device",
+      "cloud sync"
+    ],
+    "answer": "In Local Mode, all of your data (profile, routines, logs, nutrition targets) lives in your browser's storage on your own device; nothing is uploaded to a server. That means it's private by default, but also that clearing your browser data or switching devices without an export will lose it. Use the export feature regularly if your history matters to you.",
+    "followups": [
+      "app-export",
+      "app-privacy",
+      "app-delete-data"
+    ],
+    "personalize": "State which mode the user is currently in if the app exposes it."
+  },
+  {
+    "id": "app-privacy",
+    "category": "app",
+    "question": "Who can see my data? Is it private?",
+    "aliases": [
+      "privacy policy",
+      "is my data shared",
+      "does the app sell data",
+      "who sees my workouts"
+    ],
+    "answer": "In Local Mode, no one: your data stays on your device and isn't transmitted anywhere. The only exception is when you explicitly use an AI-powered answer, where the relevant parts of your question and profile context are sent to the AI service to generate the response. Nothing is shared with third parties for advertising.",
+    "followups": [
+      "app-local-mode",
+      "app-ai-usage"
+    ],
+    "personalize": "None; keep this answer factual and verify wording against actual product behavior."
+  },
+  {
+    "id": "app-export",
+    "category": "app",
+    "question": "Can I export or back up my data?",
+    "aliases": [
+      "export workouts",
+      "backup my data",
+      "download my history",
+      "move data to new phone"
+    ],
+    "answer": "Yes: use the export option in Settings to download your data as a file, which you can store anywhere and re-import later or on another device. Because Local Mode keeps everything on-device, exporting is your backup; do it before clearing browser data, switching browsers, or getting a new device.",
+    "followups": [
+      "app-local-mode",
+      "app-delete-data"
+    ],
+    "personalize": "None needed."
+  },
+  {
+    "id": "app-change-split",
+    "category": "app",
+    "question": "How do I change my training split or schedule?",
+    "aliases": [
+      "switch to push pull legs",
+      "change workout days",
+      "new split",
+      "reduce training days"
+    ],
+    "answer": "Open your plan settings and choose a different split or number of training days; the app will regenerate your routine to match while keeping your equipment and exclusions. Changing splits doesn't erase your logged history. If you're mid-week, finish the current week or just start the new plan fresh; one transition week has no meaningful effect on progress.",
+    "followups": [
+      "gs-best-split",
+      "app-edit-routine"
+    ],
+    "personalize": "Reference the user's current split and available days."
+  },
+  {
+    "id": "app-edit-routine",
+    "category": "app",
+    "question": "Can I edit the exercises in my routine?",
+    "aliases": [
+      "swap an exercise",
+      "customize my workout",
+      "remove an exercise",
+      "add exercise to plan",
+      "change sets and reps"
+    ],
+    "answer": "Yes: from your routine view you can swap an exercise for an equivalent, remove it, add your own, or adjust sets, reps, and target weights. Swaps work best when you replace like with like (same muscle and movement pattern), and the app's suggested alternatives already respect your equipment and exclusions.",
+    "followups": [
+      "se-substitute-exercise",
+      "app-change-split"
+    ],
+    "personalize": "Surface alternatives filtered by the user's equipment and exclusion list."
+  },
+  {
+    "id": "app-ai-usage",
+    "category": "app",
+    "question": "When does the app use AI, and when does it answer instantly?",
+    "aliases": [
+      "is this AI generated",
+      "how does the coach answer",
+      "AI vs knowledge base",
+      "why was that answer instant"
+    ],
+    "answer": "Most questions are answered instantly from a built-in, expert-reviewed knowledge base; no AI call and no data leaves your device. The AI model is only used for genuinely personal questions the knowledge base can't cover, and those answers are grounded in the same knowledge base plus your profile. AI answers are marked so you always know which kind you got.",
+    "followups": [
+      "app-privacy",
+      "app-local-mode"
+    ],
+    "personalize": "None; verify description matches shipped behavior."
+  },
+  {
+    "id": "app-offline",
+    "category": "app",
+    "question": "Does the app work offline?",
+    "aliases": [
+      "no internet at the gym",
+      "offline mode",
+      "use without connection",
+      "airplane mode workouts"
+    ],
+    "answer": "Your data lives on your device, so once the app is open it keeps working without a connection — logging workouts, browsing routines and exercises, and instant knowledge-base answers all run locally. You do need a connection the first time you load the app (and after clearing your browser cache), and AI-assisted answers always require one. Nothing you log is uploaded.",
+    "followups": [
+      "app-local-mode",
+      "app-ai-usage"
+    ],
+    "personalize": "None needed."
+  },
+  {
+    "id": "app-delete-data",
+    "category": "app",
+    "question": "How do I delete my data or start over?",
+    "aliases": [
+      "reset the app",
+      "clear my history",
+      "delete account data",
+      "start fresh"
+    ],
+    "answer": "Use the reset or delete option in Settings to wipe your local data, or clear the site's storage in your browser; either fully removes it, since nothing is stored on a server in Local Mode. Consider exporting first in case you change your mind, because deletion is immediate and permanent. To change just your plan rather than everything, edit your profile or split instead of resetting.",
+    "followups": [
+      "app-export",
+      "app-change-split"
+    ],
+    "personalize": "None needed."
+  }
+]

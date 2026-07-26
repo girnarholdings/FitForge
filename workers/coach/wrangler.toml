@@ -1,0 +1,27 @@
+# FitForge Coach — Cloudflare Worker (Workers AI)
+#
+# Deploy:
+#   cd workers/coach
+#   npx wrangler login
+#   npx wrangler deploy
+#
+# Then point the web app at the deployed URL by setting, at build time:
+#   NEXT_PUBLIC_AI_ENDPOINT=https://fitforge-coach.<your-subdomain>.workers.dev
+#
+# The app works WITHOUT this worker: the knowledge base answers locally. The worker only
+# handles personalized/edge-case questions the KB can't confidently match.
+
+name = "fitforge-coach"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+
+# Workers AI binding — no API key needed in code; billing/quota is per Cloudflare account.
+[ai]
+binding = "AI"
+
+[vars]
+# Comma-separated list of origins allowed to call this worker (CORS allow-list).
+# Include your Pages origin. "*" is accepted for local testing but not recommended.
+ALLOWED_ORIGINS = "https://girnarholdings.github.io,http://localhost:3000,http://localhost:4599"
+# Small, free-tier-friendly instruct model. Swap for any Workers AI text model.
+MODEL = "@cf/meta/llama-3.1-8b-instruct"

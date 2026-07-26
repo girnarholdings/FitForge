@@ -300,3 +300,219 @@ Captured at 390 × 664 by `apps/web/tests/e2e/screenshots.spec.ts` into `apps/we
   buttons, which is the stable and accessibility-relevant path.
 - `PoseFrames` is not re-exported from `components/illustrations/index.ts`; import it from
   `@/components/illustrations/poses`.
+
+---
+
+# Wave 2 — Gamified onboarding + goal-relative analytics
+
+A second pair of workstreams landed on top of the five above: **WS-A** (swipe-deck feel tuning +
+gamification) and **WS-B** (percent-of-goal heat gradient + weekly analytics time-series). This
+section records what they added, how they were integrated, and what was verified.
+
+Verified state at time of writing:
+
+| Gate | Result |
+| --- | --- |
+| `npm run build -w @fitforge/shared` | pass |
+| `npm run typecheck -w @fitforge/web` | pass, 0 errors |
+| `NEXT_PUBLIC_BASE_PATH="" NEXT_PUBLIC_DEMO=1 npm run build -w @fitforge/web` | pass (101 static routes exported) |
+| `cd apps/web && npx playwright test --reporter=line` | **34 passed** (28 pre-existing + 6 new) |
+| Phone viewport fit (390 × 664, dpr 2, `isMobile`) | no horizontal overflow on any audited route |
+
+---
+
+## 7 · Gamification — the equipment deck's reward loop (WS-A)
+
+### 7.1 Feel
+
+The deck's drag physics were rebuilt so the card is *the finger*, not a lagging proxy:
+
+- The card is painted **synchronously inside `pointermove`** (no React re-render per event), with a
+  velocity-derived lead capped at 14 px, and a 1.02× "grab" lift eased in a frame-rate-independent
+  `requestAnimationFrame` loop.
+- Release runs a **critically-damped spring** (ω = 20.5, ≈ 320 ms, no overshoot) that inherits 45 %
+  of the release velocity, so an abandoned drag settles instead of snapping.
+- Commit uses a 5-sample / 55 ms velocity buffer, so a **fast short flick** commits (0.4 px/ms with
+  a 22 px travel floor) rather than being rejected for not clearing the distance threshold.
+- The exit is animated along the **actual release vector** (clamped to the committed side) with
+  rotation continuing past the screen edge; the cards behind are promoted progressively with drag
+  distance rather than popping at the commit line.
+- Feedback layers: an eased stamp ramp, a coloured inset edge vignette (gold = have, warm gold +
+  ember = love, neutral = pass) that saturates past the commit line, and guarded
+  `navigator.vibrate` haptics (light tick on crossing, stronger on commit, triple pattern for love).
+
+### 7.2 Reward loop
+
+Every reward path is shared by **drag, button and keyboard** answers, because all three funnel
+through the same `commit()`:
+
+| Element | `data-testid` | Behaviour |
+| --- | --- | --- |
+| Commit burst | `swipe-deck-burst` | gold spark for *love*, ripple for *have*, nothing for *pass*; ~780 ms |
+| Streak chip | `equipment-combo-chip` | from 3 answers in a row: "3 in a row" → "On a roll · 5" → "Blazing · 8" → "Unstoppable · 12"; resets on undo |
+| Milestone toast | `equipment-milestone-toast` | crossing a round unlocked threshold ("+7 exercises unlocked") or finishing a category ("Benches & racks done") |
+| Unlocked counter | `equipment-unlocked-counter` | counts *up* to its new value instead of snapping; isolated leaf component so the ~60 fps tick never re-renders the deck |
+| Pace nudge | `equipment-deck-nudge` | honest, shrinking "14 left · about 20s" / "Last one" |
+| Finish moment | `equipment-finish-screen` | new `celebrate` phase: gradient-gold number counting from zero, breathing halo, 2.2× spark burst, one glow CTA |
+
+**Phase change:** `EquipmentStep`'s `Phase` union gained `'celebrate'`, inserted between
+deck-exhaustion and `'review'`. It **auto-advances to review after 3400 ms**, so the wizard can
+never be stranded there; `equipment-finish-continue` skips ahead immediately, and
+`equipment-deck-review` still jumps straight to review, bypassing the celebration entirely.
+
+**Cost discipline:** every effect is an `absolute`/`fixed`, `pointer-events-none` overlay animating
+only `transform` and `opacity` — zero layout shift — and all of them are disabled in **JS** under
+`prefers-reduced-motion` (via `usePrefersReducedMotion` in `components/ui/Confetti.tsx`) in addition
+to the global CSS rule. `globals.css` gained a purely additive animation block (`ff-spark`,
+`ff-ripple`, `ff-pop`, `ff-pop-fade`, `ff-shimmer`, `ff-halo`, `ff-rise-in`) immediately before the
+existing reduced-motion rule; no token, primitive or existing rule was modified.
+
+**New `SwipeDeck` props** (both optional, both backwards compatible):
+`getBurst(item, dir) => 'spark' | 'ripple' | null` and `overlay: ReactNode` (a pointer-events-none
+layer over the card area — `EquipmentStep` uses it for the combo chip).
+
+`components/ui/Confetti.tsx` is intentionally **not** in the `components/ui` barrel; both consumers
+import it by path, and `SwipeDeck` now takes `usePrefersReducedMotion` from it.
+
+---
+
+## 8 · Analytics — training as a time series (WS-B)
+
+### 8.1 Percent-of-weekly-goal heat gradient
+
+The heat map's axis changed from *raw sets* to **% of that muscle's personalised weekly set goal**,
+which is the question a lifter actually asks ("am I doing enough here?").
+
+- New `components/features/shared/volumeMath.ts` documents per-muscle weekly hard-set goals
+  (`BASE_WEEKLY_SET_GOAL`, 6–14 sets placed inside the 10–20 dose-response band by muscle size and
+  how much indirect volume the muscle already absorbs — front delts low, side delts high), scaled by
+  `GOAL_VOLUME_FACTOR` (hypertrophy 1.15 → general health 0.75), `EXPERIENCE_VOLUME_FACTOR`
+  (0.7 / 1.0 / 1.2) and `daysVolumeFactor` (anchored at 4 days = 1.0), floored at 4 sets.
+- `heatColorAt(pct)` interpolates a continuous ramp **in OKLab**: 0 % inert, 25 % dark gold,
+  50 % yellow `#f2d044`, 100 % orange `#ff7a33`, 130 % red, 170 %+ deep red. `heatGradientCss()`
+  samples the *same* function, so the legend can never drift from the body.
+- `MuscleMap` gained `heatColors` / `selected` / `ariaLabel` through an **additive**
+  `MuscleMapExtendedProps extends MuscleMapProps`; the frozen `types.ts` contract file is untouched
+  and every existing caller (`ExerciseCatalog`, `MuscleVolume`, `MuscleMapThumb`) is behaviourally
+  byte-identical. Precedence: `heatColors` ▸ `heat` ▸ `primary` ▸ `secondary` ▸ inert.
+- New exported `MuscleGoalHeat`: interactive silhouette (`muscle-goal-heat`) + continuous gradient
+  legend with 0 / 50 / 100 / 150 % labels (`heat-legend`) + tap-a-muscle read-out
+  (`muscle-goal-detail`) showing name, sets, goal, % of goal, a status word ("Under-trained /
+  Building / On target / Above target / Over target") and a "Show exercises →" deep link.
+- All legacy exports (`computeMuscleVolume`, `volumeHeat`, `bandFor`, `VOLUME_BANDS`, `BAND_*`) are
+  preserved, so `features/shared/index.ts` and `ExerciseCatalog` needed no changes.
+
+### 8.2 Weekly progress + time series
+
+- `workoutLog.ts` gained `weeklyBuckets()` (12 Monday-anchored weeks *including empty ones* —
+  a gap in the bars is the honest signal), `setsPerMuscleBetween`, `trendOf` /
+  `completedWeekTrend`, `exerciseFrequency`, `e1rmSeries` and `bucketWeightedSets`.
+- New `features/progress/analytics.ts`: `groupSeries` (6 muscle groups over time vs group goal),
+  `strengthTrends` (Epley e1RM, ≥ 2 sessions only — a single point is not a trend),
+  `buildSummary` (the plain-English verdict and its bullets) and `plannedWeeklySets`.
+- New `features/progress/TrendsTab.tsx` — the default Progress tab: a "How you're doing" verdict
+  card, a weekly volume column chart (Sets/Tonnage toggle, hatched in-progress week, average
+  reference line, tap-a-bar read-out), a consistency dot-calendar vs target days, muscle-group
+  small-multiple sparklines with % of goal, an e1RM strength trend line with exercise chips, and the
+  existing body-weight log integrated (not duplicated).
+- `charts.tsx` gained `ColumnChart`, `TrendLine` and `ConsistencyStrip` — self-authored inline SVG,
+  320-unit viewBox at `w-full h-auto`, keyboard-activatable per-datum tap targets, `useId`-scoped
+  pattern ids, `motion-safe:` only.
+
+### 8.3 Honesty rules (enforced by tests)
+
+- A user with **no history** never sees a fabricated chart. The heat card falls back to the active
+  routine's **planned** week, labelled "planned week" and "No sets logged yet", with no
+  Logged/Planned switch to imply history exists; Trends renders `progress-trends-empty`, which says
+  "Nothing here is simulated" and lists what unlocks after 1 workout / 2 weeks / 4 weeks. None of
+  `progress-summary`, `chart-weekly-volume`, `chart-consistency`, `chart-strength` or
+  `chart-body-weight` mount at all.
+- The week-over-week trend deliberately compares the **last two complete weeks** and excludes the
+  in-progress one, because comparing a Tuesday against a finished week always reads as a crash.
+
+### 8.4 Bug fixed in passing
+
+`workoutLog.ts` built week and day keys with `Date.toISOString().slice(0, 10)` applied to
+*local-midnight* dates, which shifted every bucket back a day for any user east of Greenwich
+(this broke `weeklyStreak`). Replaced with a local `localDateKey()`.
+
+---
+
+## 9 · Integration work for this wave
+
+Both workstreams landed type-clean: `npm run build -w @fitforge/shared` and
+`npm run typecheck -w @fitforge/web` passed on the merged tree with **no cross-workstream glue
+required** — `MuscleMap`'s prop extension is additive, so `ExerciseCatalog` and `MuscleVolume`
+consumers compiled unchanged. `next build` also passed first time. The integration work was
+therefore test coverage plus one render fix:
+
+- **`charts.tsx`** — the `ColumnChart` average-reference label was drawn at `x = VB_W` with
+  `textAnchor="end"`, putting the final glyph flush against the viewBox edge, where it was clipped.
+  Moved 2 units in.
+- **New e2e helpers** (`apps/web/tests/e2e/helpers.ts`):
+  - `seedTrainingHistory(page)` writes ~5 weeks of progressively-heavier sessions straight into
+    WS-F's real `fitforge.workoutlog.v1` slice, in the exact shape `WorkoutPlayer.finishWorkout()`
+    persists — so every analytic under test runs over production code paths rather than a stub.
+  - `recordTransientTestIds(page)` / `seenTransientTestIds(page)` — a `MutationObserver` installed
+    *before* an interaction. The reward effects are deliberately short-lived (burst 780 ms, combo
+    chip 1400 ms), so polling for them with a normal locator is a race; recording their appearance
+    is both non-flaky and a stronger assertion (it proves the effect *fired*).
+  - `tapMuscle(page, slug)` — each muscle is one `<a>` wrapping a path **and its mirrored twin**, so
+    the element's bounding box spans both sides of the body and its geometric centre falls in the
+    gap between them, where a neighbouring shape (the inner thigh, between the two quads)
+    legitimately sits on top. The helper aims at the left-hand copy, which is what a real thumb
+    does. *This is a genuine property of the silhouette, not a test workaround — a centre-of-bbox
+    synthetic click is simply not where a user taps.*
+  - `pageOverflow(page)` — `{ vertical, horizontal }` document overflow in px.
+
+### New coverage added (6 tests)
+
+| Spec | Test |
+| --- | --- |
+| `equipment-deck.spec.ts` | answering with the buttons still records have/love **and** fires the reward layer (burst, streak chip, count-up counter, shrinking nudge) with ≤ 1 px page overflow on both axes, and the answers survive to the persisted draft |
+| `equipment-deck.spec.ts` | exhausting the deck reaches `equipment-finish-screen`, counts a real number up from zero, fires the celebration burst, and hands off to review (via the CTA or the 3.4 s auto-advance) |
+| `progress.spec.ts` | the Trends tab renders all five time-series + the "How you're doing" verdict; a tapped bar reports that week's numbers; the Sets/Tonnage toggle redraws; the seeded +2.5 kg-per-session progression must read as a **positive** e1RM delta |
+| `progress.spec.ts` | the heat view shows the continuous % of goal legend (0/50/100/150 %+), a real CSS gradient, and a tap-a-muscle read-out with sets / goal / % / status that toggles off on a second tap; the Logged ⇄ Planned switch keeps the legend |
+| `progress.spec.ts` | an empty-history user gets the labelled planned projection and the honest empty state — and **none** of the time-series components mount |
+| `screenshots.spec.ts` | `progress-heat.png` + `progress-analytics.png` at 390 × 664; `onboarding-equipment.png` re-shot in the gamified state (streak chip + milestone toast + progress fill live) |
+
+---
+
+## 10 · Phone viewport re-measurement (390 × 664, dpr 2, `isMobile`, static export)
+
+Measured with `playwright-core` driving `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`
+against `npx serve apps/web/out -l 4599`, after completing onboarding so the routes are not
+intercepted by the not-onboarded gate.
+
+| Route | `scrollHeight` | `clientHeight` | `scrollWidth` | `clientWidth` | Horizontal overflow |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `/` | 664 | 664 | 390 | 390 | **none** |
+| `/onboarding/equipment/` | 664 | 664 | 390 | 390 | **none** |
+| `/progress/` (no history) | 1207 | 664 | 390 | 390 | **none** |
+| `/progress/` (5 weeks seeded) | 2721 | 664 | 390 | 390 | **none** |
+| `/exercises/` | 7009 | 664 | 390 | 390 | **none** |
+
+`/` and `/onboarding/equipment/` remain exactly one viewport tall with no page scroll at all. The
+two long routes scroll vertically by design (a catalog and an analytics stack); neither scrolls
+sideways. The only elements that extend past 390 px are chips inside deliberate `overflow-x-auto`
+rails (the Progress tab strip, the catalog category strip) — those scroll within their own
+container, which is why `document.documentElement.scrollWidth` stays at 390.
+
+---
+
+## 11 · Known gaps / follow-ups for this wave
+
+- **The milestone toast is not asserted deterministically.** Whether a given run crosses a round
+  "exercises unlocked" threshold depends on which equipment the preset already seeded, so the
+  suite asserts the burst, chip, counter and nudge but only *observes* the toast (it is visible in
+  `onboarding-equipment.png`). A dedicated fixture that forces a crossing would close this.
+- **Swipe gestures are still button-driven in e2e.** WS-A's pointer physics (velocity buffer,
+  spring constants, release-vector exit) are exercised only by hand; the suite drives the
+  accessible buttons, which is the stable and accessibility-relevant path. The reward layer is
+  shared by both paths, so its coverage is real either way.
+- **`prefers-reduced-motion` is not covered by e2e.** Every effect is gated in JS as well as CSS,
+  but no test runs the suite under `reducedMotion: 'reduce'`.
+- **The seeded analytics fixture is time-relative.** `seedTrainingHistory` places sessions at fixed
+  day offsets from *now*, so the exact bucket contents shift with the day of the week the suite
+  runs. Assertions are written against shapes and directions, never exact counts, for that reason.
+- **`loved_equipment_slugs` is still not consumed by generation** (carried over from wave 1).

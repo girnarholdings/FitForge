@@ -204,6 +204,150 @@ body {
   padding-top: max(0.75rem, env(safe-area-inset-top));
 }
 
+/* ───────────────────────────────────────────────────────────────────────────
+   MOTION KIT — swipe-deck feel + celebration pops.
+
+   Every keyframe below animates ONLY `transform` and `opacity` (compositor-
+   friendly, no layout/paint), every consumer is an `inset-0` /
+   `pointer-events: none` overlay, and every one of them is additionally gated
+   in JS on `prefers-reduced-motion` so a reduced-motion user never sees a
+   frozen half-played effect (the global rule at the bottom of this file
+   collapses durations to ~0, which alone would leave `both`-filled elements
+   parked on their end frame).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Confetti / spark particle flying out from a burst origin. */
+@keyframes ff-spark {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.35) rotate(0deg);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--ff-tx, 0px), var(--ff-ty, 0px), 0) scale(var(--ff-scale, 1))
+      rotate(var(--ff-rot, 0deg));
+    opacity: 0;
+  }
+}
+.ff-spark {
+  animation: ff-spark var(--ff-dur, 520ms) cubic-bezier(0.16, 0.82, 0.3, 1) var(--ff-delay, 0ms) 1
+    both;
+  will-change: transform, opacity;
+}
+
+/* Expanding ring under a burst — the "lighter ripple" for a plain yes. */
+@keyframes ff-ripple {
+  0% {
+    transform: scale(0.32);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.05);
+    opacity: 0;
+  }
+}
+.ff-ripple {
+  animation: ff-ripple var(--ff-dur, 500ms) cubic-bezier(0.22, 0.9, 0.32, 1) 1 both;
+  will-change: transform, opacity;
+}
+
+/* Short scale-pop for a number that just changed. */
+@keyframes ff-pop {
+  0% {
+    transform: scale(0.82);
+  }
+  55% {
+    transform: scale(1.16);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.ff-pop {
+  animation: ff-pop 300ms cubic-bezier(0.2, 1.35, 0.4, 1) 1 both;
+}
+
+/* Rise-in, hold, drift-out — combo chips and milestone toasts. */
+@keyframes ff-pop-fade {
+  0% {
+    transform: translate3d(0, 10px, 0) scale(0.86);
+    opacity: 0;
+  }
+  14% {
+    transform: translate3d(0, 0, 0) scale(1.06);
+    opacity: 1;
+  }
+  24% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+  74% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, -12px, 0) scale(0.97);
+    opacity: 0;
+  }
+}
+.ff-pop-fade {
+  animation: ff-pop-fade var(--ff-dur, 1400ms) cubic-bezier(0.22, 1, 0.36, 1) 1 both;
+  will-change: transform, opacity;
+}
+
+/* Gold sheen sweeping across a progress fill each time it advances. */
+@keyframes ff-shimmer {
+  0% {
+    transform: translate3d(-160%, 0, 0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(420%, 0, 0);
+    opacity: 0;
+  }
+}
+.ff-shimmer {
+  animation: ff-shimmer 900ms cubic-bezier(0.3, 0.7, 0.4, 1) 1 both;
+  will-change: transform, opacity;
+}
+
+/* Slow gold breathing for the finish-screen halo. */
+@keyframes ff-halo {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.09);
+    opacity: 0.8;
+  }
+}
+.ff-halo {
+  animation: ff-halo 2600ms ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Content settling in on the celebration screen. */
+@keyframes ff-rise-in {
+  0% {
+    transform: translate3d(0, 14px, 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+.ff-rise-in {
+  animation: ff-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) var(--ff-delay, 0ms) 1 both;
+}
+
 /* Respect users who prefer reduced motion. */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,6 +1,8 @@
 import { type Page, expect } from '@playwright/test';
 
 export const DEMO_STORAGE_KEY = 'fitforge.demo.v1';
+/** WS-F's additive workout-session slice (see `components/features/shared/workoutLog.ts`). */
+export const WORKOUT_LOG_KEY = 'fitforge.workoutlog.v1';
 
 /**
  * Clear all demo state (localStorage key `fitforge.demo.v1`) for test isolation. Must be called
@@ -187,4 +189,177 @@ export async function readDemoState(page: Page): Promise<Record<string, unknown>
     const raw = window.localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
   }, DEMO_STORAGE_KEY);
+}
+
+/* ══════════════════════════════════════════════════════ training history (analytics fixtures) */
+
+/**
+ * Three real catalog lifts (ids/slugs/muscles copied verbatim from
+ * `packages/shared/src/fixtures/catalog.json`) so seeded history aggregates through the same
+ * muscle attribution the app uses at runtime.
+ */
+interface HistoryLift {
+  exercise_id: string;
+  exercise_slug: string;
+  exercise_name: string;
+  mechanics: string;
+  primary_muscles: string[];
+  secondary_muscles: string[];
+  /** starting working weight; every later session adds 2.5 kg */
+  baseKg: number;
+}
+
+const HISTORY_LIFTS: HistoryLift[] = [
+  {
+    exercise_id: 'ex-barbell-back-squat',
+    exercise_slug: 'barbell-back-squat',
+    exercise_name: 'Barbell Back Squat',
+    mechanics: 'compound',
+    primary_muscles: ['quads'],
+    secondary_muscles: ['glute-max', 'lower-back', 'adductors'],
+    baseKg: 80,
+  },
+  {
+    exercise_id: 'ex-dumbbell-bench-press',
+    exercise_slug: 'dumbbell-bench-press',
+    exercise_name: 'Dumbbell Bench Press',
+    mechanics: 'compound',
+    primary_muscles: ['pecs'],
+    secondary_muscles: ['front-delts', 'triceps'],
+    baseKg: 30,
+  },
+  {
+    exercise_id: 'ex-barbell-row',
+    exercise_slug: 'barbell-row',
+    exercise_name: 'Barbell Bent-over Row',
+    mechanics: 'compound',
+    primary_muscles: ['lats'],
+    secondary_muscles: ['rhomboids', 'rear-delts', 'biceps', 'lower-back'],
+    baseKg: 60,
+  },
+];
+
+/**
+ * Days-before-now for each seeded session. Spans ~5 Monday-anchored weeks with 3 sessions a week,
+ * including two inside the last 7 days (so the heat map has a LOGGED source) — enough history for
+ * a week-over-week trend, a consistency strip and a ≥2-session strength trend on every lift.
+ */
+const HISTORY_DAY_OFFSETS = [2, 4, 6, 9, 11, 13, 16, 18, 20, 23, 25, 27, 30, 32, 34];
+
+/**
+ * Write a deterministic, PROGRESSING block of training history straight into WS-F's
+ * `fitforge.workoutlog.v1` slice, then reload so the store re-reads it.
+ *
+ * This is a fixture, not a fake: it is the exact shape `WorkoutPlayer.finishWorkout()` persists,
+ * so every analytic under test (`weeklyBuckets`, `strengthTrends`, `buildSummary`,
+ * `setsPerMuscleLast7Days`) runs over real production code paths. Weights step up over time so the
+ * estimated-1RM trend has a genuine, assertable direction.
+ *
+ * Must be called on a page served from the app origin. Leaves the page reloaded at the same URL.
+ */
+export async function seedTrainingHistory(page: Page): Promise<void> {
+  await page.evaluate(
+    ({ key, lifts, offsets }) => {
+      const DAY = 24 * 60 * 60 * 1000;
+      const sessions = offsets.map((daysAgo, i) => {
+        // oldest session = highest index → smallest progression step
+        const step = offsets.length - 1 - i;
+        const at = new Date(Date.now() - daysAgo * DAY);
+        at.setHours(18, 30, 0, 0);
+        return {
+          id: `seed-sess-${daysAgo}`,
+          dayId: `seed-day-${i % 3}`,
+          dayName: ['Day A', 'Day B', 'Day C'][i % 3]!,
+          finishedAt: at.toISOString(),
+          exercises: lifts.map((l) => ({
+            exercise_id: l.exercise_id,
+            exercise_slug: l.exercise_slug,
+            exercise_name: l.exercise_name,
+            mechanics: l.mechanics,
+            primary_muscles: [...l.primary_muscles],
+            secondary_muscles: [...l.secondary_muscles],
+            sets: [0, 1, 2].map(() => ({ reps: 8, weight_kg: l.baseKg + step * 2.5 })),
+          })),
+        };
+      });
+      window.localStorage.setItem(key, JSON.stringify({ version: 1, sessions }));
+    },
+    { key: WORKOUT_LOG_KEY, lifts: HISTORY_LIFTS, offsets: HISTORY_DAY_OFFSETS },
+  );
+  await page.reload();
+}
+
+/* ═══════════════════════════════════════════════════ transient-DOM recorder (reward effects) */
+
+/**
+ * Start recording which `data-testid`s ever get attached to the document.
+ *
+ * The gamification layer is deliberately short-lived — a burst lives 780 ms, the combo chip
+ * 1400 ms — so polling for it with a normal locator is a race. A `MutationObserver` installed
+ * BEFORE the interaction records the appearance instead, which is both non-flaky and a stronger
+ * assertion (it proves the effect fired, not merely that it lingered).
+ *
+ * Survives no navigation: call it after the page you want to observe has loaded.
+ */
+export async function recordTransientTestIds(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __ffSeen?: Set<string>; __ffObs?: MutationObserver };
+    w.__ffObs?.disconnect();
+    const seen = new Set<string>();
+    w.__ffSeen = seen;
+    const note = (node: Node) => {
+      if (!(node instanceof Element)) return;
+      const own = node.getAttribute('data-testid');
+      if (own) seen.add(own);
+      node.querySelectorAll('[data-testid]').forEach((el) => {
+        const id = el.getAttribute('data-testid');
+        if (id) seen.add(id);
+      });
+    };
+    document.querySelectorAll('[data-testid]').forEach((el) => {
+      const id = el.getAttribute('data-testid');
+      if (id) seen.add(id);
+    });
+    const obs = new MutationObserver((records) => {
+      for (const r of records) r.addedNodes.forEach(note);
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+    w.__ffObs = obs;
+  });
+}
+
+/** Every `data-testid` seen since {@link recordTransientTestIds}, including ones already gone. */
+export async function seenTransientTestIds(page: Page): Promise<string[]> {
+  return page.evaluate(() => [
+    ...((window as unknown as { __ffSeen?: Set<string> }).__ffSeen ?? new Set<string>()),
+  ]);
+}
+
+/**
+ * Tap a muscle on an interactive `MuscleMap` silhouette.
+ *
+ * Each muscle is ONE `<a>` wrapping a path AND its mirrored twin, so the element's bounding box
+ * spans both sides of the body and its geometric centre falls in the gap between them — where a
+ * neighbouring shape (the inner thigh, between the two quads) legitimately sits on top. Aiming at
+ * the left-hand copy is what a real thumb does.
+ */
+export async function tapMuscle(page: Page, slug: string): Promise<void> {
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const shape = page.getByTestId(`muscle-map-shape-${slug}`).first();
+  await expect(shape).toBeVisible();
+  const box = (await shape.boundingBox())!;
+  await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.45);
+}
+
+/** `{ vertical, horizontal }` page overflow in px — both must be ≤ 1 on a well-behaved screen. */
+export async function pageOverflow(
+  page: Page,
+): Promise<{ vertical: number; horizontal: number }> {
+  return page.evaluate(() => {
+    const el = document.documentElement;
+    return {
+      vertical: el.scrollHeight - el.clientHeight,
+      horizontal: el.scrollWidth - el.clientWidth,
+    };
+  });
 }

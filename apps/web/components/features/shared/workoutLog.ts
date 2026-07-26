@@ -121,10 +121,23 @@ function daysAgo(n: number): number {
  * dividing by {@link HEATMAP_SET_CEILING}).
  */
 export function setsPerMuscleLast7Days(sessions: WorkoutSession[]): Partial<Record<MuscleSlug, number>> {
-  const cutoff = daysAgo(7);
+  return setsPerMuscleBetween(sessions, daysAgo(7), Date.now() + 1);
+}
+
+/**
+ * Weighted sets per muscle for an arbitrary window `[fromTs, toTs)`. Same attribution as
+ * {@link setsPerMuscleLast7Days} (primary +1, secondary +0.5) — this is the primitive every
+ * time-series in the analytics view is built from.
+ */
+export function setsPerMuscleBetween(
+  sessions: WorkoutSession[],
+  fromTs: number,
+  toTs: number,
+): Partial<Record<MuscleSlug, number>> {
   const out: Partial<Record<string, number>> = {};
   for (const sess of sessions) {
-    if (new Date(sess.finishedAt).getTime() < cutoff) continue;
+    const t = new Date(sess.finishedAt).getTime();
+    if (!Number.isFinite(t) || t < fromTs || t >= toTs) continue;
     for (const ex of sess.exercises) {
       const n = ex.sets.length;
       if (n === 0) continue;
@@ -217,21 +230,34 @@ export function prsInSession(
 
 /* ---------------------------------------------------------------------- weekly streaks */
 
-/** Monday-anchored week key (YYYY-MM-DD of that week's Monday) for a timestamp. */
-function weekKey(ts: number): string {
+/** Local midnight of the Monday that starts the week containing `ts`. */
+export function weekStart(ts: number): Date {
   const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
   const dow = (d.getDay() + 6) % 7; // 0 = Monday
   d.setDate(d.getDate() - dow);
-  return d.toISOString().slice(0, 10);
+  return d;
+}
+
+/** Local YYYY-MM-DD (never UTC — a 9 pm session must not land in tomorrow's bucket). */
+function localDateKey(d: Date): string {
+  const m = `${d.getMonth() + 1}`.padStart(2, '0');
+  const day = `${d.getDate()}`.padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/** Monday-anchored week key (YYYY-MM-DD of that week's Monday) for a timestamp. */
+function weekKey(ts: number): string {
+  return localDateKey(weekStart(ts));
 }
 function dayKey(iso: string): string {
-  return new Date(iso).toISOString().slice(0, 10);
+  return localDateKey(new Date(iso));
 }
 function prevWeekKey(key: string): string {
   const d = new Date(key + 'T00:00:00');
   d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
+  // localDateKey (not toISOString) — a UTC round-trip shifts the key by a day east of Greenwich.
+  return localDateKey(d);
 }
 
 export interface StreakInfo {
@@ -282,4 +308,217 @@ export function weeklyStreak(sessions: WorkoutSession[], target: number): Streak
   }
 
   return { streak, daysThisWeek, target: tgt, metThisWeek };
+}
+
+/* ═══════════════════════════════════════════════════════════ time series (the "am I progressing?" data) */
+
+/** One Monday-anchored week of logged training, fully aggregated. */
+export interface WeekBucket {
+  /** YYYY-MM-DD of that week's Monday (local) */
+  key: string;
+  /** epoch ms of that week's Monday 00:00 local */
+  startTs: number;
+  /** short axis label, e.g. "Jul 20" */
+  label: string;
+  /** true for the week currently in progress */
+  isCurrent: boolean;
+  /** completed sessions logged in the week */
+  sessions: number;
+  /** DISTINCT calendar days trained (what a "days per week" target actually means) */
+  days: number;
+  /** total hard sets performed */
+  sets: number;
+  /** total reps performed */
+  reps: number;
+  /** tonnage = Σ (reps × weight_kg) across every set, in kg */
+  tonnage: number;
+  /** weighted sets per muscle (primary 1.0 / secondary 0.5) */
+  setsByMuscle: Partial<Record<MuscleSlug, number>>;
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function weekLabel(d: Date): string {
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+}
+
+/**
+ * The last `weeks` Monday-anchored weeks, OLDEST → NEWEST, including weeks with zero training.
+ * Empty weeks are the point: a gap in the bars is the honest signal that consistency slipped.
+ * The final bucket is always the week in progress.
+ */
+export function weeklyBuckets(sessions: WorkoutSession[], weeks = 12, now = Date.now()): WeekBucket[] {
+  const thisMonday = weekStart(now);
+  const buckets: WeekBucket[] = [];
+  const index = new Map<string, WeekBucket>();
+
+  for (let i = weeks - 1; i >= 0; i--) {
+    const d = new Date(thisMonday);
+    d.setDate(d.getDate() - i * 7);
+    const b: WeekBucket = {
+      key: localDateKey(d),
+      startTs: d.getTime(),
+      label: weekLabel(d),
+      isCurrent: i === 0,
+      sessions: 0,
+      days: 0,
+      sets: 0,
+      reps: 0,
+      tonnage: 0,
+      setsByMuscle: {},
+    };
+    buckets.push(b);
+    index.set(b.key, b);
+  }
+
+  const daysSeen = new Map<string, Set<string>>();
+  for (const sess of sessions) {
+    const ts = new Date(sess.finishedAt).getTime();
+    if (!Number.isFinite(ts)) continue;
+    const b = index.get(weekKey(ts));
+    if (!b) continue;
+    let sessionSets = 0;
+    for (const ex of sess.exercises) {
+      const n = ex.sets.length;
+      if (n === 0) continue;
+      sessionSets += n;
+      b.sets += n;
+      for (const st of ex.sets) {
+        b.reps += Math.max(0, st.reps);
+        b.tonnage += Math.max(0, st.reps) * Math.max(0, st.weight_kg);
+      }
+      for (const m of ex.primary_muscles) {
+        const k = m as MuscleSlug;
+        b.setsByMuscle[k] = (b.setsByMuscle[k] ?? 0) + n;
+      }
+      for (const m of ex.secondary_muscles) {
+        const k = m as MuscleSlug;
+        b.setsByMuscle[k] = (b.setsByMuscle[k] ?? 0) + n * 0.5;
+      }
+    }
+    if (sessionSets === 0) continue;
+    b.sessions += 1;
+    const set = daysSeen.get(b.key) ?? new Set<string>();
+    set.add(dayKey(sess.finishedAt));
+    daysSeen.set(b.key, set);
+  }
+  for (const b of buckets) b.days = daysSeen.get(b.key)?.size ?? 0;
+  return buckets;
+}
+
+/** Direction of travel for a metric. */
+export type TrendDirection = 'up' | 'down' | 'flat' | 'none';
+
+export interface Trend {
+  direction: TrendDirection;
+  /** current value */
+  current: number;
+  /** the value being compared against (previous period) */
+  previous: number;
+  /** signed percentage change, 0 when `previous` is 0 */
+  pctChange: number;
+}
+
+/** Percentage-change trend with a dead-band (< 5 % reads as "flat", which is the honest answer). */
+export function trendOf(current: number, previous: number, deadBand = 0.05): Trend {
+  if (previous <= 0 && current <= 0) return { direction: 'none', current, previous, pctChange: 0 };
+  if (previous <= 0) return { direction: 'up', current, previous, pctChange: 100 };
+  const change = (current - previous) / previous;
+  const direction: TrendDirection =
+    Math.abs(change) < deadBand ? 'flat' : change > 0 ? 'up' : 'down';
+  return { direction, current, previous, pctChange: change * 100 };
+}
+
+/**
+ * Compare the LAST COMPLETE week against the one before it. The in-progress week is excluded on
+ * purpose — comparing a Tuesday against a finished week always reads as a crash, which is a lie.
+ */
+export function completedWeekTrend(
+  buckets: WeekBucket[],
+  metric: (b: WeekBucket) => number,
+): Trend {
+  const done = buckets.filter((b) => !b.isCurrent);
+  const last = done[done.length - 1];
+  const prev = done[done.length - 2];
+  return trendOf(last ? metric(last) : 0, prev ? metric(prev) : 0);
+}
+
+export interface ExerciseFrequency {
+  exercise_id: string;
+  exercise_name: string;
+  /** number of sessions the exercise appeared in */
+  sessions: number;
+  /** total sets logged */
+  sets: number;
+}
+
+/** Exercises ranked by how often they were trained — the ones worth charting a strength trend for. */
+export function exerciseFrequency(sessions: WorkoutSession[]): ExerciseFrequency[] {
+  const map = new Map<string, ExerciseFrequency>();
+  for (const sess of sessions) {
+    for (const ex of sess.exercises) {
+      if (ex.sets.length === 0) continue;
+      const cur = map.get(ex.exercise_id) ?? {
+        exercise_id: ex.exercise_id,
+        exercise_name: ex.exercise_name,
+        sessions: 0,
+        sets: 0,
+      };
+      cur.sessions += 1;
+      cur.sets += ex.sets.length;
+      map.set(ex.exercise_id, cur);
+    }
+  }
+  return [...map.values()].sort((a, b) => b.sessions - a.sessions || b.sets - a.sets);
+}
+
+export interface E1rmPoint {
+  /** epoch ms of the session */
+  ts: number;
+  /** short label, e.g. "Jul 20" */
+  label: string;
+  /** best Epley e1RM of that session, kg */
+  e1rm: number;
+  /** the set that produced it */
+  weight_kg: number;
+  reps: number;
+}
+
+/**
+ * Per-SESSION best estimated 1RM for one exercise, oldest → newest. Session-level (not weekly)
+ * because strength progression is legible set to set, and a lifter who trains a lift twice a week
+ * should see both points.
+ */
+export function e1rmSeries(sessions: WorkoutSession[], exerciseId: string): E1rmPoint[] {
+  const pts: E1rmPoint[] = [];
+  for (const sess of sessions) {
+    const ts = new Date(sess.finishedAt).getTime();
+    if (!Number.isFinite(ts)) continue;
+    let best: E1rmPoint | null = null;
+    for (const ex of sess.exercises) {
+      if (ex.exercise_id !== exerciseId) continue;
+      for (const st of ex.sets) {
+        const est = e1rm(st.weight_kg, st.reps);
+        if (est <= 0) continue;
+        if (!best || est > best.e1rm) {
+          best = {
+            ts,
+            label: weekLabel(new Date(ts)),
+            e1rm: Math.round(est * 10) / 10,
+            weight_kg: st.weight_kg,
+            reps: st.reps,
+          };
+        }
+      }
+    }
+    if (best) pts.push(best);
+  }
+  return pts.sort((a, b) => a.ts - b.ts);
+}
+
+/** Total weighted sets across every muscle in a bucket (the "volume" headline number). */
+export function bucketWeightedSets(b: WeekBucket): number {
+  let total = 0;
+  for (const v of Object.values(b.setsByMuscle)) total += v ?? 0;
+  return total;
 }

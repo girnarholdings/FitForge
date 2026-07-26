@@ -1,27 +1,37 @@
 'use client';
 
 /**
- * Progress (§2.3): weight & measurement charts, PR list, photo timeline. A fresh demo user starts
- * empty — every tab shows a real empty state with a clear action. Weight logging is fully
- * functional and persists to the demo store (localStorage); the chart is built from real entries.
+ * Progress (§2.3): the training-analytics surface — a "% of weekly goal" heat map of the body, a
+ * Trends tab of real time-series, plus weight, measurements, PRs and photos.
+ *
+ * A fresh Local Mode user starts empty and NOTHING is fabricated: the heat map falls back to the
+ * ACTIVE ROUTINE's planned week (clearly labelled "planned"), and Trends shows an honest empty
+ * state describing what appears when. Weight logging persists to the demo store (localStorage).
  * INTEGRATION: photos wire to supabase.storage.from('progress-photos'); PRs derive from set_logs.
  */
 import * as React from 'react';
 import { Button, Card, CardTitle, Chip, Sheet } from '@/components/ui';
 import { LineChart } from '@/components/features/progress/charts';
+import { TrendsTab } from '@/components/features/progress/TrendsTab';
 import { ScaleIcon, TrendingUpIcon, PlusIcon, TargetIcon, TrophyIcon } from '@/components/ui/icons';
-import { useWeights } from '@/lib/demo/useDemo';
-import { MuscleMap, MUSCLE_NAMES, type MuscleSlug } from '@/components/illustrations';
+import { useActiveRoutine, useWeights } from '@/lib/demo/useDemo';
 import {
   useWorkoutSessions,
-  weeklyHeat,
   setsPerMuscleLast7Days,
   computePRs,
 } from '@/components/features/shared/workoutLog';
-import type { ProgressPhoto, PhotoPose } from '@/components/features/_mock/data';
+import { MuscleGoalHeat, useVolumeGoalContext } from '@/components/features/shared/MuscleVolume';
+import { buildGoalRows, fmtPct, fmtSets } from '@/components/features/shared/volumeMath';
+import { plannedWeeklySets } from '@/components/features/progress/analytics';
+import {
+  mockExerciseBySlug,
+  type ProgressPhoto,
+  type PhotoPose,
+} from '@/components/features/_mock/data';
 
-type Tab = 'weight' | 'measurements' | 'prs' | 'photos';
+type Tab = 'trends' | 'weight' | 'measurements' | 'prs' | 'photos';
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'trends', label: 'Trends' },
   { id: 'weight', label: 'Weight' },
   { id: 'measurements', label: 'Measurements' },
   { id: 'prs', label: 'PRs' },
@@ -56,18 +66,24 @@ function EmptyState({
 }
 
 export function ProgressView() {
-  const [tab, setTab] = React.useState<Tab>('weight');
+  const [tab, setTab] = React.useState<Tab>('trends');
   return (
     <div className="space-y-5">
       <h1 className="font-display text-2xl font-bold tracking-tight">Progress</h1>
-      <WeeklyVolumeHeatmap />
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <WeeklyGoalHeatmap />
+      <div className="flex gap-2 overflow-x-auto pb-1" data-testid="progress-tabs">
         {TABS.map((t) => (
-          <Chip key={t.id} selected={tab === t.id} onClick={() => setTab(t.id)}>
+          <Chip
+            key={t.id}
+            selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            data-testid={`progress-tab-${t.id}`}
+          >
             {t.label}
           </Chip>
         ))}
       </div>
+      {tab === 'trends' && <TrendsTab onGoToWeight={() => setTab('weight')} />}
       {tab === 'weight' && <WeightTab />}
       {tab === 'measurements' && <MeasurementsTab />}
       {tab === 'prs' && <PrTab />}
@@ -77,63 +93,140 @@ export function ProgressView() {
 }
 
 /**
- * Weekly volume heatmap (§6 P1-7) — the "my body as a dashboard" signature. Colours each muscle by
- * how many weighted sets it absorbed over the last 7 days (primary set = 1, secondary = 0.5),
- * mapped to gold saturation via the frozen MuscleMap `heat` prop.
+ * THE SIGNATURE VIEW — "my body as a dashboard", now measured against a goal.
+ *
+ * Each muscle is filled with its position on a CONTINUOUS yellow → orange → red ramp, where the
+ * axis is **% of that muscle's personalised weekly set goal** (see `volumeMath.ts`), not a raw
+ * count. 50 % reads yellow, 100 % orange, 130 %+ red — so "am I doing enough here?" is answerable
+ * without reading a single number, and tapping a muscle gives the numbers anyway.
+ *
+ * Source switch: LOGGED (last 7 days of real sets) or PLANNED (what the active routine prescribes
+ * for a week). A brand-new user with no history defaults to PLANNED and is told so explicitly —
+ * the view is never blank and never pretends planned volume is completed volume.
  */
-function WeeklyVolumeHeatmap() {
+function WeeklyGoalHeatmap() {
   const sessions = useWorkoutSessions();
-  const heat = React.useMemo(() => weeklyHeat(sessions), [sessions]);
-  const perMuscle = React.useMemo(() => setsPerMuscleLast7Days(sessions), [sessions]);
-  const worked = Object.keys(heat).length > 0;
+  const routine = useActiveRoutine();
+  const ctx = useVolumeGoalContext();
 
-  // Top few worked muscles for the caption.
-  const top = React.useMemo(
+  const loggedSets = React.useMemo(() => setsPerMuscleLast7Days(sessions), [sessions]);
+  const hasLogged = Object.keys(loggedSets).length > 0;
+
+  const plannedSets = React.useMemo(
     () =>
-      (Object.entries(perMuscle) as [MuscleSlug, number][])
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4),
-    [perMuscle],
+      plannedWeeklySets(
+        routine.days.flatMap((d) => d.exercises.map((e) => ({ slug: e.exercise_slug, sets: e.sets }))),
+        (slug) => mockExerciseBySlug(slug),
+      ),
+    [routine],
   );
 
+  const [source, setSource] = React.useState<'logged' | 'planned'>('logged');
+  const showPlanned = !hasLogged || source === 'planned';
+  const rows = React.useMemo(
+    () => buildGoalRows(showPlanned ? plannedSets : loggedSets, ctx),
+    [showPlanned, plannedSets, loggedSets, ctx],
+  );
+
+  const trained = rows.filter((r) => r.sets > 0);
+  const totalSets = Math.round(trained.reduce((n, r) => n + r.sets, 0));
+  const onTarget = trained.filter((r) => r.pct >= 0.85).length;
+  const avgPct =
+    trained.length > 0 ? trained.reduce((n, r) => n + Math.min(1.5, r.pct), 0) / trained.length : 0;
+
   return (
-    <Card premium className="shadow-[var(--shadow-card)]">
-      <div className="flex items-baseline justify-between">
-        <CardTitle>Weekly volume</CardTitle>
-        <span className="text-xs font-medium text-muted-foreground">last 7 days</span>
+    <Card premium data-testid="weekly-goal-heatmap">
+      <div className="flex items-baseline justify-between gap-2">
+        <CardTitle>Weekly volume vs goal</CardTitle>
+        <span className="shrink-0 text-xs font-medium text-muted-foreground">
+          {showPlanned ? 'planned week' : 'last 7 days'}
+        </span>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        {worked
-          ? 'Where your training landed this week — brighter gold means more sets.'
-          : 'Log a workout and your muscle map lights up with the week’s volume.'}
+        {showPlanned && !hasLogged ? (
+          <>
+            No sets logged yet, so this is what{' '}
+            <span className="font-semibold text-foreground">{routine.name}</span> plans for a full
+            week — {fmtSets(totalSets)} weighted sets. Finish a workout and it switches to what you
+            actually did.
+          </>
+        ) : showPlanned ? (
+          <>
+            What <span className="font-semibold text-foreground">{routine.name}</span> prescribes in
+            a full week: <span className="font-semibold text-foreground tabular">{fmtSets(totalSets)}</span>{' '}
+            weighted sets, {onTarget} of {trained.length} muscles at or above goal.
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-foreground tabular">{fmtSets(totalSets)}</span>{' '}
+            weighted sets across{' '}
+            <span className="font-semibold text-foreground tabular">{trained.length}</span> muscles —{' '}
+            <span className="font-semibold text-foreground tabular">{onTarget}</span> at or above
+            goal, averaging <span className="tabular">{fmtPct(avgPct)}</span> of goal.
+          </>
+        )}
       </p>
-      <div className="mt-3 flex items-center justify-center">
-        <MuscleMap
-          view="both"
-          heat={heat}
-          height={210}
-          className="mx-auto"
+
+      <div className="mt-3">
+        <MuscleGoalHeat
+          rows={rows}
+          height={214}
+          bare
+          header={
+            hasLogged ? (
+              <div
+                role="tablist"
+                aria-label="Volume source"
+                className="mb-3 grid grid-cols-2 gap-1 rounded-field bg-surface p-1"
+              >
+                <SourceTab
+                  active={source === 'logged'}
+                  onClick={() => setSource('logged')}
+                  testId="heat-source-logged"
+                >
+                  Last 7 days
+                </SourceTab>
+                <SourceTab
+                  active={source === 'planned'}
+                  onClick={() => setSource('planned')}
+                  testId="heat-source-planned"
+                >
+                  Planned week
+                </SourceTab>
+              </div>
+            ) : null
+          }
         />
       </div>
-      {worked ? (
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {top.map(([slug, sets]) => (
-            <span
-              key={slug}
-              className="rounded-chip bg-accent-muted px-2.5 py-0.5 text-xs font-semibold tabular-nums text-accent"
-            >
-              {MUSCLE_NAMES[slug]} · {sets % 1 === 0 ? sets : sets.toFixed(1)}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-2 flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
-          <span>Fresh</span>
-          <span className="h-2 w-24 rounded-full bg-gradient-to-r from-muted to-accent" />
-          <span>High volume</span>
-        </div>
-      )}
     </Card>
+  );
+}
+
+function SourceTab({
+  active,
+  onClick,
+  testId,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  testId: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      data-testid={testId}
+      className={
+        'rounded-field py-1.5 text-center text-xs font-semibold transition-colors ' +
+        (active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground')
+      }
+    >
+      {children}
+    </button>
   );
 }
 

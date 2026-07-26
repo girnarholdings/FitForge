@@ -6,6 +6,7 @@ import { equipmentPresetForLocation } from '@fitforge/shared/rules';
 import { cn } from '@/lib/utils';
 import { Button, Chip, SearchInput } from '@/components/ui';
 import { SwipeDeck, StarIcon, type SwipeDirection } from '@/components/ui/SwipeDeck';
+import { Confetti, usePrefersReducedMotion, type BurstSpec } from '@/components/ui/Confetti';
 import { CheckIcon, XIcon, ChevronLeftIcon, ChevronRightIcon, SparkIcon } from '@/components/ui/icons';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { DEMO_EQUIPMENT, type DemoEquipmentRow } from '@/lib/demo/catalog';
@@ -112,10 +113,99 @@ function unlockedCount(owned: ReadonlySet<string>): number {
   return n;
 }
 
+/* ------------------------------------------------------------------------- gamification */
+
+/** Round numbers worth stopping for. Crossing one pops a centred milestone toast. */
+const UNLOCK_MILESTONES = [10, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150] as const;
+
+function crossedMilestone(prev: number, next: number): number | null {
+  let hit: number | null = null;
+  for (const t of UNLOCK_MILESTONES) if (t > prev && t <= next) hit = t;
+  return hit;
+}
+
+/** Escalating, deliberately understated streak copy — a nudge, not a sticker book. */
+function comboCopy(n: number): string {
+  if (n >= 12) return `Unstoppable · ${n}`;
+  if (n >= 8) return `Blazing · ${n}`;
+  if (n >= 5) return `On a roll · ${n}`;
+  return `${n} in a row`;
+}
+
+/** ~1.6s per card, rounded to 5s — an honest, shrinking "you're nearly there". */
+function paceNudge(left: number): string {
+  if (left <= 0) return 'All answered — nice work';
+  if (left === 1) return 'Last one';
+  return `${left} left · about ${Math.max(5, Math.round((left * 1.6) / 5) * 5)}s`;
+}
+
+/** Haptics are a progressive enhancement; never throw where unsupported. */
+function haptic(pattern: number | number[]): void {
+  try {
+    if (typeof navigator === 'undefined' || !('vibrate' in navigator)) return;
+    navigator.vibrate(pattern);
+  } catch {
+    /* no-op */
+  }
+}
+
+/**
+ * A number that eases to its new value instead of snapping. Isolated in its own leaf component so
+ * the ~60fps tick can never re-render (or fight) the swipe deck above it.
+ */
+function CountUp({
+  value,
+  animate,
+  duration = 700,
+  start,
+}: {
+  value: number;
+  animate: boolean;
+  duration?: number;
+  /** first-render value to count up FROM (the finish screen counts up from zero) */
+  start?: number;
+}) {
+  const [shown, setShown] = React.useState(() =>
+    animate && start !== undefined ? start : value,
+  );
+  const fromRef = React.useRef(shown);
+
+  React.useEffect(() => {
+    if (!animate) {
+      fromRef.current = value;
+      setShown(value);
+      return;
+    }
+    const from = fromRef.current;
+    if (from === value) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const v = Math.round(from + (value - from) * eased);
+      fromRef.current = v;
+      setShown(v);
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = value;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [animate, duration, value]);
+
+  return <>{shown}</>;
+}
+
+interface Toast {
+  id: number;
+  text: string;
+  sub?: string;
+}
+
 /* ---------------------------------------------------------------------------- deck model */
 
 type Answer = 'have' | 'love' | 'none';
-type Phase = 'intro' | 'deck' | 'review';
+type Phase = 'intro' | 'deck' | 'celebrate' | 'review';
 
 type DeckCard =
   | { kind: 'category'; key: string; category: EquipmentCategory; items: DemoEquipmentRow[] }
@@ -222,6 +312,28 @@ export function EquipmentStep() {
   const [announcement, setAnnouncement] = React.useState('');
   const hydrated = React.useRef(false);
 
+  /* ------------------------------------------------------------------------ gamification */
+
+  const reduced = usePrefersReducedMotion();
+  // The streak counter itself is never rendered directly — only the chip it pops.
+  const [, setCombo] = React.useState(0);
+  const [comboPop, setComboPop] = React.useState<{ n: number; id: number } | null>(null);
+  const [toast, setToast] = React.useState<Toast | null>(null);
+  const [finishBurst, setFinishBurst] = React.useState<BurstSpec | null>(null);
+  const seq = React.useRef(0);
+
+  React.useEffect(() => {
+    if (!comboPop) return;
+    const t = window.setTimeout(() => setComboPop(null), 1400);
+    return () => window.clearTimeout(t);
+  }, [comboPop]);
+
+  React.useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 1700);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+
   const nameForSlug = React.useCallback(
     (slug: string) => catalog.find((c) => c.slug === slug)?.name ?? slug,
     [catalog],
@@ -324,9 +436,60 @@ export function EquipmentStep() {
       setDeckIndex(0);
       setHistory([]);
       setAnnouncement('');
+      setCombo(0);
+      setComboPop(null);
+      setToast(null);
       setPhase('deck');
     },
     [answers, catalog],
+  );
+
+  /**
+   * Fire the shared reward layer for one answer: streak chip, then the loudest milestone we
+   * crossed (a round "exercises unlocked" number beats a finished category). Runs for drags,
+   * buttons and keyboard alike, because every path lands here.
+   */
+  const reward = React.useCallback(
+    (opts: { prev: number; next: number; categoryDone?: string; steps?: number }) => {
+      const steps = opts.steps ?? 1;
+      setCombo((c) => {
+        const n = c + steps;
+        if (n >= 3) {
+          seq.current += 1;
+          setComboPop({ n, id: seq.current });
+        }
+        return n;
+      });
+      const gained = opts.next - opts.prev;
+      const hit = crossedMilestone(opts.prev, opts.next);
+      seq.current += 1;
+      if (hit !== null) {
+        setToast({
+          id: seq.current,
+          text: `+${gained} exercise${gained === 1 ? '' : 's'} unlocked`,
+          sub: `${opts.next} now available`,
+        });
+        haptic([10, 40, 18]);
+      } else if (opts.categoryDone) {
+        setToast({ id: seq.current, text: `${opts.categoryDone} done`, sub: 'Category complete' });
+      }
+    },
+    [],
+  );
+
+  /** Was this the answer that finished off its category? */
+  const categoryJustCompleted = React.useCallback(
+    (
+      category: EquipmentCategory,
+      before: Readonly<Record<string, Answer>>,
+      after: Readonly<Record<string, Answer>>,
+    ): string | undefined => {
+      const rows = catalog.filter((r) => r.category === category);
+      if (rows.length === 0) return undefined;
+      if (rows.every((r) => before[r.slug])) return undefined;
+      return rows.every((r) => after[r.slug]) ? CATEGORY_META[category].label : undefined;
+    },
+    [catalog],
   );
 
   // Lock the page behind the full-screen deck/review overlays so the URL bar can't collapse
@@ -340,12 +503,35 @@ export function EquipmentStep() {
     };
   }, [phase]);
 
-  // Deck exhausted → review. Held briefly so the last card is seen flying out.
+  // Deck exhausted → the payoff screen. Held briefly so the last card is seen flying out.
   React.useEffect(() => {
     if (phase !== 'deck' || queue.length === 0 || deckIndex < queue.length) return;
-    const t = window.setTimeout(() => setPhase('review'), 260);
+    const t = window.setTimeout(() => setPhase('celebrate'), 260);
     return () => window.clearTimeout(t);
   }, [deckIndex, phase, queue.length]);
+
+  // Finish moment: spark burst under the counting number, then hand over to the review screen
+  // (the CTA gets there sooner for anyone who taps).
+  React.useEffect(() => {
+    if (phase !== 'celebrate') {
+      setFinishBurst(null);
+      return;
+    }
+    setToast(null);
+    setComboPop(null);
+    haptic([14, 50, 22, 50, 30]);
+    seq.current += 1;
+    const id = seq.current;
+    const t1 = window.setTimeout(
+      () => setFinishBurst({ id, x: 88, y: 88, kind: 'spark', power: 2.2 }),
+      280,
+    );
+    const t2 = window.setTimeout(() => setPhase('review'), 3400);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [phase]);
 
   const answerCard = React.useCallback(
     (card: DeckCard, dir: SwipeDirection) => {
@@ -358,11 +544,17 @@ export function EquipmentStep() {
       const owned = new Set(ownedSet);
       if (answer === 'none') owned.delete(card.row.slug);
       else owned.add(card.row.slug);
+      const after = unlockedCount(owned);
       const verb =
         answer === 'love' ? 'saved as a favourite' : answer === 'have' ? 'added' : 'skipped';
-      setAnnouncement(`${card.row.name} ${verb}. ${unlockedCount(owned)} exercises unlocked.`);
+      setAnnouncement(`${card.row.name} ${verb}. ${after} exercises unlocked.`);
+      reward({
+        prev: unlocked,
+        next: after,
+        categoryDone: categoryJustCompleted(card.row.category, answers, next),
+      });
     },
-    [answers, applyAnswers, deckIndex, ownedSet],
+    [answers, applyAnswers, categoryJustCompleted, deckIndex, ownedSet, reward, unlocked],
   );
 
   const answerCategory = React.useCallback(
@@ -377,12 +569,19 @@ export function EquipmentStep() {
         if (all) owned.add(row.slug);
         else owned.delete(row.slug);
       }
+      const after = unlockedCount(owned);
       setAnnouncement(
         `${CATEGORY_META[card.category].label}: ${all ? 'all' : 'none'} of ${card.items.length} items. ` +
-          `${unlockedCount(owned)} exercises unlocked.`,
+          `${after} exercises unlocked.`,
       );
+      reward({
+        prev: unlocked,
+        next: after,
+        steps: card.items.length,
+        categoryDone: categoryJustCompleted(card.category, answers, next),
+      });
     },
-    [answers, applyAnswers, deckIndex, ownedSet],
+    [answers, applyAnswers, categoryJustCompleted, deckIndex, ownedSet, reward, unlocked],
   );
 
   const undo = React.useCallback((): SwipeDirection | void => {
@@ -392,6 +591,10 @@ export function EquipmentStep() {
     applyAnswers(last.answers);
     setDeckIndex(last.deckIndex);
     setAnnouncement('Undone.');
+    // A streak is only worth anything if it is honest — rewinding an answer resets it.
+    setCombo(0);
+    setComboPop(null);
+    setToast(null);
     return last.dir;
   }, [applyAnswers, history]);
 
@@ -514,6 +717,9 @@ export function EquipmentStep() {
         }
         unlocked={unlocked}
         progress={itemCards === 0 ? 0 : itemsDone / itemCards}
+        nudge={paceNudge(itemCards - itemsDone)}
+        toast={toast}
+        reduced={reduced}
         testId="equipment-deck-screen"
       >
         <SwipeDeck<DeckCard>
@@ -549,6 +755,26 @@ export function EquipmentStep() {
               : undefined
           }
           emptyState={<p className="text-sm text-muted-foreground">All done — nice work.</p>}
+          overlay={
+            comboPop ? (
+              <div className="absolute inset-x-0 top-12 flex justify-center px-4">
+                <span
+                  key={comboPop.id}
+                  data-testid="equipment-combo-chip"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-chip border border-accent/50 bg-surface-2/92 px-3 py-1',
+                    'font-display text-[11px] font-bold uppercase tracking-[0.14em] text-accent',
+                    'shadow-[var(--shadow-card)] backdrop-blur-sm',
+                    !reduced && 'ff-pop-fade',
+                  )}
+                  style={{ ['--ff-dur' as string]: '1400ms' }}
+                >
+                  <SparkIcon size={12} />
+                  {comboCopy(comboPop.n)}
+                </span>
+              </div>
+            ) : null
+          }
         />
 
         <div className="shrink-0 pt-2">
@@ -560,6 +786,66 @@ export function EquipmentStep() {
     );
   }
 
+  /* ------------------------------------------------------------------------ finish moment */
+
+  if (phase === 'celebrate') {
+    return (
+      <div
+        data-testid="equipment-finish-screen"
+        className={cn(
+          'fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-surface',
+          'px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+        )}
+        style={{ height: '100svh' }}
+      >
+        <p role="status" aria-live="polite" className="sr-only">
+          Kit complete. {unlocked} exercises unlocked.
+        </p>
+
+        <div className="relative grid h-[176px] w-[176px] shrink-0 place-items-center">
+          {!reduced && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-1/2 -ml-[130px] -mt-[130px] block h-[260px] w-[260px]"
+            >
+              <span className="ff-halo block h-full w-full rounded-full bg-[radial-gradient(circle,var(--accent-muted),transparent_68%)]" />
+            </span>
+          )}
+          <p className="relative text-center">
+            <span
+              className="tabular text-gradient-gold block font-display text-[4.5rem] font-bold leading-none"
+              data-testid="equipment-finish-count"
+            >
+              <CountUp value={unlocked} animate={!reduced} duration={1200} start={0} />
+            </span>
+          </p>
+          <Confetti burst={finishBurst} data-testid="equipment-finish-burst" />
+        </div>
+
+        <div
+          className={cn('mt-2 text-center', !reduced && 'ff-rise-in')}
+          style={{ ['--ff-delay' as string]: '160ms' }}
+        >
+          <p className="font-display text-lg font-bold text-foreground">exercises unlocked</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {haveRows.length === 0
+              ? 'Bodyweight only — that is still a full programme.'
+              : `${haveRows.length} ${haveRows.length === 1 ? 'piece' : 'pieces'} of kit in your gym.`}
+          </p>
+        </div>
+
+        <div
+          className={cn('mt-7 w-full max-w-[320px]', !reduced && 'ff-rise-in')}
+          style={{ ['--ff-delay' as string]: '320ms' }}
+        >
+          <Button block glow onClick={() => setPhase('review')} data-testid="equipment-finish-continue">
+            See my kit
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (phase === 'review') {
     return (
       <OverlayScreen
@@ -568,6 +854,7 @@ export function EquipmentStep() {
         title={<span className="text-sm font-medium text-foreground">Your kit</span>}
         unlocked={unlocked}
         progress={1}
+        reduced={reduced}
         testId="equipment-review-screen"
       >
         <p role="status" aria-live="polite" className="sr-only">
@@ -675,7 +962,15 @@ export function EquipmentStep() {
 
       <div className="flex items-center justify-between gap-3 rounded-card border border-accent/30 bg-accent-muted px-3.5 py-2.5">
         <p className="min-w-0" data-testid="equipment-unlocked-banner">
-          <span className="tabular font-display text-xl font-bold text-accent">{unlocked}</span>
+          <span
+            key={unlocked}
+            className={cn(
+              'tabular inline-block font-display text-xl font-bold text-accent',
+              !reduced && 'ff-pop',
+            )}
+          >
+            <CountUp value={unlocked} animate={!reduced} />
+          </span>
           <span className="ml-1.5 text-sm font-medium text-accent">exercises unlocked</span>
           <span className="ml-1 text-xs text-muted-foreground">of {TOTAL_EXERCISES}</span>
         </p>
@@ -755,6 +1050,9 @@ function OverlayScreen({
   title,
   unlocked,
   progress,
+  nudge,
+  toast,
+  reduced = false,
   testId,
   children,
 }: {
@@ -763,9 +1061,15 @@ function OverlayScreen({
   title: React.ReactNode;
   unlocked: number;
   progress: number;
+  /** shrinking "N left · about Xs" line under the progress bar */
+  nudge?: string;
+  /** brief centred milestone banner — an absolute, non-interactive overlay (no layout shift) */
+  toast?: Toast | null;
+  reduced?: boolean;
   testId: string;
   children: React.ReactNode;
 }) {
+  const pct = Math.round(progress * 100);
   return (
     <div
       data-testid={testId}
@@ -791,7 +1095,12 @@ function OverlayScreen({
             data-testid="equipment-unlocked-counter"
           >
             <SparkIcon size={13} />
-            {unlocked} unlocked
+            <span>
+              <span key={unlocked} className={cn('inline-block', !reduced && 'ff-pop')}>
+                <CountUp value={unlocked} animate={!reduced} />
+              </span>{' '}
+              unlocked
+            </span>
           </span>
         </div>
         <div
@@ -799,17 +1108,53 @@ function OverlayScreen({
           role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={Math.round(progress * 100)}
+          aria-valuenow={pct}
           aria-label="Equipment progress"
         >
           <div
-            className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
+            className="relative h-full overflow-hidden rounded-full bg-accent transition-[width] duration-500 ease-out"
+            style={{ width: `${pct}%` }}
+          >
+            {!reduced && pct > 0 && (
+              <span
+                key={pct}
+                aria-hidden
+                className="ff-shimmer absolute inset-y-0 left-0 block w-1/3 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.75),transparent)]"
+              />
+            )}
+          </div>
         </div>
+        {nudge && (
+          <p
+            className="mt-1.5 text-[10px] font-medium leading-none text-muted-foreground"
+            data-testid="equipment-deck-nudge"
+          >
+            {nudge}
+          </p>
+        )}
       </header>
 
       <div className="mt-3 flex min-h-0 flex-1 flex-col">{children}</div>
+
+      {toast && (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-[24%] z-50 flex justify-center px-8"
+          data-testid="equipment-milestone-toast"
+        >
+          <div
+            key={toast.id}
+            className={cn(
+              'rounded-card border border-accent/45 bg-elevated/95 px-4 py-2.5 text-center',
+              'shadow-[var(--shadow-pop)] backdrop-blur-sm',
+              !reduced && 'ff-pop-fade',
+            )}
+            style={{ ['--ff-dur' as string]: '1700ms' }}
+          >
+            <p className="font-display text-base font-bold text-accent">{toast.text}</p>
+            {toast.sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{toast.sub}</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
