@@ -1435,6 +1435,11 @@ export function splitDayStrip(split: SplitDefinition): string[] {
 export interface SplitRecommendationInput {
   days_per_week?: number | null;
   experience_level?: ExperienceLevel | null;
+  /**
+   * Every goal the user picked, in pick order (the goals step is a multi-select). When present
+   * this wins over `primary_goal`/`secondary_goal`, which are kept for older callers.
+   */
+  goals?: readonly GoalType[] | null;
   primary_goal?: GoalType | null;
   secondary_goal?: GoalType | null;
   equipment_slugs?: readonly string[] | null;
@@ -1547,11 +1552,26 @@ export function recommendSplits(
       score += 6;
     }
 
-    if (split.goals.includes(goal)) {
-      score += 15;
-      reasons.push('Matches your goal');
-    }
-    if (input.secondary_goal && split.goals.includes(input.secondary_goal)) score += 6;
+    // Goals are a MULTI-SELECT now: score every goal the user picked, weighting the first-picked
+    // heaviest and later picks progressively less. `goals` is the answer of record; primary /
+    // secondary stay supported for callers that predate it.
+    const picked: readonly GoalType[] =
+      input.goals && input.goals.length > 0
+        ? input.goals
+        : ([input.primary_goal, input.secondary_goal].filter(Boolean) as GoalType[]);
+    const ranked = picked.length > 0 ? picked : [goal];
+    const GOAL_WEIGHTS = [15, 6, 4, 3];
+    let creditedSecondary = false;
+    ranked.forEach((g, i) => {
+      if (!split.goals.includes(g)) return;
+      score += GOAL_WEIGHTS[i] ?? 2;
+      if (i === 0) {
+        reasons.push('Matches your goal');
+      } else if (!creditedSecondary) {
+        creditedSecondary = true;
+        reasons.push('Also fits your other goals');
+      }
+    });
 
     return { split, score, reasons, index };
   });

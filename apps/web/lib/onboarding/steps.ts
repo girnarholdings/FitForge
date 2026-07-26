@@ -20,8 +20,8 @@ export const STEP_META: Record<OnboardingStep, StepMeta> = {
   goals: {
     step: 'goals',
     screen: 2,
-    title: "What's your main goal?",
-    subtitle: 'Pick one primary goal. You can add a secondary one too.',
+    title: 'What are you training for?',
+    subtitle: 'Tap every goal that applies. The first one you pick leads your plan.',
     wizard: true,
   },
   experience: {

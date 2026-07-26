@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { GoalType } from '@fitforge/shared/types';
-import { SelectableCardGrid, Chip, type SelectableOption } from '@/components/ui';
+import { SelectableCardGrid, type SelectableOption } from '@/components/ui';
 import { TrophyIcon, DumbbellIcon, FlameIcon, RunIcon, HeartIcon } from '@/components/ui/icons';
 import { useOnboarding } from '../OnboardingProvider';
 import { OnboardingFooter } from '../OnboardingFooter';
@@ -23,56 +23,75 @@ const GOAL_LABEL: Record<GoalType, string> = {
   general_health: 'general health',
 };
 
-/** Screen 2 · Goals (§2.2). Primary required + optional secondary. */
+/** "fat loss", "strength and fat loss", "strength, fat loss and endurance" */
+function joinGoals(goals: GoalType[]): string {
+  const parts = goals.map((g) => GOAL_LABEL[g]);
+  if (parts.length <= 1) return parts[0] ?? '';
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * Screen 2 · Goals. A single MULTI-SELECT picker — tap every goal that applies, in the order that
+ * matters to you. There is no separate "secondary goal" question buried at the bottom of the
+ * screen any more; the first thing you tap leads, and everything you tap shapes the plan.
+ *
+ * `goals[]` is the answer of record; `primary_goal` / `secondary_goal` stay in sync as goals[0] /
+ * goals[1] so generation, macros, split scoring and Settings keep working unchanged.
+ */
 export function GoalsStep() {
   const { draft, patch } = useOnboarding();
 
-  const setPrimary = (value: GoalType) => {
-    // if the new primary equals the current secondary, clear the secondary
+  // Tolerate a draft saved before this step became multi-select.
+  const goals = React.useMemo<GoalType[]>(() => {
+    if (draft.goals?.length) return draft.goals;
+    return [draft.primary_goal, draft.secondary_goal].filter(Boolean) as GoalType[];
+  }, [draft.goals, draft.primary_goal, draft.secondary_goal]);
+
+  const commit = (next: GoalType[]) => {
     patch({
-      primary_goal: value,
-      secondary_goal: draft.secondary_goal === value ? null : draft.secondary_goal,
+      goals: next,
+      primary_goal: next[0] ?? null,
+      secondary_goal: next[1] ?? null,
     });
   };
 
-  const toggleSecondary = (value: GoalType) => {
-    patch({ secondary_goal: draft.secondary_goal === value ? null : value });
+  const toggle = (value: GoalType) => {
+    commit(goals.includes(value) ? goals.filter((g) => g !== value) : [...goals, value]);
   };
 
   return (
     <>
       <SelectableCardGrid
         options={GOAL_OPTIONS}
-        value={draft.primary_goal}
-        onChange={setPrimary}
-        mode="single"
+        value={goals}
+        onChange={toggle}
+        mode="multiple"
+        order
       />
 
-      {draft.primary_goal && (
-        <div className="mt-6 rounded-card bg-accent-muted p-3 text-sm text-accent">
-          Nice — we&apos;ll tune your plan for {GOAL_LABEL[draft.primary_goal]}.
+      {goals.length > 0 && (
+        <div
+          className="mt-5 rounded-card bg-accent-muted p-3 text-sm text-accent"
+          data-testid="goals-summary"
+        >
+          {goals.length === 1 ? (
+            <>Nice — we&apos;ll tune your plan for {joinGoals(goals)}.</>
+          ) : (
+            <>
+              Nice — we&apos;ll tune your plan for {joinGoals(goals)}, leading with{' '}
+              <span className="font-semibold">{GOAL_LABEL[goals[0]!]}</span>.
+            </>
+          )}
         </div>
       )}
 
-      {draft.primary_goal && (
-        <div className="mt-6">
-          <p className="text-sm font-medium text-foreground">Add a secondary goal? (optional)</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {GOAL_OPTIONS.filter((o) => o.value !== draft.primary_goal).map((o) => (
-              <Chip
-                key={o.value}
-                selected={draft.secondary_goal === o.value}
-                onClick={() => toggleSecondary(o.value)}
-              >
-                {o.title}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      )}
+      <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+        Pick as many as you like — the first one you tap leads your programming, and the rest
+        adjust the split we recommend.
+      </p>
 
       <div className="flex-1" />
-      <OnboardingFooter step="goals" canContinue={!!draft.primary_goal} />
+      <OnboardingFooter step="goals" canContinue={goals.length > 0} />
     </>
   );
 }

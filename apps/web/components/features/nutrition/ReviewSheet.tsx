@@ -1,0 +1,498 @@
+'use client';
+
+/**
+ * THE CONFIRM STEP (docs/RESEARCH-FOOD.md §C2.7) — "ask to confirm what you entered and what it
+ * thinks that equates to".
+ *
+ * Every parsed item is an EDITABLE row: what it matched, the portion it assumed, the computed
+ * calories/macros, and a confidence signal. One tap changes the food (opens search), the quantity
+ * (stepper) or the unit (chips). Anything the parser could not match is shown honestly as an
+ * unmatched row with a "search for it" action — never dropped, never guessed. Nothing reaches the
+ * day until "Log …" is pressed.
+ */
+import * as React from 'react';
+import { Button, Card, Chip, Sheet } from '@/components/ui';
+import { CheckIcon, PlusIcon, SearchIcon, XIcon } from '@/components/ui/icons';
+import { cn } from '@/lib/utils';
+import { computeMacros, confidenceHint, confidenceLevel, formatMacros, sumMacros } from '@/lib/food/format';
+import { formatQuantity, unitOptions } from '@/lib/food/measures';
+import { reprice } from '@/lib/food/parse';
+import { rememberAlias } from '@/lib/food/learning';
+import type { Food, ParsedItem } from '@/lib/food/types';
+import type { MealSlot } from '@/components/features/_mock/data';
+import { MEAL_SLOTS } from './mealSlots';
+import { FoodPickerSheet } from './FoodPickerSheet';
+
+const LEVEL_STYLES = {
+  high: { dot: 'bg-success', text: 'text-success' },
+  medium: { dot: 'bg-energy', text: 'text-energy' },
+  low: { dot: 'bg-danger', text: 'text-danger' },
+} as const;
+
+export function ReviewSheet({
+  open,
+  input,
+  items,
+  slot,
+  recents,
+  onSlotChange,
+  onItemsChange,
+  onConfirm,
+  onClose,
+}: {
+  open: boolean;
+  input: string;
+  items: ParsedItem[];
+  slot: MealSlot;
+  recents: Food[];
+  onSlotChange: (slot: MealSlot) => void;
+  onItemsChange: (items: ParsedItem[]) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const [pickerFor, setPickerFor] = React.useState<string | null>(null);
+  const [customFor, setCustomFor] = React.useState<string | null>(null);
+
+  const matched = items.filter((i) => i.food && i.portion);
+  const totals = sumMacros(
+    matched.map((i) => computeMacros(i.food as Food, i.portion?.grams ?? 0)),
+  );
+  const unmatchedCount = items.length - matched.length;
+
+  function patch(id: string, next: ParsedItem) {
+    onItemsChange(items.map((i) => (i.id === id ? next : i)));
+  }
+  function remove(id: string) {
+    onItemsChange(items.filter((i) => i.id !== id));
+  }
+  function chooseFood(id: string, food: Food) {
+    const item = items.find((i) => i.id === id);
+    setPickerFor(null);
+    if (!item) return;
+    // Learning (§C2.7): these words mean this food, from now on.
+    if (item.query) rememberAlias(item.query, food.id);
+    patch(id, reprice(item, { food }));
+  }
+
+  /** Nothing in the catalog fits — let the user type the numbers off the packet. */
+  function addCustom(id: string, entry: CustomEntry) {
+    const item = items.find((i) => i.id === id);
+    setCustomFor(null);
+    if (!item) return;
+    const food: Food = {
+      id: `custom-${Date.now().toString(36)}`,
+      name: entry.name,
+      aliases: [],
+      category: 'dish',
+      per_100g: {
+        kcal: entry.kcal,
+        protein_g: entry.protein_g,
+        carbs_g: entry.carbs_g,
+        fat_g: entry.fat_g,
+      },
+      serving_name: '1 serving',
+      serving_grams: 100,
+      household_measures: [{ name: 'serving', grams: 100 }],
+    };
+    patch(id, reprice(item, { food, quantity: 1, unit: null }));
+  }
+
+  return (
+    <>
+      <Sheet open={open} onClose={onClose} title="Does this look right?">
+        <div data-testid="review-sheet" className="flex max-h-[68dvh] flex-col">
+          <p className="-mt-2 mb-3 line-clamp-2 shrink-0 text-sm text-muted-foreground">
+            You said “<span className="text-foreground">{input}</span>” · tap anything to fix it.
+          </p>
+
+          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto">
+            {items.length === 0 && (
+              <p className="py-6 text-center text-sm text-muted-foreground">Nothing to log yet.</p>
+            )}
+            {items.map((item) =>
+              item.food && item.portion ? (
+                <MatchedRow
+                  key={item.id}
+                  item={item}
+                  onChange={(next) => patch(item.id, next)}
+                  onRemove={() => remove(item.id)}
+                  onOpenPicker={() => setPickerFor(item.id)}
+                  onPickAlternative={(food) => chooseFood(item.id, food)}
+                />
+              ) : (
+                <UnmatchedRow
+                  key={item.id}
+                  item={item}
+                  onSearch={() => setPickerFor(item.id)}
+                  onCustom={() => setCustomFor(item.id)}
+                  onRemove={() => remove(item.id)}
+                />
+              ),
+            )}
+          </div>
+
+          <div className="-mx-5 mt-3 shrink-0 space-y-2 border-t border-border bg-surface px-5 pt-3">
+            <div className="flex flex-wrap gap-1.5">
+              {MEAL_SLOTS.map((s) => (
+                <Chip
+                  key={s.slot}
+                  selected={slot === s.slot}
+                  className="!px-3 !py-1.5 text-xs"
+                  onClick={() => onSlotChange(s.slot)}
+                >
+                  {s.label}
+                </Chip>
+              ))}
+            </div>
+
+            <div data-testid="review-total">
+              <div className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="truncate text-muted-foreground">
+                  {matched.length} item{matched.length === 1 ? '' : 's'}
+                  {unmatchedCount > 0 ? ` · ${unmatchedCount} unmatched` : ''}
+                </span>
+                <span className="tabular shrink-0 font-semibold text-foreground">
+                  {Math.round(totals.kcal)} kcal
+                </span>
+              </div>
+              <p className="tabular text-right text-[11px] text-muted-foreground">
+                {formatMacros(totals)}
+              </p>
+            </div>
+
+            <Button
+              block
+              size="lg"
+              glow
+              data-testid="review-confirm"
+              disabled={matched.length === 0}
+              onClick={onConfirm}
+            >
+              <CheckIcon size={18} />
+              Log {matched.length} item{matched.length === 1 ? '' : 's'} · {Math.round(totals.kcal)}{' '}
+              kcal
+            </Button>
+          </div>
+        </div>
+      </Sheet>
+
+      <CustomEntrySheet
+        open={customFor != null}
+        name={items.find((i) => i.id === customFor)?.sourceText ?? ''}
+        onCancel={() => setCustomFor(null)}
+        onAdd={(entry) => customFor && addCustom(customFor, entry)}
+      />
+
+      <FoodPickerSheet
+        open={pickerFor != null}
+        title="Which food was it?"
+        initialQuery={items.find((i) => i.id === pickerFor)?.sourceText}
+        recents={recents}
+        onSelect={(food) => pickerFor && chooseFood(pickerFor, food)}
+        onClose={() => setPickerFor(null)}
+      />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------------ matched row */
+
+function MatchedRow({
+  item,
+  onChange,
+  onRemove,
+  onOpenPicker,
+  onPickAlternative,
+}: {
+  item: ParsedItem;
+  onChange: (next: ParsedItem) => void;
+  onRemove: () => void;
+  onOpenPicker: () => void;
+  onPickAlternative: (food: Food) => void;
+}) {
+  const food = item.food as Food;
+  const grams = item.portion?.grams ?? 0;
+  const macros = computeMacros(food, grams);
+  const level = confidenceLevel(item.confidence);
+  const styles = LEVEL_STYLES[level];
+  const units = React.useMemo(() => unitOptions(food), [food]);
+
+  const step = item.unit === 'g' || item.unit === 'ml' ? 25 : item.unit === 'oz' ? 1 : 0.5;
+  const setQuantity = (q: number) =>
+    onChange(reprice(item, { quantity: Math.max(step, Math.round(q * 100) / 100) }));
+
+  // With no explicit unit the portion still came from a named measure ('large', 'medium').
+  const selectedUnit = item.unit ?? item.portion?.measureName ?? '__serving';
+
+  // Keep the unit actually in use visible in the horizontally scrolling chip strip.
+  const chipsRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const strip = chipsRef.current;
+    const chip = strip?.querySelector<HTMLElement>('[data-selected="true"]');
+    if (strip && chip) strip.scrollLeft = Math.max(0, chip.offsetLeft - strip.offsetLeft - 8);
+  }, [selectedUnit]);
+
+  return (
+    <Card
+      data-testid="review-row"
+      data-confidence={level}
+      className="!p-3"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+          {item.child ? '↳ ' : ''}“{item.sourceText}”
+        </p>
+        <button
+          type="button"
+          aria-label={`Remove ${food.name}`}
+          onClick={onRemove}
+          className="-mr-1 -mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground transition-colors hover:text-danger"
+        >
+          <XIcon size={14} />
+        </button>
+      </div>
+
+      <button
+        type="button"
+        data-testid="review-row-food"
+        onClick={onOpenPicker}
+        className="mt-1 flex w-full items-center gap-2 text-left"
+      >
+        <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', styles.dot)} />
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+          {food.name}
+        </span>
+        <span className="shrink-0 text-xs font-semibold text-accent">Change</span>
+      </button>
+
+      <p className="mt-1 pl-4 text-xs text-muted-foreground">
+        {item.portion?.label} ·{' '}
+        <span className="tabular text-foreground">{Math.round(macros.kcal)} kcal</span> ·{' '}
+        <span className="tabular">{formatMacros(macros)}</span>
+      </p>
+
+      {level !== 'high' && (
+        <p className={cn('mt-1 pl-4 text-[11px] font-medium', styles.text)}>
+          {confidenceHint(level)}
+        </p>
+      )}
+
+      <div className="mt-2 flex items-center gap-2">
+        <div className="flex items-center rounded-field border border-border bg-surface">
+          <button
+            type="button"
+            aria-label={`Decrease ${food.name}`}
+            onClick={() => setQuantity(item.quantity - step)}
+            className="grid h-9 w-9 place-items-center rounded-l-field text-lg font-semibold text-foreground hover:bg-elevated"
+          >
+            −
+          </button>
+          <span className="tabular min-w-10 text-center text-sm font-semibold">
+            {formatQuantity(item.quantity)}
+          </span>
+          <button
+            type="button"
+            aria-label={`Increase ${food.name}`}
+            onClick={() => setQuantity(item.quantity + step)}
+            className="grid h-9 w-9 place-items-center rounded-r-field text-lg font-semibold text-foreground hover:bg-elevated"
+          >
+            +
+          </button>
+        </div>
+
+        <div
+          ref={chipsRef}
+          className="-mx-1 flex min-w-0 flex-1 gap-1.5 overflow-x-auto px-1 py-0.5"
+        >
+          {units.map((u) => (
+            <button
+              key={u.unit}
+              type="button"
+              data-selected={selectedUnit === u.unit}
+              onClick={() =>
+                onChange(
+                  reprice(item, {
+                    unit: u.unit === '__serving' ? null : u.unit,
+                    quantity: u.unit === 'g' ? Math.round(grams) : item.quantity,
+                  }),
+                )
+              }
+              className={cn(
+                'shrink-0 rounded-chip border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                selectedUnit === u.unit
+                  ? 'border-accent bg-accent-muted text-accent'
+                  : 'border-border bg-surface-2 text-muted-foreground',
+              )}
+            >
+              {u.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {level === 'low' && item.alternatives.length > 0 && (
+        <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
+          {item.alternatives.slice(0, 3).map((alt) => (
+            <button
+              key={alt.id}
+              type="button"
+              onClick={() => onPickAlternative(alt)}
+              className="shrink-0 rounded-chip border border-border bg-surface px-2.5 py-1.5 text-[11px] text-muted-foreground"
+            >
+              {alt.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* ---------------------------------------------------------------------- unmatched row */
+
+function UnmatchedRow({
+  item,
+  onSearch,
+  onCustom,
+  onRemove,
+}: {
+  item: ParsedItem;
+  onSearch: () => void;
+  onCustom: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <Card
+      data-testid="review-row"
+      data-confidence="none"
+      className="!p-3 border-danger/50 bg-danger/5"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">“{item.sourceText}”</p>
+          <p className="mt-0.5 text-xs text-danger">
+            No match in the food database — nothing was guessed.
+          </p>
+        </div>
+        <button
+          type="button"
+          aria-label={`Remove ${item.sourceText}`}
+          onClick={onRemove}
+          className="-mr-1 -mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground transition-colors hover:text-danger"
+        >
+          <XIcon size={14} />
+        </button>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" data-testid="unmatched-search" onClick={onSearch}>
+          <SearchIcon size={15} /> Search for it
+        </Button>
+        <Button size="sm" variant="ghost" data-testid="unmatched-custom" onClick={onCustom}>
+          <PlusIcon size={15} /> Enter macros
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/* --------------------------------------------------------------------- custom entry */
+
+interface CustomEntry {
+  name: string;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+}
+
+/**
+ * The escape hatch: a food that genuinely is not in the catalog (a restaurant special, a
+ * home recipe) can be entered straight off the packet. Values are stored per serving.
+ */
+function CustomEntrySheet({
+  open,
+  name: initialName,
+  onAdd,
+  onCancel,
+}: {
+  open: boolean;
+  name: string;
+  onAdd: (entry: CustomEntry) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = React.useState(initialName);
+  const [kcal, setKcal] = React.useState(0);
+  const [p, setP] = React.useState(0);
+  const [c, setC] = React.useState(0);
+  const [f, setF] = React.useState(0);
+
+  React.useEffect(() => {
+    if (open) {
+      setName(initialName);
+      setKcal(0);
+      setP(0);
+      setC(0);
+      setF(0);
+    }
+  }, [open, initialName]);
+
+  if (!open) return null;
+
+  return (
+    <Sheet open onClose={onCancel} title="Enter it yourself">
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Straight off the packet — one serving. Nothing is invented for you.
+        </p>
+        <input
+          value={name}
+          aria-label="Food name"
+          placeholder="What was it?"
+          onChange={(e) => setName(e.target.value)}
+          className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-accent"
+        />
+        <div className="grid grid-cols-4 gap-2">
+          {(
+            [
+              ['kcal', kcal, setKcal],
+              ['P', p, setP],
+              ['C', c, setC],
+              ['F', f, setF],
+            ] as const
+          ).map(([label, value, set]) => (
+            <label key={label} className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase text-muted-foreground">
+                {label}
+              </span>
+              <input
+                type="number"
+                inputMode="decimal"
+                aria-label={label}
+                value={value || ''}
+                onChange={(e) => set(Math.max(0, Number(e.target.value)))}
+                className="h-11 w-full rounded-xl border border-border bg-surface px-2 text-base tabular-nums outline-none focus:border-accent"
+              />
+            </label>
+          ))}
+        </div>
+        <Button
+          block
+          size="lg"
+          disabled={name.trim().length === 0}
+          data-testid="custom-add"
+          onClick={() =>
+            onAdd({
+              name: name.trim(),
+              kcal,
+              protein_g: p,
+              carbs_g: c,
+              fat_g: f,
+            })
+          }
+        >
+          Add to the list
+        </Button>
+      </div>
+    </Sheet>
+  );
+}

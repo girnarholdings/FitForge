@@ -36,6 +36,8 @@ export function SplitStep() {
       days_per_week: draft.days_per_week,
       session_minutes: draft.session_minutes,
       experience_level: (draft.experience_level ?? 'beginner') as ExperienceLevel,
+      // Multi-select goals lead the recommendation; primary/secondary remain the fallback.
+      goals: (draft.goals ?? []) as GoalType[],
       primary_goal: (draft.primary_goal ?? 'general_health') as GoalType,
       secondary_goal: draft.secondary_goal as GoalType | null,
       equipment_slugs: draft.equipment_slugs,
@@ -45,6 +47,7 @@ export function SplitStep() {
       draft.days_per_week,
       draft.session_minutes,
       draft.experience_level,
+      draft.goals,
       draft.primary_goal,
       draft.secondary_goal,
       draft.equipment_slugs,

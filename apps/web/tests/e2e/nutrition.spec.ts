@@ -1,14 +1,24 @@
 import { test, expect } from '@playwright/test';
 import { completeOnboarding, resetDemo, readDemoState, DEMO_STORAGE_KEY } from './helpers';
 
+/**
+ * Nutrition — CONVERSATIONAL logging.
+ *
+ * The primary path is now: type a sentence → the deterministic parser (`lib/food/parse`) turns it
+ * into items → a confirm sheet shows what it thinks each one equates to → the user confirms, and
+ * only then is anything written to the day. These specs drive that path end-to-end, plus the
+ * honest "no match" surface, real search over the 509-food catalog, and copy-yesterday.
+ */
+
 const yesterdayISO = () => new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 test.describe('nutrition', () => {
   test.beforeEach(async ({ page }) => {
     await resetDemo(page);
   });
 
-  test('food search returns results and logging a food updates + persists the day totals', async ({
+  test('typing a sentence parses it, the confirm step shows the maths, and confirming logs the day', async ({
     page,
   }) => {
     await completeOnboarding(page);
@@ -16,38 +26,128 @@ test.describe('nutrition', () => {
 
     await expect(page.getByRole('heading', { name: 'Nutrition' })).toBeVisible();
 
-    // Fresh day shows the guided empty state; use its primary CTA to open the food search.
-    await page.getByRole('button', { name: /Search & add food/i }).click();
+    // 1 · say what you ate, in words.
+    const composer = page.getByTestId('nutrition-composer');
+    await expect(composer).toBeVisible();
+    await composer.fill('2 eggs and a slice of toast with butter');
+    await page.getByTestId('composer-submit').click();
 
-    const search = page.getByRole('combobox', { name: 'Search foods' });
-    await expect(search).toBeVisible();
-    await search.fill('Chicken');
+    // 2 · the confirm step lists every item it understood, with its computed nutrition.
+    const review = page.getByTestId('review-sheet');
+    await expect(review).toBeVisible();
+    await expect(review.getByTestId('review-row')).toHaveCount(3);
+    await expect(review.getByText(/Egg, whole/i)).toBeVisible();
+    await expect(review.getByText(/Bread, white/i)).toBeVisible();
+    await expect(review.getByText(/Butter/i).first()).toBeVisible();
+    await expect(page.getByTestId('review-total')).toContainText(/kcal/);
 
-    // Type-ahead returns matching results.
-    const option = page.getByRole('option', { name: /Chicken/i }).first();
-    await expect(option).toBeVisible();
-    await option.click();
+    // Nothing is logged until confirm.
+    const beforeState = await readDemoState(page);
+    const beforeLogs =
+      (beforeState as { logsByDate: Record<string, unknown[]> }).logsByDate[todayISO()] ?? [];
+    expect(beforeLogs.length).toBe(0);
 
-    // Serving picker → confirm log.
-    const logBtn = page.getByRole('button', { name: /Log \d+ kcal/ });
-    await expect(logBtn).toBeVisible();
-    await logBtn.click();
+    await page.screenshot({ path: 'tests/screenshots/nutrition-confirm.png' });
 
-    // The logged food now appears in the day view.
-    await expect(page.getByText(/Chicken/i).first()).toBeVisible();
+    // 3 · confirm commits everything at once.
+    await page.getByTestId('review-confirm').click();
+    await expect(review).toBeHidden();
+    await expect(page.getByText(/Egg, whole/i).first()).toBeVisible();
 
     await page.screenshot({ path: 'tests/screenshots/nutrition.png', fullPage: true });
 
-    // Persisted to the store under today's date.
     const state = await readDemoState(page);
     const logsByDate = (state as { logsByDate: Record<string, unknown[]> }).logsByDate;
-    const today = new Date().toISOString().slice(0, 10);
-    expect(logsByDate[today], 'today has persisted food logs').toBeTruthy();
-    expect(logsByDate[today].length).toBeGreaterThan(0);
+    expect(logsByDate[todayISO()], 'today has persisted food logs').toBeTruthy();
+    expect(logsByDate[todayISO()]?.length ?? 0).toBe(3);
 
-    // Reload and confirm the entry survives.
+    // Survives a reload.
     await page.reload();
+    await expect(page.getByText(/Egg, whole/i).first()).toBeVisible();
+  });
+
+  test('a phrase the parser cannot match is surfaced honestly, never guessed', async ({ page }) => {
+    await completeOnboarding(page);
+    await page.goto('/nutrition');
+
+    await page.getByTestId('nutrition-composer').fill('asdfgh and 2 eggs');
+    await page.getByTestId('composer-submit').click();
+
+    const review = page.getByTestId('review-sheet');
+    await expect(review).toBeVisible();
+    await expect(review.getByText(/No match in the food database/i)).toBeVisible();
+    await expect(review.getByTestId('unmatched-search')).toBeVisible();
+
+    // Only the item it actually recognised is logged.
+    await page.getByTestId('review-confirm').click();
+    const state = await readDemoState(page);
+    const logs = (state as { logsByDate: Record<string, unknown[]> }).logsByDate[todayISO()] ?? [];
+    expect(logs.length).toBe(1);
+  });
+
+  test('search returns real results for the everyday queries that used to return nothing', async ({
+    page,
+  }) => {
+    await completeOnboarding(page);
+    await page.goto('/nutrition');
+
+    await page.getByRole('button', { name: /search the food list/i }).click();
+    const search = page.getByRole('combobox', { name: 'Search foods' });
+    await expect(search).toBeVisible();
+
+    for (const [query, expected] of [
+      ['chicken', /Chicken/i],
+      ['pizza', /Pizza/i],
+      ['coffee', /Coffee/i],
+      ['burger', /burger/i],
+    ] as const) {
+      await search.fill(query);
+      await expect(page.getByRole('option').first()).toBeVisible();
+      await expect(page.getByRole('option', { name: expected }).first()).toBeVisible();
+    }
+
+    // Picking a result still goes through the confirm step.
+    await search.fill('chicken');
+    await page.getByRole('option', { name: /Chicken/i }).first().click();
+    await expect(page.getByTestId('review-sheet')).toBeVisible();
+    await page.getByTestId('review-confirm').click();
     await expect(page.getByText(/Chicken/i).first()).toBeVisible();
+
+    const state = await readDemoState(page);
+    const logs = (state as { logsByDate: Record<string, unknown[]> }).logsByDate[todayISO()] ?? [];
+    expect(logs.length).toBeGreaterThan(0);
+  });
+
+  test('correcting a match teaches the parser — the same words resolve to the fixed food next time', async ({
+    page,
+  }) => {
+    await completeOnboarding(page);
+    await page.goto('/nutrition');
+
+    // "bread" resolves to the generic white bread…
+    await page.getByTestId('nutrition-composer').fill('bread');
+    await page.getByTestId('composer-submit').click();
+    const review = page.getByTestId('review-sheet');
+    await expect(review.getByText(/Bread, white/i)).toBeVisible();
+
+    // …the user corrects it to sourdough.
+    await review.getByTestId('review-row-food').first().click();
+    const search = page.getByRole('combobox', { name: 'Search foods' });
+    await search.fill('sourdough');
+    await page.getByRole('option', { name: /sourdough/i }).first().click();
+    await expect(review.getByText(/Bread, sourdough/i)).toBeVisible();
+    await page.getByTestId('review-confirm').click();
+
+    // The correction is remembered locally…
+    const aliases = await page.evaluate(() =>
+      window.localStorage.getItem('fitforge.foodAliases.v1'),
+    );
+    expect(aliases).toContain('sourdough');
+
+    // …and the same phrase now resolves to sourdough without any correction.
+    await page.getByTestId('nutrition-composer').fill('bread');
+    await page.getByTestId('composer-submit').click();
+    await expect(review.getByText(/Bread, sourdough/i)).toBeVisible();
   });
 
   test('copy-yesterday re-logs the previous day’s meals into today and persists', async ({
@@ -55,7 +155,6 @@ test.describe('nutrition', () => {
   }) => {
     await completeOnboarding(page);
 
-    // Seed a food log under yesterday's date directly in the store, then reload the day view.
     const y = yesterdayISO();
     await page.evaluate(
       ({ key, date }) => {
@@ -67,7 +166,7 @@ test.describe('nutrition', () => {
             id: 'nl-yesterday-1',
             logged_on: date,
             meal_slot: 'lunch',
-            food_id: 'f-salmon',
+            food_id: 'salmon',
             custom_name: 'Atlantic Salmon, cooked',
             quantity_g: 150,
             kcal: 312,
@@ -83,21 +182,16 @@ test.describe('nutrition', () => {
 
     await page.goto('/nutrition');
 
-    // The copy-yesterday affordance appears because yesterday has logs.
     const copyBtn = page.getByTestId('copy-yesterday');
     await expect(copyBtn).toBeVisible();
     await copyBtn.click();
 
-    // Yesterday's meal now shows in today's day view.
     await expect(page.getByText('Atlantic Salmon, cooked').first()).toBeVisible();
 
-    // Persisted under today's date.
     const state = await readDemoState(page);
     const logsByDate = (state as { logsByDate: Record<string, unknown[]> }).logsByDate;
-    const today = new Date().toISOString().slice(0, 10);
-    expect(logsByDate[today]?.length ?? 0).toBeGreaterThan(0);
+    expect(logsByDate[todayISO()]?.length ?? 0).toBeGreaterThan(0);
 
-    // Survives reload.
     await page.reload();
     await expect(page.getByText('Atlantic Salmon, cooked').first()).toBeVisible();
   });

@@ -19,6 +19,12 @@ export interface SelectableCardGridProps<V extends string> {
   /** single = radio semantics (goals primary, experience, location); multiple = toggles */
   mode?: 'single' | 'multiple';
   columns?: 1 | 2;
+  /**
+   * Multi-select only: badge each selection with its 1-based pick order instead of a plain check,
+   * so "the first one you tap leads" is visible rather than a rule the user has to remember.
+   * Requires `value` to be an ARRAY in selection order.
+   */
+  order?: boolean;
   className?: string;
 }
 
@@ -32,12 +38,14 @@ export function SelectableCardGrid<V extends string>({
   onChange,
   mode = 'single',
   columns = 1,
+  order = false,
   className,
 }: SelectableCardGridProps<V>) {
-  const selectedSet = React.useMemo(
-    () => new Set(Array.isArray(value) ? value : value ? [value] : []),
+  const selectedList = React.useMemo(
+    () => (Array.isArray(value) ? value : value ? [value] : []),
     [value],
   );
+  const selectedSet = React.useMemo(() => new Set(selectedList), [selectedList]);
 
   return (
     <div
@@ -81,13 +89,20 @@ export function SelectableCardGrid<V extends string>({
             <span
               aria-hidden
               className={cn(
-                'grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors',
+                'grid shrink-0 place-items-center rounded-full border transition-colors',
+                order && mode === 'multiple' ? 'h-6 w-6 text-[11px] font-bold' : 'h-5 w-5',
                 isSelected
                   ? 'border-accent bg-accent text-accent-foreground'
                   : 'border-border text-transparent',
               )}
             >
-              <CheckIcon size={13} />
+              {order && mode === 'multiple' ? (
+                isSelected ? (
+                  selectedList.indexOf(opt.value) + 1
+                ) : null
+              ) : (
+                <CheckIcon size={13} />
+              )}
             </span>
           </Card>
         );

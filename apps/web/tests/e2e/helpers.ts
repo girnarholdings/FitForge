@@ -99,7 +99,7 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   await enterDemo(page);
 
   // 2 · Goals — pick a primary goal.
-  await expect(page.getByText("What's your main goal?")).toBeVisible();
+  await expect(page.getByText("What are you training for?")).toBeVisible();
   await page.getByText('Lose fat').click();
   await cont(page);
 

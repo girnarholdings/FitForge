@@ -141,20 +141,13 @@ export interface Routine {
   days: RoutineDay[];
 }
 
-/* -------------------------------------------------------------------- nutrition read models */
-export interface FoodSearchRow {
-  food_id: string;
-  slug: string;
-  name: string;
-  brand: string | null;
-  kcal: number; // per 100 g
-  protein_g: number; // per 100 g
-  carbs_g: number; // per 100 g
-  fat_g: number; // per 100 g
-  serving_name: string;
-  serving_grams: number;
-  score: number;
-}
+/* -------------------------------------------------------------------- nutrition read models
+ *
+ * The FOOD CATALOG has moved out of this mock plane: `lib/food/core.json` (509 curated foods with
+ * aliases, per-100 g macros and household measures) plus `lib/food/{index,search,parse,measures}`
+ * is the real thing the nutrition surface reads. Only the LOG shape — what the user recorded —
+ * stays here, because the demo store persists it.
+ */
 export interface NutritionLog {
   id: string;
   logged_on: string;
@@ -181,12 +174,6 @@ export interface NutritionTargets {
   carbs_g_target: number;
   fat_g_target: number;
 }
-export interface MealTemplate {
-  id: string;
-  name: string;
-  items: { food_id: string; food_name: string; quantity_g: number }[];
-}
-
 /* -------------------------------------------------------------------- progress read models */
 export interface BodyMetric {
   measured_on: string;
@@ -683,138 +670,11 @@ export function mockRoutineDay(dayId: string): RoutineDay | undefined {
   return MOCK_ROUTINE.days.find((d) => d.id === dayId);
 }
 
-/* ----------------------------------------------------------------------------- nutrition */
-export const FOODS: FoodSearchRow[] = [
-  { food_id: 'f-chicken', slug: 'chicken-breast', name: 'Chicken Breast, cooked', brand: null, kcal: 165, protein_g: 31, carbs_g: 0, fat_g: 3.6, serving_name: '1 breast', serving_grams: 120, score: 0 },
-  { food_id: 'f-salmon', slug: 'salmon', name: 'Atlantic Salmon, cooked', brand: null, kcal: 208, protein_g: 20, carbs_g: 0, fat_g: 13, serving_name: '1 fillet', serving_grams: 150, score: 0 },
-  { food_id: 'f-beef', slug: 'ground-beef-90', name: 'Ground Beef 90/10, cooked', brand: null, kcal: 217, protein_g: 26, carbs_g: 0, fat_g: 12, serving_name: '100 g', serving_grams: 100, score: 0 },
-  { food_id: 'f-egg', slug: 'egg', name: 'Whole Egg', brand: null, kcal: 143, protein_g: 12.6, carbs_g: 0.7, fat_g: 9.5, serving_name: '1 large', serving_grams: 50, score: 0 },
-  { food_id: 'f-eggwhite', slug: 'egg-white', name: 'Egg Whites', brand: null, kcal: 52, protein_g: 10.9, carbs_g: 0.7, fat_g: 0.2, serving_name: '3 tbsp', serving_grams: 46, score: 0 },
-  { food_id: 'f-tofu', slug: 'tofu-firm', name: 'Firm Tofu', brand: null, kcal: 144, protein_g: 17, carbs_g: 3, fat_g: 8, serving_name: '½ block', serving_grams: 126, score: 0 },
-  { food_id: 'f-whey', slug: 'whey-protein', name: 'Whey Protein Powder', brand: null, kcal: 375, protein_g: 75, carbs_g: 12.5, fat_g: 6, serving_name: '1 scoop', serving_grams: 32, score: 0 },
-  { food_id: 'f-greek', slug: 'greek-yogurt-nonfat', name: 'Greek Yogurt, nonfat', brand: null, kcal: 59, protein_g: 10.3, carbs_g: 3.6, fat_g: 0.4, serving_name: '1 cup', serving_grams: 170, score: 0 },
-  { food_id: 'f-cottage', slug: 'cottage-cheese-2', name: 'Cottage Cheese 2%', brand: null, kcal: 84, protein_g: 11, carbs_g: 4.3, fat_g: 2.3, serving_name: '½ cup', serving_grams: 113, score: 0 },
-  { food_id: 'f-rice', slug: 'white-rice', name: 'White Rice, cooked', brand: null, kcal: 130, protein_g: 2.7, carbs_g: 28, fat_g: 0.3, serving_name: '1 cup', serving_grams: 158, score: 0 },
-  { food_id: 'f-brownrice', slug: 'brown-rice', name: 'Brown Rice, cooked', brand: null, kcal: 112, protein_g: 2.3, carbs_g: 24, fat_g: 0.8, serving_name: '1 cup', serving_grams: 195, score: 0 },
-  { food_id: 'f-oats', slug: 'oats', name: 'Rolled Oats, dry', brand: null, kcal: 379, protein_g: 13.2, carbs_g: 67.7, fat_g: 6.5, serving_name: '½ cup', serving_grams: 40, score: 0 },
-  { food_id: 'f-sweetpotato', slug: 'sweet-potato', name: 'Sweet Potato, baked', brand: null, kcal: 90, protein_g: 2, carbs_g: 20.7, fat_g: 0.2, serving_name: '1 medium', serving_grams: 130, score: 0 },
-  { food_id: 'f-banana', slug: 'banana', name: 'Banana', brand: null, kcal: 89, protein_g: 1.1, carbs_g: 22.8, fat_g: 0.3, serving_name: '1 medium', serving_grams: 118, score: 0 },
-  { food_id: 'f-apple', slug: 'apple', name: 'Apple', brand: null, kcal: 52, protein_g: 0.3, carbs_g: 13.8, fat_g: 0.2, serving_name: '1 medium', serving_grams: 182, score: 0 },
-  { food_id: 'f-blueberries', slug: 'blueberries', name: 'Blueberries', brand: null, kcal: 57, protein_g: 0.7, carbs_g: 14.5, fat_g: 0.3, serving_name: '1 cup', serving_grams: 148, score: 0 },
-  { food_id: 'f-avocado', slug: 'avocado', name: 'Avocado', brand: null, kcal: 160, protein_g: 2, carbs_g: 8.5, fat_g: 14.7, serving_name: '½ fruit', serving_grams: 100, score: 0 },
-  { food_id: 'f-oliveoil', slug: 'olive-oil', name: 'Olive Oil', brand: null, kcal: 884, protein_g: 0, carbs_g: 0, fat_g: 100, serving_name: '1 tbsp', serving_grams: 13.5, score: 0 },
-  { food_id: 'f-almonds', slug: 'almonds', name: 'Almonds', brand: null, kcal: 579, protein_g: 21.2, carbs_g: 21.6, fat_g: 49.9, serving_name: '¼ cup', serving_grams: 35, score: 0 },
-  { food_id: 'f-pb', slug: 'peanut-butter', name: 'Peanut Butter', brand: null, kcal: 588, protein_g: 25, carbs_g: 20, fat_g: 50, serving_name: '2 tbsp', serving_grams: 32, score: 0 },
-  { food_id: 'f-lentils', slug: 'lentils', name: 'Lentils, cooked', brand: null, kcal: 116, protein_g: 9, carbs_g: 20.1, fat_g: 0.4, serving_name: '1 cup', serving_grams: 198, score: 0 },
-  { food_id: 'f-blackbeans', slug: 'black-beans', name: 'Black Beans, cooked', brand: null, kcal: 132, protein_g: 8.9, carbs_g: 23.7, fat_g: 0.5, serving_name: '1 cup', serving_grams: 172, score: 0 },
-];
-
-const FOOD_BY_ID = new Map(FOODS.map((f) => [f.food_id, f]));
-
-export function mockFoodById(id: string): FoodSearchRow | undefined {
-  return FOOD_BY_ID.get(id);
-}
-
-export function mockSearchFoods(q: string, limit = 8): FoodSearchRow[] {
-  const query = q.trim().toLowerCase();
-  if (query.length < 2) return [];
-  return FOODS.map((f) => {
-    const name = f.name.toLowerCase();
-    let score = 0;
-    if (name === query) score += 100;
-    if (name.startsWith(query)) score += 60;
-    if (new RegExp(`\\b${escapeRe(query)}`).test(name)) score += 40;
-    if (name.includes(query)) score += 20;
-    score += 5; // verified
-    return { ...f, score };
-  })
-    .filter((r) => r.score > 15)
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
-    .slice(0, limit);
-}
-
-export const RECENT_FOODS: FoodSearchRow[] = [
-  FOOD_BY_ID.get('f-chicken')!,
-  FOOD_BY_ID.get('f-rice')!,
-  FOOD_BY_ID.get('f-greek')!,
-  FOOD_BY_ID.get('f-banana')!,
-];
-
-/** Compute macro snapshot for `quantity_g` of a food (mirrors server-side `log_food`). */
-export function computeMacros(food: FoodSearchRow, quantityG: number) {
-  const factor = quantityG / 100;
-  return {
-    kcal: round1(food.kcal * factor),
-    protein_g: round1(food.protein_g * factor),
-    carbs_g: round1(food.carbs_g * factor),
-    fat_g: round1(food.fat_g * factor),
-  };
-}
-
-export const MOCK_TODAY_LOGS: NutritionLog[] = [
-  logRow('nl-1', 'breakfast', 'f-oats', 80),
-  logRow('nl-2', 'breakfast', 'f-greek', 170),
-  logRow('nl-3', 'breakfast', 'f-blueberries', 148),
-  logRow('nl-4', 'lunch', 'f-chicken', 180),
-  logRow('nl-5', 'lunch', 'f-rice', 200),
-  logRow('nl-6', 'lunch', 'f-avocado', 50),
-  logRow('nl-7', 'snack', 'f-whey', 32),
-  logRow('nl-8', 'snack', 'f-banana', 118),
-];
-
-function logRow(id: string, slot: MealSlot, foodId: string, qty: number): NutritionLog {
-  const food = FOOD_BY_ID.get(foodId)!;
-  const m = computeMacros(food, qty);
-  return {
-    id,
-    logged_on: todayISO(),
-    meal_slot: slot,
-    food_id: foodId,
-    custom_name: food.name,
-    quantity_g: qty,
-    ...m,
-  };
-}
-
-export function mockDailyNutrition(): DailyNutrition {
-  return MOCK_TODAY_LOGS.reduce<DailyNutrition>(
-    (acc, l) => ({
-      logged_on: todayISO(),
-      kcal: round1(acc.kcal + l.kcal),
-      protein_g: round1(acc.protein_g + l.protein_g),
-      carbs_g: round1(acc.carbs_g + l.carbs_g),
-      fat_g: round1(acc.fat_g + l.fat_g),
-    }),
-    { logged_on: todayISO(), kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
-  );
-}
-
-export const MEAL_SLOTS: { slot: MealSlot; label: string; icon: string }[] = [
-  { slot: 'breakfast', label: 'Breakfast', icon: '\u{1F373}' },
-  { slot: 'lunch', label: 'Lunch', icon: '\u{1F957}' },
-  { slot: 'dinner', label: 'Dinner', icon: '\u{1F37D}\u{FE0F}' },
-  { slot: 'snack', label: 'Snack', icon: '\u{1F34E}' },
-];
-
-export const MOCK_MEAL_TEMPLATES: MealTemplate[] = [
-  {
-    id: 'm-shake',
-    name: 'Post-workout shake',
-    items: [
-      { food_id: 'f-whey', food_name: 'Whey Protein Powder', quantity_g: 32 },
-      { food_id: 'f-banana', food_name: 'Banana', quantity_g: 118 },
-    ],
-  },
-  {
-    id: 'm-breakfast',
-    name: 'Go-to breakfast',
-    items: [
-      { food_id: 'f-oats', food_name: 'Rolled Oats, dry', quantity_g: 80 },
-      { food_id: 'f-greek', food_name: 'Greek Yogurt, nonfat', quantity_g: 170 },
-      { food_id: 'f-blueberries', food_name: 'Blueberries', quantity_g: 148 },
-    ],
-  },
-];
+/* ----------------------------------------------------------------------------- nutrition
+ * Foods, search, portion maths and the natural-language parser all live in `@/lib/food` now.
+ * See `lib/food/index.ts` (the in-RAM catalog + inverted index), `search.ts`, `parse.ts`,
+ * `measures.ts` and `format.ts`.
+ */
 
 /* ----------------------------------------------------------------------------- progress */
 export const MOCK_BODY_METRICS: BodyMetric[] = buildWeightSeries();

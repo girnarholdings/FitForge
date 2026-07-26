@@ -21,6 +21,7 @@ import * as React from 'react';
 import { MuscleMap, MUSCLE_NAMES, ALL_MUSCLE_SLUGS } from '@/components/illustrations';
 import type { MuscleSlug } from '@/components/illustrations';
 import { mockExerciseBySlug, mockExerciseById } from '@/components/features/_mock/data';
+import { TargetIcon } from '@/components/ui/icons';
 import { useDemoState } from '@/lib/demo/useDemo';
 import {
   buildGoalRows,
@@ -180,7 +181,11 @@ const STATUS_TEXT: Record<GoalStatus, string> = {
 export interface MuscleGoalHeatProps {
   /** goal-resolved rows (build with `buildGoalRows`) */
   rows: MuscleGoalRow[];
-  /** silhouette height in px (front + back render side by side) */
+  /**
+   * Legacy sizing hint. It used to be the height of EACH of two side-by-side silhouettes; it is
+   * now scaled up into the height of the single flip figure, so existing callers get a body
+   * that is ~3× the painted area without touching their code.
+   */
   height?: number;
   /** "Show exercises" deep-link from the selected-muscle detail */
   onMuscleSelect?: (slug: MuscleSlug) => void;
@@ -188,13 +193,26 @@ export interface MuscleGoalHeatProps {
   header?: React.ReactNode;
   /** drop the card chrome — for when the caller already provides a surface */
   bare?: boolean;
+  /** show the scrollable muscle rail (off when the caller renders its own ranked list) */
+  rail?: boolean;
   className?: string;
 }
 
 /**
- * The signature view: every muscle filled with its position on the CONTINUOUS
- * yellow → orange → red ramp, where the axis is **% of that muscle's weekly set goal**.
- * Tap (or keyboard-activate) any muscle for its exact numbers.
+ * The signature view, rebuilt around ONE flippable body.
+ *
+ * Every muscle is filled with its position on the CONTINUOUS yellow → orange → red ramp, where
+ * the axis is **% of that muscle's weekly set goal**. What changed:
+ *
+ *   · one body with a FRONT / BACK switch instead of two look-alike silhouettes, so the figure is
+ *     twice as wide and every region is a real tap target;
+ *   · the read-out sits DIRECTLY under the figure and occupies the same space whether or not
+ *     something is selected — tap a muscle and the answer is already on screen, with nothing
+ *     below it jumping;
+ *   · the selection is echoed on the body itself (gold ring + a pinned callout with the %), so
+ *     you never have to hunt for what you just tapped;
+ *   · the muscle rail gives every muscle a 38 px-tall alternative target, sorted by how far along
+ *     its goal it is — which doubles as an instant ranking.
  */
 export function MuscleGoalHeat({
   rows,
@@ -202,6 +220,7 @@ export function MuscleGoalHeat({
   onMuscleSelect,
   header,
   bare = false,
+  rail = true,
   className,
 }: MuscleGoalHeatProps) {
   const [selected, setSelected] = React.useState<MuscleSlug | null>(null);
@@ -214,6 +233,108 @@ export function MuscleGoalHeat({
     .filter((r) => r.sets > 0)
     .reduce<MuscleGoalRow | null>((best, r) => (!best || r.pct > best.pct ? r : best), null);
 
+  /** rail chips: a colour dot, the name, and the number that matters — sorted by % of goal */
+  const badges = React.useMemo(() => {
+    const out: Partial<Record<MuscleSlug, string>> = {};
+    for (const r of rows) if (r.sets > 0) out[r.slug] = fmtPct(r.pct);
+    return out;
+  }, [rows]);
+  const dotColors = React.useMemo(() => {
+    const out: Partial<Record<MuscleSlug, string>> = {};
+    for (const r of rows) out[r.slug] = r.sets > 0 ? r.color : 'var(--muscle-line)';
+    return out;
+  }, [rows]);
+  const railOrder = React.useMemo(
+    () => [...rows].sort((a, b) => b.pct - a.pct || b.sets - a.sets).map((r) => r.slug),
+    [rows],
+  );
+
+  /* the colour key belongs NEXT to the colours it explains, not at the bottom of the card */
+  const legend = (
+    <div data-testid="heat-legend">
+      <div
+        className="h-2 w-full rounded-full border border-border"
+        style={{ backgroundImage: LEGEND_GRADIENT }}
+        aria-hidden
+      />
+      <div className="mt-1 flex justify-between text-[10px] font-semibold tabular text-muted-foreground">
+        <span>0%</span>
+        <span>50%</span>
+        <span className="text-accent">100%</span>
+        <span className="text-danger">150%+</span>
+      </div>
+      <p className="mt-0.5 text-center text-[10px] leading-snug text-muted-foreground">
+        % of your weekly set goal — yellow is building, orange is on goal, red is over.
+      </p>
+    </div>
+  );
+
+  const readout = (
+    <div className="min-h-[136px]" data-testid="muscle-goal-detail">
+      {detail ? (
+        <div className="rounded-field border border-accent/45 bg-surface p-3 shadow-[0_0_0_1px_rgba(228,184,77,0.06)]">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="truncate font-display text-base font-bold text-foreground">
+              {detail.name}
+            </span>
+            <span
+              className={`shrink-0 text-xs font-bold ${STATUS_TEXT[detail.status]}`}
+              data-testid="muscle-goal-detail-status"
+            >
+              {GOAL_STATUS_LABEL[detail.status]}
+            </span>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-center">
+            <Stat label="This week" value={fmt(detail.sets)} unit="sets" />
+            <Stat label="Goal" value={fmt(detail.goal)} unit="sets" />
+            <Stat
+              label="Of goal"
+              value={fmtPct(detail.pct)}
+              unit=""
+              color={detail.sets > 0 ? detail.color : undefined}
+            />
+          </div>
+          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+            {GOAL_STATUS_HELP[detail.status]}
+          </p>
+          {onMuscleSelect && (
+            <button
+              type="button"
+              onClick={() => onMuscleSelect(detail.slug)}
+              data-testid="muscle-goal-detail-exercises"
+              className="mt-2 text-sm font-semibold text-accent"
+            >
+              Show {detail.name} exercises →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex h-[136px] flex-col items-center justify-center gap-1.5 rounded-field border border-dashed border-border-strong/70 bg-surface/60 px-4 text-center">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-accent-muted text-accent">
+            <TargetIcon size={16} />
+          </span>
+          <p className="text-[13px] font-semibold text-foreground">
+            Tap any muscle for its sets, goal and % of goal
+          </p>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            {hottest ? (
+              <>
+                Right now{' '}
+                <span className="font-semibold text-foreground">{hottest.name}</span> leads at{' '}
+                <span className="tabular font-semibold" style={{ color: hottest.color }}>
+                  {fmtPct(hottest.pct)}
+                </span>{' '}
+                of goal.
+              </>
+            ) : (
+              'Nothing logged for this week yet.'
+            )}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
       className={[
@@ -225,83 +346,29 @@ export function MuscleGoalHeat({
       data-testid="muscle-goal-heat"
     >
       {header}
-      <div className="flex justify-center">
-        <MuscleMap
-          view="both"
-          heatColors={colors}
-          selected={selected}
-          height={height}
-          labels={false}
-          interactive
-          ariaLabel="Weekly volume as a percentage of goal, per muscle"
-          onMuscleClick={(slug) => setSelected((cur) => (cur === slug ? null : slug))}
-        />
-      </div>
-
-      {/* continuous gradient legend — sampled from the SAME ramp the body uses */}
-      <div className="mt-3" data-testid="heat-legend">
-        <div
-          className="h-2.5 w-full rounded-full border border-border"
-          style={{ backgroundImage: LEGEND_GRADIENT }}
-          aria-hidden
-        />
-        <div className="mt-1 flex justify-between text-[10px] font-semibold tabular text-muted-foreground">
-          <span>0%</span>
-          <span>50%</span>
-          <span className="text-accent">100%</span>
-          <span className="text-danger">150%+</span>
-        </div>
-        <p className="mt-1 text-center text-[11px] leading-snug text-muted-foreground">
-          % of your weekly set goal — yellow is building, orange is on goal, red is over.
-        </p>
-      </div>
-
-      {/* tap-to-inspect detail */}
-      <div className="mt-3" data-testid="muscle-goal-detail">
-        {detail ? (
-          <div className="rounded-field border border-border bg-surface p-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="truncate font-display text-base font-bold text-foreground">
-                {detail.name}
-              </span>
-              <span
-                className={`shrink-0 text-xs font-bold ${STATUS_TEXT[detail.status]}`}
-                data-testid="muscle-goal-detail-status"
-              >
-                {GOAL_STATUS_LABEL[detail.status]}
-              </span>
-            </div>
-            <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-              <Stat label="This week" value={fmt(detail.sets)} unit="sets" />
-              <Stat label="Goal" value={fmt(detail.goal)} unit="sets" />
-              <Stat
-                label="Of goal"
-                value={fmtPct(detail.pct)}
-                unit=""
-                color={detail.sets > 0 ? detail.color : undefined}
-              />
-            </div>
-            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-              {GOAL_STATUS_HELP[detail.status]}
-            </p>
-            {onMuscleSelect && (
-              <button
-                type="button"
-                onClick={() => onMuscleSelect(detail.slug)}
-                data-testid="muscle-goal-detail-exercises"
-                className="mt-2 text-sm font-semibold text-accent"
-              >
-                Show {detail.name} exercises →
-              </button>
-            )}
+      <MuscleMap
+        view="both"
+        heatColors={colors}
+        selected={selected}
+        // the legacy prop sized ONE of two tiny silhouettes; scale it into a real figure
+        height={Math.round(Math.max(height, 200) * 1.34)}
+        // Always open facing the user. With every muscle painted, "auto" would pick a side on a
+        // coin-flip and the user would land somewhere different each visit.
+        initialView="front"
+        interactive
+        rail={rail}
+        badges={badges}
+        dotColors={dotColors}
+        railOrder={railOrder}
+        hint={
+          <div className="space-y-2">
+            {legend}
+            {readout}
           </div>
-        ) : (
-          <p className="text-center text-[11px] text-muted-foreground">
-            Tap any muscle for its sets, goal and % of goal
-            {hottest ? ` — ${hottest.name} leads at ${fmtPct(hottest.pct)}` : ''}.
-          </p>
-        )}
-      </div>
+        }
+        ariaLabel="Weekly volume as a percentage of goal, per muscle"
+        onMuscleClick={(slug) => setSelected((cur) => (cur === slug ? null : slug))}
+      />
     </div>
   );
 }
@@ -424,7 +491,9 @@ export function MuscleVolume({
       </div>
 
       {/* View 1 — the % of weekly goal heat gradient */}
-      <MuscleGoalHeat rows={goalRows} onMuscleSelect={onMuscleSelect} header={heatHeader} />
+      {/* the ranked list below is this view's alternative selection path, so the heat card
+          drops its own rail rather than showing two lists of the same twenty muscles */}
+      <MuscleGoalHeat rows={goalRows} onMuscleSelect={onMuscleSelect} header={heatHeader} rail={false} />
 
       {/* View 2 — ranked bars, each scaled to that muscle's OWN weekly goal */}
       <ul className="space-y-1.5" data-testid="muscle-volume-bars">

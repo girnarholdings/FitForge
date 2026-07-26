@@ -40,6 +40,15 @@ export interface OnboardingDraft {
   display_name: string | null;
 
   // step 2 · goals
+  /**
+   * Every goal the user picked, in the order they picked them. This is the real answer now —
+   * the step is a multi-select, so someone can want strength AND fat loss without ranking them
+   * in a separate question at the bottom of the screen.
+   *
+   * `primary_goal` / `secondary_goal` are kept in sync as `goals[0]` / `goals[1]` so every
+   * existing consumer (generation, macros, split scoring, settings) keeps working untouched.
+   */
+  goals: GoalType[];
   primary_goal: GoalType | null;
   secondary_goal: GoalType | null;
 
@@ -99,6 +108,7 @@ export interface OnboardingDraft {
 export function emptyDraft(): OnboardingDraft {
   return {
     display_name: null,
+    goals: [],
     primary_goal: null,
     secondary_goal: null,
     experience_level: null,

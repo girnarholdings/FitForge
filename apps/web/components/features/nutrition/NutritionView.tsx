@@ -1,178 +1,188 @@
 'use client';
 
 /**
- * Nutrition day view (§2.3): logs grouped by meal_slot; search_foods type-ahead → serving picker
- * (default serving_name/serving_grams, ×0.5/×1/×2 quick chips) → log_food; quick-add custom
- * entry; meal templates. Meal slot defaults by time of day (§2.3). All mocked & local.
+ * Nutrition day view — rebuilt around CONVERSATIONAL logging.
+ *
+ * The primary action is a sentence: "2 eggs and a slice of toast with butter". The deterministic
+ * parser (`lib/food/parse`, docs/RESEARCH-FOOD.md §C2) turns it into items, the confirm sheet
+ * shows what it thinks each one equates to, and only a confirm writes to the day. Manual search
+ * over the 509-food catalog, recents, copy-yesterday and per-item editing all remain.
+ *
+ * Everything is local: the food index lives in RAM, corrections are learned into localStorage.
  */
 import * as React from 'react';
-import { Button, Card, CardTitle, Chip, SearchInput, Sheet, MacroRing } from '@/components/ui';
-import { PlusIcon, SearchIcon, XIcon, RepeatIcon } from '@/components/ui/icons';
+import { Button, Card, CardTitle, Chip, Sheet } from '@/components/ui';
+import { PlusIcon, RepeatIcon, SearchIcon, SparkleIcon, XIcon } from '@/components/ui/icons';
 import {
-  FOODS,
-  RECENT_FOODS,
-  MEAL_SLOTS,
-  MOCK_MEAL_TEMPLATES,
-  mockSearchFoods,
-  mockFoodById,
-  computeMacros,
   defaultMealSlot,
   todayISO,
-  type FoodSearchRow,
-  type NutritionLog,
   type MealSlot,
+  type NutritionLog,
 } from '@/components/features/_mock/data';
 import { useDemoState, useNutritionTargets, useTodayLogs } from '@/lib/demo/useDemo';
-import { cn } from '@/lib/utils';
+import { foodById, FOOD_COUNT } from '@/lib/food/index';
+import { computeMacros, formatMacros, sumMacros } from '@/lib/food/format';
+import { resolvePortion, unitOptions } from '@/lib/food/measures';
+import { parseFoodText } from '@/lib/food/parse';
+import { learnedFoodIds } from '@/lib/food/learning';
+import { popularFoods } from '@/lib/food/search';
+import type { Food, ParsedItem } from '@/lib/food/types';
+import { MEAL_SLOTS } from './mealSlots';
+import { Composer } from './Composer';
+import { DaySummary } from './DaySummary';
+import { FoodPickerSheet } from './FoodPickerSheet';
+import { ReviewSheet } from './ReviewSheet';
 
 let logSeq = 1000;
 const genLogId = () => `nl-new-${logSeq++}`;
 
-/** ISO date (UTC, matching todayISO) for N days before today. */
 function isoDaysAgo(n: number): string {
   return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 }
 
 export function NutritionView() {
-  // DEMO MODE: targets + today's logs come from the demo store (persisted to localStorage).
   const targets = useNutritionTargets();
   const { logs, setLogs } = useTodayLogs();
   const state = useDemoState();
-  const [slotForSearch, setSlotForSearch] = React.useState<MealSlot | null>(null);
-  const [pickFood, setPickFood] = React.useState<{ food: FoodSearchRow; slot: MealSlot } | null>(
-    null,
-  );
-  const [quickAddOpen, setQuickAddOpen] = React.useState(false);
 
-  const totals = logs.reduce(
-    (a, l) => ({
-      kcal: a.kcal + l.kcal,
-      protein_g: a.protein_g + l.protein_g,
-      carbs_g: a.carbs_g + l.carbs_g,
-      fat_g: a.fat_g + l.fat_g,
-    }),
-    { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
-  );
+  const [draft, setDraft] = React.useState<{ input: string; items: ParsedItem[] } | null>(null);
+  const [draftSlot, setDraftSlot] = React.useState<MealSlot>('lunch');
+  const [pickerSlot, setPickerSlot] = React.useState<MealSlot | null>(null);
+  const [editing, setEditing] = React.useState<NutritionLog | null>(null);
 
-  // Remaining = Goal − Food (MFP's one-formula headline). Can go negative → "over".
-  const remainingKcal = Math.round(targets.kcal_target - totals.kcal);
-  const remainingProtein = Math.round(targets.protein_g_target - totals.protein_g);
+  const totals = sumMacros(logs);
 
-  // P2-13: yesterday's logs (for one-tap copy) + the 8 most-frequent foods (chips above search).
-  const yesterdayISO = isoDaysAgo(1);
-  const yesterdayLogs = state.logsByDate[yesterdayISO] ?? [];
+  /* ------------------------------------------------------------------ history + recents */
 
-  const frequentFoods = React.useMemo<FoodSearchRow[]>(() => {
+  const historyIds = React.useMemo(() => {
     const counts = new Map<string, number>();
     for (const dayLogs of Object.values(state.logsByDate)) {
       for (const l of dayLogs) {
         if (l.food_id) counts.set(l.food_id, (counts.get(l.food_id) ?? 0) + 1);
       }
     }
-    const ranked = [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([id]) => mockFoodById(id))
-      .filter((f): f is FoodSearchRow => f != null);
-    // Fresh users have no history → fall back to the curated recents so the strip still adds value.
-    return (ranked.length > 0 ? ranked : RECENT_FOODS).slice(0, 8);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
   }, [state.logsByDate]);
 
-  function addLog(log: NutritionLog) {
-    setLogs((prev) => [...prev, log]);
+  const recents = React.useMemo<Food[]>(() => {
+    const fromHistory = historyIds.map((id) => foodById(id)).filter((f): f is Food => f != null);
+    return fromHistory.length > 0 ? fromHistory.slice(0, 8) : popularFoods(6);
+  }, [historyIds]);
+
+  const yesterday = isoDaysAgo(1);
+  const yesterdayLogs = state.logsByDate[yesterday] ?? [];
+
+  /* --------------------------------------------------------------------------- actions */
+
+  const parseAndReview = React.useCallback(
+    (text: string) => {
+      const boostIds = [...historyIds, ...learnedFoodIds()];
+      const result = parseFoodText(text, { boostIds });
+      setDraftSlot(result.mealSlot ?? defaultMealSlot());
+      setDraft({ input: text, items: result.items });
+    },
+    [historyIds],
+  );
+
+  /** A one-tap recent/search pick still goes through the confirm step, pre-filled. */
+  function reviewSingleFood(food: Food, slot: MealSlot) {
+    const portion = resolvePortion(food, 1, null, {});
+    setDraftSlot(slot);
+    setDraft({
+      input: food.name,
+      items: [
+        {
+          id: `pi-manual-${logSeq++}`,
+          sourceText: food.name,
+          quantity: 1,
+          quantitySource: 'implicit',
+          unit: null,
+          size: null,
+          query: food.name.toLowerCase(),
+          food,
+          alternatives: [],
+          portion,
+          matchConfidence: 1,
+          confidence: 1,
+          child: false,
+        },
+      ],
+    });
   }
+
+  function commitDraft() {
+    if (!draft) return;
+    const rows: NutritionLog[] = [];
+    for (const item of draft.items) {
+      if (!item.food || !item.portion) continue;
+      const macros = computeMacros(item.food, item.portion.grams);
+      rows.push({
+        id: genLogId(),
+        logged_on: todayISO(),
+        meal_slot: draftSlot,
+        food_id: item.food.id,
+        custom_name: item.food.name,
+        quantity_g: item.portion.grams,
+        ...macros,
+      });
+    }
+    if (rows.length > 0) setLogs((prev) => [...prev, ...rows]);
+    setDraft(null);
+  }
+
   function copyYesterday() {
-    const src = state.logsByDate[yesterdayISO] ?? [];
+    const src = state.logsByDate[yesterday] ?? [];
     if (src.length === 0) return;
     setLogs((prev) => [
       ...prev,
       ...src.map((l) => ({ ...l, id: genLogId(), logged_on: todayISO() })),
     ]);
   }
+
   function removeLog(id: string) {
     setLogs((prev) => prev.filter((l) => l.id !== id));
+    setEditing(null);
   }
-  function logFood(food: FoodSearchRow, slot: MealSlot, quantityG: number) {
-    const m = computeMacros(food, quantityG);
-    addLog({
-      id: genLogId(),
-      logged_on: new Date().toISOString().slice(0, 10),
-      meal_slot: slot,
-      food_id: food.food_id,
-      custom_name: food.name,
-      quantity_g: quantityG,
-      ...m,
-    });
-  }
-  function logTemplate(templateId: string, slot: MealSlot) {
-    const t = MOCK_MEAL_TEMPLATES.find((x) => x.id === templateId);
-    if (!t) return;
-    for (const item of t.items) {
-      const food = FOODS.find((f) => f.food_id === item.food_id);
-      if (food) logFood(food, slot, item.quantity_g);
-    }
+
+  function updateLog(next: NutritionLog) {
+    setLogs((prev) => prev.map((l) => (l.id === next.id ? next : l)));
+    setEditing(null);
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 pb-8 md:pb-0">
       <header className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">Nutrition</h1>
         <span className="text-sm text-muted-foreground">Today</span>
       </header>
 
-      {/* Day summary — "Remaining = Goal − Food" (P2-12): gold protein ring + ivory kcal ring,
-          per-macro %-of-target bars (Cronometer pattern). */}
-      <Card premium>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-          Remaining = Goal − Food
-        </p>
+      <DaySummary totals={totals} targets={targets} />
 
-        <div className="mt-3 flex items-center justify-center gap-6">
-          {/* Calories ring — ivory (kcal), center shows what's left */}
-          <MacroRing
-            value={totals.kcal}
-            target={targets.kcal_target}
-            size={132}
-            stroke={12}
-            color="var(--color-foreground)"
-            caption={remainingKcal.toLocaleString()}
-            sublabel={remainingKcal < 0 ? 'over' : 'kcal left'}
-            label="Calories"
-          />
-          {/* Protein ring — signature gold */}
-          <MacroRing
-            value={totals.protein_g}
-            target={targets.protein_g_target}
-            size={100}
-            stroke={10}
-            color="var(--color-accent)"
-            caption={`${Math.max(0, remainingProtein)}g`}
-            sublabel="protein left"
-            label="Protein"
-          />
-        </div>
+      {/* The headline input. Fixed to the thumb zone on phones, in-flow on desktop. */}
+      <Composer onSubmit={parseAndReview} showExamples={logs.length === 0} />
 
-        {/* Goal − Food = Remaining, spelled out for MFP-grade clarity */}
-        <div className="mt-4 grid grid-cols-3 gap-2 rounded-field bg-surface/60 px-3 py-2.5 text-center">
-          <FormulaCell label="Goal" value={targets.kcal_target} />
-          <FormulaCell label="Food" value={Math.round(totals.kcal)} />
-          <FormulaCell
-            label="Remaining"
-            value={remainingKcal}
-            emphasize
-            over={remainingKcal < 0}
-          />
-        </div>
+      {logs.length === 0 && (
+        <Card className="border-2 border-dashed border-border bg-surface-2/60 text-center shadow-none">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-muted text-accent">
+            <SparkleIcon size={26} />
+          </span>
+          <CardTitle className="mt-3">Just tell it what you ate</CardTitle>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            Type a sentence like “2 eggs and a slice of toast with butter”. FitForge works out the
+            portions and macros from {FOOD_COUNT} foods, shows you what it understood, and logs it
+            only once you confirm.
+          </p>
+          <Button
+            variant="secondary"
+            className="mx-auto mt-4"
+            onClick={() => setPickerSlot(defaultMealSlot())}
+          >
+            <SearchIcon size={18} /> Or search the food list
+          </Button>
+        </Card>
+      )}
 
-        {/* Per-macro %-of-target bars (Cronometer) */}
-        <dl className="mt-4 space-y-2.5">
-          <MacroRow label="Protein" value={totals.protein_g} target={targets.protein_g_target} color="var(--color-accent)" />
-          <MacroRow label="Carbs" value={totals.carbs_g} target={targets.carbs_g_target} color="var(--color-success)" />
-          <MacroRow label="Fat" value={totals.fat_g} target={targets.fat_g_target} color="var(--color-energy)" />
-        </dl>
-      </Card>
-
-      {/* Quick add strip — copy yesterday + most-frequent foods, above the food search (P2-13) */}
-      {(yesterdayLogs.length > 0 || frequentFoods.length > 0) && (
+      {(yesterdayLogs.length > 0 || recents.length > 0) && (
         <Card className="!py-3">
           <div className="mb-2 flex items-center justify-between">
             <CardTitle className="text-sm">Quick log</CardTitle>
@@ -188,11 +198,11 @@ export function NutritionView() {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {frequentFoods.map((f) => (
+            {recents.map((f) => (
               <Chip
-                key={f.food_id}
+                key={f.id}
                 leading={<PlusIcon size={14} />}
-                onClick={() => setPickFood({ food: f, slot: defaultMealSlot() })}
+                onClick={() => reviewSingleFood(f, defaultMealSlot())}
               >
                 {f.name}
               </Chip>
@@ -201,24 +211,6 @@ export function NutritionView() {
         </Card>
       )}
 
-      {/* First-run guidance — shown until the user logs their first food */}
-      {logs.length === 0 && (
-        <Card className="border-2 border-dashed border-border bg-surface-2/60 text-center shadow-none">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-muted text-accent">
-            <SearchIcon size={26} />
-          </span>
-          <CardTitle className="mt-3">Log your first meal</CardTitle>
-          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-            Search our food database, pick a serving, and it lands in your day — your calorie ring
-            and macros update instantly. Nothing is logged until you add it.
-          </p>
-          <Button className="mx-auto mt-4" onClick={() => setSlotForSearch(defaultMealSlot())}>
-            <SearchIcon size={18} /> Search &amp; add food
-          </Button>
-        </Card>
-      )}
-
-      {/* Meal slots */}
       {MEAL_SLOTS.map(({ slot, label }) => {
         const slotLogs = logs.filter((l) => l.meal_slot === slot);
         const slotKcal = slotLogs.reduce((a, l) => a + l.kcal, 0);
@@ -226,7 +218,7 @@ export function NutritionView() {
           <Card key={slot} className="!p-0 shadow-[var(--shadow-card)]">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <CardTitle className="text-base">{label}</CardTitle>
-              <span className="text-sm tabular-nums text-muted-foreground">
+              <span className="tabular text-sm text-muted-foreground">
                 {Math.round(slotKcal)} kcal
               </span>
             </div>
@@ -234,22 +226,26 @@ export function NutritionView() {
               <ul className="divide-y divide-border">
                 {slotLogs.map((l) => (
                   <li key={l.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(l)}
+                      className="min-w-0 flex-1 text-left"
+                    >
                       <p className="truncate text-sm font-medium text-foreground">
-                        {l.custom_name}
+                        {l.custom_name ?? 'Food'}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {l.quantity_g != null ? `${Math.round(l.quantity_g)} g · ` : ''}
-                        {Math.round(l.protein_g)}P / {Math.round(l.carbs_g)}C / {Math.round(l.fat_g)}F
+                        {formatMacros(l)}
                       </p>
-                    </div>
+                    </button>
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-sm tabular-nums text-muted-foreground">
+                      <span className="tabular text-sm text-muted-foreground">
                         {Math.round(l.kcal)}
                       </span>
                       <button
                         type="button"
-                        aria-label={`Remove ${l.custom_name}`}
+                        aria-label={`Remove ${l.custom_name ?? 'food'}`}
                         onClick={() => removeLog(l.id)}
                         className="grid h-7 w-7 place-items-center rounded-lg bg-muted text-muted-foreground transition-colors hover:text-danger"
                       >
@@ -263,7 +259,7 @@ export function NutritionView() {
             <div className="px-3 py-2">
               <button
                 type="button"
-                onClick={() => setSlotForSearch(slot)}
+                onClick={() => setPickerSlot(slot)}
                 className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent-muted"
               >
                 <PlusIcon size={18} /> Add food
@@ -273,192 +269,91 @@ export function NutritionView() {
         );
       })}
 
-      {/* Meal templates */}
-      <Card>
-        <CardTitle className="mb-2 text-sm">Quick log a saved meal</CardTitle>
-        <div className="flex flex-wrap gap-2">
-          {MOCK_MEAL_TEMPLATES.map((t) => (
-            <Chip key={t.id} onClick={() => logTemplate(t.id, defaultMealSlot())}>
-              {t.name}
-            </Chip>
-          ))}
-          <Chip leading={<PlusIcon size={14} />} onClick={() => setQuickAddOpen(true)}>
-            Quick add
-          </Chip>
-        </div>
-      </Card>
+      {/* Confirm step */}
+      <ReviewSheet
+        open={draft != null}
+        input={draft?.input ?? ''}
+        items={draft?.items ?? []}
+        slot={draftSlot}
+        recents={recents}
+        onSlotChange={setDraftSlot}
+        onItemsChange={(items) => setDraft((d) => (d ? { ...d, items } : d))}
+        onConfirm={commitDraft}
+        onClose={() => setDraft(null)}
+      />
 
-      {/* Food search sheet */}
-      <Sheet
-        open={slotForSearch != null}
-        onClose={() => setSlotForSearch(null)}
-        title={`Add to ${slotForSearch ? MEAL_SLOTS.find((s) => s.slot === slotForSearch)?.label : ''}`}
-      >
-        {slotForSearch && (
-          <SearchInput<FoodSearchRow>
-            autoFocus
-            recents={RECENT_FOODS}
-            search={async (q) => mockSearchFoods(q, 8)}
-            getKey={(f) => f.food_id}
-            onSelect={(f) => {
-              setPickFood({ food: f, slot: slotForSearch });
-              setSlotForSearch(null);
-            }}
-            renderResult={(f) => (
-              <span className="flex w-full items-center justify-between gap-3">
-                <span className="min-w-0 truncate font-medium">{f.name}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {Math.round(f.kcal)} kcal · {Math.round(f.protein_g)}P /100g
-                </span>
-              </span>
-            )}
-            placeholder="Search foods…"
-            aria-label="Search foods"
-          />
-        )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Recents show first · results ranked by relevance and your favorites (§7.1).
-        </p>
-      </Sheet>
+      {/* Manual search */}
+      <FoodPickerSheet
+        open={pickerSlot != null}
+        title="Add food"
+        recents={recents}
+        onSelect={(food) => {
+          const slot = pickerSlot ?? defaultMealSlot();
+          setPickerSlot(null);
+          reviewSingleFood(food, slot);
+        }}
+        onClose={() => setPickerSlot(null)}
+      />
 
-      {/* Serving picker */}
-      {pickFood && (
-        <ServingPicker
-          food={pickFood.food}
-          slot={pickFood.slot}
-          onClose={() => setPickFood(null)}
-          onConfirm={(qty, slot) => {
-            logFood(pickFood.food, slot, qty);
-            setPickFood(null);
-          }}
+      {/* Edit an already-logged item */}
+      {editing && (
+        <EditLogSheet
+          log={editing}
+          onClose={() => setEditing(null)}
+          onSave={updateLog}
+          onRemove={() => removeLog(editing.id)}
         />
       )}
-
-      {/* Quick add custom */}
-      <QuickAddSheet
-        open={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
-        onConfirm={(entry) => {
-          addLog({
-            id: genLogId(),
-            logged_on: new Date().toISOString().slice(0, 10),
-            meal_slot: entry.slot,
-            food_id: null,
-            custom_name: entry.name,
-            quantity_g: null,
-            kcal: entry.kcal,
-            protein_g: entry.protein_g,
-            carbs_g: entry.carbs_g,
-            fat_g: entry.fat_g,
-          });
-          setQuickAddOpen(false);
-        }}
-      />
     </div>
   );
 }
 
-function FormulaCell({
-  label,
-  value,
-  emphasize,
-  over,
-}: {
-  label: string;
-  value: number;
-  emphasize?: boolean;
-  over?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-        {label}
-      </p>
-      <p
-        className={cn(
-          'font-display tabular text-lg font-bold',
-          over ? 'text-energy' : emphasize ? 'text-accent' : 'text-foreground',
-        )}
-      >
-        {value.toLocaleString()}
-      </p>
-    </div>
-  );
-}
+/* ------------------------------------------------------------------- edit a logged row */
 
-function MacroRow({
-  label,
-  value,
-  target,
-  color,
-}: {
-  label: string;
-  value: number;
-  target: number;
-  color: string;
-}) {
-  const rawPct = Math.round((value / Math.max(1, target)) * 100);
-  const pct = Math.min(100, rawPct);
-  const over = rawPct > 100;
-  return (
-    <div>
-      <div className="mb-1 flex items-baseline justify-between text-xs">
-        <span className="font-medium text-foreground">{label}</span>
-        <span className="tabular text-muted-foreground">
-          {Math.round(value)} / {target} g
-          <span className={cn('ml-1.5 font-semibold', over ? 'text-energy' : 'text-foreground')}>
-            {rawPct}%
-          </span>
-        </span>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full transition-[width] duration-300"
-          style={{ width: `${pct}%`, backgroundColor: over ? 'var(--color-energy)' : color }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function ServingPicker({
-  food,
-  slot,
+function EditLogSheet({
+  log,
   onClose,
-  onConfirm,
+  onSave,
+  onRemove,
 }: {
-  food: FoodSearchRow;
-  slot: MealSlot;
+  log: NutritionLog;
   onClose: () => void;
-  onConfirm: (quantityG: number, slot: MealSlot) => void;
+  onSave: (next: NutritionLog) => void;
+  onRemove: () => void;
 }) {
-  const [grams, setGrams] = React.useState(food.serving_grams);
-  const [slotSel, setSlotSel] = React.useState<MealSlot>(slot);
-  const m = computeMacros(food, grams);
-  const servings = grams / food.serving_grams;
+  const food = foodById(log.food_id);
+  const [grams, setGrams] = React.useState(Math.round(log.quantity_g ?? 100));
+  const [slot, setSlot] = React.useState<MealSlot>(log.meal_slot);
+
+  const macros = food
+    ? computeMacros(food, grams)
+    : { kcal: log.kcal, protein_g: log.protein_g, carbs_g: log.carbs_g, fat_g: log.fat_g };
 
   return (
-    <Sheet open onClose={onClose} title={food.name}>
+    <Sheet open onClose={onClose} title={log.custom_name ?? 'Edit item'}>
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <MacroRing value={m.kcal} target={m.kcal} size={84} stroke={9} caption={Math.round(m.kcal)} label="kcal" />
-          <p className="text-sm text-muted-foreground">
-            {Math.round(m.protein_g)}P / {Math.round(m.carbs_g)}C / {Math.round(m.fat_g)}F ·{' '}
-            {servings.toFixed(2)}× {food.serving_name}
-          </p>
-        </div>
+        <p className="tabular text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">{Math.round(macros.kcal)} kcal</span> ·{' '}
+          {formatMacros(macros)}
+        </p>
 
-        <div className="flex flex-wrap gap-2">
-          {[0.5, 1, 2].map((mult) => (
-            <Chip
-              key={mult}
-              selected={Math.abs(grams - food.serving_grams * mult) < 0.01}
-              onClick={() => setGrams(+(food.serving_grams * mult).toFixed(1))}
-            >
-              ×{mult} ({food.serving_name})
-            </Chip>
-          ))}
-        </div>
+        {food && (
+          <div className="flex flex-wrap gap-1.5">
+            {unitOptions(food)
+              .filter((u) => u.grams != null)
+              .slice(0, 6)
+              .map((u) => (
+                <Chip
+                  key={u.unit}
+                  selected={Math.abs(grams - (u.grams ?? 0)) < 0.5}
+                  className="!px-3 !py-1.5 text-xs"
+                  onClick={() => setGrams(Math.round(u.grams ?? grams))}
+                >
+                  1 {u.label}
+                </Chip>
+              ))}
+          </div>
+        )}
 
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -468,7 +363,8 @@ function ServingPicker({
             type="number"
             inputMode="decimal"
             value={grams}
-            onChange={(e) => setGrams(Number(e.target.value))}
+            aria-label="Grams"
+            onChange={(e) => setGrams(Math.max(0, Number(e.target.value)))}
             className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-accent"
           />
         </label>
@@ -479,91 +375,31 @@ function ServingPicker({
           </span>
           <div className="flex flex-wrap gap-2">
             {MEAL_SLOTS.map((s) => (
-              <Chip key={s.slot} selected={slotSel === s.slot} onClick={() => setSlotSel(s.slot)}>
+              <Chip key={s.slot} selected={slot === s.slot} onClick={() => setSlot(s.slot)}>
                 {s.label}
               </Chip>
             ))}
           </div>
         </div>
 
-        <Button block size="lg" onClick={() => onConfirm(grams, slotSel)}>
-          Log {Math.round(m.kcal)} kcal
-        </Button>
-      </div>
-    </Sheet>
-  );
-}
-
-function QuickAddSheet({
-  open,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: (e: {
-    name: string;
-    slot: MealSlot;
-    kcal: number;
-    protein_g: number;
-    carbs_g: number;
-    fat_g: number;
-  }) => void;
-}) {
-  const [name, setName] = React.useState('');
-  const [kcal, setKcal] = React.useState(0);
-  const [p, setP] = React.useState(0);
-  const [c, setC] = React.useState(0);
-  const [f, setF] = React.useState(0);
-  const [slot, setSlot] = React.useState<MealSlot>(defaultMealSlot());
-
-  return (
-    <Sheet open={open} onClose={onClose} title="Quick add">
-      <div className="space-y-3">
-        <input
-          value={name}
-          placeholder="What did you eat?"
-          onChange={(e) => setName(e.target.value)}
-          className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-accent"
-        />
-        <div className="grid grid-cols-4 gap-2">
-          {(
-            [
-              ['kcal', kcal, setKcal],
-              ['P', p, setP],
-              ['C', c, setC],
-              ['F', f, setF],
-            ] as const
-          ).map(([lbl, val, set]) => (
-            <label key={lbl} className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase text-muted-foreground">{lbl}</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={val || ''}
-                onChange={(e) => set(Number(e.target.value))}
-                className="h-11 w-full rounded-xl border border-border bg-surface px-2 text-base tabular-nums outline-none focus:border-accent"
-              />
-            </label>
-          ))}
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={onRemove}>
+            Remove
+          </Button>
+          <Button
+            block
+            onClick={() =>
+              onSave({
+                ...log,
+                meal_slot: slot,
+                quantity_g: food ? grams : log.quantity_g,
+                ...macros,
+              })
+            }
+          >
+            Save
+          </Button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {MEAL_SLOTS.map((s) => (
-            <Chip key={s.slot} selected={slot === s.slot} onClick={() => setSlot(s.slot)}>
-              {s.label}
-            </Chip>
-          ))}
-        </div>
-        <Button
-          block
-          size="lg"
-          disabled={!name.trim()}
-          onClick={() =>
-            onConfirm({ name: name.trim(), slot, kcal, protein_g: p, carbs_g: c, fat_g: f })
-          }
-        >
-          Add
-        </Button>
       </div>
     </Sheet>
   );

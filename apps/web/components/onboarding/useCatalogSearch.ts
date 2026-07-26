@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { mockSearchExercises, mockSearchFoods } from '@/components/features/_mock/data';
+import { mockSearchExercises } from '@/components/features/_mock/data';
+import { searchFoods as searchFoodIndex } from '@/lib/food/search';
 
 export interface ExerciseHit {
   exercise_id: string;
@@ -24,9 +25,9 @@ export interface FoodHit {
 }
 
 /**
- * DEMO MODE type-ahead fetchers. The §7.1 ranking runs entirely in-memory over the fixture
- * catalog (`mockSearchExercises` / `mockSearchFoods`); the AbortSignal is accepted for API
- * compatibility with `SearchInput` but there is nothing to cancel.
+ * DEMO MODE type-ahead fetchers. The §7.1 ranking runs entirely in-memory — exercises over the
+ * shared fixture catalog, foods over the 509-food `lib/food` index — so the AbortSignal is
+ * accepted for API compatibility with `SearchInput` but there is nothing to cancel.
  */
 export function useCatalogSearch() {
   const searchExercises = React.useCallback(
@@ -48,16 +49,16 @@ export function useCatalogSearch() {
 
   const searchFoods = React.useCallback(
     async (q: string, _signal?: AbortSignal, _applyDietFilter = true): Promise<FoodHit[]> => {
-      return mockSearchFoods(q, 8).map((f) => ({
-        food_id: f.food_id,
-        slug: f.slug,
-        name: f.name,
-        brand: f.brand,
-        kcal: f.kcal,
-        protein_g: f.protein_g,
-        serving_name: f.serving_name,
-        serving_grams: f.serving_grams,
-        score: f.score,
+      return searchFoodIndex(q, { limit: 8 }).map((hit) => ({
+        food_id: hit.food.id,
+        slug: hit.food.id,
+        name: hit.food.name,
+        brand: null,
+        kcal: hit.food.per_100g.kcal,
+        protein_g: hit.food.per_100g.protein_g,
+        serving_name: hit.food.serving_name,
+        serving_grams: hit.food.serving_grams,
+        score: Math.round(hit.score),
       }));
     },
     [],
