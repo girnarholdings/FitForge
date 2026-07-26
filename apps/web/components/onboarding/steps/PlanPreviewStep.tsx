@@ -2,11 +2,11 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Sheet } from '@/components/ui';
-import { SwapIcon, ChevronDownIcon } from '@/components/ui/icons';
+import { Button, Card, Sheet } from '@/components/ui';
+import { SwapIcon, ChevronDownIcon, InfoIcon } from '@/components/ui/icons';
 import { MuscleMapThumb } from '@/components/illustrations';
 import type { MuscleSlug } from '@/components/illustrations';
-import { finalizeOnboarding } from '@/lib/demo/generate';
+import { finalizeOnboarding, planCoverageForDraft, describeDay } from '@/lib/demo/generate';
 import { getState, update } from '@/lib/demo/store';
 import {
   mockSuggestSubstitutes,
@@ -42,7 +42,7 @@ function dayPrimaryMuscles(day: RoutineDay): MuscleSlug[] {
  * (§7.4). "Start plan" routes to /today.
  */
 export function PlanPreviewStep() {
-  const { draft } = useOnboarding();
+  const { draft, goTo } = useOnboarding();
   const router = useRouter();
   const [routine, setRoutine] = React.useState<Routine | null>(null);
   const [openDay, setOpenDay] = React.useState<string | null>(null);
@@ -98,6 +98,10 @@ export function PlanPreviewStep() {
   const totalExercises =
     routine?.days.reduce((n, d) => n + d.exercises.length, 0) ?? 0;
 
+  // M1 — when equipment / protected areas genuinely thin the plan out, SAY SO here rather than
+  // quietly shipping a skeleton week. Derived from the same generation pass that built `routine`.
+  const coverage = React.useMemo(() => planCoverageForDraft(draft), [draft]);
+
   return (
     <div className="space-y-4">
       {!routine && <p className="text-sm text-muted-foreground">Building your plan…</p>}
@@ -137,6 +141,42 @@ export function PlanPreviewStep() {
               </div>
             </div>
           </Card>
+          {coverage.limited && (
+            <Card className="border-accent-soft/60 bg-surface-2" data-testid="plan-limited-notice">
+              <div className="flex gap-3">
+                <span className="mt-0.5 shrink-0 text-accent" aria-hidden>
+                  <InfoIcon size={18} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{coverage.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {coverage.body}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => goTo(coverage.actionStep)}
+                      data-testid="plan-limited-action"
+                    >
+                      {coverage.actionLabel}
+                    </Button>
+                    {coverage.cause === 'both' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => goTo('exclusions')}
+                        data-testid="plan-limited-action-alt"
+                      >
+                        Review protected areas
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           <p className="text-sm text-muted-foreground">
             Tap a day to review it — swap anything you like.
           </p>
@@ -156,10 +196,13 @@ export function PlanPreviewStep() {
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate font-semibold text-foreground">{day.name}</span>
-                        <span className="block text-xs text-muted-foreground">
-                          {day.exercises.length > 0
-                            ? `${day.exercises.length} exercises`
-                            : 'Rest / recovery'}
+                        {/* Honest per-day copy (M1 / m1): the count is pluralised and the
+                            movements listed are the ones the day ACTUALLY contains. */}
+                        <span
+                          className="block truncate text-xs text-muted-foreground"
+                          data-testid={`plan-day-summary-${day.day_index}`}
+                        >
+                          {day.exercises.length > 0 ? describeDay(day) : 'Rest / recovery'}
                         </span>
                       </span>
                     </span>

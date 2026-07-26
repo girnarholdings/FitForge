@@ -219,20 +219,23 @@ export function editDistanceAtMostOne(a: string, b: string): boolean {
   const lb = b.length;
   if (Math.abs(la - lb) > 1) return false;
 
-  // One adjacent transposition (same length, two swapped neighbours, rest identical).
+  // One substitution, or one adjacent transposition (two swapped neighbours, REST IDENTICAL).
+  //
+  // The whole string has to be scanned before a transposition can be accepted: bailing out with
+  // `true` at the first swapped pair silently ignores every later character, which made pairs
+  // like `brauche` ≡ `barbell` (differing in 6 of 7 positions) look like a distance-1 typo and
+  // let a German question fuzzy-rescue its way to a confident, wrong English answer.
   if (la === lb) {
-    let first = -1;
-    let diffs = 0;
+    const diffs: number[] = [];
     for (let k = 0; k < la; k += 1) {
       if (a[k] !== b[k]) {
-        diffs += 1;
-        if (diffs > 2) return false;
-        if (first < 0) first = k;
-        else if (k === first + 1 && a[first] === b[k] && a[k] === b[first]) return true;
-        else return diffs <= 1;
+        diffs.push(k);
+        if (diffs.length > 2) return false;
       }
     }
-    return diffs <= 1;
+    if (diffs.length <= 1) return true; // identical, or one substitution
+    const [p, q] = diffs as [number, number];
+    return q === p + 1 && a[p] === b[q] && a[q] === b[p];
   }
 
   // One insertion / deletion — walk the shorter string against the longer one.

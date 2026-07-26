@@ -9,9 +9,14 @@ import Link from 'next/link';
 import { getSplit, AUTO_SPLIT_SLUG } from '@fitforge/shared/rules';
 import type { GoalType, ExperienceLevel } from '@fitforge/shared/types';
 import { Card, CardTitle, CardDescription, Button } from '@/components/ui';
-import { DumbbellIcon, PlusIcon, RepeatIcon } from '@/components/ui/icons';
+import { DumbbellIcon, PlusIcon, RepeatIcon, InfoIcon } from '@/components/ui/icons';
 import { useActiveRoutine, useDemoState } from '@/lib/demo/useDemo';
-import { applySplit } from '@/lib/demo/generate';
+import {
+  applySplit,
+  describeDay,
+  exerciseCountLabel,
+  planCoverageForDraft,
+} from '@/lib/demo/generate';
 import { WEEKDAY_LABELS } from '@/components/features/_mock/data';
 import { DayStrip, daysLabel, levelLabel } from './SplitCard';
 import { SplitLibrarySheet } from './SplitLibrarySheet';
@@ -32,6 +37,11 @@ export function RoutineList() {
   const [browsing, setBrowsing] = React.useState(false);
   const splitSlug = state.draft.split_slug ?? null;
   const split = getSplit(splitSlug);
+
+  // M1 — never silently ship a skeleton plan. When the user's equipment / protected areas were
+  // what thinned the week out, say it here with a concrete next step.
+  const coverage = React.useMemo(() => planCoverageForDraft(state.draft), [state.draft]);
+  const showCoverage = coverage.limited && state.routine != null;
 
   const profile = React.useMemo(
     () => ({
@@ -79,11 +89,36 @@ export function RoutineList() {
                   {routine.source === 'generated' ? 'Generated for you' : 'Custom'}
                 </span>
                 <span className="rounded-full bg-surface px-2 py-0.5 text-[11px] text-muted-foreground">
-                  {routine.days.length} days · {totalExercises} exercises
+                  {routine.days.length} {routine.days.length === 1 ? 'day' : 'days'} ·{' '}
+                  {exerciseCountLabel(totalExercises)}
                 </span>
               </div>
             </div>
           </div>
+
+          {showCoverage && (
+            <div
+              className="mt-3 flex gap-3 rounded-xl border border-accent-soft/60 bg-surface p-3"
+              data-testid="routine-limited-notice"
+            >
+              <span className="mt-0.5 shrink-0 text-accent" aria-hidden>
+                <InfoIcon size={16} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground">{coverage.title}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  {coverage.body}
+                </p>
+                <Link
+                  href="/settings"
+                  className="mt-2 inline-block text-[11px] font-semibold text-accent"
+                  data-testid="routine-limited-action"
+                >
+                  {coverage.actionLabel} →
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Active split — what program the week is actually running (WS-5) */}
           <div
@@ -142,9 +177,14 @@ export function RoutineList() {
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-foreground">{d.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                    {/* Honest, pluralised day line (M1 / m1) — the movements listed are the ones
+                        this day actually contains, not the template's promise. */}
+                    <span
+                      className="block truncate text-xs text-muted-foreground"
+                      data-testid={`routine-day-summary-${d.day_index}`}
+                    >
                       {d.weekday != null ? `${WEEKDAY_LABELS[d.weekday]} · ` : ''}
-                      {d.exercises.length} exercises
+                      {describeDay(d)}
                     </span>
                   </span>
                 </span>

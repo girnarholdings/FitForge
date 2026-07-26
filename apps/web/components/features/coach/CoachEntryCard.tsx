@@ -3,7 +3,7 @@
 /**
  * Compact "Ask your coach" entry point for Today.
  *
- * Deliberately dependency-free (no `lib/kb` import) so the 83-entry knowledge base is only ever
+ * Deliberately dependency-free (no `lib/kb` import) so the curated knowledge base is only ever
  * downloaded on the Coach route itself — Today stays as light as it was.
  */
 import * as React from 'react';
@@ -29,7 +29,7 @@ export function CoachEntryCard() {
         <span className="min-w-0 flex-1">
           <span className="block font-semibold text-foreground">Ask your coach</span>
           <span className="block text-sm text-muted-foreground">
-            83 curated answers, instantly and offline.
+            Curated answers, instantly and offline.
           </span>
         </span>
         <span aria-hidden className="shrink-0 text-muted-foreground">

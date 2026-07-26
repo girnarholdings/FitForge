@@ -3,7 +3,7 @@
 /**
  * BROWSE mode — the knowledge base as a real wiki.
  *
- * The Coach is not "a chat box with a KB behind it": all 83 curated entries are browsable by
+ * The Coach is not "a chat box with a KB behind it": every curated entry is browsable by
  * category, filterable by text, and expandable in place. A user who does not know what to ask
  * can read their way to the answer, which is also the cheapest possible interaction (no AI, no
  * retrieval ambiguity).

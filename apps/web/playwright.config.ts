@@ -68,7 +68,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx --yes serve out -l ${PORT}`,
+    // A tiny zero-dependency server instead of `npx serve`: `serve` leaks a file descriptor per
+    // request and dies with EMFILE partway through a full run (the box's hard `ulimit -n` is
+    // 4096), failing every remaining test with ERR_CONNECTION_REFUSED — a fake regression that
+    // looks exactly like a product break. See tests/static-server.mjs.
+    command: `node tests/static-server.mjs out ${PORT}`,
     cwd: '.',
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,

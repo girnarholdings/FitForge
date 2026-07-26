@@ -21,6 +21,7 @@ import {
   XIcon,
   ArrowRightIcon,
   ChevronLeftIcon,
+  DumbbellIcon,
 } from '@/components/ui/icons';
 import { SubstituteSheet } from '@/components/features/shared/SubstituteSheet';
 import {
@@ -142,18 +143,37 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   const [swapOpen, setSwapOpen] = React.useState(false);
   const [plateForSet, setPlateForSet] = React.useState<number | null>(null);
 
+  // Keep the pager index inside the exercise list at all times (belt and braces for the guard
+  // below — a stale index must never be able to read past the end of the array).
+  React.useEffect(() => {
+    setIndex((i) => (i > 0 && i > exercises.length - 1 ? Math.max(0, exercises.length - 1) : i));
+  }, [exercises.length]);
+
   if (!day) {
     return (
-      <Card>
-        <CardTitle>Workout not found</CardTitle>
-        <Link href="/today" className="mt-3 inline-block text-sm font-medium text-accent">
-          Back to Today
-        </Link>
-      </Card>
+      <PlayerFallback
+        testId="workout-not-found"
+        title="Workout not found"
+        body="We couldn't find that session. It may have been removed when your plan changed."
+      />
     );
   }
 
-  const current = exercises[index]!;
+  // DEFENSIVE GUARD: the generator now guarantees every day has exercises, but a routine restored
+  // from an older localStorage snapshot (or hand-edited to empty) must never white-screen the app.
+  // Never index blindly — `exercises[index]` used to throw straight into "Application error".
+  const current = exercises[index];
+  if (!current) {
+    return (
+      <PlayerFallback
+        testId="workout-empty"
+        title={`${day.name} has no exercises yet`}
+        body="This session came out empty — usually because the equipment or protected areas on file rule everything out. Add exercises to it, or review your setup and we'll rebuild the plan."
+        secondary={{ href: '/routines', label: 'Open Workouts' }}
+      />
+    );
+  }
+
   const totalSets = exercises.reduce((n, e) => n + e.sets.length, 0);
   const doneSets = exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
   const resting = restLeft != null;
@@ -169,12 +189,14 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   }
 
   function completeSet(setIdx: number) {
-    const s = current.sets[setIdx]!;
+    const active = exercises[index];
+    const s = active?.sets[setIdx];
+    if (!active || !s) return;
     const nextDone = !s.done;
     updateSet(index, setIdx, { done: nextDone });
     if (nextDone) {
       // Rest timer auto-starts on set completion (§6 P0-5), sized by mechanics.
-      const total = restForMechanics(mechanicsOf(current.exerciseId));
+      const total = restForMechanics(mechanicsOf(active.exerciseId));
       restTotalRef.current = total;
       setRestLeft(total);
     }
@@ -190,9 +212,9 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
           sets: [
             ...ex.sets,
             {
-              reps: last?.reps ?? current.routineExercise.rep_max,
+              reps: last?.reps ?? ex.routineExercise.rep_max,
               weight_kg: last?.weight_kg ?? 0,
-              rpe: last?.rpe ?? current.routineExercise.target_rpe,
+              rpe: last?.rpe ?? ex.routineExercise.target_rpe,
               done: false,
             },
           ],
@@ -460,6 +482,54 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
           <PlateCalculator total={current.sets[plateForSet]?.weight_kg ?? 0} />
         )}
       </Sheet>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------- player empty states */
+
+/**
+ * The player can never white-screen (B1c). Whenever there is nothing to train — an unknown session
+ * id, or a day that somehow holds no exercises — we say so plainly and always give a way out.
+ */
+function PlayerFallback({
+  testId,
+  title,
+  body,
+  secondary,
+}: {
+  testId: string;
+  title: string;
+  body: string;
+  secondary?: { href: string; label: string };
+}) {
+  return (
+    <div className="space-y-4" data-testid={testId}>
+      <Link
+        href="/today"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronLeftIcon size={15} /> Today
+      </Link>
+      <Card premium>
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-accent-muted text-accent">
+          <DumbbellIcon size={22} />
+        </div>
+        <CardTitle className="mt-3">{title}</CardTitle>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/today">
+            <Button size="sm">Back to Today</Button>
+          </Link>
+          {secondary && (
+            <Link href={secondary.href}>
+              <Button size="sm" variant="secondary">
+                {secondary.label}
+              </Button>
+            </Link>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

@@ -153,15 +153,22 @@ export function ExclusionsStep() {
         </div>
 
         {hardPatterns.length > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            We&apos;ll avoid: {hardPatterns.map(prettyPattern).join(', ')}.
+          <p className="mt-3 text-xs text-muted-foreground" data-testid="exclusions-hard-summary">
+            We&apos;ll leave these out entirely: {hardPatterns.map(prettyPattern).join(', ')}.
           </p>
         )}
 
         {softInScope.length > 0 && (
-          <div className="mt-3 rounded-card border border-border bg-surface-2 p-3">
+          <div
+            className="mt-3 rounded-card border border-border bg-surface-2 p-3"
+            data-testid="exclusions-soft-panel"
+          >
+            {/* Says exactly what the generator does (§7.2.2): a SOFT exclusion sinks a pattern
+                below every alternative but never deletes it, so a protected area can't empty a
+                day or wipe a whole movement out of the plan. */}
             <p className="text-xs text-muted-foreground">
-              We&apos;ll also ease off these — tap any to keep it in your plan:
+              These stay in, but we&apos;ll ease off them — you&apos;ll only see them when nothing
+              gentler fits the slot. Tap any to train it normally:
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {softInScope.map((p) => (
@@ -205,11 +212,17 @@ export function ExclusionsStep() {
                     Remove
                   </button>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Substitute with:</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Substitute with:{' '}
+                  <span className="text-muted-foreground/80">
+                    we&apos;ll slot this in wherever {ex.name} would have gone.
+                  </span>
+                </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Chip
                     selected={ex.preferred_substitute_id === null}
                     onClick={() => pinSubstitute(ex.id, null)}
+                    data-testid={`substitute-auto-${ex.slug}`}
                   >
                     Auto
                   </Chip>
@@ -218,6 +231,7 @@ export function ExclusionsStep() {
                       key={opt.exercise_id}
                       selected={ex.preferred_substitute_id === opt.exercise_id}
                       onClick={() => pinSubstitute(ex.id, opt.exercise_id)}
+                      data-testid={`substitute-pin-${opt.slug}`}
                     >
                       {opt.name}
                     </Chip>

@@ -286,6 +286,81 @@
     "personalize": "Never diagnose; if the user has logged injuries, remind them of their exclusions."
   },
   {
+    "id": "ts-something-hurts",
+    "category": "technique-safety",
+    "question": "Something hurt during a set. What should I do right now?",
+    "aliases": [
+      "felt a sharp pain mid set",
+      "what to do when something hurts while lifting",
+      "should I stop if it hurts",
+      "felt a twinge lifting",
+      "tweaked something in the gym"
+    ],
+    "answer": "Stop that set. Racking the weight costs you one session; pushing through a warning signal can cost you months. Then keep it simple: move the area gently through whatever range feels comfortable, avoid anything that reproduces the pain, and give it a day or two before you retest it lightly.\n\nGet it looked at by a doctor or physiotherapist rather than guessing if any of this is true: the pain was sudden and severe, you heard or felt a pop, the joint is swelling, it gives way or locks, you have numbness, tingling or weakness, or it has not settled within a few days. FitForge cannot examine you, so it will not tell you whether it is safe to load it again — only someone who can assess you should.",
+    "followups": [
+      "ts-pain-vs-soreness",
+      "ts-train-through-pain",
+      "ts-when-to-see-a-pro"
+    ],
+    "personalize": "Never diagnose and never prescribe loading for a painful area; point to a clinician and to the user's exclusions."
+  },
+  {
+    "id": "ts-train-through-pain",
+    "category": "technique-safety",
+    "question": "Should I train through pain?",
+    "aliases": [
+      "can I lift through pain",
+      "is it ok to push through pain",
+      "training with pain",
+      "no pain no gain true",
+      "work out while it hurts"
+    ],
+    "answer": "No — not sharp pain, joint pain, or pain that changes how you move. \"No pain, no gain\" was always about effort and mild muscle soreness, never about symptoms. Discomfort from hard effort, burning muscles and a dull ache the next day are part of training. Sharp, stabbing, pinching, one-sided or joint-line pain is a signal to stop the movement that causes it.\n\nWhat you can usually keep doing is everything that does not hurt: other body parts, pain-free ranges of motion, and easy walking. That keeps you training while the problem is assessed. What you should not do is add weight, add reps, or \"test\" the painful movement every session to see if it still hurts. If it needs testing that often, it needs a professional opinion.",
+    "followups": [
+      "ts-pain-vs-soreness",
+      "se-injury-workaround",
+      "ts-when-to-see-a-pro"
+    ],
+    "personalize": "Reinforce that this is general guidance; defer to any clinician the user is already seeing."
+  },
+  {
+    "id": "ts-when-to-see-a-pro",
+    "category": "technique-safety",
+    "question": "When should I see a doctor or physio about training pain?",
+    "aliases": [
+      "do I need to see a physio",
+      "when to get an injury checked",
+      "should I see a doctor about my knee",
+      "when is pain serious",
+      "red flags training injury"
+    ],
+    "answer": "Book an appointment rather than waiting if any of these apply: the pain came on suddenly and severely, there was a pop or tearing sensation, the area is swollen, bruised, hot or visibly deformed, the joint gives way or locks, you have numbness, tingling or weakness, you cannot put weight on it or use it normally, or the pain has not improved after about a week of sensible rest.\n\nGet urgent medical care — not a training answer — for chest pain or pressure, difficulty breathing, fainting or severe dizziness, or sudden weakness or numbness on one side. Also worth a visit: pain that keeps coming back to the same spot, and any pain you are managing with painkillers so you can keep lifting. Bring the specifics with you: which movement provokes it, when it started, and what makes it better or worse. That is far more useful to a clinician than a diagnosis you found online.",
+    "followups": [
+      "ts-something-hurts",
+      "ts-pain-vs-soreness",
+      "se-injury-workaround"
+    ],
+    "personalize": "Never estimate severity for the user; encourage the appointment and note their logged exclusions."
+  },
+  {
+    "id": "ts-after-injury",
+    "category": "technique-safety",
+    "question": "How do I get back to lifting after an injury?",
+    "aliases": [
+      "return to training after injury",
+      "back to the gym after being hurt",
+      "how soon can I lift again",
+      "easing back in after time off hurt"
+    ],
+    "answer": "Follow the plan of whoever assessed you — a physiotherapist's rehab progression beats any general rule, and this guide cannot replace one. Where you have been cleared to train, the usual pattern is: start well below what you think you can handle, keep the painful range out of it at first, and add a little at a time while symptoms stay quiet both during the session and the next day.\n\nA practical rule many clinicians use is that mild discomfort that settles quickly is acceptable, while pain that spikes during a set or lingers into the next day means you did too much. Expect the first few weeks back to feel easy on purpose. In FitForge you can exclude the movements you are avoiding, so your plan builds itself around them instead of you having to remember mid-session.",
+    "followups": [
+      "se-injury-workaround",
+      "app-edit-routine",
+      "ts-when-to-see-a-pro"
+    ],
+    "personalize": "Defer to the user's clinician; reference logged exclusions rather than suggesting loads."
+  },
+  {
     "id": "ts-form-check",
     "category": "technique-safety",
     "question": "How do I know if my form is correct?",

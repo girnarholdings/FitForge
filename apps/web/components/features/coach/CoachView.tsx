@@ -7,8 +7,8 @@
  *  · ASK    — type a question. Retrieval runs entirely offline (lib/kb) and the §1.3 thresholds
  *             decide between an instant curated answer, a "did you mean…?" disambiguation, or a
  *             personalized AI answer grounded on the top 3 entries.
- *  · BROWSE — all 83 entries by category, searchable and expandable, for users who would rather
- *             read than type.
+ *  · BROWSE — every curated entry by category, searchable and expandable, for users who would
+ *             rather read than type.
  *
  * HONESTY RULES this component enforces:
  *  · Every answer carries its provenance badge — curated guide vs AI.
@@ -17,6 +17,13 @@
  *  · With no `NEXT_PUBLIC_AI_ENDPOINT` configured (the default in this repo), questions that
  *    would route to the AI say so plainly and fall back to the closest curated entries. The UI
  *    never implies an AI answered when none did.
+ *
+ * SAFETY RULE, which outranks all of the above:
+ *  · A question that reports pain, injury or a medical situation gets the SAFETY CARD as its
+ *    primary response — never a curated entry, never a model answer, whether or not an AI
+ *    endpoint is configured. `routeQuery` refuses to resolve such a query to `answer`, and this
+ *    component never issues a network call for one. Related entries are offered underneath, below
+ *    a rule, labelled as general information.
  */
 import * as React from 'react';
 import { Button, Card } from '@/components/ui';
@@ -27,12 +34,14 @@ import {
   SendIcon,
   SparkleIcon,
 } from '@/components/ui/icons';
-import { askKb, entryById } from '@/lib/kb';
+import { KB_ENTRIES, entryById, routeQuery, searchKb } from '@/lib/kb';
+import type { KbRoutePlus } from '@/lib/kb/route';
 import { askCoach, isCoachConfigured, snippetsFromHits } from '@/lib/kb/client';
 import { profileFacts, useCoachProfile } from '@/lib/kb/profile';
-import type { CoachProfile, KbEntry, KbHit, KbRoute } from '@/lib/kb/types';
+import type { CoachProfile, KbEntry, KbHit } from '@/lib/kb/types';
 import { AnswerCard } from './AnswerCard';
 import { BrowseKb } from './BrowseKb';
+import { SafetyCard } from './SafetyCard';
 
 type Mode = 'ask' | 'browse';
 
@@ -45,10 +54,16 @@ type AiState =
 interface Turn {
   id: string;
   question: string;
-  route: KbRoute;
+  route: KbRoutePlus;
   ai: AiState;
   facts: string[];
 }
+
+/** Total curated entries — read from the shipped KB so the copy can never drift from the data. */
+const ENTRY_COUNT = KB_ENTRIES.length;
+
+/** Cheap "this isn't English" tell, used only to add a hint to the no-match card. */
+const NON_ASCII = /[^\x00-\x7F]/;
 
 const SUGGESTIONS = [
   'How much protein do I need?',
@@ -72,8 +87,42 @@ function hitEntries(hits: KbHit[]): KbEntry[] {
   return hits.map((h) => h.entry);
 }
 
-/** A synthetic "the user tapped this entry" route — no retrieval, confidence is by definition 1. */
-function directRoute(entry: KbEntry): KbRoute {
+/**
+ * Curated background reading offered UNDER a safety card, per tier.
+ *
+ * Retrieval alone is not good enough here: "my knee hurts when I squat" retrieves the entry about
+ * knees travelling past the toes, which is topical but useless to someone in pain, and a guarded
+ * query ("I have tendonitis in my elbow") retrieves nothing at all. These entries are written for
+ * exactly this moment, so they lead; genuine retrieval hits fill the remaining slots.
+ */
+const SAFETY_READING: Record<string, string[]> = {
+  urgent: ['ts-when-to-see-a-pro', 'ts-something-hurts'],
+  injury: ['ts-something-hurts', 'ts-train-through-pain', 'ts-when-to-see-a-pro'],
+  'medical-general': ['ts-when-to-see-a-pro'],
+};
+
+const MAX_SECONDARY = 4;
+
+/** Curated-first, retrieval-second, de-duplicated, capped. */
+function secondaryReading(level: string, hits: KbHit[]): KbEntry[] {
+  const out: KbEntry[] = [];
+  const seen = new Set<string>();
+  const push = (e: KbEntry | undefined) => {
+    if (!e || seen.has(e.id) || out.length >= MAX_SECONDARY) return;
+    seen.add(e.id);
+    out.push(e);
+  };
+  for (const id of SAFETY_READING[level] ?? []) push(entryById(id));
+  for (const e of hitEntries(hits)) push(e);
+  return out;
+}
+
+/**
+ * A synthetic "the user tapped this entry" route — no retrieval, confidence is by definition 1.
+ * No safety gate either: opening a named entry is the user's own explicit choice to read it, not
+ * the app answering a symptom with it.
+ */
+function directRoute(entry: KbEntry): KbRoutePlus {
   const hit: KbHit = { entry, score: 0, conf: 1, matched: [] };
   return {
     mode: 'answer',
@@ -82,6 +131,8 @@ function directRoute(entry: KbEntry): KbRoute {
     top: hit,
     conf: 1,
     cues: [],
+    safety: null,
+    guard: null,
     reason: 'Opened from the guide.',
   };
 }
@@ -103,7 +154,7 @@ export function CoachView() {
   }, []);
 
   const runAi = React.useCallback(
-    async (turnId: string, question: string, route: KbRoute, p: CoachProfile) => {
+    async (turnId: string, question: string, route: KbRoutePlus, p: CoachProfile) => {
       const controller = new AbortController();
       abortRef.current = controller;
       const result = await askCoach(
@@ -137,7 +188,7 @@ export function CoachView() {
   );
 
   const pushTurn = React.useCallback(
-    (question: string, route: KbRoute, wantsAi: boolean) => {
+    (question: string, route: KbRoutePlus, wantsAi: boolean) => {
       turnSeq += 1;
       const id = `turn-${turnSeq}`;
       const facts = profileFacts(profile);
@@ -164,10 +215,19 @@ export function CoachView() {
       const q = raw.trim();
       if (!q) return;
       setInput('');
-      const route = askKb(q);
-      pushTurn(q, route, route.mode === 'ai');
+      const route = routeQuery(q, searchKb(q, 8));
+      // A red-flagged question NEVER travels to the model, configured or not: a small model given
+      // "I have chest pain during exercise" will happily write training advice around it.
+      // A question with NO trustworthy match — either discarded by `weakEvidence` or with no hit
+      // at all (e.g. asked in another language) — only travels to the model when one is actually
+      // configured. On an unconfigured build it must fall through to the honest no-match card,
+      // which names the real problem, rather than the "personalized answers need the Coach
+      // service" card, which asserts the question was personal when nothing established that.
+      const noTrustworthyMatch = route.guard !== null || route.top === null;
+      const wantsAi = route.mode === 'ai' && !route.safety && (configured || !noTrustworthyMatch);
+      pushTurn(q, route, wantsAi);
     },
-    [pushTurn],
+    [configured, pushTurn],
   );
 
   /** Open a specific entry (disambiguation button, followup chip, source chip). No AI, no cost. */
@@ -199,7 +259,7 @@ export function CoachView() {
             <span className="text-gradient-gold">Coach</span>
           </h1>
           <p className="text-sm text-muted-foreground">
-            83 curated answers, offline. Ask anything or browse the guide.
+            {ENTRY_COUNT} curated answers, offline. Ask anything or browse the guide.
           </p>
         </div>
         <span
@@ -384,7 +444,7 @@ function EmptyAsk({
         onClick={onBrowse}
         className="mt-4 text-sm font-semibold text-accent hover:underline"
       >
-        Or browse all 83 entries
+        Or browse all {ENTRY_COUNT} entries
       </button>
     </Card>
   );
@@ -414,9 +474,25 @@ function TurnBlock({
 }) {
   const { route, ai } = turn;
   const top = route.top;
+  const safety = route.safety;
   const isAiPath = route.mode === 'ai';
-  // The curated answer stays on screen for every path except "the AI already replaced it".
-  const showKb = Boolean(top) && route.mode !== 'disambiguate' && ai.kind !== 'answer';
+  // The curated answer stays on screen for every path except "the AI already replaced it" — and
+  // never at all on the safety path, where a curated entry as the primary response IS the defect.
+  const showKb = !safety && Boolean(top) && route.mode !== 'disambiguate' && ai.kind !== 'answer';
+
+  // Pain / injury / medical: one card, and nothing else can outrank it.
+  if (safety) {
+    return (
+      <div className="space-y-2.5" data-testid="coach-turn">
+        <QuestionBubble text={turn.question} />
+        <SafetyCard
+          flag={safety}
+          entries={secondaryReading(safety.level, route.hits)}
+          onOpenEntry={onOpenEntry}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2.5" data-testid="coach-turn">
@@ -529,15 +605,23 @@ function TurnBlock({
         </>
       )}
 
-      {/* Retrieval found nothing at all — never fake an answer (§3 fallback ladder, step 2). */}
+      {/* Retrieval found nothing TRUSTWORTHY — never fake an answer (§3 fallback ladder, step 2).
+          `route.guard` means a hit existed but its evidence did not survive inspection, which is
+          the same thing from the user's side and must read the same way. */}
       {isAiPath && !top && ai.kind !== 'pending' && ai.kind !== 'answer' && (
         <Card data-testid="coach-no-match">
           <p className="text-sm font-semibold text-foreground">
             I don&rsquo;t have a good answer for that yet
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Nothing in the guide matches. Try rephrasing, or browse the categories.
+            Nothing in the guide genuinely matches, and a near-miss would be worse than saying so.
+            Try rephrasing, or browse the categories.
           </p>
+          {NON_ASCII.test(turn.question) && (
+            <p className="mt-2 text-sm text-muted-foreground" data-testid="coach-no-match-language">
+              The guide is written in English — asking in English will match far better.
+            </p>
+          )}
         </Card>
       )}
     </div>

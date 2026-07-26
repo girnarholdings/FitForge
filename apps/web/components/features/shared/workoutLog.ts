@@ -9,8 +9,9 @@
  * additive, versioned localStorage slice here. It is fully client-side, SSR-safe (server snapshot
  * is a stable empty array), and offline — no runtime fetches, no new deps.
  *
- * `window.localStorage.clear()` (the e2e reset + Settings "Erase Local Mode data") wipes this key
- * too, so it never outlives the Local Mode data it augments.
+ * This slice is part of the Local Mode data set: `lib/demo/store` includes it in every backup and
+ * removes it on erase (via {@link readWorkoutLog} / {@link replaceWorkoutLog} / {@link
+ * clearWorkoutLog}), so it can never outlive — or be lost by — the data it augments.
  */
 import * as React from 'react';
 import type { MuscleSlug } from '@/components/illustrations';
@@ -41,10 +42,202 @@ export interface WorkoutSession {
   exercises: LoggedExercise[];
 }
 
-interface LogState {
+export interface LogState {
   version: 1;
   sessions: WorkoutSession[];
 }
+
+/* ══════════════════════════════════════════════════════ shape guards (shared with lib/demo/store)
+ *
+ * Local Mode data is user-writable: it can be hand-edited, restored from a hostile/truncated
+ * backup, or left behind in an older shape by a previous build. Nothing downstream of a
+ * `localStorage` read may assume a shape, so every read runs through a normalizer.
+ *
+ * These primitives live HERE (rather than in `lib/demo/store`) so this slice stays dependency-free
+ * and the demo store can import them one-way, with no import cycle.
+ */
+
+/** A non-null, non-array object — the only thing safe to read named fields off. */
+export function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * A usable finite number, or null. Rejects `NaN` / `±Infinity` (the direct source of every
+ * "NaN of 2000 kcal" in the UI) and coerces numeric strings, which is how JSON round-trips of
+ * hand-edited data usually arrive.
+ */
+export function finiteNumber(v: unknown): number | null {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/** A non-empty string, or null. */
+export function nonEmptyString(v: unknown): string | null {
+  return typeof v === 'string' && v.length > 0 ? v : null;
+}
+
+/** Accumulated shape complaints. Empty ⇒ the payload was already well-formed. */
+export type ShapeIssues = string[];
+
+/** Record a complaint (bounded, so a 10 MB garbage file can't build a 10 MB error string). */
+export function noteIssue(issues: ShapeIssues, path: string, msg: string): void {
+  if (issues.length < 25) issues.push(`${path}: ${msg}`);
+}
+
+/** Human-readable summary of the first few issues, for user-facing import errors. */
+export function describeIssues(issues: ShapeIssues): string {
+  const head = issues.slice(0, 3).join('; ');
+  return issues.length > 3 ? `${head} (+${issues.length - 3} more)` : head;
+}
+
+/* ------------------------------------------------------------------- workout-log normalizer */
+
+/** Hard cap so a restored backup can never blow past the storage budget. */
+const MAX_SESSIONS = 200;
+
+const MECHANICS: readonly Mechanics[] = ['compound', 'isolation'];
+
+function normalizeSet(v: unknown, path: string, issues: ShapeIssues): LoggedSet | null {
+  if (!isPlainObject(v)) {
+    noteIssue(issues, path, 'expected a set object');
+    return null;
+  }
+  const reps = finiteNumber(v.reps);
+  const weight = finiteNumber(v.weight_kg);
+  if (reps === null) noteIssue(issues, `${path}.reps`, 'expected a finite number');
+  if (weight === null) noteIssue(issues, `${path}.weight_kg`, 'expected a finite number');
+  return { reps: Math.max(0, reps ?? 0), weight_kg: Math.max(0, weight ?? 0) };
+}
+
+function normalizeStringArray(v: unknown, path: string, issues: ShapeIssues): string[] {
+  if (!Array.isArray(v)) {
+    if (v !== undefined) noteIssue(issues, path, 'expected an array of strings');
+    return [];
+  }
+  const out: string[] = [];
+  for (const item of v) {
+    if (typeof item === 'string') out.push(item);
+    else noteIssue(issues, path, 'contained a non-string entry');
+  }
+  return out;
+}
+
+function normalizeExercise(v: unknown, path: string, issues: ShapeIssues): LoggedExercise | null {
+  if (!isPlainObject(v)) {
+    noteIssue(issues, path, 'expected an exercise object');
+    return null;
+  }
+  const id = nonEmptyString(v.exercise_id);
+  if (id === null) {
+    noteIssue(issues, `${path}.exercise_id`, 'expected a non-empty string');
+    return null;
+  }
+  const mechanics = MECHANICS.includes(v.mechanics as Mechanics)
+    ? (v.mechanics as Mechanics)
+    : 'compound';
+  if (v.mechanics !== undefined && mechanics !== v.mechanics) {
+    noteIssue(issues, `${path}.mechanics`, 'expected "compound" or "isolation"');
+  }
+  const rawSets = v.sets;
+  const sets: LoggedSet[] = [];
+  if (Array.isArray(rawSets)) {
+    rawSets.forEach((s, i) => {
+      const set = normalizeSet(s, `${path}.sets[${i}]`, issues);
+      if (set) sets.push(set);
+    });
+  } else if (rawSets !== undefined) {
+    noteIssue(issues, `${path}.sets`, 'expected an array');
+  }
+  return {
+    exercise_id: id,
+    exercise_slug: nonEmptyString(v.exercise_slug) ?? id,
+    exercise_name: nonEmptyString(v.exercise_name) ?? id,
+    mechanics,
+    primary_muscles: normalizeStringArray(v.primary_muscles, `${path}.primary_muscles`, issues),
+    secondary_muscles: normalizeStringArray(
+      v.secondary_muscles,
+      `${path}.secondary_muscles`,
+      issues,
+    ),
+    sets,
+  };
+}
+
+function normalizeSession(v: unknown, path: string, issues: ShapeIssues): WorkoutSession | null {
+  // A `null` entry here is the exact payload that used to crash Progress and Today.
+  if (!isPlainObject(v)) {
+    noteIssue(issues, path, 'expected a session object');
+    return null;
+  }
+  const finishedAt = nonEmptyString(v.finishedAt);
+  // An unparseable timestamp poisons every week bucket / streak key, so the session is dropped.
+  if (finishedAt === null || !Number.isFinite(new Date(finishedAt).getTime())) {
+    noteIssue(issues, `${path}.finishedAt`, 'expected an ISO date string');
+    return null;
+  }
+  const rawExercises = v.exercises;
+  const exercises: LoggedExercise[] = [];
+  if (Array.isArray(rawExercises)) {
+    rawExercises.forEach((e, i) => {
+      const ex = normalizeExercise(e, `${path}.exercises[${i}]`, issues);
+      if (ex) exercises.push(ex);
+    });
+  } else if (rawExercises !== undefined) {
+    noteIssue(issues, `${path}.exercises`, 'expected an array');
+  }
+  const id = nonEmptyString(v.id);
+  if (id === null) noteIssue(issues, `${path}.id`, 'expected a non-empty string');
+  return {
+    id: id ?? `session-${new Date(finishedAt).getTime()}`,
+    dayId: nonEmptyString(v.dayId) ?? '',
+    dayName: nonEmptyString(v.dayName) ?? 'Workout',
+    finishedAt,
+    exercises,
+  };
+}
+
+/**
+ * Coerce ANY value into a usable {@link LogState}, dropping what cannot be repaired. Pass an
+ * `issues` array to find out whether anything had to be repaired (strict callers — i.e. import —
+ * reject when it comes back non-empty); omit it to just get a safe value (defensive read).
+ */
+export function normalizeWorkoutLog(value: unknown, issues: ShapeIssues = []): LogState {
+  if (!isPlainObject(value)) {
+    noteIssue(issues, 'workoutLog', 'expected an object');
+    return { version: 1, sessions: [] };
+  }
+  if (value.version !== undefined && value.version !== 1) {
+    noteIssue(issues, 'workoutLog.version', 'expected 1');
+  }
+  const raw = value.sessions;
+  if (!Array.isArray(raw)) {
+    if (raw !== undefined) noteIssue(issues, 'workoutLog.sessions', 'expected an array');
+    return { version: 1, sessions: [] };
+  }
+  const sessions: WorkoutSession[] = [];
+  raw.forEach((s, i) => {
+    const sess = normalizeSession(s, `workoutLog.sessions[${i}]`, issues);
+    if (sess) sessions.push(sess);
+  });
+  return { version: 1, sessions: sessions.slice(0, MAX_SESSIONS) };
+}
+
+/** Strict gate used by backup import: any repair at all is a rejection. */
+export function validateWorkoutLog(
+  value: unknown,
+): { ok: true; value: LogState } | { ok: false; error: string } {
+  const issues: ShapeIssues = [];
+  const state = normalizeWorkoutLog(value, issues);
+  if (issues.length > 0) return { ok: false, error: describeIssues(issues) };
+  return { ok: true, value: state };
+}
+
+/* ------------------------------------------------------------------------------ persistence */
 
 const SERVER_STATE: LogState = { version: 1, sessions: [] };
 let cache: LogState | null = null;
@@ -54,31 +247,40 @@ function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
 
+/**
+ * DEFENSIVE READ. Whatever is on disk comes back as a valid {@link LogState}: a `null` entry, a
+ * session with no `exercises` array, a set whose `reps` is `"12"` or `NaN` — all repaired or
+ * dropped here rather than crashing (or NaN-ing) the analytics that consume them.
+ */
 function load(): LogState {
   if (!isBrowser()) return SERVER_STATE;
   if (cache) return cache;
   try {
     const raw = window.localStorage.getItem(WORKOUT_LOG_KEY);
-    const parsed = raw ? (JSON.parse(raw) as Partial<LogState>) : null;
-    cache =
-      parsed && Array.isArray(parsed.sessions)
-        ? { version: 1, sessions: parsed.sessions as WorkoutSession[] }
-        : { version: 1, sessions: [] };
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    const issues: ShapeIssues = [];
+    cache = parsed === null ? { version: 1, sessions: [] } : normalizeWorkoutLog(parsed, issues);
+    // Self-heal: rewrite the repaired shape so the next reader (and any other tab) sees clean data.
+    // Storage-only — `load()` runs inside render via `getSnapshot`, so it must not notify.
+    if (issues.length > 0 && raw) writeStorage(cache);
   } catch {
     cache = { version: 1, sessions: [] };
   }
   return cache;
 }
 
+function writeStorage(next: LogState) {
+  if (!isBrowser()) return;
+  try {
+    window.localStorage.setItem(WORKOUT_LOG_KEY, JSON.stringify(next));
+  } catch {
+    /* quota / private mode — keep in-memory only */
+  }
+}
+
 function persist(next: LogState) {
   cache = next;
-  if (isBrowser()) {
-    try {
-      window.localStorage.setItem(WORKOUT_LOG_KEY, JSON.stringify(next));
-    } catch {
-      /* quota / private mode — keep in-memory only */
-    }
-  }
+  writeStorage(next);
   for (const l of listeners) l();
 }
 
@@ -93,14 +295,41 @@ function getServerSnapshot(): LogState {
   return SERVER_STATE;
 }
 
-/** Append a finished session. Newest first. Caps at 200 sessions to bound storage. */
+/** Append a finished session. Newest first. Caps at {@link MAX_SESSIONS} to bound storage. */
 export function logSession(session: WorkoutSession): void {
   const s = load();
-  persist({ version: 1, sessions: [session, ...s.sessions].slice(0, 200) });
+  persist({ version: 1, sessions: [session, ...s.sessions].slice(0, MAX_SESSIONS) });
 }
 
 export function getSessions(): WorkoutSession[] {
   return load().sessions;
+}
+
+/* -------------------------------------------------- backup / erase hooks (lib/demo/store owns
+ * the Local Mode bundle; it drives this slice through the three calls below so the in-memory
+ * cache and every subscriber stay in step with what is on disk). */
+
+/** Current log state — what `exportAllState()` puts in the `workoutLog` section of a backup. */
+export function readWorkoutLog(): LogState {
+  return load();
+}
+
+/** Replace the whole slice (backup restore). Already-validated input. */
+export function replaceWorkoutLog(next: LogState): void {
+  persist({ version: 1, sessions: next.sessions.slice(0, MAX_SESSIONS) });
+}
+
+/** Drop every logged session AND the underlying key ("erase all Local Mode data"). */
+export function clearWorkoutLog(): void {
+  cache = { version: 1, sessions: [] };
+  if (isBrowser()) {
+    try {
+      window.localStorage.removeItem(WORKOUT_LOG_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+  for (const l of listeners) l();
 }
 
 export function useWorkoutSessions(): WorkoutSession[] {

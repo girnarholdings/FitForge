@@ -1,15 +1,26 @@
 /**
- * §1.3 decision logic — which of the three answering paths a query takes.
+ * §1.3 decision logic — which answering path a query takes.
  *
+ *   RED FLAG (pain / injury / medical)  → `disambiguate` + `safety`, ALWAYS, before anything else
  *   conf ≥ 0.55                 → `answer`       serve the KB entry instantly
  *   0.30 ≤ conf < 0.55          → `disambiguate` show the top 3 questions as buttons, no AI call
  *   conf < 0.30                 → `ai`           call the coach with the top 3 as grounding
  *   …or the query carries first-person specifics the KB cannot possibly know, which forces `ai`
  *   REGARDLESS of confidence (a confident generic answer to "my knee hurts when I squat" is
  *   exactly the failure mode this rule exists to prevent).
+ *   …or the top hit's evidence is too thin to be trusted (see `weakEvidence`), which discards the
+ *   hits entirely so the UI shows its honest no-match state instead of a confident wrong answer.
+ *
+ * SAFETY ORDERING. The red-flag gate runs FIRST and never resolves to `answer`, so no consumer —
+ * including one that knows nothing about `safety` — can serve a curated entry, or fire an AI call,
+ * as the response to someone reporting symptoms. The Coach surface reads `safety` and renders a
+ * purpose-built card; anything else degrades to a "pick what you meant" list. Both are safe.
  *
  * Pure: takes hits in, returns a decision. `index.ts` binds it to the shipped index.
  */
+import { classifyQuery } from './safety';
+import type { SafetyFlag } from './safety';
+import { tokenize } from './text';
 import type { KbHit, KbRoute } from './types';
 
 export const CONF_ANSWER = 0.55;
@@ -85,14 +96,92 @@ export function firstPersonCues(query: string): string[] {
   return FIRST_PERSON_CUES.filter((c) => c.test(query)).map((c) => c.name);
 }
 
+/* --------------------------------------------------------------- spurious-match suppression */
+
 /**
- * Apply the §1.3 thresholds. `hits` must be sorted by score descending (as `searchKb` returns).
+ * Minimum share of the query's own stems the top entry must actually match before a sub-threshold
+ * hit is worth showing at all.
  */
-export function routeQuery(query: string, hits: KbHit[]): KbRoute {
-  const top = hits[0] ?? null;
-  const conf = top?.conf ?? 0;
+export const MIN_COVERAGE = 0.5;
+
+/**
+ * Why a top hit was discarded as untrustworthy, or `null` when it stands.
+ *
+ * Retrieval is lexical, so a query in another language (or plain nonsense) can still land on an
+ * entry through one incidental stem — the typo rescue in `search.ts` is happy to map an unknown
+ * word onto a same-length vocabulary word, which is how "Wie viel Eiweiß brauche ich pro Tag?"
+ * reached "What can I do with only dumbbells?" ("brauche" → "barbell") and was then rendered in
+ * full as the answer. Confidence alone did not catch it: the UI showed the entry anyway because a
+ * hit existed. So the evidence itself is inspected:
+ *
+ *   · `typo-rescue-only` — nothing the user actually typed matched; every matched stem was a
+ *     fuzzy substitution the index invented. That is a coincidence, not a retrieval.
+ *   · `thin-overlap`     — a sub-threshold hit that matched under half of the query's stems.
+ *
+ * Either way the hits are dropped and the surface falls back to its honest no-match state.
+ */
+export function weakEvidence(query: string, top: KbHit | null): string | null {
+  if (!top) return null;
+  const asked = new Set(tokenize(query));
+  if (asked.size === 0) return null;
+
+  const matched = top.matched;
+  if (matched.length === 0) return 'no-overlap';
+
+  // Stems the user literally typed (post-normalization), as opposed to fuzzy substitutions.
+  const native = matched.filter((m) => asked.has(m)).length;
+  const coverage = matched.length / asked.size;
+
+  if (native === 0 && asked.size >= 2) return 'typo-rescue-only';
+  if (top.conf < CONF_DISAMBIGUATE && coverage < MIN_COVERAGE) return 'thin-overlap';
+  return null;
+}
+
+/* ------------------------------------------------------------------------------- the router */
+
+/** `routeQuery`'s result: a `KbRoute` plus the two gates this module adds on top of §1.3. */
+export interface KbRoutePlus extends KbRoute {
+  /** Non-null when the query reports pain, injury or a medical situation (see `safety.ts`). */
+  safety: SafetyFlag | null;
+  /** Non-null when the top hit was discarded as a spurious match (see `weakEvidence`). */
+  guard: string | null;
+}
+
+/**
+ * Apply the red-flag gate, the spurious-match guard and the §1.3 thresholds, in that order.
+ * `hits` must be sorted by score descending (as `searchKb` returns).
+ */
+export function routeQuery(query: string, hits: KbHit[]): KbRoutePlus {
   const cues = firstPersonCues(query);
-  const shortlist = hits.slice(0, TOP_N);
+  const safety = classifyQuery(query);
+  const guard = weakEvidence(query, hits[0] ?? null);
+
+  // A hit whose evidence does not survive inspection is no hit at all — never grounding for an AI
+  // call, never a "closest match" card.
+  const kept = guard ? [] : hits;
+  const top = kept[0] ?? null;
+  const conf = top?.conf ?? 0;
+  const shortlist = kept.slice(0, TOP_N);
+
+  // ── RED FLAG. Runs before every confidence test, and deliberately cannot resolve to `answer`
+  //    or to `ai`: a curated entry must never be served as the response to reported symptoms, and
+  //    an urgent medical question must never be handed to a small model for a freeform reply.
+  if (safety) {
+    return {
+      mode: 'disambiguate',
+      query,
+      hits: shortlist,
+      top,
+      conf,
+      cues,
+      safety,
+      guard,
+      reason:
+        safety.level === 'urgent'
+          ? 'This sounds like it needs medical attention, not training advice.'
+          : 'This describes pain, injury or a medical situation, which the guide must not answer as if it were a training question.',
+    };
+  }
 
   // A near-exact hit outranks the cues: the user typed a curated question almost verbatim, so
   // hand them the curated answer instead of an "ask the AI" detour.
@@ -104,6 +193,8 @@ export function routeQuery(query: string, hits: KbHit[]): KbRoute {
       top,
       conf,
       cues,
+      safety: null,
+      guard,
       reason: `This is specific to you (${cues[0]}), which the guide can't know.`,
     };
   }
@@ -116,7 +207,11 @@ export function routeQuery(query: string, hits: KbHit[]): KbRoute {
       top,
       conf,
       cues,
-      reason: 'No entry in the guide closely matches this question.',
+      safety: null,
+      guard,
+      reason: guard
+        ? 'Nothing in the guide genuinely matches this question.'
+        : 'No entry in the guide closely matches this question.',
     };
   }
 
@@ -128,6 +223,8 @@ export function routeQuery(query: string, hits: KbHit[]): KbRoute {
       top,
       conf,
       cues,
+      safety: null,
+      guard,
       reason: 'Several entries match about equally well.',
     };
   }
@@ -139,6 +236,8 @@ export function routeQuery(query: string, hits: KbHit[]): KbRoute {
     top,
     conf,
     cues,
+    safety: null,
+    guard,
     reason: 'A guide entry matches this question closely.',
   };
 }

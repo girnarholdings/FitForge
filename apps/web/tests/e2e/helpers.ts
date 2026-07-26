@@ -363,3 +363,198 @@ export async function pageOverflow(
     };
   });
 }
+
+/* ═══════════════════════════════════════════════ regression fixtures (adversarial-review pass)
+ *
+ * The helpers below exist so the blockers found in the adversarial review can never silently
+ * come back. They deliberately drive REAL production code paths (the onboarding wizard, the
+ * Settings screen's regenerate button, the Settings file input) rather than asserting on
+ * internals, because every one of those defects was invisible to unit-level checks.
+ */
+
+/**
+ * A completed Local Mode state with NO routine and NO answers — just enough to get past the
+ * "you haven't onboarded" gate so a test can land directly on an app route.
+ */
+export function bareCompletedState(): Record<string, unknown> {
+  return {
+    version: 1,
+    userId: 'demo-user',
+    onboardingStep: 'done',
+    completedAt: '2026-07-01T10:00:00.000Z',
+    draft: null,
+    profile: null,
+    nutritionProfile: null,
+    routine: null,
+    targets: null,
+    logsByDate: {},
+    weights: [],
+  };
+}
+
+/** Write a raw string straight into a `fitforge.*` key, bypassing every store write path. */
+export async function writeRawStore(
+  page: Page,
+  entries: Record<string, string | null>,
+): Promise<void> {
+  await page.goto('/today');
+  await page.evaluate((rows) => {
+    window.localStorage.clear();
+    for (const [k, v] of Object.entries(rows)) {
+      if (v !== null) window.localStorage.setItem(k, v);
+    }
+  }, entries);
+}
+
+/**
+ * Seed a completed Local Mode state whose ONBOARDING DRAFT holds `draft`, so Settings and the
+ * generator both see real answers. Leaves the page on `/today`.
+ */
+export async function seedDraft(page: Page, draft: Record<string, unknown>): Promise<void> {
+  const state = { ...bareCompletedState(), draft: { ...DEFAULT_DRAFT, ...draft } };
+  await page.goto('/today');
+  await page.evaluate(
+    ({ key, value }) => {
+      window.localStorage.clear();
+      window.localStorage.setItem(key, value);
+    },
+    { key: DEMO_STORAGE_KEY, value: JSON.stringify(state) },
+  );
+}
+
+/** Every field the onboarding wizard writes, at its neutral default. */
+export const DEFAULT_DRAFT: Record<string, unknown> = {
+  display_name: null,
+  primary_goal: 'general_health',
+  secondary_goal: null,
+  experience_level: 'beginner',
+  days_per_week: 3,
+  session_minutes: 45,
+  preferred_days: [],
+  split_slug: null,
+  training_location: 'commercial_gym',
+  equipment_slugs: [],
+  loved_equipment_slugs: [],
+  favorites: [],
+  body_areas: [],
+  movement_exclusions: [],
+  excluded_exercises: [],
+  sex: 'male',
+  birthdate: '1990-01-01',
+  height_cm: 175,
+  weight_kg: 80,
+  unit_system: 'metric',
+  diet_type: 'none',
+  allergies: [],
+  meals_per_day: 3,
+  kcal_target: null,
+  protein_g_target: null,
+  carbs_g_target: null,
+  fat_g_target: null,
+  targets_source: 'suggested',
+};
+
+/**
+ * The three movement exclusions the §7.2.2 rule derives from protecting Knees — two HARD, one
+ * SOFT. Written out longhand so a regression that silently flips `soft` is caught here.
+ */
+export const KNEES_EXCLUSIONS = [
+  { movement_pattern: 'lunge', reason: 'injury', source_body_area: 'knees', soft: false },
+  { movement_pattern: 'knee_extension_iso', reason: 'injury', source_body_area: 'knees', soft: false },
+  { movement_pattern: 'squat', reason: 'injury', source_body_area: 'knees', soft: true },
+];
+
+/** Knees + Lower back + Shoulders — the exact protection set from the B1 repro. */
+export const THREE_AREA_EXCLUSIONS = [
+  ...KNEES_EXCLUSIONS,
+  { movement_pattern: 'hinge', reason: 'injury', source_body_area: 'lower_back', soft: true },
+  { movement_pattern: 'core_flexion', reason: 'injury', source_body_area: 'lower_back', soft: true },
+  { movement_pattern: 'vertical_push', reason: 'injury', source_body_area: 'shoulders', soft: false },
+  { movement_pattern: 'shoulder_isolation', reason: 'injury', source_body_area: 'shoulders', soft: true },
+];
+
+/**
+ * Run the REAL generator by pressing Settings' "Re-generate my plan", then read back the routine
+ * that was persisted. This is the only way to exercise generation end-to-end from a spec: it goes
+ * through the same `routineForDraft` the wizard uses and proves the result actually reaches the
+ * store (M2d regressed precisely because the button was decorative).
+ */
+export interface GeneratedRoutine {
+  name: string;
+  days: { id: string; name: string; count: number; names: string[] }[];
+}
+
+export async function regenerateFromSettings(page: Page): Promise<GeneratedRoutine> {
+  await page.goto('/settings');
+  const button = page.getByTestId('settings-regenerate');
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(page.getByTestId('settings-plan-name')).toBeVisible();
+  return readRoutine(page);
+}
+
+/** Read the persisted active routine, flattened to what the regression specs assert on. */
+export async function readRoutine(page: Page): Promise<GeneratedRoutine> {
+  const routine = await page.evaluate((key) => {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as { routine: unknown }).routine : null;
+  }, DEMO_STORAGE_KEY);
+  const r = routine as {
+    name: string;
+    days: { id: string; name: string; exercises: { exercise_name: string }[] }[];
+  } | null;
+  if (!r) throw new Error('no routine persisted');
+  return {
+    name: r.name,
+    days: r.days.map((d) => ({
+      id: d.id,
+      name: d.name,
+      count: d.exercises.length,
+      names: d.exercises.map((e) => e.exercise_name),
+    })),
+  };
+}
+
+/**
+ * Load `path` and report whether the app broke: an uncaught exception, Next's "Application
+ * error" bail-out screen, or a literal `NaN` rendered into the page.
+ *
+ * A crash on a corrupted store used to be silent in CI because the route still returned HTTP 200
+ * — the failure only existed in the client. This asserts on the client.
+ */
+export async function probeRoute(
+  page: Page,
+  path: string,
+): Promise<{ errors: string[]; applicationError: boolean; renderedNaN: boolean; text: string }> {
+  const errors: string[] = [];
+  const onError = (e: Error) => errors.push(e.message);
+  page.on('pageerror', onError);
+  try {
+    // `load` (not `networkidle`): networkidle is a heuristic that can never settle and turns a
+    // healthy page into a timeout. Quiet is then waited for BEST-EFFORT, and a fixed settle
+    // window afterwards gives hydration — and any crash it triggers — time to happen.
+    await page.goto(path, { waitUntil: 'load' });
+    await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
+    await page.waitForTimeout(400);
+    const probe = await page.evaluate(() => {
+      const text = document.body ? document.body.innerText : '';
+      return {
+        applicationError: /Application error/i.test(text),
+        // word-boundary NaN, so "NaNo" style copy could never false-positive
+        renderedNaN: /(^|[^A-Za-z])NaN([^A-Za-z]|$)/.test(text),
+        text,
+      };
+    });
+    return { errors, ...probe };
+  } finally {
+    page.off('pageerror', onError);
+  }
+}
+
+/** Assert a route renders cleanly: no uncaught error, no bail-out screen, no `NaN` on screen. */
+export async function expectRouteHealthy(page: Page, path: string): Promise<void> {
+  const r = await probeRoute(page, path);
+  expect(r.errors, `${path} threw`).toEqual([]);
+  expect(r.applicationError, `${path} showed the "Application error" screen`).toBe(false);
+  expect(r.renderedNaN, `${path} rendered NaN`).toBe(false);
+}

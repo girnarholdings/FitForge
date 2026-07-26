@@ -1,10 +1,23 @@
 'use client';
 
 /**
- * Settings (§2.3): every onboarding answer is editable post-hoc. Editing equipment or exclusions
- * surfaces a "re-generate my plan?" prompt (generate_starter_routine). Mocked local state; writes
- * are no-ops. Covers the full §2.2 profile: goals, experience, schedule, location, equipment,
- * exclusions, body metrics, nutrition prefs & targets, plus account actions.
+ * Settings (§2.3) — every onboarding answer, editable post-hoc, against the REAL Local Mode store.
+ *
+ * Two rules govern this screen:
+ *
+ *  1. NOTHING here is fabricated. Every control reads its value from the demo store
+ *     (`lib/demo/store.ts`): the onboarding draft first, then the derived profile / nutrition
+ *     profile / targets it was generated into. There are no MOCK_* fallbacks — a user who trains
+ *     2 days a week on no equipment sees "2 days" and an empty kit, not the fixture's 4 days and
+ *     a rack of barbells.
+ *  2. NOTHING here is a no-op. Every control writes straight back through `update()` and persists
+ *     to `localStorage` on the spot (there is no "Save changes" button to lie about it), keeping
+ *     the draft and the derived rows the rest of the app reads (`profile`, `nutritionProfile`,
+ *     `targets`) in sync. Editing equipment or protected areas offers a real re-generation, which
+ *     calls the real generator (`lib/demo/generate.ts`) and replaces the stored routine.
+ *
+ * Data actions are wired to the whole-of-Local-Mode APIs (`exportAllState` / `importAllState` /
+ * `eraseAllLocalData`), so a backup covers every `fitforge.*` key and an erase clears them all.
  */
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
@@ -18,6 +31,7 @@ import {
   Sheet,
   type SelectableOption,
 } from '@/components/ui';
+import { StarIcon } from '@/components/ui/SwipeDeck';
 import {
   TrophyIcon,
   DumbbellIcon,
@@ -31,21 +45,51 @@ import {
   ExportIcon,
   ImportIcon,
   TrashIcon,
+  CheckIcon,
+  RepeatIcon,
 } from '@/components/ui/icons';
-import { resetDemo, exportState, importState, getState } from '@/lib/demo/store';
 import {
-  MOCK_PROFILE,
-  MOCK_NUTRITION_PROFILE,
-  WEEKDAY_LABELS,
-  EQUIPMENT_FACETS,
+  update,
+  getState,
+  exportAllState,
+  importAllState,
+  eraseAllLocalData,
+  type DemoState,
+} from '@/lib/demo/store';
+import { useDemoState } from '@/lib/demo/useDemo';
+import {
+  routineForDraft,
+  targetsForDraft,
+  planCoverageForDraft,
+  describeDay,
+  exerciseCountLabel,
+} from '@/lib/demo/generate';
+import { DEMO_EQUIPMENT } from '@/lib/demo/catalog';
+import { resolveBodyAreaExclusions } from '@fitforge/shared/rules';
+import {
+  BODY_AREAS,
+  ALLERGEN_TAGS,
+  type BodyArea,
   type GoalType,
   type DietType,
+  type ExperienceLevel,
+  type TrainingLocation,
+  type SexType,
+  type UnitSystem,
+  type EquipmentCategory,
+  type MovementPattern,
+} from '@fitforge/shared/types';
+import type { OnboardingDraft, DraftMovementExclusion } from '@/components/onboarding/types';
+import {
+  WEEKDAY_LABELS,
+  type Profile,
+  type NutritionProfile,
+  type NutritionTargets,
 } from '@/components/features/_mock/data';
 
-type Experience = 'beginner' | 'intermediate' | 'advanced';
-type Location = 'home' | 'commercial_gym' | 'minimal';
+type Draft = Partial<OnboardingDraft>;
 
-/** A small indigo icon chip used for goal / location option cards. */
+/** A small gold icon chip used for goal / location option cards. */
 function OptionBadge({ children }: { children: React.ReactNode }) {
   return (
     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-muted text-accent">
@@ -68,12 +112,12 @@ const GOAL_LABEL: Record<GoalType, string> = {
   endurance: 'Endurance',
   general_health: 'General health',
 };
-const EXPERIENCE_OPTIONS: SelectableOption<Experience>[] = [
+const EXPERIENCE_OPTIONS: SelectableOption<ExperienceLevel>[] = [
   { value: 'beginner', title: 'Beginner', description: 'Less than 1 year consistent' },
   { value: 'intermediate', title: 'Intermediate', description: '1–3 years' },
   { value: 'advanced', title: 'Advanced', description: '3+ years' },
 ];
-const LOCATION_OPTIONS: SelectableOption<Location>[] = [
+const LOCATION_OPTIONS: SelectableOption<TrainingLocation>[] = [
   { value: 'home', title: 'Home', description: 'Dumbbells, bands, a bench', icon: <OptionBadge><HomeIcon size={20} /></OptionBadge> },
   { value: 'commercial_gym', title: 'Commercial gym', description: 'Full equipment', icon: <OptionBadge><BuildingIcon size={20} /></OptionBadge> },
   { value: 'minimal', title: 'Minimal', description: 'Bodyweight & travel', icon: <OptionBadge><PlaneIcon size={20} /></OptionBadge> },
@@ -87,23 +131,242 @@ const DIET_OPTIONS: SelectableOption<DietType>[] = [
   { value: 'mediterranean', title: 'Mediterranean' },
   { value: 'none', title: 'Just track' },
 ];
+const SEX_OPTIONS: { value: SexType; label: string }[] = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+];
 const SESSION_MINUTES = [30, 45, 60, 75, 90];
-const BODY_AREAS = ['shoulders', 'lower_back', 'knees', 'wrists', 'hips', 'neck', 'elbows'];
-const ALLERGENS = ['peanut', 'tree_nut', 'dairy', 'gluten', 'egg', 'soy', 'shellfish', 'fish', 'sesame'];
+const BODY_AREA_LABEL: Record<BodyArea, string> = {
+  shoulders: 'Shoulders',
+  lower_back: 'Lower back',
+  knees: 'Knees',
+  wrists: 'Wrists',
+  hips: 'Hips',
+  neck: 'Neck',
+  elbows: 'Elbows',
+};
+const EQUIPMENT_CATEGORY_LABEL: Record<EquipmentCategory, string> = {
+  free_weights: 'Free weights',
+  benches_racks: 'Benches & racks',
+  machines: 'Machines',
+  cables: 'Cables',
+  bodyweight_accessories: 'Bodyweight kit',
+  cardio: 'Cardio',
+};
+const EQUIPMENT_CATEGORY_ORDER: EquipmentCategory[] = [
+  'free_weights',
+  'benches_racks',
+  'bodyweight_accessories',
+  'cables',
+  'machines',
+  'cardio',
+];
+
+function prettyPattern(p: MovementPattern | string): string {
+  return String(p)
+    .split('_')
+    .filter((w) => w !== 'iso')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+function allergenLabel(tag: string): string {
+  return tag.charAt(0).toUpperCase() + tag.slice(1).replace(/_/g, ' ');
+}
+
+/* ═══════════════════════════════════════════════════════════ the store ↔ screen projection
+ *
+ * ONE resolver drives both what the screen renders and what a write persists, so the two can
+ * never drift. Precedence is: the onboarding draft (the answers the user gave and can edit here)
+ * → the derived rows generated from them → a neutral default for a store that never had the
+ * field at all (e.g. a v1 backup imported from an older build).
+ */
+
+interface Answers {
+  displayName: string;
+  primaryGoal: GoalType;
+  secondaryGoal: GoalType | null;
+  experience: ExperienceLevel;
+  daysPerWeek: number;
+  sessionMinutes: number;
+  preferredDays: number[];
+  location: TrainingLocation;
+  equipment: string[];
+  loved: string[];
+  bodyAreas: BodyArea[];
+  movementExclusions: DraftMovementExclusion[];
+  sex: SexType;
+  birthdate: string;
+  heightCm: number | null;
+  weightKg: number | null;
+  unit: UnitSystem;
+  dietType: DietType;
+  allergies: string[];
+  mealsPerDay: number;
+  targetsSource: 'suggested' | 'custom';
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+function resolveAnswers(state: DemoState): Answers {
+  const d = state.draft;
+  const p = state.profile;
+  const n = state.nutritionProfile;
+  const t = state.targets;
+  return {
+    displayName: d.display_name ?? p?.display_name ?? '',
+    primaryGoal: d.primary_goal ?? p?.primary_goal ?? 'general_health',
+    secondaryGoal: d.secondary_goal ?? p?.secondary_goal ?? null,
+    experience: d.experience_level ?? p?.experience_level ?? 'beginner',
+    daysPerWeek: d.days_per_week ?? p?.days_per_week ?? 3,
+    sessionMinutes: d.session_minutes ?? p?.session_minutes ?? 45,
+    preferredDays: d.preferred_days ?? p?.preferred_days ?? [],
+    location: d.training_location ?? p?.training_location ?? 'commercial_gym',
+    equipment: d.equipment_slugs ?? [],
+    loved: d.loved_equipment_slugs ?? [],
+    bodyAreas: d.body_areas ?? [],
+    movementExclusions: d.movement_exclusions ?? [],
+    sex: d.sex ?? p?.sex ?? 'prefer_not_to_say',
+    birthdate: d.birthdate ?? p?.birthdate ?? '',
+    heightCm: d.height_cm ?? p?.height_cm ?? null,
+    weightKg: d.weight_kg ?? null,
+    unit: d.unit_system ?? p?.unit_system ?? 'metric',
+    dietType: d.diet_type ?? n?.diet_type ?? 'none',
+    allergies: d.allergies ?? n?.allergies ?? [],
+    mealsPerDay: d.meals_per_day ?? n?.meals_per_day ?? 3,
+    targetsSource: d.targets_source ?? n?.targets_source ?? 'suggested',
+    kcal: d.kcal_target ?? t?.kcal_target ?? n?.kcal_target ?? 0,
+    protein: d.protein_g_target ?? t?.protein_g_target ?? n?.protein_g_target ?? 0,
+    carbs: d.carbs_g_target ?? t?.carbs_g_target ?? n?.carbs_g_target ?? 0,
+    fat: d.fat_g_target ?? t?.fat_g_target ?? n?.fat_g_target ?? 0,
+  };
+}
+
+/**
+ * Apply a draft patch and re-derive everything downstream of it, then persist.
+ *
+ * The store keeps BOTH the answers (`draft`) and the rows generated from them (`profile`,
+ * `nutritionProfile`, `targets`) — Today, Nutrition and Progress read the latter. Writing only the
+ * draft would leave Settings claiming one thing and the rest of the app showing another, so a
+ * single write updates all of them. Suggested (i.e. not hand-edited) macro targets are recomputed
+ * from the real §7.2.4 rule whenever an input to it changes.
+ */
+function commitPatch(patch: Draft): void {
+  update((s) => {
+    let draft: Draft = { ...s.draft, ...patch };
+    const source = draft.targets_source ?? s.nutritionProfile?.targets_source ?? 'suggested';
+    if (source === 'suggested') {
+      const suggested = targetsForDraft(draft);
+      draft = {
+        ...draft,
+        targets_source: 'suggested',
+        kcal_target: suggested.kcal_target,
+        protein_g_target: suggested.protein_g_target,
+        carbs_g_target: suggested.carbs_g_target,
+        fat_g_target: suggested.fat_g_target,
+      };
+    }
+
+    const a = resolveAnswers({ ...s, draft });
+    const name = a.displayName.trim();
+    const profile: Profile = {
+      display_name: name.length > 0 ? name : null,
+      sex: a.sex,
+      birthdate: a.birthdate,
+      height_cm: a.heightCm ?? s.profile?.height_cm ?? 170,
+      unit_system: a.unit,
+      experience_level: a.experience,
+      primary_goal: a.primaryGoal,
+      secondary_goal: a.secondaryGoal,
+      training_location: a.location,
+      days_per_week: a.daysPerWeek,
+      session_minutes: a.sessionMinutes,
+      preferred_days: a.preferredDays,
+    };
+    const targets: NutritionTargets = {
+      kcal_target: a.kcal,
+      protein_g_target: a.protein,
+      carbs_g_target: a.carbs,
+      fat_g_target: a.fat,
+    };
+    const nutritionProfile: NutritionProfile = {
+      diet_type: a.dietType,
+      allergies: a.allergies,
+      meals_per_day: a.mealsPerDay,
+      kcal_target: a.kcal,
+      protein_g_target: a.protein,
+      carbs_g_target: a.carbs,
+      fat_g_target: a.fat,
+      targets_source: a.targetsSource,
+    };
+    return { ...s, draft, profile, nutritionProfile, targets };
+  });
+}
 
 export function SettingsView() {
   const router = useRouter();
+  const state = useDemoState();
+  const answers = React.useMemo(() => resolveAnswers(state), [state]);
+  const routine = state.routine;
+
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [importStatus, setImportStatus] = React.useState<'idle' | 'ok' | 'error'>('idle');
+  const [importError, setImportError] = React.useState<string | null>(null);
+  const [savedCount, setSavedCount] = React.useState(0);
+  const [planDirty, setPlanDirty] = React.useState(false);
+  const [planStatus, setPlanStatus] = React.useState<string | null>(null);
+  const [regenPrompt, setRegenPrompt] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  /**
+   * The "re-generate?" sheet is an OFFER, not a nag: it interrupts once per round of edits.
+   * Equipment cycles through have → favourite → off, so re-opening a modal on every tap would
+   * make the control unusable; after the first offer the inline banner carries the message.
+   */
+  const offeredRegenRef = React.useRef(false);
 
-  function resetAndLeave() {
-    resetDemo();
-    router.push('/');
-  }
+  /** Write-through: persist the patch, then acknowledge it truthfully. */
+  const save = React.useCallback((patch: Draft, affectsPlan = false) => {
+    commitPatch(patch);
+    setSavedCount((n) => n + 1);
+    if (affectsPlan) {
+      setPlanDirty(true);
+      setPlanStatus(null); // the last "re-generated" line is no longer true of these answers
+    }
+  }, []);
 
-  /** Export the whole Local Mode store as a downloadable JSON backup (§5.1 / P2-16). */
+  /** Re-run the real generator over the CURRENT answers and replace the stored routine (§7.5). */
+  const regenerate = React.useCallback(() => {
+    const draft = getState().draft;
+    const next = routineForDraft(draft);
+    update((s) => ({ ...s, routine: next }));
+    const total = next.days.reduce((sum, d) => sum + d.exercises.length, 0);
+    setPlanDirty(false);
+    setRegenPrompt(false);
+    offeredRegenRef.current = false;
+    setPlanStatus(`Plan re-generated · ${next.name} · ${exerciseCountLabel(total)}`);
+  }, []);
+
+  /** Offer a re-generation once per round of plan-affecting edits. */
+  const offerRegenerate = React.useCallback(() => {
+    if (offeredRegenRef.current) return;
+    offeredRegenRef.current = true;
+    setRegenPrompt(true);
+  }, []);
+
+  // Honest coverage read-out for the answers as they stand (§7.5 / M1) — pure, so it can be
+  // recomputed whenever the draft changes.
+  const coverage = React.useMemo(() => planCoverageForDraft(state.draft), [state.draft]);
+
+  const totalExercises = routine?.days.reduce((sum, d) => sum + d.exercises.length, 0) ?? 0;
+
+  /* ------------------------------------------------------------------ Local Mode data actions */
+
+  /** Export EVERY Local Mode key as a downloadable JSON backup (§5.1 / P2-16). */
   function exportData() {
-    const blob = new Blob([exportState()], { type: 'application/json' });
+    const blob = new Blob([exportAllState()], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -114,81 +377,180 @@ export function SettingsView() {
     URL.revokeObjectURL(url);
   }
 
-  /** Restore the store from a user-selected JSON backup, then reload into Today. */
+  /** Restore from a user-selected backup. Nothing is written unless every section validates. */
   async function importData(file: File) {
-    const text = await file.text();
-    if (importState(text)) {
-      setImportStatus('ok');
+    const result = importAllState(await file.text());
+    if (result.ok) {
+      setImportError(null);
       router.push('/today');
     } else {
-      setImportStatus('error');
+      setImportError(result.error);
     }
   }
-  const [primaryGoal, setPrimaryGoal] = React.useState<GoalType>(MOCK_PROFILE.primary_goal);
-  const [secondaryGoal, setSecondaryGoal] = React.useState<GoalType | null>(
-    MOCK_PROFILE.secondary_goal,
+
+  function eraseAndLeave() {
+    eraseAllLocalData();
+    router.push('/');
+  }
+
+  /* --------------------------------------------------------------------------- edit handlers */
+
+  function toggleWeekday(index: number) {
+    const next = answers.preferredDays.includes(index)
+      ? answers.preferredDays.filter((d) => d !== index)
+      : [...answers.preferredDays, index].sort((a, b) => a - b);
+    save({ preferred_days: next }, true);
+  }
+
+  /**
+   * Equipment cycles have → love → gone, exactly as the onboarding review screen does, so the
+   * gold star ("we'll favour this") stays editable here too.
+   */
+  function cycleEquipment(slug: string) {
+    const owned = answers.equipment.includes(slug);
+    const loved = answers.loved.includes(slug);
+    let equipment = answers.equipment;
+    let lovedSlugs = answers.loved;
+    if (!owned) {
+      equipment = [...equipment, slug];
+    } else if (!loved) {
+      lovedSlugs = [...lovedSlugs, slug];
+    } else {
+      equipment = equipment.filter((s) => s !== slug);
+      lovedSlugs = lovedSlugs.filter((s) => s !== slug);
+    }
+    save({ equipment_slugs: equipment, loved_equipment_slugs: lovedSlugs }, true);
+    offerRegenerate();
+  }
+
+  /** Protected areas resolve to real movement-pattern exclusions through the §7.2.2 rule. */
+  function toggleBodyArea(area: BodyArea) {
+    const next = answers.bodyAreas.includes(area)
+      ? answers.bodyAreas.filter((a) => a !== area)
+      : [...answers.bodyAreas, area];
+    const rows: DraftMovementExclusion[] = resolveBodyAreaExclusions(next).map((e) => ({
+      movement_pattern: e.movement_pattern,
+      reason: 'injury',
+      source_body_area: e.source_body_area,
+      soft: e.soft,
+    }));
+    save({ body_areas: next, movement_exclusions: rows }, true);
+    offerRegenerate();
+  }
+
+  function toggleAllergy(tag: string) {
+    const next = answers.allergies.includes(tag)
+      ? answers.allergies.filter((a) => a !== tag)
+      : [...answers.allergies, tag];
+    save({ allergies: next });
+  }
+
+  /** A hand-typed macro target is a custom override (§2.3) — it stops tracking the suggestion. */
+  function setCustomTarget(patch: Draft) {
+    save({ ...patch, targets_source: 'custom' });
+  }
+
+  function resetTargetsToSuggested() {
+    const suggested = targetsForDraft({ ...getState().draft, targets_source: 'suggested' });
+    save({
+      targets_source: 'suggested',
+      kcal_target: suggested.kcal_target,
+      protein_g_target: suggested.protein_g_target,
+      carbs_g_target: suggested.carbs_g_target,
+      fat_g_target: suggested.fat_g_target,
+    });
+  }
+
+  const sessionOptions = React.useMemo(
+    () => [...new Set([...SESSION_MINUTES, answers.sessionMinutes])].sort((a, b) => a - b),
+    [answers.sessionMinutes],
   );
-  const [experience, setExperience] = React.useState<Experience>(MOCK_PROFILE.experience_level);
-  const [location, setLocation] = React.useState<Location>(MOCK_PROFILE.training_location);
-  const [daysPerWeek, setDaysPerWeek] = React.useState(MOCK_PROFILE.days_per_week);
-  const [preferredDays, setPreferredDays] = React.useState<number[]>(MOCK_PROFILE.preferred_days);
-  const [sessionMinutes, setSessionMinutes] = React.useState(MOCK_PROFILE.session_minutes);
-
-  const [displayName, setDisplayName] = React.useState('');
-  const [heightCm, setHeightCm] = React.useState(MOCK_PROFILE.height_cm);
-
-  // Hydrate the editable name from the Local Mode store after mount (§5.4).
-  React.useEffect(() => {
-    setDisplayName(getState().profile?.display_name ?? '');
-  }, []);
-  const [birthdate, setBirthdate] = React.useState(MOCK_PROFILE.birthdate);
-  const [unit, setUnit] = React.useState(MOCK_PROFILE.unit_system);
-
-  const [equipment, setEquipment] = React.useState<string[]>(['barbell', 'dumbbell', 'cable-machine', 'pull-up-bar']);
-  const [bodyAreas, setBodyAreas] = React.useState<string[]>([]);
-
-  const [dietType, setDietType] = React.useState<DietType>(MOCK_NUTRITION_PROFILE.diet_type);
-  const [allergies, setAllergies] = React.useState<string[]>(MOCK_NUTRITION_PROFILE.allergies);
-  const [mealsPerDay, setMealsPerDay] = React.useState(MOCK_NUTRITION_PROFILE.meals_per_day);
-  const [kcalTarget, setKcalTarget] = React.useState(MOCK_NUTRITION_PROFILE.kcal_target);
-
-  // "Re-generate my plan?" prompt fires when equipment or exclusions change (§2.3).
-  const [regenPrompt, setRegenPrompt] = React.useState(false);
-  const [deleteOpen, setDeleteOpen] = React.useState(false);
-
-  function toggle<T>(list: T[], v: T): T[] {
-    return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
-  }
-  function onEquipmentChange(slug: string) {
-    setEquipment((prev) => toggle(prev, slug));
-    setRegenPrompt(true);
-  }
-  function onBodyAreaChange(area: string) {
-    setBodyAreas((prev) => toggle(prev, area));
-    setRegenPrompt(true);
-  }
+  const avoidedPatterns = React.useMemo(
+    () => answers.movementExclusions.map((m) => prettyPattern(m.movement_pattern)),
+    [answers.movementExclusions],
+  );
 
   return (
     <div className="space-y-6 pb-4">
       <h1 className="font-display text-2xl font-bold tracking-tight">Settings</h1>
+      <p className="-mt-4 text-xs text-muted-foreground" data-testid="settings-saved">
+        <span role="status" aria-live="polite">
+          {savedCount > 0 ? 'Saved to this browser.' : 'Every change saves to this browser as you make it.'}
+        </span>
+      </p>
 
       {/* ---------------------------------------------------------------- Your plan */}
       <GroupHeader>Your plan</GroupHeader>
 
+      <Section title="Current routine" hint="Generated from the answers below.">
+        {routine ? (
+          <div className="space-y-2" data-testid="settings-plan-summary">
+            <p className="text-sm font-semibold text-foreground" data-testid="settings-plan-name">
+              {routine.name}
+            </p>
+            <p className="text-xs text-muted-foreground tabular" data-testid="settings-plan-days">
+              {routine.days.length} {routine.days.length === 1 ? 'day' : 'days'} a week ·{' '}
+              {exerciseCountLabel(totalExercises)}
+            </p>
+            <ul className="space-y-1">
+              {routine.days.map((day) => (
+                <li key={day.id} className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{day.name}</span> — {describeDay(day)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground" data-testid="settings-plan-summary">
+            No routine generated yet.
+          </p>
+        )}
+
+        {coverage.limited && (
+          <p className="rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+            {coverage.title}. {coverage.body}
+          </p>
+        )}
+
+        {planDirty && (
+          <p
+            className="rounded-xl border border-accent bg-accent-muted px-3 py-2 text-xs text-accent"
+            data-testid="settings-plan-dirty"
+          >
+            Your answers changed. Re-generate to bring the routine in line with them.
+          </p>
+        )}
+
+        <Button
+          size="lg"
+          block
+          variant={planDirty ? 'primary' : 'secondary'}
+          onClick={regenerate}
+          data-testid="settings-regenerate"
+        >
+          <RepeatIcon size={18} /> Re-generate my plan
+        </Button>
+        <p className="text-xs text-muted-foreground" role="status" aria-live="polite" data-testid="settings-plan-status">
+          {planStatus ?? ''}
+        </p>
+      </Section>
+
       <Section title="Primary goal" hint="Drives how we generate and progress your routine.">
         <SelectableCardGrid
           options={GOAL_OPTIONS}
-          value={primaryGoal}
-          onChange={(v) => setPrimaryGoal(v)}
+          value={answers.primaryGoal}
+          onChange={(v) => save({ primary_goal: v }, true)}
           columns={1}
         />
         <FieldLabel>Secondary goal (optional)</FieldLabel>
         <div className="flex flex-wrap gap-2">
-          {GOAL_OPTIONS.filter((o) => o.value !== primaryGoal).map((o) => (
+          {GOAL_OPTIONS.filter((o) => o.value !== answers.primaryGoal).map((o) => (
             <Chip
               key={o.value}
-              selected={secondaryGoal === o.value}
-              onClick={() => setSecondaryGoal(secondaryGoal === o.value ? null : o.value)}
+              selected={answers.secondaryGoal === o.value}
+              onClick={() =>
+                save({ secondary_goal: answers.secondaryGoal === o.value ? null : o.value })
+              }
             >
               {GOAL_LABEL[o.value]}
             </Chip>
@@ -199,25 +561,28 @@ export function SettingsView() {
       <Section title="Experience">
         <SelectableCardGrid
           options={EXPERIENCE_OPTIONS}
-          value={experience}
-          onChange={(v) => setExperience(v)}
+          value={answers.experience}
+          onChange={(v) => save({ experience_level: v }, true)}
         />
       </Section>
 
       <Section title="Schedule">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <FieldLabel>Days per week</FieldLabel>
-          <Stepper value={daysPerWeek} min={1} max={7} onChange={setDaysPerWeek} unit="days" />
+          <Stepper
+            value={answers.daysPerWeek}
+            min={1}
+            max={7}
+            onChange={(v) => save({ days_per_week: v }, true)}
+            unit="days"
+            aria-label="Days per week"
+          />
         </div>
         <div>
           <FieldLabel>Preferred days</FieldLabel>
           <div className="mt-1.5 flex flex-wrap gap-2">
             {WEEKDAY_LABELS.map((d, i) => (
-              <Chip
-                key={d}
-                selected={preferredDays.includes(i)}
-                onClick={() => setPreferredDays((prev) => toggle(prev, i).sort((a, b) => a - b))}
-              >
+              <Chip key={d} selected={answers.preferredDays.includes(i)} onClick={() => toggleWeekday(i)}>
                 {d}
               </Chip>
             ))}
@@ -226,8 +591,12 @@ export function SettingsView() {
         <div>
           <FieldLabel>Session length</FieldLabel>
           <div className="mt-1.5 flex flex-wrap gap-2">
-            {SESSION_MINUTES.map((m) => (
-              <Chip key={m} selected={sessionMinutes === m} onClick={() => setSessionMinutes(m)}>
+            {sessionOptions.map((m) => (
+              <Chip
+                key={m}
+                selected={answers.sessionMinutes === m}
+                onClick={() => save({ session_minutes: m }, true)}
+              >
                 {m} min
               </Chip>
             ))}
@@ -238,37 +607,78 @@ export function SettingsView() {
       <Section title="Training location">
         <SelectableCardGrid
           options={LOCATION_OPTIONS}
-          value={location}
-          onChange={(v) => setLocation(v)}
+          value={answers.location}
+          onChange={(v) => save({ training_location: v }, true)}
         />
       </Section>
 
-      <Section title="Equipment" hint="Changing this can change which exercises we recommend.">
-        <div className="flex flex-wrap gap-2">
-          {EQUIPMENT_FACETS.filter((e) => e.slug !== 'bodyweight').map((e) => (
-            <Chip
-              key={e.slug}
-              selected={equipment.includes(e.slug)}
-              onClick={() => onEquipmentChange(e.slug)}
-            >
-              {e.name}
-            </Chip>
-          ))}
-        </div>
+      <Section
+        title="Equipment"
+        hint="Tap to cycle: have, then a gold star for kit we should favour, then off."
+      >
+        <p className="text-xs text-muted-foreground" data-testid="settings-equipment-count">
+          {answers.equipment.length === 0
+            ? 'Nothing marked — we build bodyweight-only plans for you.'
+            : `${answers.equipment.length} marked${answers.loved.length > 0 ? ` · ${answers.loved.length} favourite` : ''}`}
+        </p>
+        {EQUIPMENT_CATEGORY_ORDER.map((category) => {
+          const rows = DEMO_EQUIPMENT.filter((e) => e.category === category);
+          if (rows.length === 0) return null;
+          return (
+            <div key={category}>
+              <FieldLabel>{EQUIPMENT_CATEGORY_LABEL[category]}</FieldLabel>
+              <div
+                className="mt-1.5 flex flex-wrap gap-2"
+                role="group"
+                aria-label={EQUIPMENT_CATEGORY_LABEL[category]}
+              >
+                {rows.map((row) => {
+                  const owned = answers.equipment.includes(row.slug);
+                  const loved = answers.loved.includes(row.slug);
+                  return (
+                    <Chip
+                      key={row.slug}
+                      selected={owned}
+                      leading={
+                        owned ? (
+                          loved ? (
+                            <StarIcon size={13} className="text-accent" />
+                          ) : (
+                            <CheckIcon size={13} />
+                          )
+                        ) : undefined
+                      }
+                      onClick={() => cycleEquipment(row.slug)}
+                      data-testid={`settings-equipment-${row.slug}`}
+                    >
+                      {row.name}
+                    </Chip>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </Section>
 
       <Section title="Protect / avoid" hint="Body areas map to movement patterns we'll avoid.">
         <div className="flex flex-wrap gap-2">
-          {BODY_AREAS.map((a) => (
+          {BODY_AREAS.map((area) => (
             <Chip
-              key={a}
-              selected={bodyAreas.includes(a)}
-              onClick={() => onBodyAreaChange(a)}
+              key={area}
+              selected={answers.bodyAreas.includes(area)}
+              onClick={() => toggleBodyArea(area)}
+              data-testid={`settings-body-area-${area}`}
             >
-              <span className="capitalize">{a.replace('_', ' ')}</span>
+              {BODY_AREA_LABEL[area]}
             </Chip>
           ))}
         </div>
+        {avoidedPatterns.length > 0 && (
+          <p className="text-xs text-muted-foreground" data-testid="settings-avoided-patterns">
+            We&apos;ll steer away from: {avoidedPatterns.join(', ')}.
+          </p>
+        )}
       </Section>
 
       {/* ---------------------------------------------------------------- Preferences */}
@@ -277,63 +687,140 @@ export function SettingsView() {
       <Section title="Diet">
         <SelectableCardGrid
           options={DIET_OPTIONS}
-          value={dietType}
-          onChange={(v) => setDietType(v)}
+          value={answers.dietType}
+          onChange={(v) => save({ diet_type: v })}
           columns={2}
         />
         <FieldLabel>Allergies</FieldLabel>
         <div className="flex flex-wrap gap-2">
-          {ALLERGENS.map((a) => (
-            <Chip key={a} selected={allergies.includes(a)} onClick={() => setAllergies((prev) => toggle(prev, a))}>
-              <span className="capitalize">{a.replace('_', ' ')}</span>
+          {ALLERGEN_TAGS.map((tag) => (
+            <Chip
+              key={tag}
+              selected={answers.allergies.includes(tag)}
+              onClick={() => toggleAllergy(tag)}
+              data-testid={`settings-allergy-${tag}`}
+            >
+              {allergenLabel(tag)}
             </Chip>
           ))}
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <FieldLabel>Meals per day</FieldLabel>
-          <Stepper value={mealsPerDay} min={1} max={6} onChange={setMealsPerDay} unit="meals" />
+          <Stepper
+            value={answers.mealsPerDay}
+            min={1}
+            max={6}
+            onChange={(v) => save({ meals_per_day: v })}
+            unit="meals"
+            aria-label="Meals per day"
+          />
         </div>
       </Section>
 
-      <Section title="Calorie target" hint="Auto-computed, editable. Edits are stored as custom overrides.">
+      <Section
+        title="Daily targets"
+        hint={
+          answers.targetsSource === 'custom'
+            ? 'Custom values — these stay put until you reset them.'
+            : 'Suggested from your body metrics, goal and schedule.'
+        }
+      >
         <div className="flex items-center gap-3">
-          <input
-            type="number"
-            inputMode="numeric"
-            value={kcalTarget}
-            onChange={(e) => setKcalTarget(Number(e.target.value))}
-            className="h-11 w-32 rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-accent"
+          <NumberField
+            label="Calories"
+            value={answers.kcal}
+            min={0}
+            onCommit={(n) => setCustomTarget({ kcal_target: n })}
+            testId="settings-kcal"
+            width="w-28"
           />
           <span className="text-sm text-muted-foreground">kcal / day</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setKcalTarget(MOCK_NUTRITION_PROFILE.kcal_target)}
-          >
-            Reset to suggested
-          </Button>
         </div>
+        <div className="grid grid-cols-3 gap-2">
+          <NumberField
+            label="Protein (g)"
+            value={answers.protein}
+            min={0}
+            onCommit={(n) => setCustomTarget({ protein_g_target: n })}
+            testId="settings-protein"
+          />
+          <NumberField
+            label="Carbs (g)"
+            value={answers.carbs}
+            min={0}
+            onCommit={(n) => setCustomTarget({ carbs_g_target: n })}
+            testId="settings-carbs"
+          />
+          <NumberField
+            label="Fat (g)"
+            value={answers.fat}
+            min={0}
+            onCommit={(n) => setCustomTarget({ fat_g_target: n })}
+            testId="settings-fat"
+          />
+        </div>
+        <Button size="sm" variant="ghost" onClick={resetTargetsToSuggested}>
+          Reset to suggested
+        </Button>
       </Section>
 
       <Section title="Profile">
-        <LabeledInput label="Display name" value={displayName} onChange={setDisplayName} />
+        <label className="flex flex-col gap-1">
+          <FieldLabel>Display name</FieldLabel>
+          <input
+            value={answers.displayName}
+            onChange={(e) => save({ display_name: e.target.value })}
+            data-testid="settings-display-name"
+            className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-accent"
+          />
+        </label>
         <div className="grid grid-cols-2 gap-3">
-          <LabeledNumber label="Height (cm)" value={heightCm} onChange={setHeightCm} />
+          <NumberField
+            label="Height (cm)"
+            value={answers.heightCm}
+            min={0}
+            onCommit={(n) => save({ height_cm: n })}
+            testId="settings-height"
+          />
           <label className="flex flex-col gap-1">
             <FieldLabel>Birthdate</FieldLabel>
             <input
               type="date"
-              value={birthdate}
-              onChange={(e) => setBirthdate(e.target.value)}
+              value={answers.birthdate}
+              onChange={(e) => save({ birthdate: e.target.value })}
+              data-testid="settings-birthdate"
               className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-accent"
             />
           </label>
+        </div>
+        <NumberField
+          label="Weight (kg)"
+          value={answers.weightKg}
+          min={0}
+          step="0.1"
+          onCommit={(n) => save({ weight_kg: n })}
+          testId="settings-weight"
+          hint="Used for your calorie targets. Day-to-day weigh-ins live in Progress."
+        />
+        <div>
+          <FieldLabel>Sex</FieldLabel>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {SEX_OPTIONS.map((o) => (
+              <Chip
+                key={o.value}
+                selected={answers.sex === o.value}
+                onClick={() => save({ sex: o.value })}
+              >
+                {o.label}
+              </Chip>
+            ))}
+          </div>
         </div>
         <div>
           <FieldLabel>Units</FieldLabel>
           <div className="mt-1.5 flex gap-2">
             {(['metric', 'imperial'] as const).map((u) => (
-              <Chip key={u} selected={unit === u} onClick={() => setUnit(u)}>
+              <Chip key={u} selected={answers.unit === u} onClick={() => save({ unit_system: u })}>
                 <span className="capitalize">{u}</span>
               </Chip>
             ))}
@@ -349,7 +836,7 @@ export function SettingsView() {
         hint="Everything lives in this browser. Nothing is uploaded. Back up or move your data anytime."
       >
         <div className="flex flex-col gap-2">
-          <Button size="lg" variant="secondary" block onClick={exportData}>
+          <Button size="lg" variant="secondary" block onClick={exportData} data-testid="settings-export">
             <ExportIcon size={18} /> Export data (JSON)
           </Button>
           <Button
@@ -357,6 +844,7 @@ export function SettingsView() {
             variant="secondary"
             block
             onClick={() => fileInputRef.current?.click()}
+            data-testid="settings-import"
           >
             <ImportIcon size={18} /> Import data
           </Button>
@@ -372,9 +860,9 @@ export function SettingsView() {
               e.target.value = '';
             }}
           />
-          {importStatus === 'error' && (
-            <p role="alert" className="text-xs text-danger">
-              That file wasn&apos;t a valid FitForge backup. Nothing was changed.
+          {importError && (
+            <p role="alert" className="text-xs text-danger" data-testid="settings-import-error">
+              {importError}
             </p>
           )}
           <Button
@@ -387,31 +875,33 @@ export function SettingsView() {
             <TrashIcon size={18} /> Erase Local Mode data
           </Button>
           <p className="text-xs text-muted-foreground">
-            Erasing clears your profile, routine, and food logs stored in this browser.
+            A backup covers everything this app stores here — your answers, plan, food logs and full
+            training history. Erasing clears all of it.
           </p>
         </div>
       </Section>
 
       <Section title="Account">
         <div className="flex flex-col gap-2">
-          <Button size="lg" block>
-            Save changes
-          </Button>
-          <Button size="lg" variant="secondary" block onClick={resetAndLeave} data-testid="demo-signout">
+          <Button size="lg" variant="secondary" block onClick={eraseAndLeave} data-testid="demo-signout">
             <LogOutIcon size={18} /> Sign out
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Local Mode has no account to sign out of — this clears this browser&apos;s data and
+            returns you to the start. Export a backup first if you want to keep it.
+          </p>
         </div>
       </Section>
 
-      {/* Regenerate prompt */}
+      {/* Regenerate prompt — fired by equipment / protected-area edits (§2.3). */}
       <Sheet open={regenPrompt} onClose={() => setRegenPrompt(false)} title="Re-generate your plan?">
         <p className="text-sm text-muted-foreground">
           You changed your equipment or the areas you want to protect. Want us to re-generate your
           starter routine to match?
         </p>
         <div className="mt-4 flex flex-col gap-2">
-          <Button block onClick={() => setRegenPrompt(false)}>
-            Re-generate my plan
+          <Button block onClick={regenerate} data-testid="settings-regenerate-confirm">
+            Yes, re-generate it
           </Button>
           <Button variant="ghost" block onClick={() => setRegenPrompt(false)}>
             Keep my current plan
@@ -422,12 +912,11 @@ export function SettingsView() {
       {/* Erase Local Mode confirm */}
       <Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Erase Local Mode data?">
         <p className="text-sm text-muted-foreground">
-          This clears your profile, generated routine, and food logs stored in this browser
-          (storage key <code>fitforge.demo.v1</code>). This cannot be undone. Export a backup first
-          if you want to keep it.
+          This clears your profile, generated routine, food logs and training history stored in this
+          browser. This cannot be undone. Export a backup first if you want to keep it.
         </p>
         <div className="mt-4 flex flex-col gap-2">
-          <Button variant="danger" block onClick={resetAndLeave}>
+          <Button variant="danger" block onClick={eraseAndLeave}>
             Yes, erase everything
           </Button>
           <Button variant="ghost" block onClick={() => setDeleteOpen(false)}>
@@ -464,6 +953,7 @@ function Section({
     </Card>
   );
 }
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -471,45 +961,67 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
-function LabeledInput({
+
+/**
+ * A numeric field that survives being emptied.
+ *
+ * A raw `value={n} onChange={Number(e.target.value)}` turns a cleared box into a persisted `0`
+ * (and a half-typed "1." into `1`), so the field keeps its own text buffer, commits only when the
+ * text parses to a finite number, and snaps back to the stored value on blur.
+ */
+function NumberField({
   label,
   value,
-  onChange,
+  onCommit,
+  min,
+  step,
+  testId,
+  hint,
+  width,
 }: {
   label: string;
-  value: string;
-  onChange: (v: string) => void;
+  value: number | null;
+  onCommit: (value: number) => void;
+  min?: number;
+  step?: string;
+  testId?: string;
+  hint?: string;
+  width?: string;
 }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <FieldLabel>{label}</FieldLabel>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-accent"
-      />
-    </label>
-  );
-}
-function LabeledNumber({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
+  const stored = value == null ? '' : String(value);
+  const [text, setText] = React.useState(stored);
+  const [editing, setEditing] = React.useState(false);
+
+  // Follow the store while the user is not typing (import, reset-to-suggested, another tab).
+  React.useEffect(() => {
+    if (!editing) setText(stored);
+  }, [stored, editing]);
+
   return (
     <label className="flex flex-col gap-1">
       <FieldLabel>{label}</FieldLabel>
       <input
         type="number"
         inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base tabular-nums outline-none focus:border-accent"
+        min={min}
+        step={step}
+        value={text}
+        data-testid={testId}
+        onFocus={() => setEditing(true)}
+        onChange={(e) => {
+          setText(e.target.value);
+          const n = Number(e.target.value);
+          if (e.target.value.trim() !== '' && Number.isFinite(n) && (min == null || n >= min)) {
+            onCommit(n);
+          }
+        }}
+        onBlur={() => {
+          setEditing(false);
+          setText(stored);
+        }}
+        className={`h-11 rounded-xl border border-border bg-surface px-3 text-base tabular outline-none focus:border-accent ${width ?? 'w-full'}`}
       />
+      {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
     </label>
   );
 }

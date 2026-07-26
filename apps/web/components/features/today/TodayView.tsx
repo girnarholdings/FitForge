@@ -17,6 +17,7 @@ import {
   useTodayLogs,
   useDemoState,
 } from '@/lib/demo/useDemo';
+import { exerciseCountLabel } from '@/lib/demo/generate';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
 import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
 
@@ -87,7 +88,7 @@ export function TodayView() {
             </p>
             <h2 className="mt-1 font-display text-lg font-bold text-accent-foreground">{day.name}</h2>
             <p className="mt-0.5 text-sm opacity-80">
-              {day.exercises.length} exercises · from {routine.name}
+              {exerciseCountLabel(day.exercises.length)} · from {routine.name}
             </p>
           </div>
           <div className="px-5 py-4">
