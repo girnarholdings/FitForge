@@ -1,32 +1,219 @@
 [
-  { "slug": "barbell", "name": "Barbell", "category": "free_weights", "common_in_home": true, "common_in_gym": true },
-  { "slug": "ez-curl-bar", "name": "EZ-Curl Bar", "category": "free_weights", "common_in_home": true, "common_in_gym": true },
-  { "slug": "dumbbell", "name": "Dumbbells", "category": "free_weights", "common_in_home": true, "common_in_gym": true },
-  { "slug": "kettlebell", "name": "Kettlebell", "category": "free_weights", "common_in_home": true, "common_in_gym": true },
-  { "slug": "weight-plates", "name": "Weight Plates", "category": "free_weights", "common_in_home": true, "common_in_gym": true },
-  { "slug": "flat-bench", "name": "Flat Bench", "category": "benches_racks", "common_in_home": true, "common_in_gym": true },
-  { "slug": "adjustable-bench", "name": "Adjustable Bench", "category": "benches_racks", "common_in_home": true, "common_in_gym": true },
-  { "slug": "squat-rack", "name": "Squat / Power Rack", "category": "benches_racks", "common_in_home": false, "common_in_gym": true },
-  { "slug": "smith-machine", "name": "Smith Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "cable-machine", "name": "Cable Machine / Crossover", "category": "cables", "common_in_home": false, "common_in_gym": true },
-  { "slug": "lat-pulldown", "name": "Lat Pulldown Machine", "category": "cables", "common_in_home": false, "common_in_gym": true },
-  { "slug": "seated-row-machine", "name": "Seated Cable Row", "category": "cables", "common_in_home": false, "common_in_gym": true },
-  { "slug": "leg-press", "name": "Leg Press Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "hack-squat-machine", "name": "Hack Squat Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "leg-extension-machine", "name": "Leg Extension Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "leg-curl-machine", "name": "Leg Curl Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "chest-press-machine", "name": "Chest Press Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "pec-deck", "name": "Pec Deck / Fly Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "shoulder-press-machine", "name": "Shoulder Press Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "hip-thrust-machine", "name": "Hip Thrust / Glute Drive", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "calf-raise-machine", "name": "Calf Raise Machine", "category": "machines", "common_in_home": false, "common_in_gym": true },
-  { "slug": "pull-up-bar", "name": "Pull-up Bar", "category": "bodyweight_accessories", "common_in_home": true, "common_in_gym": true },
-  { "slug": "dip-station", "name": "Dip Station / Parallel Bars", "category": "bodyweight_accessories", "common_in_home": false, "common_in_gym": true },
-  { "slug": "resistance-bands", "name": "Resistance Bands", "category": "bodyweight_accessories", "common_in_home": true, "common_in_gym": true },
-  { "slug": "suspension-trainer", "name": "Suspension Trainer (TRX)", "category": "bodyweight_accessories", "common_in_home": true, "common_in_gym": false },
-  { "slug": "ab-wheel", "name": "Ab Wheel", "category": "bodyweight_accessories", "common_in_home": true, "common_in_gym": false },
-  { "slug": "medicine-ball", "name": "Medicine Ball", "category": "bodyweight_accessories", "common_in_home": false, "common_in_gym": true },
-  { "slug": "treadmill", "name": "Treadmill", "category": "cardio", "common_in_home": false, "common_in_gym": true },
-  { "slug": "stationary-bike", "name": "Stationary Bike", "category": "cardio", "common_in_home": false, "common_in_gym": true },
-  { "slug": "rowing-machine", "name": "Rowing Machine (Erg)", "category": "cardio", "common_in_home": false, "common_in_gym": true }
+  {
+    "slug": "barbell",
+    "name": "Barbell",
+    "category": "free_weights",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "ez-curl-bar",
+    "name": "EZ-Curl Bar",
+    "category": "free_weights",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "dumbbell",
+    "name": "Dumbbells",
+    "category": "free_weights",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "kettlebell",
+    "name": "Kettlebell",
+    "category": "free_weights",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "weight-plates",
+    "name": "Weight Plates",
+    "category": "free_weights",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "flat-bench",
+    "name": "Flat Bench",
+    "category": "benches_racks",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "adjustable-bench",
+    "name": "Adjustable Bench",
+    "category": "benches_racks",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "squat-rack",
+    "name": "Squat / Power Rack",
+    "category": "benches_racks",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "smith-machine",
+    "name": "Smith Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "cable-machine",
+    "name": "Cable Machine / Crossover",
+    "category": "cables",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "lat-pulldown",
+    "name": "Lat Pulldown Machine",
+    "category": "cables",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "seated-row-machine",
+    "name": "Seated Cable Row",
+    "category": "cables",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "leg-press",
+    "name": "Leg Press Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "hack-squat-machine",
+    "name": "Hack Squat Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "leg-extension-machine",
+    "name": "Leg Extension Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "leg-curl-machine",
+    "name": "Leg Curl Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "chest-press-machine",
+    "name": "Chest Press Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "pec-deck",
+    "name": "Pec Deck / Fly Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "shoulder-press-machine",
+    "name": "Shoulder Press Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "hip-thrust-machine",
+    "name": "Hip Thrust / Glute Drive",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "calf-raise-machine",
+    "name": "Calf Raise Machine",
+    "category": "machines",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "pull-up-bar",
+    "name": "Pull-up Bar",
+    "category": "bodyweight_accessories",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "dip-station",
+    "name": "Dip Station / Parallel Bars",
+    "category": "bodyweight_accessories",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "resistance-bands",
+    "name": "Resistance Bands",
+    "category": "bodyweight_accessories",
+    "common_in_home": true,
+    "common_in_gym": true
+  },
+  {
+    "slug": "suspension-trainer",
+    "name": "Suspension Trainer (TRX)",
+    "category": "bodyweight_accessories",
+    "common_in_home": true,
+    "common_in_gym": false
+  },
+  {
+    "slug": "ab-wheel",
+    "name": "Ab Wheel",
+    "category": "bodyweight_accessories",
+    "common_in_home": true,
+    "common_in_gym": false
+  },
+  {
+    "slug": "medicine-ball",
+    "name": "Medicine Ball",
+    "category": "bodyweight_accessories",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "treadmill",
+    "name": "Treadmill",
+    "category": "cardio",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "stationary-bike",
+    "name": "Stationary Bike",
+    "category": "cardio",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "rowing-machine",
+    "name": "Rowing Machine (Erg)",
+    "category": "cardio",
+    "common_in_home": false,
+    "common_in_gym": true
+  },
+  {
+    "slug": "plyo-box",
+    "name": "Plyo Box",
+    "category": "other",
+    "common_in_home": false,
+    "common_in_gym": true
+  }
 ]

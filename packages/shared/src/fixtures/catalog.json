@@ -1363,5 +1363,659 @@
       "quads"
     ],
     "is_active": true
+  },
+  {
+    "id": "ex-pike-push-up",
+    "slug": "pike-push-up",
+    "name": "Pike Push-Up",
+    "movement_pattern": "vertical_push",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 62,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "triceps",
+      "side-delts",
+      "traps"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-diamond-push-up",
+    "slug": "diamond-push-up",
+    "name": "Diamond Push-Up",
+    "movement_pattern": "horizontal_push",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 64,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "triceps"
+    ],
+    "secondary_muscles": [
+      "pecs",
+      "front-delts"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-decline-push-up",
+    "slug": "decline-push-up",
+    "name": "Feet-Elevated Push-Up",
+    "movement_pattern": "horizontal_push",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 60,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "pecs"
+    ],
+    "secondary_muscles": [
+      "front-delts",
+      "triceps"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-pistol-squat",
+    "slug": "pistol-squat",
+    "name": "Pistol Squat",
+    "movement_pattern": "squat",
+    "mechanics": "compound",
+    "difficulty": "advanced",
+    "popularity": 55,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "glute-med",
+      "adductors",
+      "abs"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-nordic-hamstring-curl",
+    "slug": "nordic-hamstring-curl",
+    "name": "Nordic Hamstring Curl",
+    "movement_pattern": "knee_flexion_iso",
+    "mechanics": "isolation",
+    "difficulty": "advanced",
+    "popularity": 58,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "hamstrings"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "lower-back"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-hollow-body-hold",
+    "slug": "hollow-body-hold",
+    "name": "Hollow Body Hold",
+    "movement_pattern": "core_stability",
+    "mechanics": "isolation",
+    "difficulty": "intermediate",
+    "popularity": 61,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "abs"
+    ],
+    "secondary_muscles": [
+      "hip-flexors",
+      "obliques"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-side-plank",
+    "slug": "side-plank",
+    "name": "Side Plank",
+    "movement_pattern": "core_stability",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 66,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "obliques"
+    ],
+    "secondary_muscles": [
+      "glute-med",
+      "abs",
+      "side-delts"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-bird-dog",
+    "slug": "bird-dog",
+    "name": "Bird Dog",
+    "movement_pattern": "core_stability",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 63,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "lower-back"
+    ],
+    "secondary_muscles": [
+      "abs",
+      "glute-max",
+      "rear-delts"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-wall-sit",
+    "slug": "wall-sit",
+    "name": "Wall Sit",
+    "movement_pattern": "knee_extension_iso",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 57,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "calves"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-bear-crawl",
+    "slug": "bear-crawl",
+    "name": "Bear Crawl",
+    "movement_pattern": "core_stability",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 54,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "abs"
+    ],
+    "secondary_muscles": [
+      "front-delts",
+      "quads",
+      "obliques",
+      "triceps"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-burpee",
+    "slug": "burpee",
+    "name": "Burpee",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 72,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "pecs",
+      "front-delts",
+      "triceps",
+      "abs",
+      "glute-max"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-dumbbell-thruster",
+    "slug": "dumbbell-thruster",
+    "name": "Dumbbell Thruster",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 68,
+    "is_bodyweight_ok": false,
+    "equipment": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "primary_muscles": [
+      "quads",
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "triceps",
+      "abs",
+      "side-delts"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-box-jump",
+    "slug": "box-jump",
+    "name": "Box Jump",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 65,
+    "is_bodyweight_ok": true,
+    "equipment": [
+      [
+        "plyo-box"
+      ]
+    ],
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "hamstrings",
+      "calves"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-mountain-climber",
+    "slug": "mountain-climber",
+    "name": "Mountain Climber",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "beginner",
+    "popularity": 67,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "abs"
+    ],
+    "secondary_muscles": [
+      "hip-flexors",
+      "front-delts",
+      "obliques"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-jumping-jack",
+    "slug": "jumping-jack",
+    "name": "Jumping Jack",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "beginner",
+    "popularity": 59,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "calves"
+    ],
+    "secondary_muscles": [
+      "side-delts",
+      "glute-med",
+      "adductors"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-dumbbell-snatch",
+    "slug": "dumbbell-snatch",
+    "name": "Dumbbell Snatch",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "advanced",
+    "popularity": 60,
+    "is_bodyweight_ok": false,
+    "equipment": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "primary_muscles": [
+      "glute-max",
+      "side-delts"
+    ],
+    "secondary_muscles": [
+      "hamstrings",
+      "traps",
+      "lower-back",
+      "quads"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-wall-ball",
+    "slug": "wall-ball",
+    "name": "Wall Ball",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 58,
+    "is_bodyweight_ok": false,
+    "equipment": [
+      [
+        "medicine-ball"
+      ]
+    ],
+    "primary_muscles": [
+      "quads",
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "triceps",
+      "abs"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-arm-circles",
+    "slug": "arm-circles",
+    "name": "Arm Circles",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 52,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "side-delts",
+      "rear-delts",
+      "traps"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-leg-swings",
+    "slug": "leg-swings",
+    "name": "Leg Swings",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 55,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "hip-flexors"
+    ],
+    "secondary_muscles": [
+      "hamstrings",
+      "glute-max",
+      "adductors"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-cat-cow",
+    "slug": "cat-cow",
+    "name": "Cat-Cow",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 60,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "lower-back"
+    ],
+    "secondary_muscles": [
+      "abs",
+      "traps"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-worlds-greatest-stretch",
+    "slug": "worlds-greatest-stretch",
+    "name": "World's Greatest Stretch",
+    "movement_pattern": "mobility",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "popularity": 62,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "hip-flexors"
+    ],
+    "secondary_muscles": [
+      "hamstrings",
+      "adductors",
+      "obliques",
+      "lower-back"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-inchworm",
+    "slug": "inchworm",
+    "name": "Inchworm",
+    "movement_pattern": "mobility",
+    "mechanics": "compound",
+    "difficulty": "beginner",
+    "popularity": 56,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "hamstrings"
+    ],
+    "secondary_muscles": [
+      "abs",
+      "front-delts",
+      "calves"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-band-pull-apart",
+    "slug": "band-pull-apart",
+    "name": "Band Pull-Apart",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 61,
+    "is_bodyweight_ok": false,
+    "equipment": [
+      [
+        "resistance-bands"
+      ]
+    ],
+    "primary_muscles": [
+      "rear-delts"
+    ],
+    "secondary_muscles": [
+      "rhomboids",
+      "traps"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-thoracic-rotation",
+    "slug": "thoracic-rotation",
+    "name": "Open-Book Thoracic Rotation",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 54,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "obliques"
+    ],
+    "secondary_muscles": [
+      "lower-back",
+      "pecs",
+      "rear-delts"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-standing-hamstring-stretch",
+    "slug": "standing-hamstring-stretch",
+    "name": "Standing Hamstring Stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 58,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "hamstrings"
+    ],
+    "secondary_muscles": [
+      "calves",
+      "lower-back"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-kneeling-hip-flexor-stretch",
+    "slug": "kneeling-hip-flexor-stretch",
+    "name": "Kneeling Hip Flexor Stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 60,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "hip-flexors"
+    ],
+    "secondary_muscles": [
+      "quads",
+      "glute-max"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-pigeon-stretch",
+    "slug": "pigeon-stretch",
+    "name": "Pigeon Stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "intermediate",
+    "popularity": 57,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "glute-max"
+    ],
+    "secondary_muscles": [
+      "glute-med",
+      "hip-flexors"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-childs-pose",
+    "slug": "childs-pose",
+    "name": "Child's Pose",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 62,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "lats"
+    ],
+    "secondary_muscles": [
+      "lower-back",
+      "traps",
+      "quads"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-doorway-chest-stretch",
+    "slug": "doorway-chest-stretch",
+    "name": "Doorway Chest Stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 59,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "pecs"
+    ],
+    "secondary_muscles": [
+      "front-delts",
+      "biceps"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-wall-calf-stretch",
+    "slug": "wall-calf-stretch",
+    "name": "Wall Calf Stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 55,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "calves"
+    ],
+    "secondary_muscles": [
+      "hamstrings"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-seated-spinal-twist",
+    "slug": "seated-spinal-twist",
+    "name": "Seated Spinal Twist",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 53,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "obliques"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "lower-back"
+    ],
+    "is_active": true
+  },
+  {
+    "id": "ex-figure-four-stretch",
+    "slug": "figure-four-stretch",
+    "name": "Figure-Four Glute Stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "popularity": 58,
+    "is_bodyweight_ok": true,
+    "equipment": [],
+    "primary_muscles": [
+      "glute-max"
+    ],
+    "secondary_muscles": [
+      "glute-med"
+    ],
+    "is_active": true
   }
 ]

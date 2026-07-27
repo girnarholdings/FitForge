@@ -1,11 +1,62 @@
 [
-  { "slug": "chest", "name": "Chest", "display_order": 1 },
-  { "slug": "back", "name": "Back", "display_order": 2 },
-  { "slug": "shoulders", "name": "Shoulders", "display_order": 3 },
-  { "slug": "arms", "name": "Arms", "display_order": 4 },
-  { "slug": "legs", "name": "Legs", "display_order": 5 },
-  { "slug": "glutes", "name": "Glutes", "display_order": 6 },
-  { "slug": "core", "name": "Core", "display_order": 7 },
-  { "slug": "cardio", "name": "Cardio", "display_order": 8 },
-  { "slug": "full-body", "name": "Full Body", "display_order": 9 }
+  {
+    "slug": "chest",
+    "name": "Chest",
+    "display_order": 1
+  },
+  {
+    "slug": "back",
+    "name": "Back",
+    "display_order": 2
+  },
+  {
+    "slug": "shoulders",
+    "name": "Shoulders",
+    "display_order": 3
+  },
+  {
+    "slug": "arms",
+    "name": "Arms",
+    "display_order": 4
+  },
+  {
+    "slug": "legs",
+    "name": "Legs",
+    "display_order": 5
+  },
+  {
+    "slug": "glutes",
+    "name": "Glutes",
+    "display_order": 6
+  },
+  {
+    "slug": "core",
+    "name": "Core",
+    "display_order": 7
+  },
+  {
+    "slug": "cardio",
+    "name": "Cardio",
+    "display_order": 8
+  },
+  {
+    "slug": "full-body",
+    "name": "Full Body",
+    "display_order": 9
+  },
+  {
+    "slug": "conditioning",
+    "name": "Conditioning",
+    "display_order": 10
+  },
+  {
+    "slug": "mobility",
+    "name": "Warm-up & Mobility",
+    "display_order": 11
+  },
+  {
+    "slug": "stretch",
+    "name": "Cooldown & Stretching",
+    "display_order": 12
+  }
 ]

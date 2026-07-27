@@ -2330,5 +2330,1139 @@
       "Swinging the whole arms instead of the wrists"
     ],
     "pose_pattern": "jump-rope"
+  },
+  {
+    "slug": "pike-push-up",
+    "name": "Pike Push-Up",
+    "category": "shoulders",
+    "movement_pattern": "vertical_push",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 62,
+    "primary_muscles": [
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "triceps",
+      "side-delts",
+      "traps"
+    ],
+    "equipment": [],
+    "pose_pattern": "pike-push-up",
+    "instructions": "From a push-up position, walk your feet in and lift your hips until your body makes an inverted V. Lower the crown of your head toward the floor between your hands, then press back up. The steeper your hips, the more this becomes a shoulder press rather than a chest press.",
+    "setup": "Hands shoulder-width, feet walked in until your hips are stacked high over your shoulders and your torso is close to vertical.",
+    "tempo": "Lower for 2 seconds, pause an inch off the floor, press up in 1.",
+    "breathing": "Breathe in on the way down, out as you press.",
+    "form_cues": [
+      "Look back between your feet, not forward — that keeps your neck long.",
+      "Elbows track forward and slightly out, roughly 45°, not flared to the sides.",
+      "Keep your hips high the whole set; letting them drop turns it back into a push-up."
+    ],
+    "why": "The best overhead press you can do without a barbell — it loads the front delts vertically using only your own weight, and it is the honest first step toward a handstand push-up.",
+    "common_mistakes": [
+      "Hips sagging as you fatigue, so the shoulders stop being the working muscle.",
+      "Head dropping in front of the hands instead of between them."
+    ]
+  },
+  {
+    "slug": "diamond-push-up",
+    "name": "Diamond Push-Up",
+    "category": "arms",
+    "movement_pattern": "horizontal_push",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 64,
+    "primary_muscles": [
+      "triceps"
+    ],
+    "secondary_muscles": [
+      "pecs",
+      "front-delts"
+    ],
+    "equipment": [],
+    "pose_pattern": "push-up",
+    "instructions": "Set your hands close together under your chest so your index fingers and thumbs form a triangle. Lower your chest to your hands with elbows tucked close to your ribs, then press back up.",
+    "setup": "Push-up position with hands touching under the middle of your chest, feet hip-width.",
+    "tempo": "Two seconds down, brief touch, one second up.",
+    "breathing": "In on the descent, out on the press.",
+    "form_cues": [
+      "Elbows stay close to your sides — this is a triceps exercise, and flaring loses it.",
+      "Squeeze your glutes so your hips do not sag.",
+      "Lower to the hands, not to the floor beside them."
+    ],
+    "why": "The highest-tension triceps exercise available with no equipment; research on push-up hand placement consistently shows the narrow position shifts load onto the triceps.",
+    "common_mistakes": [
+      "Flaring the elbows, which hands the work back to the chest and stresses the shoulder.",
+      "Going to the floor with the hips leading, so the rep is a worm rather than a press."
+    ]
+  },
+  {
+    "slug": "decline-push-up",
+    "name": "Feet-Elevated Push-Up",
+    "category": "chest",
+    "movement_pattern": "horizontal_push",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 60,
+    "primary_muscles": [
+      "pecs"
+    ],
+    "secondary_muscles": [
+      "front-delts",
+      "triceps"
+    ],
+    "equipment": [],
+    "pose_pattern": "push-up",
+    "instructions": "Put your feet on a bench, box or step and set your hands slightly wider than your shoulders on the floor. Lower your chest to the floor and press back up. The higher your feet, the harder it gets and the more the upper chest works.",
+    "setup": "Feet on a knee-height surface, hands under your shoulders, body in one straight line.",
+    "tempo": "Two seconds down, one second up, no bouncing at the bottom.",
+    "breathing": "In on the way down, out as you press.",
+    "form_cues": [
+      "Ribs down and glutes squeezed — the elevation makes it easy to sag.",
+      "Elbows at roughly 45° to your body, not straight out.",
+      "Full lockout at the top without shrugging."
+    ],
+    "why": "The simplest way to keep progressing push-ups once floor reps are easy: raising the feet raises the share of your bodyweight you press, and it biases the upper chest.",
+    "common_mistakes": [
+      "Elevating so high the movement becomes a shoulder press by accident.",
+      "Letting the hips pike up to shorten the range."
+    ]
+  },
+  {
+    "slug": "pistol-squat",
+    "name": "Pistol Squat",
+    "category": "legs",
+    "movement_pattern": "squat",
+    "mechanics": "compound",
+    "difficulty": "advanced",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 55,
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "glute-med",
+      "adductors",
+      "abs"
+    ],
+    "equipment": [],
+    "pose_pattern": "pistol-squat",
+    "instructions": "Stand on one leg with the other extended in front of you. Push your hips back and sit down as far as you can on the standing leg, keeping the free leg off the floor, then drive back up. Hold something light in front of you as a counterweight if it helps you stay balanced.",
+    "setup": "One foot flat, the other leg straight out ahead, arms forward as a counterbalance.",
+    "tempo": "Three seconds down under control, one to two seconds up.",
+    "breathing": "Big breath at the top, brace, exhale once you are standing.",
+    "form_cues": [
+      "Keep the whole standing foot down — the heel lifting is a mobility limit, not a strength one.",
+      "Free leg stays straight and off the floor for the whole rep.",
+      "Sit BACK first, not straight down."
+    ],
+    "why": "A genuine heavy leg exercise with no equipment: one leg carrying full bodyweight through a deep range trains the quad hard and exposes side-to-side differences a barbell squat hides.",
+    "common_mistakes": [
+      "Collapsing into the bottom instead of controlling it.",
+      "Chasing depth before you have the ankle range, so the heel pops and the knee caves."
+    ]
+  },
+  {
+    "slug": "nordic-hamstring-curl",
+    "name": "Nordic Hamstring Curl",
+    "category": "legs",
+    "movement_pattern": "knee_flexion_iso",
+    "mechanics": "isolation",
+    "difficulty": "advanced",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 58,
+    "primary_muscles": [
+      "hamstrings"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "lower-back"
+    ],
+    "equipment": [],
+    "pose_pattern": "nordic-curl",
+    "instructions": "Kneel with your ankles anchored under something solid or held by a partner. Keeping your hips straight, lower your torso toward the floor as slowly as you can, catching yourself with your hands. Push back up with your hands and repeat.",
+    "setup": "Kneeling on something soft, ankles pinned, body in a straight line from knees to head.",
+    "tempo": "Fight the descent for as long as you can — 3 to 5 seconds is the whole exercise.",
+    "breathing": "Steady breathing; do not hold your breath through the lower.",
+    "form_cues": [
+      "Hips stay locked straight — bending at the waist removes the hamstring entirely.",
+      "Hands ready in front of you the whole way down.",
+      "Go slower before you go lower."
+    ],
+    "why": "The most-studied hamstring injury-prevention exercise there is; programmes built around it repeatedly show large reductions in hamstring strain rates in sport.",
+    "common_mistakes": [
+      "Breaking at the hips to make the descent easier, which turns it into a controlled fall.",
+      "Dropping the last third instead of resisting it, which is where the useful tension lives."
+    ]
+  },
+  {
+    "slug": "hollow-body-hold",
+    "name": "Hollow Body Hold",
+    "category": "core",
+    "movement_pattern": "core_stability",
+    "mechanics": "isolation",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 61,
+    "primary_muscles": [
+      "abs"
+    ],
+    "secondary_muscles": [
+      "hip-flexors",
+      "obliques"
+    ],
+    "equipment": [],
+    "pose_pattern": "hollow-hold",
+    "instructions": "Lie on your back, press your lower back flat into the floor, and lift your shoulders and legs a few inches off the ground with arms overhead. Hold that dish shape. Bend the knees or bring the arms to your sides to make it easier.",
+    "setup": "On your back, lower back pressed down HARD before anything lifts.",
+    "tempo": "Hold for 20–45 seconds. Stop the set the moment your lower back lifts.",
+    "breathing": "Shallow, continuous breathing through the ribs — never hold your breath.",
+    "form_cues": [
+      "Lower back glued to the floor is the whole exercise; height off the floor is secondary.",
+      "Ribs pulled down toward your hips, not flared open.",
+      "Arms by your ears only if the back stays flat."
+    ],
+    "why": "The gymnastics standard for a braced midline, and it teaches the exact position that protects your spine under a heavy squat or overhead press.",
+    "common_mistakes": [
+      "Lowering the legs past the point where the lower back arches off the floor.",
+      "Straining the neck by pulling on the head instead of lifting from the ribs."
+    ]
+  },
+  {
+    "slug": "side-plank",
+    "name": "Side Plank",
+    "category": "core",
+    "movement_pattern": "core_stability",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 66,
+    "primary_muscles": [
+      "obliques"
+    ],
+    "secondary_muscles": [
+      "glute-med",
+      "abs",
+      "side-delts"
+    ],
+    "equipment": [],
+    "pose_pattern": "side-plank",
+    "instructions": "Lie on your side propped on one forearm with your elbow under your shoulder. Lift your hips so your body makes a straight line from ankle to head, and hold. Drop to the bottom knee to make it easier.",
+    "setup": "Elbow directly under the shoulder, feet stacked or staggered, top hand on the hip.",
+    "tempo": "Hold 20–45 seconds per side, then swap.",
+    "breathing": "Normal, relaxed breathing throughout.",
+    "form_cues": [
+      "Push the floor away so the bottom shoulder does not sink.",
+      "Squeeze the bottom glute — it is what keeps the hips from drifting back.",
+      "One straight line from ear to ankle, viewed from the front."
+    ],
+    "why": "Trains the obliques and the lateral hip together in the way they actually work — resisting side bend — which is what keeps your torso square when you carry, lunge or run.",
+    "common_mistakes": [
+      "Hips sagging toward the floor as the set goes on.",
+      "Rolling forward so it becomes a front plank on one arm."
+    ]
+  },
+  {
+    "slug": "bird-dog",
+    "name": "Bird Dog",
+    "category": "core",
+    "movement_pattern": "core_stability",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 63,
+    "primary_muscles": [
+      "lower-back"
+    ],
+    "secondary_muscles": [
+      "abs",
+      "glute-max",
+      "rear-delts"
+    ],
+    "equipment": [],
+    "pose_pattern": "bird-dog",
+    "instructions": "On hands and knees, reach one arm forward and the opposite leg back until both are level with your torso. Hold briefly, return under control, then switch sides.",
+    "setup": "Hands under shoulders, knees under hips, spine long and neutral.",
+    "tempo": "Reach out over 2 seconds, hold 2, return over 2.",
+    "breathing": "Exhale as you reach, inhale as you return.",
+    "form_cues": [
+      "Opposite arm and leg, always — same-side is a different (and much easier) exercise.",
+      "Keep your hips level; imagine balancing a glass of water on your lower back.",
+      "Reach long rather than high."
+    ],
+    "why": "The cleanest way to train the spine to stay still while the limbs move, which is what your back actually does under load. Costs nothing and is safe on almost any back.",
+    "common_mistakes": [
+      "Lifting the leg high enough to arch the lower back.",
+      "Twisting the hips open as the leg goes back."
+    ]
+  },
+  {
+    "slug": "wall-sit",
+    "name": "Wall Sit",
+    "category": "legs",
+    "movement_pattern": "knee_extension_iso",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 57,
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "calves"
+    ],
+    "equipment": [],
+    "pose_pattern": "wall-sit",
+    "instructions": "Slide your back down a wall until your knees are bent to about 90° and your thighs are parallel to the floor. Hold. Keep your whole foot on the ground and your back flat against the wall.",
+    "setup": "Feet about two shoe-lengths from the wall, hip-width, back flat against it.",
+    "tempo": "Hold 30–60 seconds. The burn is the point.",
+    "breathing": "Keep breathing steadily — the instinct is to hold your breath.",
+    "form_cues": [
+      "Knees stacked over your ankles, not out past your toes.",
+      "Weight through your heels and mid-foot.",
+      "Hands off your thighs — resting on them takes the load off."
+    ],
+    "why": "A genuinely hard quad exercise needing nothing but a wall, and isometric holds like this are well supported for knee-pain rehab where loaded knee bending still hurts.",
+    "common_mistakes": [
+      "Sitting too high, so it becomes an easy hold instead of a working one.",
+      "Sliding the feet in until the knees pass the toes."
+    ]
+  },
+  {
+    "slug": "bear-crawl",
+    "name": "Bear Crawl",
+    "category": "full-body",
+    "movement_pattern": "core_stability",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 54,
+    "primary_muscles": [
+      "abs"
+    ],
+    "secondary_muscles": [
+      "front-delts",
+      "quads",
+      "obliques",
+      "triceps"
+    ],
+    "equipment": [],
+    "pose_pattern": "bear-crawl",
+    "instructions": "Start on hands and toes with your knees hovering an inch off the floor. Move forward one hand and the opposite foot at a time, keeping your hips low and level. Crawl forward, then back.",
+    "setup": "Hands under shoulders, knees under hips and hovering, back flat.",
+    "tempo": "Slow and deliberate — speed hides the work.",
+    "breathing": "Steady; do not hold your breath.",
+    "form_cues": [
+      "Hips stay low and stop them swinging side to side.",
+      "Short steps — long ones make you rotate.",
+      "Knees stay an inch off the floor the entire time."
+    ],
+    "why": "Loads the shoulders and the anti-rotation core at the same time while you move, which is closer to how the midline works in life than any static hold.",
+    "common_mistakes": [
+      "Hips riding high, which turns it into a walking downward dog.",
+      "Big steps that make the whole torso rock."
+    ]
+  },
+  {
+    "slug": "burpee",
+    "name": "Burpee",
+    "category": "conditioning",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 72,
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "pecs",
+      "front-delts",
+      "triceps",
+      "abs",
+      "glute-max"
+    ],
+    "equipment": [],
+    "pose_pattern": "burpee",
+    "instructions": "From standing, put your hands on the floor, jump or step your feet back to a plank, lower your chest to the floor, push back up, jump or step your feet in, and stand and jump with your hands overhead. Step rather than jump to lower the impact without losing the effect.",
+    "setup": "Standing, feet hip-width, clear floor space in front of you.",
+    "tempo": "One smooth rep every 3–5 seconds; consistency beats a fast start.",
+    "breathing": "Out on the way down, in as you come up. Do not hold your breath.",
+    "form_cues": [
+      "Chest genuinely touches the floor — a half-rep burpee is just a squat thrust.",
+      "Land soft from the jump, knees slightly bent.",
+      "Keep the rhythm even instead of sprinting and stalling."
+    ],
+    "why": "One movement that raises your heart rate faster than almost anything and needs no equipment or space. The standard conditioning currency in CrossFit for exactly that reason.",
+    "common_mistakes": [
+      "Snaking up from the floor hips-first instead of pressing up in one piece.",
+      "Going out far too fast and having nothing left after 45 seconds."
+    ]
+  },
+  {
+    "slug": "dumbbell-thruster",
+    "name": "Dumbbell Thruster",
+    "category": "full-body",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": false,
+    "popularity": 68,
+    "primary_muscles": [
+      "quads",
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "triceps",
+      "abs",
+      "side-delts"
+    ],
+    "equipment": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "pose_pattern": "thruster",
+    "instructions": "Hold dumbbells at your shoulders, squat to at least parallel, then drive up and let the momentum carry the dumbbells straight overhead to a locked-out finish. Lower them back to your shoulders and go straight into the next squat.",
+    "setup": "Dumbbells resting on the front of the shoulders, elbows slightly forward, feet shoulder-width.",
+    "tempo": "One continuous movement — the squat and the press are one rep, not two.",
+    "breathing": "In at the top, brace on the way down, out through the press.",
+    "form_cues": [
+      "Drive the legs first; the arms finish what the legs start.",
+      "Full lockout overhead with the ribs down.",
+      "Chest stays tall out of the bottom so the dumbbells do not tip forward."
+    ],
+    "why": "The single most efficient full-body conditioning movement — legs and shoulders together means your heart rate goes somewhere no isolated exercise takes it.",
+    "common_mistakes": [
+      "Pressing separately after the squat, which loses the drive and makes it far harder.",
+      "Squatting to a quarter depth so the legs contribute nothing."
+    ]
+  },
+  {
+    "slug": "box-jump",
+    "name": "Box Jump",
+    "category": "legs",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 65,
+    "primary_muscles": [
+      "quads"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "hamstrings",
+      "calves"
+    ],
+    "equipment": [
+      [
+        "plyo-box"
+      ]
+    ],
+    "pose_pattern": "box-jump",
+    "instructions": "Stand a foot back from a stable box. Dip, swing your arms and jump onto it, landing softly with both feet flat and your knees slightly bent. Stand fully upright on top, then STEP down one foot at a time.",
+    "setup": "A box you can clear comfortably — start lower than you think.",
+    "tempo": "Explosive up, then fully reset between reps. This is a power exercise, not a conditioning one.",
+    "breathing": "Sharp breath out on the jump.",
+    "form_cues": [
+      "Step down, never jump down — the repeated landing is where Achilles injuries come from.",
+      "Land in a quarter squat with soft knees, not stiff legs.",
+      "Stand all the way up on the box to finish the rep."
+    ],
+    "why": "Trains rate of force development — how fast you can produce force — which heavy slow lifting does not, and it carries directly into sprinting and jumping.",
+    "common_mistakes": [
+      "Rebounding straight off the floor, which turns a power exercise into an injury risk.",
+      "Picking a box so high that the landing is a deep tuck rather than a real jump."
+    ]
+  },
+  {
+    "slug": "mountain-climber",
+    "name": "Mountain Climber",
+    "category": "core",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 67,
+    "primary_muscles": [
+      "abs"
+    ],
+    "secondary_muscles": [
+      "hip-flexors",
+      "front-delts",
+      "obliques"
+    ],
+    "equipment": [],
+    "pose_pattern": "mountain-climber",
+    "instructions": "Start in a push-up position. Drive one knee toward your chest, return it, and swap — quickly and rhythmically — while your hips stay level and your shoulders stay over your hands.",
+    "setup": "High plank, hands under shoulders, body in a straight line.",
+    "tempo": "Fast feet, still torso. 20–40 seconds per set.",
+    "breathing": "Short, rhythmic breaths in time with the legs.",
+    "form_cues": [
+      "Hips stay LOW and level — the moment they bounce, the core has stopped working.",
+      "Shoulders stacked over the hands, not drifting back.",
+      "Knee comes to the chest, not to the elbow."
+    ],
+    "why": "Cardio and anti-extension core work in one, with no equipment and almost no space. Good as a finisher or in a circuit.",
+    "common_mistakes": [
+      "Hips pumping up and down with each rep.",
+      "Going so fast that the feet barely move and the range disappears."
+    ]
+  },
+  {
+    "slug": "jumping-jack",
+    "name": "Jumping Jack",
+    "category": "cardio",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 59,
+    "primary_muscles": [
+      "calves"
+    ],
+    "secondary_muscles": [
+      "side-delts",
+      "glute-med",
+      "adductors"
+    ],
+    "equipment": [],
+    "pose_pattern": "jumping-jack",
+    "instructions": "Start with feet together and arms by your sides. Jump your feet out wide while sweeping your arms overhead, then jump back. Keep it light and rhythmic.",
+    "setup": "Standing tall, feet together, arms relaxed.",
+    "tempo": "Continuous and light for 30–60 seconds.",
+    "breathing": "Easy, rhythmic breathing — you should be able to talk.",
+    "form_cues": [
+      "Land on the balls of your feet and stay springy.",
+      "Arms all the way overhead, not just to shoulder height.",
+      "Soft knees throughout."
+    ],
+    "why": "The classic general warm-up: raises body temperature and heart rate in under a minute, using every joint you are about to train.",
+    "common_mistakes": [
+      "Landing flat-footed and heavy.",
+      "Half-height arms, which loses the shoulder warm-up entirely."
+    ]
+  },
+  {
+    "slug": "dumbbell-snatch",
+    "name": "Dumbbell Snatch",
+    "category": "full-body",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "advanced",
+    "is_unilateral": true,
+    "is_bodyweight_ok": false,
+    "popularity": 60,
+    "primary_muscles": [
+      "glute-max",
+      "side-delts"
+    ],
+    "secondary_muscles": [
+      "hamstrings",
+      "traps",
+      "lower-back",
+      "quads"
+    ],
+    "equipment": [
+      [
+        "dumbbell"
+      ]
+    ],
+    "pose_pattern": "db-snatch",
+    "instructions": "Set a dumbbell on the floor between your feet. Hinge down, grip it, and drive explosively through your legs and hips, letting the dumbbell travel close to your body and punching your hand up to lock it out overhead in one movement. Lower under control and repeat.",
+    "setup": "Feet shoulder-width, dumbbell between them, hips back and chest up.",
+    "tempo": "Explosive up, controlled down. Never grind a snatch.",
+    "breathing": "Sharp exhale at the top of the pull.",
+    "form_cues": [
+      "Power comes from the hips snapping open, not from pulling with the arm.",
+      "Keep the dumbbell close — it should almost brush your body on the way up.",
+      "Punch the hand up and lock the elbow rather than pressing it out slowly."
+    ],
+    "why": "Total-body power in one implement, and unlike a barbell snatch the technical barrier is low enough to be trainable in weeks rather than months.",
+    "common_mistakes": [
+      "Turning it into a one-arm upright row by pulling with the shoulder.",
+      "Letting the dumbbell swing wide away from the body, which stresses the lower back."
+    ]
+  },
+  {
+    "slug": "wall-ball",
+    "name": "Wall Ball",
+    "category": "full-body",
+    "movement_pattern": "conditioning",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": false,
+    "is_bodyweight_ok": false,
+    "popularity": 58,
+    "primary_muscles": [
+      "quads",
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "triceps",
+      "abs"
+    ],
+    "equipment": [
+      [
+        "medicine-ball"
+      ]
+    ],
+    "pose_pattern": "wall-ball",
+    "instructions": "Hold a medicine ball at your chest, squat to parallel, then drive up and throw the ball to a target high on the wall. Catch it as it comes down and go straight into the next squat.",
+    "setup": "Standing about arm-length from a wall, ball at chest height, elbows tucked.",
+    "tempo": "Continuous — catch and descend in one motion.",
+    "breathing": "Out on the throw, in as you catch and descend.",
+    "form_cues": [
+      "Squat to at least parallel every rep, not a dip.",
+      "Let the legs throw the ball; the arms only guide it.",
+      "Catch it high and absorb it into the next squat."
+    ],
+    "why": "A thruster you can do without holding a load overhead, which makes it far kinder on the shoulders while giving the same brutal heart-rate response.",
+    "common_mistakes": [
+      "Pressing the ball with the arms instead of throwing it with the legs.",
+      "Catching with straight arms, which jars the elbows and shoulders."
+    ]
+  },
+  {
+    "slug": "arm-circles",
+    "name": "Arm Circles",
+    "category": "mobility",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 52,
+    "primary_muscles": [
+      "front-delts"
+    ],
+    "secondary_muscles": [
+      "side-delts",
+      "rear-delts",
+      "traps"
+    ],
+    "equipment": [],
+    "pose_pattern": "arm-circles",
+    "instructions": "Stand tall with your arms out to the sides. Draw small circles forward, growing them until your arms are sweeping all the way overhead. Reverse the direction and repeat.",
+    "setup": "Standing, feet hip-width, arms straight out at shoulder height.",
+    "tempo": "10–15 circles each direction, controlled rather than flung.",
+    "breathing": "Relaxed and continuous.",
+    "form_cues": [
+      "Start small and grow the circles as the joint warms up.",
+      "Keep your ribs down instead of arching your back to get the arms higher.",
+      "Both directions — backward circles are the ones most people skip and need most."
+    ],
+    "why": "Takes the shoulder through its full range under no load before you ask it to press or pull, which is exactly what a dynamic warm-up is for.",
+    "common_mistakes": [
+      "Starting with huge fast circles on a cold joint.",
+      "Only doing forward circles, so the rear shoulder never warms up."
+    ]
+  },
+  {
+    "slug": "leg-swings",
+    "name": "Leg Swings",
+    "category": "mobility",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 55,
+    "primary_muscles": [
+      "hip-flexors"
+    ],
+    "secondary_muscles": [
+      "hamstrings",
+      "glute-max",
+      "adductors"
+    ],
+    "equipment": [],
+    "pose_pattern": "leg-swing",
+    "instructions": "Hold a wall or rack for balance and swing one leg forward and back in a relaxed arc, letting the range grow with each swing. Then swing it side to side across your body. Swap legs.",
+    "setup": "Standing on one leg, one hand on a support, torso upright.",
+    "tempo": "10–12 swings per direction per leg, building range gradually.",
+    "breathing": "Easy and continuous.",
+    "form_cues": [
+      "Let the leg swing rather than forcing it — this is not a stretch you hold.",
+      "Keep the torso still; the movement is at the hip only.",
+      "Both planes: front-to-back and side-to-side."
+    ],
+    "why": "Prepares the hip for squatting and hinging through the exact ranges those lifts use, and it is the dynamic alternative that does not cost you strength the way a pre-lift static stretch does.",
+    "common_mistakes": [
+      "Swinging so hard the lower back arches to make up the range.",
+      "Skipping the sideways plane, which is the one that matters for lunges and lateral work."
+    ]
+  },
+  {
+    "slug": "cat-cow",
+    "name": "Cat-Cow",
+    "category": "mobility",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 60,
+    "primary_muscles": [
+      "lower-back"
+    ],
+    "secondary_muscles": [
+      "abs",
+      "traps"
+    ],
+    "equipment": [],
+    "pose_pattern": "cat-cow",
+    "instructions": "On hands and knees, breathe out and round your spine toward the ceiling, tucking your chin and tailbone. Then breathe in and reverse it — chest forward, tailbone up, and look slightly ahead. Move slowly between the two.",
+    "setup": "Hands under shoulders, knees under hips, spine neutral to start.",
+    "tempo": "One full cycle every 4–6 seconds, tied to your breathing.",
+    "breathing": "Out as you round, in as you arch. The breath drives the movement.",
+    "form_cues": [
+      "Move one vertebra at a time rather than hinging in one place.",
+      "Let the head follow the spine instead of leading it.",
+      "Small and smooth beats big and forced."
+    ],
+    "why": "The simplest way to wake up spinal movement in both directions before you load it, and the single most useful drill for a back that feels stiff first thing.",
+    "common_mistakes": [
+      "Cranking the neck at both ends of the range.",
+      "Rushing, which turns it into rocking rather than segmental movement."
+    ]
+  },
+  {
+    "slug": "worlds-greatest-stretch",
+    "name": "World's Greatest Stretch",
+    "category": "mobility",
+    "movement_pattern": "mobility",
+    "mechanics": "compound",
+    "difficulty": "intermediate",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 62,
+    "primary_muscles": [
+      "hip-flexors"
+    ],
+    "secondary_muscles": [
+      "hamstrings",
+      "adductors",
+      "obliques",
+      "lower-back"
+    ],
+    "equipment": [],
+    "pose_pattern": "lunge-twist",
+    "instructions": "Step into a deep lunge and put both hands on the floor inside your front foot. Drop your back hip toward the floor, then rotate your torso and reach the inside arm straight up toward the ceiling. Come back down, step through, and repeat on the other side.",
+    "setup": "Long lunge, front shin roughly vertical, back leg straight and toes down.",
+    "tempo": "5–6 per side, holding the reach for 2 seconds each time.",
+    "breathing": "Breathe out as you rotate and reach up.",
+    "form_cues": [
+      "Rotate from the mid-back, not from the lower back.",
+      "Push the back hip forward and down — that is where the hip flexor opens.",
+      "Eyes follow the reaching hand."
+    ],
+    "why": "One movement that opens the hip flexors, hamstrings, adductors and thoracic spine at once — the four things that limit a squat and an overhead press.",
+    "common_mistakes": [
+      "A short lunge, which means the back hip never opens.",
+      "Rotating with a rounded lower back instead of turning through the ribs."
+    ]
+  },
+  {
+    "slug": "inchworm",
+    "name": "Inchworm",
+    "category": "mobility",
+    "movement_pattern": "mobility",
+    "mechanics": "compound",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 56,
+    "primary_muscles": [
+      "hamstrings"
+    ],
+    "secondary_muscles": [
+      "abs",
+      "front-delts",
+      "calves"
+    ],
+    "equipment": [],
+    "pose_pattern": "inchworm",
+    "instructions": "From standing, hinge and put your hands on the floor, bending your knees as much as you need. Walk your hands out to a plank, hold for a beat, then walk your feet up to your hands and stand.",
+    "setup": "Standing tall, feet hip-width, clear space ahead.",
+    "tempo": "6–8 reps, unhurried.",
+    "breathing": "Out as you walk out, in as you walk back in.",
+    "form_cues": [
+      "Bend the knees on the way down — this is not a hamstring test.",
+      "Hold a real plank at the end of the walk-out, ribs down.",
+      "Take small steps with the feet on the way back in."
+    ],
+    "why": "Warms the hamstrings, shoulders and core in one continuous movement, which is far more time-efficient than warming each of them separately.",
+    "common_mistakes": [
+      "Keeping the legs locked and forcing the hamstrings on a cold body.",
+      "Sagging through the middle at the plank position."
+    ]
+  },
+  {
+    "slug": "band-pull-apart",
+    "name": "Band Pull-Apart",
+    "category": "mobility",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": false,
+    "popularity": 61,
+    "primary_muscles": [
+      "rear-delts"
+    ],
+    "secondary_muscles": [
+      "rhomboids",
+      "traps"
+    ],
+    "equipment": [
+      [
+        "resistance-bands"
+      ]
+    ],
+    "pose_pattern": "band-pull-apart",
+    "instructions": "Hold a light band at shoulder height with straight arms. Pull it apart until your hands are wide and the band touches your chest, squeezing your shoulder blades together, then return slowly.",
+    "setup": "Arms straight out in front at shoulder height, band taut but not stretched.",
+    "tempo": "Pull over 1 second, hold the squeeze for 1, return over 2.",
+    "breathing": "Out as you pull apart.",
+    "form_cues": [
+      "Arms stay straight — bending them turns it into a row.",
+      "Squeeze the shoulder blades, do not just move the hands.",
+      "Use a light band; this is a warm-up, not a strength set."
+    ],
+    "why": "The best 60-second insurance for a pressing session: it wakes up the rear delts and upper back that hold your shoulder in a good position under a bench or overhead press.",
+    "common_mistakes": [
+      "A band so heavy the shoulders shrug up to move it.",
+      "Snapping it back instead of returning under control."
+    ]
+  },
+  {
+    "slug": "thoracic-rotation",
+    "name": "Open-Book Thoracic Rotation",
+    "category": "mobility",
+    "movement_pattern": "mobility",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 54,
+    "primary_muscles": [
+      "obliques"
+    ],
+    "secondary_muscles": [
+      "lower-back",
+      "pecs",
+      "rear-delts"
+    ],
+    "equipment": [],
+    "pose_pattern": "open-book",
+    "instructions": "Lie on your side with knees bent to 90° and both arms stretched out in front of you. Keeping your knees down, sweep the top arm in a wide arc across your body and open your chest toward the ceiling. Follow the hand with your eyes, then return.",
+    "setup": "On your side, hips and knees at 90°, arms stacked straight out.",
+    "tempo": "6–8 per side, pausing 2 seconds at the open position.",
+    "breathing": "Breathe out as you open, and use the exhale to get another inch.",
+    "form_cues": [
+      "The knees stay pinned to the floor — if they lift, the rotation moved to the lower back.",
+      "Reach long through the fingertips rather than just dropping the arm.",
+      "Eyes track the hand; the head follows the chest."
+    ],
+    "why": "Most people are stiff through the mid-back, which is what forces the lower back and shoulders to compensate on overhead work. This isolates rotation to the right segment.",
+    "common_mistakes": [
+      "Letting the top knee lift, which moves the movement to the lumbar spine.",
+      "Forcing the arm to the floor rather than letting the chest open."
+    ]
+  },
+  {
+    "slug": "standing-hamstring-stretch",
+    "name": "Standing Hamstring Stretch",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 58,
+    "primary_muscles": [
+      "hamstrings"
+    ],
+    "secondary_muscles": [
+      "calves",
+      "lower-back"
+    ],
+    "equipment": [],
+    "pose_pattern": "hamstring-stretch",
+    "instructions": "Put one heel on a low step with your leg straight and toes pointing up. Keeping your back flat, hinge forward from the hips until you feel a stretch down the back of the thigh. Hold, then swap legs.",
+    "setup": "One heel on a low box or step, standing leg soft, hands on the front thigh.",
+    "tempo": "Hold 20–30 seconds per side, 2 rounds.",
+    "breathing": "Slow breathing; let the muscle release on each exhale.",
+    "form_cues": [
+      "Hinge at the hip with a flat back rather than rounding to reach further.",
+      "Point the toes of the raised foot up.",
+      "A firm stretch, never a sharp or nervy one."
+    ],
+    "why": "The most useful post-training stretch for anyone who squats, hinges or sits at a desk. Holds of 20–30 seconds are enough — longer adds nothing for range.",
+    "common_mistakes": [
+      "Rounding the back to touch the toes, which stretches the spine rather than the hamstring.",
+      "Doing this BEFORE lifting, where long static holds measurably reduce strength."
+    ]
+  },
+  {
+    "slug": "kneeling-hip-flexor-stretch",
+    "name": "Kneeling Hip Flexor Stretch",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 60,
+    "primary_muscles": [
+      "hip-flexors"
+    ],
+    "secondary_muscles": [
+      "quads",
+      "glute-max"
+    ],
+    "equipment": [],
+    "pose_pattern": "hip-flexor-stretch",
+    "instructions": "Kneel on one knee with the other foot flat in front. Squeeze the glute on the kneeling side and push your hips gently forward until you feel a stretch at the front of the hip. Stay tall. Hold, then swap.",
+    "setup": "Half-kneeling, front shin vertical, back knee under or slightly behind the hip.",
+    "tempo": "Hold 25–30 seconds per side, 2 rounds.",
+    "breathing": "Breathe out slowly and let the hip settle forward.",
+    "form_cues": [
+      "Squeeze the back glute FIRST — that is what actually lengthens the hip flexor.",
+      "Keep the ribs down; arching the lower back fakes the range.",
+      "Move the hips forward, do not lean the torso back."
+    ],
+    "why": "Directly counteracts sitting, and tight hip flexors are one of the most common reasons people cannot finish a hip thrust or stand tall at the top of a deadlift.",
+    "common_mistakes": [
+      "Arching the lower back so the stretch is felt in the spine instead of the hip.",
+      "Leaning the torso backward rather than driving the hips forward."
+    ]
+  },
+  {
+    "slug": "pigeon-stretch",
+    "name": "Pigeon Stretch",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "intermediate",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 57,
+    "primary_muscles": [
+      "glute-max"
+    ],
+    "secondary_muscles": [
+      "glute-med",
+      "hip-flexors"
+    ],
+    "equipment": [],
+    "pose_pattern": "pigeon",
+    "instructions": "From all fours, bring one shin forward across your body and slide the other leg straight back. Keep your hips square and lower your chest over the front shin as far as is comfortable. Hold, then swap.",
+    "setup": "Front shin angled across the body, back leg straight behind, hips level.",
+    "tempo": "Hold 30 seconds per side, breathing into it.",
+    "breathing": "Deep and slow; sink a little further on each exhale.",
+    "form_cues": [
+      "Keep the hips square — letting one side rise removes the stretch.",
+      "Put a cushion under the near hip if it does not reach the floor.",
+      "Stop well short of any pinching in the front of the hip or knee."
+    ],
+    "why": "The most direct stretch there is for the glutes and deep hip rotators, which get short from heavy squatting and from sitting.",
+    "common_mistakes": [
+      "Letting the hips rotate open so the stretch disappears.",
+      "Pushing into knee pain — the front knee should never be the thing you feel."
+    ]
+  },
+  {
+    "slug": "childs-pose",
+    "name": "Child's Pose",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 62,
+    "primary_muscles": [
+      "lats"
+    ],
+    "secondary_muscles": [
+      "lower-back",
+      "traps",
+      "quads"
+    ],
+    "equipment": [],
+    "pose_pattern": "childs-pose",
+    "instructions": "Kneel, sit your hips back toward your heels and reach your arms long in front of you, letting your chest sink toward the floor. Rest your forehead down and breathe.",
+    "setup": "Knees roughly hip-width or wider, big toes together, arms stretched forward.",
+    "tempo": "Hold 30–60 seconds. This is the one you can stay in.",
+    "breathing": "Slow deep breaths into the back of the ribs.",
+    "form_cues": [
+      "Reach the hands away while the hips travel back — that is what lengthens the lats.",
+      "Widen the knees if your belly or hips block the position.",
+      "Let the shoulders relax rather than holding them up."
+    ],
+    "why": "Decompresses the spine and lengthens the lats after pulling work, and it is the most reliable way to bring your breathing rate down at the end of a hard session.",
+    "common_mistakes": [
+      "Keeping the shoulders active instead of letting the chest sink.",
+      "Knees too close together when the hips are tight, which blocks the position."
+    ]
+  },
+  {
+    "slug": "doorway-chest-stretch",
+    "name": "Doorway Chest Stretch",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": false,
+    "is_bodyweight_ok": true,
+    "popularity": 59,
+    "primary_muscles": [
+      "pecs"
+    ],
+    "secondary_muscles": [
+      "front-delts",
+      "biceps"
+    ],
+    "equipment": [],
+    "pose_pattern": "chest-stretch",
+    "instructions": "Stand in a doorway with your forearms on the frame, elbows at about shoulder height. Step one foot through and lean gently forward until you feel a stretch across the chest. Hold.",
+    "setup": "Forearms flat on the frame, elbows at roughly 90° and shoulder height.",
+    "tempo": "Hold 25–30 seconds, 2 rounds.",
+    "breathing": "Breathe out and let the chest open a little further.",
+    "form_cues": [
+      "Lead with the chest, not the chin.",
+      "Ribs down so the stretch stays in the chest rather than the lower back.",
+      "Vary the elbow height to catch different fibres."
+    ],
+    "why": "The direct counter to a pressing session and to a day at a keyboard; a short chest lets the shoulder sit forward, which is where most bench-press shoulder pain begins.",
+    "common_mistakes": [
+      "Pushing so far it pinches at the front of the shoulder.",
+      "Arching the lower back to lean further instead of opening the chest."
+    ]
+  },
+  {
+    "slug": "wall-calf-stretch",
+    "name": "Wall Calf Stretch",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 55,
+    "primary_muscles": [
+      "calves"
+    ],
+    "secondary_muscles": [
+      "hamstrings"
+    ],
+    "equipment": [],
+    "pose_pattern": "calf-stretch",
+    "instructions": "Put your hands on a wall, step one foot well back with the leg straight and the heel down. Push the hips forward until you feel the stretch in the upper calf. Then bend that back knee slightly to move the stretch lower toward the Achilles. Hold each, then swap.",
+    "setup": "Hands on the wall, back leg straight, back heel flat on the floor, toes pointing forward.",
+    "tempo": "Hold 25 seconds straight-legged, then 25 with the knee bent.",
+    "breathing": "Slow and steady.",
+    "form_cues": [
+      "The back heel must stay down — lifting it removes the stretch entirely.",
+      "Back toes point straight at the wall, not turned out.",
+      "Do both versions: straight leg for the gastroc, bent knee for the soleus."
+    ],
+    "why": "Ankle range is the most common hidden limit on squat depth. Two minutes here does more for a shallow squat than any amount of cueing.",
+    "common_mistakes": [
+      "Letting the heel come up to get a bigger-feeling stretch.",
+      "Skipping the bent-knee version, which is the one that affects deep squatting."
+    ]
+  },
+  {
+    "slug": "seated-spinal-twist",
+    "name": "Seated Spinal Twist",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 53,
+    "primary_muscles": [
+      "obliques"
+    ],
+    "secondary_muscles": [
+      "glute-max",
+      "lower-back"
+    ],
+    "equipment": [],
+    "pose_pattern": "seated-twist",
+    "instructions": "Sit with your legs out in front. Cross one foot over the opposite thigh, then rotate your torso toward the bent knee, using your arm against the knee as a gentle lever. Sit tall. Hold, then swap.",
+    "setup": "Seated tall, one leg straight, the other foot planted across it.",
+    "tempo": "Hold 25–30 seconds per side.",
+    "breathing": "Inhale to grow tall, exhale to rotate a little further.",
+    "form_cues": [
+      "Lengthen the spine BEFORE you rotate — twisting a slumped spine achieves nothing.",
+      "Rotate from the mid-back rather than yanking with the arm.",
+      "Keep both sit bones on the floor."
+    ],
+    "why": "Restores rotation to a mid-back that heavy bracing tends to lock down, and it pairs naturally with the open-book drill from the warm-up.",
+    "common_mistakes": [
+      "Cranking with the arm so the force goes into the lower back.",
+      "Slumping, which loses the rotation before it starts."
+    ]
+  },
+  {
+    "slug": "figure-four-stretch",
+    "name": "Figure-Four Glute Stretch",
+    "category": "stretch",
+    "movement_pattern": "static_stretch",
+    "mechanics": "isolation",
+    "difficulty": "beginner",
+    "is_unilateral": true,
+    "is_bodyweight_ok": true,
+    "popularity": 58,
+    "primary_muscles": [
+      "glute-max"
+    ],
+    "secondary_muscles": [
+      "glute-med"
+    ],
+    "equipment": [],
+    "pose_pattern": "figure-four",
+    "instructions": "Lie on your back and cross one ankle over the opposite knee to make a figure four. Reach through and pull the bottom thigh toward your chest until you feel the stretch in the crossed glute. Hold, then swap.",
+    "setup": "On your back, head down, one ankle resting on the opposite thigh just above the knee.",
+    "tempo": "Hold 30 seconds per side.",
+    "breathing": "Slow; let the hip release on each exhale.",
+    "form_cues": [
+      "Keep the head and shoulders on the floor rather than curling up to reach.",
+      "Push the crossed knee gently away to deepen it.",
+      "Stop if you feel pinching at the front of the hip."
+    ],
+    "why": "The most accessible glute stretch there is — everything happens lying down, so a tight or cranky hip has nowhere to cheat to.",
+    "common_mistakes": [
+      "Lifting the head and shoulders, which turns it into an abdominal effort.",
+      "Pulling into pain rather than to a firm, tolerable stretch."
+    ]
   }
 ]

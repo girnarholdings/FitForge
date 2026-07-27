@@ -45,7 +45,10 @@ export type MovementPattern =
   | 'knee_flexion_iso'
   | 'knee_extension_iso'
   | 'calf_raise'
-  | 'cardio';
+  | 'cardio'
+  | 'conditioning'
+  | 'mobility'
+  | 'static_stretch';
 export type Mechanics = 'compound' | 'isolation';
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -264,6 +267,9 @@ const PATTERN_CATEGORY: Record<MovementPattern, { slug: string; name: string }> 
   core_stability: { slug: 'core', name: 'Core' },
   carry: { slug: 'full-body', name: 'Full Body' },
   cardio: { slug: 'cardio', name: 'Cardio' },
+  conditioning: { slug: 'conditioning', name: 'Conditioning' },
+  mobility: { slug: 'mobility', name: 'Warm-up' },
+  static_stretch: { slug: 'stretch', name: 'Cooldown' },
 };
 
 /** Pretty display names for equipment slugs used across the fixture catalog. */
@@ -296,6 +302,7 @@ const EQUIPMENT_NAMES: Record<string, string> = {
   treadmill: 'Treadmill',
   'stationary-bike': 'Stationary Bike',
   'rowing-machine': 'Rowing Machine',
+  'plyo-box': 'Plyo Box',
 };
 
 function equipmentName(slug: string): string {
@@ -376,7 +383,12 @@ export const EXERCISE_CATEGORIES = [
   { slug: 'glutes', name: 'Glutes' },
   { slug: 'core', name: 'Core' },
   { slug: 'cardio', name: 'Cardio' },
+  { slug: 'conditioning', name: 'Conditioning' },
   { slug: 'full-body', name: 'Full Body' },
+  // Warm-up and cooldown sit at the END of the chip row deliberately: they are what you reach
+  // for around a session, not the thing you browse first.
+  { slug: 'mobility', name: 'Warm-up' },
+  { slug: 'stretch', name: 'Cooldown' },
 ];
 export const EQUIPMENT_FACETS = [
   { slug: 'barbell', name: 'Barbell' },

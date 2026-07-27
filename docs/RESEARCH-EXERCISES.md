@@ -172,3 +172,56 @@ Implementation notes: store each split as `{name, daysPerWeek, level, goals[], s
 - wger: https://wger.de/en/software/features · https://github.com/wger-project/wger
 - Open datasets: https://github.com/yuhonas/free-exercise-db (public domain, 800+ ex., 2-photo format) · https://github.com/yuhonas/free-exercise-db/issues/2 (Everkinetic CC-BY-SA 3.0) · https://github.com/chaosbastler/opentraining-exercises
 - Program specs (StrongLifts, Starting Strength, GreySkull, nSuns, GZCLP, 5/3/1, Texas Method, Madcow, PHUL, PHAT, Reddit PPL, RR, Strong Curves): canonical public writeups widely mirrored on Boostcamp/Liftosaur/r-Fitness wikis.
+
+---
+
+# Catalog expansion — bodyweight, conditioning, mobility, stretching
+
+Added in response to: *"the number of exercises is very little for no weights or body weight only.
+Find more effective cross fit and mat exercises… that help stretch pre workout and cool down post
+workout."*
+
+**59 → 91 exercises. No-equipment exercises 6 → 33.**
+
+| Group | Count | Examples |
+|---|---|---|
+| Bodyweight strength | 10 | Pistol squat, Nordic hamstring curl, pike push-up, hollow hold, bird dog, bear crawl |
+| Conditioning (CrossFit-style) | 7 | Burpee, thruster, box jump, wall ball, dumbbell snatch, mountain climber |
+| Mobility (warm-up) | 7 | Leg swings, cat-cow, world's greatest stretch, inchworm, band pull-apart, open-book |
+| Static stretching (cooldown) | 8 | Hamstring, hip flexor, pigeon, child's pose, doorway chest, wall calf, figure-four |
+
+## Warm-up and cooldown are different slots, and the order is not arbitrary
+
+`mobility` and `stretch` are separate categories with separate movement patterns because putting
+them the wrong way round measurably hurts the session:
+
+- **Dynamic mobility before** raises tissue temperature and rehearses the ranges about to be
+  loaded, with no performance cost.
+- **Static stretching before** produces a measurable stretch-induced force deficit — lower maximal
+  strength and power in the session that follows, and worse with longer holds.
+- **Static stretching after** is where it belongs, held 15–30 s.
+
+Sources: [Behm & Chaouachi, acute effects review](https://pubmed.ncbi.nlm.nih.gov/21373870/) ·
+[stretch-induced force deficit meta-analysis](https://www.sciencedirect.com/science/article/pii/S2095254624000693) ·
+[dynamic warm-up review](https://www.sciencedirect.com/science/article/pii/S2666061X24001664)
+
+So the generator will never place a static hold in front of a heavy lift, and the cooldown
+category sits at the end of the catalog chip row rather than mixed in with training movements.
+
+## Pose art
+
+All 30 new movement shapes got authored rigs (`components/illustrations/poses/rigs-extra.tsx`)
+rather than being left to fall through to a pattern default — a pattern default would have drawn
+a plank for a pigeon stretch, which is exactly the class of error docs/POSE-AUDIT.md exists to
+prevent.
+
+Stretch and hold rigs read **"enter the position → the held position"** rather than
+"bottom → top", because a static stretch has no concentric or eccentric. That is also the more
+useful thing to draw: most people get a stretch wrong on the way in, not at the end.
+
+## Validation
+
+`seed/merge-extra-exercises.mjs` refuses to write unless every row has all 20 fields, a known
+category, known muscle slugs, known equipment slugs, at least one primary muscle, and at least
+two form cues and two common mistakes. An unknown muscle slug does not throw at runtime — it
+silently drops the exercise out of the muscle map — so it is caught at merge time instead.

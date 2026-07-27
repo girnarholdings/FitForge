@@ -87,6 +87,9 @@ const PATTERN_LABEL: Record<MovementPattern, string> = {
   knee_extension_iso: 'Knee extension',
   calf_raise: 'Calf raise',
   cardio: 'Cardio',
+  conditioning: 'Conditioning',
+  mobility: 'Mobility drill',
+  static_stretch: 'Static stretch',
 };
 
 function patternName(p: string): string {

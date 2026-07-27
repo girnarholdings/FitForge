@@ -9,6 +9,7 @@
  */
 import * as React from 'react';
 import type { Arrow, Frame, ImplementKind, Pose, Pt, Rig } from './types';
+import { EXTRA_RIGS } from './rigs-extra';
 
 /* ------------------------------------------------------------------ scenery */
 
@@ -2071,6 +2072,10 @@ function buildRigs(): Record<string, Rig> {
 
   const map: Record<string, Rig> = {};
   for (const r of list) map[r.id] = r;
+  // The bodyweight / conditioning / mobility / stretch expansion lives in its own file — see
+  // rigs-extra.tsx for why those rigs read "enter the position → hold" rather than "bottom → top".
+  for (const rig of EXTRA_RIGS) map[rig.id] = rig;
+
   return map;
 }
 
@@ -2098,4 +2103,9 @@ export const PATTERN_DEFAULT_RIG: Record<string, string> = {
   knee_extension_iso: 'leg-extension',
   calf_raise: 'calf-raise',
   cardio: 'run',
+  // The bodyweight / conditioning / mobility / stretch expansion. These defaults are only
+  // reached when an exercise has no `pose_pattern`; every new row sets one explicitly.
+  conditioning: 'burpee',
+  mobility: 'arm-circles',
+  static_stretch: 'hamstring-stretch',
 };

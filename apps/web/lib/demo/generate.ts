@@ -420,6 +420,9 @@ const PATTERN_LABEL: Record<string, string> = {
   knee_extension_iso: 'quads',
   calf_raise: 'calves',
   cardio: 'cardio',
+  conditioning: 'conditioning',
+  mobility: 'mobility',
+  static_stretch: 'stretch',
 };
 
 function patternLabelsFor(rows: readonly RoutineExercise[]): string[] {

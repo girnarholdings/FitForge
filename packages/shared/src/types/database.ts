@@ -51,7 +51,10 @@ export type MovementPattern =
   | 'knee_flexion_iso'
   | 'knee_extension_iso'
   | 'calf_raise'
-  | 'cardio';
+  | 'cardio'
+  | 'conditioning'
+  | 'mobility'
+  | 'static_stretch';
 export type MechanicsType = 'compound' | 'isolation';
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 export type MuscleRole = 'primary' | 'secondary';
