@@ -11,7 +11,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import type { Frame, HiSeg, ImplementKind, Pose, Pt, Rig, PoseFramesProps } from './types';
-import { resolveRig, implementFor, equipmentForExercise } from './rigs';
+import { resolveRig, implementFor, equipmentForExercise } from './catalog';
 
 const ACCENT = 'var(--accent)';
 const FRAME_MS = 1200;
@@ -245,10 +245,14 @@ function FrameArt({ rig, frame, kind }: { rig: Rig; frame: Frame; kind: Implemen
       {rig.scenery}
       {frame.art}
       {tethered &&
-        frame.cableFrom &&
-        anchors.map((a, i) => (
-          <Tether key={`t${i}`} from={frame.cableFrom as Pt} to={a} dashed={kind === 'band'} />
-        ))}
+        anchors.map((a, i) => {
+          // Each handle is tethered to ITS OWN anchor: a cable fly / crossover has one
+          // stack per side, so hand 2 must not run back to the left-hand pulley.
+          const from = (i === 1 ? (frame.cableFrom2 ?? frame.cableFrom) : frame.cableFrom) as
+            | Pt
+            | undefined;
+          return from ? <Tether key={`t${i}`} from={from} to={a} dashed={kind === 'band'} /> : null;
+        })}
       <Figure pose={frame.pose} hi={frame.hi} view={rig.view} />
       {anchors.map((a, i) => (
         <Implement key={`i${i}`} kind={kind} view={rig.view} at={a} angle={frame.impAngle} span={span} />
@@ -274,11 +278,7 @@ function FrameArt({ rig, frame, kind }: { rig: Rig; frame: Frame; kind: Implemen
       {rig.ground !== false && (
         <line x1={8} y1={104} x2={112} y2={104} strokeWidth={2} opacity={0.28} />
       )}
-      {rig.tilt ? (
-        <g transform={`rotate(${rig.tilt.deg} ${rig.tilt.cx} ${rig.tilt.cy})`}>{body}</g>
-      ) : (
-        body
-      )}
+      {body}
     </svg>
   );
 }

@@ -5,13 +5,10 @@
  * (owned elsewhere); import from `@/components/illustrations/poses`.
  */
 export { PoseFrames } from './PoseFrames';
-export {
-  POSE_RIGS,
-  PATTERN_DEFAULT_RIG,
-  resolveRig,
-  implementFor,
-  equipmentForExercise,
-} from './rigs';
+/** the authored art (pure geometry — no catalog knowledge) */
+export { POSE_RIGS, PATTERN_DEFAULT_RIG } from './rigs';
+/** the seed-driven exercise → rig lookup */
+export { resolveRig, implementFor, equipmentForExercise, RIG_BY_EXERCISE } from './catalog';
 export type {
   Pose,
   Pt,

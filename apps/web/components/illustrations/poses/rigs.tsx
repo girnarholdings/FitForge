@@ -9,7 +9,6 @@
  */
 import * as React from 'react';
 import type { Arrow, Frame, ImplementKind, Pose, Pt, Rig } from './types';
-import exercisesSeed from '../../../../../seed/data/exercises.json';
 
 /* ------------------------------------------------------------------ scenery */
 
@@ -145,8 +144,9 @@ function squatRig(id: string, label: string, o: SquatOpts): Rig {
 
 /* ------------------------------------------------------------ press families */
 
-function benchPressRig(id: string, label: string, incline: boolean): Rig {
-  const body = { hip: [64, 70] as Pt, kn: [84, 74] as Pt, an: [84, 98] as Pt, toe: [94, 98] as Pt };
+/** Flat bench press: supine on a horizontal pad, feet planted on the floor. */
+function benchPressRig(id: string, label: string): Rig {
+  const body = { hip: [64, 70] as Pt, kn: [84, 76] as Pt, an: [84, 104] as Pt, toe: [94, 104] as Pt };
   const base = (el: Pt, wr: Pt): Pose => ({
     head: [28, 63],
     neck: [36, 66],
@@ -159,32 +159,74 @@ function benchPressRig(id: string, label: string, incline: boolean): Rig {
     id,
     label,
     view: 'side',
-    /**
-     * INCLINE = the HEAD END IS RAISED. The figure lies head-left (head x≈28), feet-right
-     * (toe x≈94) about a pivot at x=58, and SVG rotation is CLOCKWISE-positive (y grows
-     * downward), so a POSITIVE angle lifts the head and drops the feet — a true incline.
-     * The previous negative angle drove the head DOWN and the hips UP, i.e. it drew a
-     * DECLINE press under an "Incline press" label. 30° is the standard incline-bench
-     * setting for upper-chest emphasis.
-     */
-    tilt: incline ? { deg: 30, cx: 58, cy: 82 } : undefined,
     scenery: <Pad x1={24} x2={80} y={72} />,
     frames: [
       {
         caption: 'Bottom',
-        pose: base([36, 60], [46, 56]),
+        pose: base([35, 62], [46, 59]),
         hi: ['arm'],
-        imp: [46, 53],
+        imp: [46, 56],
         impAngle: 90,
-        arrow: arrow([64, 52], [64, 34], -8),
+        arrow: arrow([64, 54], [64, 34], -8),
       },
       {
         caption: 'Lock out',
-        pose: base([43, 52], [46, 40]),
+        pose: base([42, 53], [45, 40]),
         hi: ['arm'],
-        imp: [46, 37],
+        imp: [45, 37],
         impAngle: 90,
-        arrow: arrow([64, 34], [64, 52], 8),
+        arrow: arrow([64, 34], [64, 54], 8),
+      },
+    ],
+  };
+}
+
+/**
+ * Incline press. Authored directly rather than rotating the flat-bench scene: rotating the
+ * whole group swung the bench legs off the floor and drove the lifter's feet THROUGH the
+ * floor line. Here the back pad rises to the left at ~32° (the head end is raised — an
+ * incline, not a decline), the seat and its legs stay square to the floor, and the press
+ * path runs perpendicular to the torso (up and slightly toward the feet).
+ */
+function inclinePressRig(id: string, label: string): Rig {
+  const base = (el: Pt, wr: Pt): Pose => ({
+    head: [28, 54],
+    neck: [36, 58],
+    sh: [38, 59],
+    el,
+    wr,
+    hip: [60, 72],
+    kn: [80, 80],
+    an: [80, 104],
+    toe: [90, 104],
+  });
+  return {
+    id,
+    label,
+    view: 'side',
+    scenery: (
+      <>
+        <Pad x1={52} x2={78} y={76} />
+        <Backrest from={[54, 78]} to={[22, 58]} />
+        <line x1={26} y1={62} x2={34} y2={104} {...S} />
+      </>
+    ),
+    frames: [
+      {
+        caption: 'Bottom',
+        pose: base([38, 52], [48, 54]),
+        hi: ['arm'],
+        imp: [50, 51],
+        impAngle: 90,
+        arrow: arrow([70, 54], [78, 38], -8),
+      },
+      {
+        caption: 'Lock out',
+        pose: base([48, 49], [57, 40]),
+        hi: ['arm'],
+        imp: [58, 38],
+        impAngle: 90,
+        arrow: arrow([78, 38], [70, 54], 8),
       },
     ],
   };
@@ -206,15 +248,18 @@ function ohpRig(id: string, label: string, seated: boolean): Rig {
         hi: ['arm', 'arm2'],
         imp: [46, 33],
         imp2: [74, 33],
-        arrow: arrow([98, 40], [98, 18], -8),
+        arrow: arrow([98, 42], [98, 14], -8),
       },
       {
+        // Lock out = elbows STRAIGHT, bar/handles stacked over the shoulders and clear of
+        // the head. The previous pose kept the upper arm folded to ~4px, so the "lock out"
+        // frame parked the bar at forehead height — a half rep.
         caption: 'Lock out',
-        pose: front([48, 32], [48, 18], [72, 32], [72, 18], legs),
+        pose: front([49, 23], [49, 11], [71, 23], [71, 11], legs),
         hi: ['arm', 'arm2'],
-        imp: [48, 15],
-        imp2: [72, 15],
-        arrow: arrow([98, 18], [98, 40], 8),
+        imp: [49, 8],
+        imp2: [71, 8],
+        arrow: arrow([98, 14], [98, 42], 8),
       },
     ],
   };
@@ -244,15 +289,17 @@ function flyRig(id: string, label: string, seated: boolean): Rig {
         imp: [13, 49],
         imp2: [107, 49],
         cableFrom: seated ? undefined : [8, 16],
+        cableFrom2: seated ? undefined : [112, 16],
         arrow: arrow([18, 62], [50, 66], 10),
       },
       {
         caption: 'Squeeze',
-        pose: front([44, 46], [56, 52], [76, 46], [64, 52], legs),
+        pose: front([44, 44], [56, 48], [76, 44], [64, 48], legs),
         hi: ['arm', 'arm2'],
-        imp: [55, 53],
-        imp2: [65, 53],
+        imp: [55, 49],
+        imp2: [65, 49],
         cableFrom: seated ? undefined : [8, 16],
+        cableFrom2: seated ? undefined : [112, 16],
         arrow: arrow([50, 66], [18, 62], -10),
       },
     ],
@@ -292,10 +339,13 @@ function bentRowRig(id: string, label: string, oneArm: boolean): Rig {
         arrow: arrow([88, 84], [88, 62], -8),
       },
       {
+        // A row drives the ELBOW BACK PAST THE RIBS. The previous pose put the elbow at
+        // (76,56) — in front of the chest, on the far side of the torso from the back —
+        // which draws a shoulder-flexion movement, not a row.
         caption: 'Pull',
-        pose: base([76, 56], [62, 66]),
+        pose: base([48, 50], [56, 64]),
         hi: ['arm'],
-        imp: [60, 70],
+        imp: [56, 68],
         impAngle: 90,
         arrow: arrow([88, 62], [88, 84], 8),
       },
@@ -345,16 +395,21 @@ function legMachineRig(id: string, label: string, dir: 'extend' | 'curl'): Rig {
 }
 
 function hipThrustRig(id: string, label: string, bench: boolean): Rig {
+  // Bench version: arms hang down the side of the bench. FLOOR version (glute bridge): the
+  // lifter is already lying ON the floor, so an arm dropped 20px below the shoulder ended up
+  // 12px BELOW the floor line. On the floor the arms rest alongside the body instead.
+  const armEl: Pt = bench ? [-4, 10] : [10, 4];
+  const armWr: Pt = bench ? [0, 20] : [20, 6];
   const base = (hip: Pt, sh: Pt, head: Pt, neck: Pt, kn: Pt): Pose => ({
     head,
     neck,
     sh,
-    el: [sh[0] - 4, sh[1] + 10],
-    wr: [sh[0], sh[1] + 20],
+    el: [sh[0] + armEl[0], sh[1] + armEl[1]],
+    wr: [sh[0] + armWr[0], sh[1] + armWr[1]],
     hip,
     kn,
-    an: [82, 100],
-    toe: [92, 100],
+    an: [82, 104],
+    toe: [92, 104],
   });
   const down = bench
     ? base([62, 88], [38, 68], [28, 64], [36, 68], [80, 76])
@@ -376,20 +431,7 @@ function hipThrustRig(id: string, label: string, bench: boolean): Rig {
   };
 }
 
-function lateralRaiseRig(id: string, label: string, bent: boolean): Rig {
-  const hinge: Partial<Pose> = bent
-    ? {
-        head: [60, 34],
-        neck: [60, 43],
-        sh: [50, 46],
-        sh2: [70, 46],
-        hip: [55, 68],
-        hip2: [65, 68],
-        kn: [53, 86],
-        kn2: [67, 86],
-      }
-    : {};
-  const dy = bent ? 12 : 0;
+function lateralRaiseRig(id: string, label: string): Rig {
   return {
     id,
     label,
@@ -397,19 +439,74 @@ function lateralRaiseRig(id: string, label: string, bent: boolean): Rig {
     frames: [
       {
         caption: 'Start',
-        pose: front([47, 48 + dy], [44, 62 + dy], [73, 48 + dy], [76, 62 + dy], hinge),
+        pose: front([47, 48], [44, 62], [73, 48], [76, 62]),
         hi: ['arm', 'arm2'],
-        imp: [42, 66 + dy],
-        imp2: [78, 66 + dy],
-        arrow: arrow([28, 62 + dy], [16, 42 + dy], -9),
+        imp: [42, 66],
+        imp2: [78, 66],
+        arrow: arrow([28, 62], [16, 42], -9),
       },
       {
         caption: 'Raise',
-        pose: front([36, 38 + dy], [20, 36 + dy], [84, 38 + dy], [100, 36 + dy], hinge),
+        pose: front([36, 38], [20, 36], [84, 38], [100, 36]),
         hi: ['arm', 'arm2'],
-        imp: [16, 36 + dy],
-        imp2: [104, 36 + dy],
-        arrow: arrow([16, 42 + dy], [28, 62 + dy], 9),
+        imp: [16, 36],
+        imp2: [104, 36],
+        arrow: arrow([16, 42], [28, 62], 9),
+      },
+    ],
+  };
+}
+
+/**
+ * Rear delt fly — its own rig, NOT a shifted lateral raise. Performed upright, a "rear delt
+ * fly" is simply a lateral raise; the hip hinge IS the exercise. Previously both ids drew the
+ * same standing figure 12px lower, so the two illustrations were indistinguishable and the
+ * rear-delt one taught the wrong movement.
+ *
+ * Read as a front view of someone hinged over: the torso is foreshortened to a stub, the head
+ * drops between/below the shoulder line (you are looking at the crown), and the arms hang
+ * straight toward the floor before sweeping out to the sides.
+ */
+function rearDeltFlyRig(id: string, label: string): Rig {
+  const bentOver = (el: Pt, wr: Pt, el2: Pt, wr2: Pt): Pose => ({
+    head: [60, 52],
+    neck: [60, 44],
+    sh: [46, 42],
+    el,
+    wr,
+    sh2: [74, 42],
+    el2,
+    wr2,
+    hip: [55, 60],
+    hip2: [65, 60],
+    kn: [52, 80],
+    kn2: [68, 80],
+    an: [52, 100],
+    an2: [68, 100],
+    toe: [48, 104],
+    toe2: [72, 104],
+  });
+  return {
+    id,
+    label,
+    view: 'front',
+    frames: [
+      {
+        caption: 'Hang',
+        pose: bentOver([46, 56], [46, 70], [74, 56], [74, 70]),
+        hi: ['arm', 'arm2'],
+        imp: [46, 74],
+        imp2: [74, 74],
+        impAngle: 90,
+        arrow: arrow([32, 66], [18, 48], -9),
+      },
+      {
+        caption: 'Fly',
+        pose: bentOver([32, 46], [18, 44], [88, 46], [102, 44]),
+        hi: ['arm', 'arm2'],
+        imp: [14, 44],
+        imp2: [106, 44],
+        arrow: arrow([18, 48], [32, 66], 9),
       },
     ],
   };
@@ -443,13 +540,63 @@ function buildRigs(): Record<string, Rig> {
       bottomArm: [[66, 64], [76, 58]],
       implement: 'none',
     }),
-    squatRig('squat-machine', 'Machine squat', {
-      startArm: [[48, 44], [47, 34]],
-      bottomArm: [[54, 66], [53, 57]],
-      impStart: [50, 34],
-      impBottom: [56, 57],
+    /**
+     * Hack squat. Its own rig rather than the free-squat pose with a machine glyph pasted on
+     * the shoulders: on a hack squat the back stays FLAT AGAINST AN ANGLED SLED PAD and the
+     * torso never folds forward, so the shared squat pose (which pitches the chest over the
+     * knees) misdescribed the apparatus and the trunk position alike.
+     */
+    {
+      id: 'squat-machine',
+      label: 'Hack squat',
+      view: 'side',
       implement: 'machine',
-    }),
+      scenery: (
+        <>
+          <Backrest from={[36, 88]} to={[66, 32]} />
+          <line x1={28} y1={94} x2={58} y2={38} {...S} />
+          <line x1={22} y1={96} x2={34} y2={96} {...S} />
+        </>
+      ),
+      frames: [
+        {
+          caption: 'Start',
+          pose: {
+            head: [68, 34],
+            neck: [62, 41],
+            sh: [60, 42],
+            el: [55, 55],
+            wr: [50, 68],
+            hip: [48, 66],
+            kn: [50, 84],
+            an: [52, 104],
+            toe: [62, 104],
+          },
+          hi: ['leg'],
+          imp: [59, 37],
+          impAngle: -30,
+          arrow: arrow([86, 52], [70, 82], 8),
+        },
+        {
+          caption: 'Bottom',
+          pose: {
+            head: [58, 53],
+            neck: [52, 60],
+            sh: [50, 61],
+            el: [45, 74],
+            wr: [40, 87],
+            hip: [38, 85],
+            kn: [56, 84],
+            an: [52, 104],
+            toe: [62, 104],
+          },
+          hi: ['leg'],
+          imp: [49, 56],
+          impAngle: -30,
+          arrow: arrow([70, 82], [86, 52], -8),
+        },
+      ],
+    },
     {
       id: 'leg-press',
       label: 'Leg press',
@@ -517,23 +664,26 @@ function buildRigs(): Record<string, Rig> {
           arrow: arrow([88, 46], [88, 84], 9),
         },
         {
+          // Both knees bend in a lunge: the REAR knee drops to just above the floor with the
+          // rear heel lifted. The previous pose left the rear leg almost straight (knee, hip
+          // and ankle nearly collinear), which is a split stance, not a lunge.
           caption: 'Bottom',
           pose: {
-            head: [52, 26],
-            neck: [49, 35],
-            sh: [49, 38],
-            el: [49, 52],
-            wr: [49, 66],
-            hip: [48, 64],
-            kn: [70, 80],
-            an: [70, 104],
-            toe: [80, 104],
-            kn2: [30, 88],
-            an2: [22, 102],
-            toe2: [14, 104],
+            head: [52, 34],
+            neck: [49, 43],
+            sh: [49, 46],
+            el: [49, 60],
+            wr: [49, 74],
+            hip: [50, 72],
+            kn: [72, 82],
+            an: [72, 104],
+            toe: [82, 104],
+            kn2: [46, 94],
+            an2: [28, 97],
+            toe2: [32, 104],
           },
           hi: ['leg'],
-          imp: [51, 69],
+          imp: [51, 77],
           impAngle: 90,
           arrow: arrow([88, 84], [88, 46], -9),
         },
@@ -701,20 +851,24 @@ function buildRigs(): Record<string, Rig> {
           arrow: arrow([86, 50], [86, 84], 9),
         },
         {
+          // The bar hangs straight down from the shoulders and must stay ON THE LEGS. The
+          // previous hinge parked the shoulders 11px in front of mid-foot, so the bar floated
+          // ~17px (≈30 cm) out in front of the shins — the classic bar-drift fault. Hips go
+          // further back instead, keeping the bar over mid-foot and brushing the shin.
           caption: 'Hinge',
           pose: {
-            head: [78, 52],
-            neck: [70, 55],
-            sh: [68, 56],
-            el: [68, 72],
-            wr: [68, 86],
-            hip: [40, 62],
-            kn: [50, 84],
+            head: [63, 54],
+            neck: [55, 57],
+            sh: [53, 58],
+            el: [53, 73],
+            wr: [53, 88],
+            hip: [28, 68],
+            kn: [46, 84],
             an: [52, 104],
             toe: [62, 104],
           },
           hi: ['leg', 'torso'],
-          imp: [68, 90],
+          imp: [53, 92],
           arrow: arrow([86, 84], [86, 50], -9),
         },
         { caption: 'Finish', pose: stand([55, 50], [56, 66]), hi: ['torso'], imp: [56, 69] },
@@ -792,41 +946,46 @@ function buildRigs(): Record<string, Rig> {
       id: 'calf-raise',
       label: 'Calf raise',
       view: 'side',
-      scenery: <Pad x1={44} x2={84} y={94} />,
+      // The step starts IN FRONT of the heel (x1=58) so the balls of the feet are on it and
+      // the heel hangs off the back edge. The old block started at x=44 — behind the heel —
+      // so the dropped heel was drawn straight through the solid step.
+      scenery: <Pad x1={58} x2={98} y={94} />,
       frames: [
         {
           caption: 'Stretch',
           pose: {
-            head: [57, 25],
-            neck: [54, 34],
-            sh: [54, 37],
-            el: [54, 51],
-            wr: [54, 65],
-            hip: [53, 63],
-            kn: [53, 84],
-            an: [53, 102],
+            head: [57, 23],
+            neck: [54, 32],
+            sh: [54, 35],
+            el: [54, 49],
+            wr: [54, 63],
+            hip: [53, 61],
+            kn: [53, 82],
+            an: [53, 100],
             toe: [64, 94],
           },
           hi: ['leg'],
-          imp: [56, 68],
+          imp: [56, 66],
           impAngle: 90,
           arrow: arrow([86, 76], [86, 60], -7),
         },
         {
+          // Top of a calf raise = heel clearly ABOVE the ball of the foot. The old top frame
+          // left the ankle only 2px above the toe, so "Rise" showed a flat foot.
           caption: 'Rise',
           pose: {
-            head: [57, 15],
-            neck: [54, 24],
-            sh: [54, 27],
-            el: [54, 41],
-            wr: [54, 55],
-            hip: [53, 53],
-            kn: [53, 74],
-            an: [55, 92],
+            head: [57, 13],
+            neck: [54, 22],
+            sh: [54, 25],
+            el: [54, 39],
+            wr: [54, 53],
+            hip: [53, 51],
+            kn: [53, 72],
+            an: [55, 90],
             toe: [64, 94],
           },
           hi: ['leg'],
-          imp: [56, 58],
+          imp: [56, 56],
           impAngle: 90,
           arrow: arrow([86, 60], [86, 76], 7),
         },
@@ -834,45 +993,49 @@ function buildRigs(): Record<string, Rig> {
     },
 
     /* --- horizontal push ------------------------------------------------ */
-    benchPressRig('bench-press', 'Bench press', false),
-    benchPressRig('incline-press', 'Incline press', true),
+    benchPressRig('bench-press', 'Bench press'),
+    inclinePressRig('incline-press', 'Incline press'),
     {
       id: 'push-up',
       label: 'Push-up',
       view: 'side',
       implement: 'none',
+      // Hands and toes are the two ground contacts and NEVER leave the floor (y=104); the
+      // body pivots about the toes. The old pose drew 20–22px arm bones (the rest of the rig
+      // library uses ~14) which forced the elbow 20px behind the shoulder and let the feet
+      // float 6px in the air at lock-out.
       frames: [
         {
           caption: 'Bottom',
           pose: {
-            head: [96, 80],
-            neck: [88, 84],
-            sh: [84, 86],
-            el: [66, 96],
-            wr: [88, 100],
-            hip: [52, 92],
-            kn: [32, 96],
-            an: [14, 100],
-            toe: [8, 104],
+            head: [94, 76],
+            neck: [86, 79],
+            sh: [78, 82],
+            el: [71, 94],
+            wr: [84, 104],
+            hip: [50, 90],
+            kn: [30, 96],
+            an: [16, 100],
+            toe: [10, 104],
           },
           hi: ['arm'],
-          arrow: arrow([104, 94], [104, 66], -8),
+          arrow: arrow([104, 92], [104, 66], -8),
         },
         {
           caption: 'Lock out',
           pose: {
-            head: [96, 62],
-            neck: [88, 68],
-            sh: [84, 70],
-            el: [86, 85],
-            wr: [88, 100],
-            hip: [52, 80],
-            kn: [32, 88],
-            an: [14, 94],
-            toe: [8, 98],
+            head: [98, 66],
+            neck: [90, 70],
+            sh: [82, 74],
+            el: [83, 89],
+            wr: [84, 104],
+            hip: [52, 85],
+            kn: [32, 93],
+            an: [18, 98],
+            toe: [10, 104],
           },
           hi: ['arm'],
-          arrow: arrow([104, 66], [104, 94], 8),
+          arrow: arrow([104, 66], [104, 92], 8),
         },
       ],
     },
@@ -937,11 +1100,15 @@ function buildRigs(): Record<string, Rig> {
       view: 'side',
       implement: 'none',
       ground: false,
+      // Dip bars sit at HIP height: with straight arms at the top the shoulders are a full
+      // arm-length (28px) ABOVE the hands. The old rig put the bars at y=52 with 8px arm
+      // bones, and its "Bottom" frame dropped the shoulder BELOW hand level — a position the
+      // elbow cannot reach.
       scenery: (
         <>
-          <FixedBar x1={26} x2={94} y={52} />
-          <Post x={30} y1={52} y2={112} />
-          <Post x={90} y1={52} y2={112} />
+          <FixedBar x1={26} x2={94} y={64} />
+          <Post x={30} y1={64} y2={112} />
+          <Post x={90} y1={64} y2={112} />
         </>
       ),
       frames: [
@@ -951,31 +1118,31 @@ function buildRigs(): Record<string, Rig> {
             head: [60, 24],
             neck: [57, 33],
             sh: [56, 36],
-            el: [57, 44],
-            wr: [56, 52],
+            el: [56, 50],
+            wr: [56, 64],
             hip: [57, 62],
             kn: [62, 80],
             an: [54, 92],
             toe: [64, 94],
           },
           hi: ['arm'],
-          arrow: arrow([80, 40], [80, 62], 8),
+          arrow: arrow([80, 38], [80, 58], 8),
         },
         {
           caption: 'Bottom',
           pose: {
-            head: [60, 38],
-            neck: [57, 47],
-            sh: [56, 50],
-            el: [44, 54],
-            wr: [56, 52],
-            hip: [57, 76],
-            kn: [62, 94],
-            an: [54, 106],
-            toe: [64, 108],
+            head: [60, 35],
+            neck: [57, 44],
+            sh: [56, 47],
+            el: [45, 56],
+            wr: [56, 64],
+            hip: [57, 73],
+            kn: [62, 91],
+            an: [54, 103],
+            toe: [64, 105],
           },
           hi: ['arm'],
-          arrow: arrow([80, 62], [80, 40], -8),
+          arrow: arrow([80, 58], [80, 38], -8),
         },
       ],
     },
@@ -1014,7 +1181,7 @@ function buildRigs(): Record<string, Rig> {
           imp: [82, 66],
           impAngle: 90,
           cableFrom: [108, 70],
-          arrow: arrow([70, 42], [44, 42], -8),
+          arrow: arrow([70, 42], [44, 42], 8),
         },
         {
           caption: 'Pull',
@@ -1033,7 +1200,7 @@ function buildRigs(): Record<string, Rig> {
           imp: [58, 68],
           impAngle: 90,
           cableFrom: [108, 70],
-          arrow: arrow([44, 42], [70, 42], 8),
+          arrow: arrow([44, 42], [70, 42], -8),
         },
       ],
     },
@@ -1118,21 +1285,24 @@ function buildRigs(): Record<string, Rig> {
           arrow: arrow([82, 62], [82, 40], -8),
         },
         {
+          // "Chin over" has to actually clear the bar: the head must finish level with the
+          // bar (y=14), not 25px below it. Pulling only 8px up left the caption describing a
+          // rep that the drawing never completed.
           caption: 'Chin over',
           pose: {
-            head: [60, 33],
-            neck: [55, 41],
-            sh: [54, 42],
-            el: [44, 29],
+            head: [60, 16],
+            neck: [55, 24],
+            sh: [54, 25],
+            el: [40, 19],
             wr: [56, 16],
-            hip: [54, 64],
-            kn: [52, 82],
-            an: [44, 94],
-            toe: [52, 98],
+            hip: [53, 49],
+            kn: [51, 67],
+            an: [43, 79],
+            toe: [51, 83],
           },
           hi: ['arm'],
           cableFrom: [56, 15],
-          imp: [45, 92],
+          imp: [44, 77],
           arrow: arrow([82, 40], [82, 62], 8),
         },
       ],
@@ -1197,6 +1367,9 @@ function buildRigs(): Record<string, Rig> {
       id: 'curl',
       label: 'Curl',
       view: 'front',
+      // Grip width is FIXED (a barbell does not get shorter at the top), so the hands stay at
+      // x=45/75 in both frames and only travel vertically. The cable anchor sits on the floor
+      // line, not below it.
       frames: [
         {
           caption: 'Start',
@@ -1204,16 +1377,16 @@ function buildRigs(): Record<string, Rig> {
           hi: ['arm', 'arm2'],
           imp: [45, 67],
           imp2: [75, 67],
-          cableFrom: [60, 108],
+          cableFrom: [60, 103],
           arrow: arrow([30, 64], [32, 40], -10),
         },
         {
           caption: 'Squeeze',
-          pose: front([48, 50], [52, 36], [72, 50], [68, 36]),
+          pose: front([48, 50], [46, 36], [72, 50], [74, 36]),
           hi: ['arm', 'arm2'],
-          imp: [51, 33],
-          imp2: [69, 33],
-          cableFrom: [60, 108],
+          imp: [45, 33],
+          imp2: [75, 33],
+          cableFrom: [60, 103],
           arrow: arrow([32, 40], [30, 64], 10),
         },
       ],
@@ -1298,53 +1471,59 @@ function buildRigs(): Record<string, Rig> {
       id: 'triceps-overhead',
       label: 'Overhead triceps extension',
       view: 'side',
+      // The upper arm stays vertical overhead and the elbow does not move — only the forearm
+      // swings. (Side view: the elbow sits beside the ear, so it reads over the head circle.)
       frames: [
         {
           caption: 'Stretch',
-          pose: stand([52, 24], [38, 28]),
+          pose: stand([53, 21], [40, 27]),
           hi: ['arm'],
-          imp: [34, 29],
+          imp: [36, 28],
           impAngle: 90,
-          arrow: arrow([36, 18], [58, 10], -8),
+          arrow: arrow([38, 16], [58, 8], -8),
         },
         {
           caption: 'Lock out',
-          pose: stand([52, 24], [54, 10]),
+          pose: stand([53, 21], [55, 8]),
           hi: ['arm'],
-          imp: [55, 7],
+          imp: [56, 5],
           impAngle: 90,
-          arrow: arrow([58, 10], [36, 18], 8),
+          arrow: arrow([58, 8], [38, 16], 8),
         },
       ],
     },
 
     /* --- shoulders -------------------------------------------------------- */
-    lateralRaiseRig('lateral-raise', 'Lateral raise', false),
-    lateralRaiseRig('rear-delt-fly', 'Rear delt fly', true),
+    lateralRaiseRig('lateral-raise', 'Lateral raise'),
+    rearDeltFlyRig('rear-delt-fly', 'Rear delt fly'),
     {
       id: 'face-pull',
       label: 'Face pull',
       view: 'front',
       implement: 'cable',
       scenery: <FixedBar x1={40} x2={80} y={8} />,
+      // A face pull PULLS THE ROPE APART: the hands start together, reaching toward the
+      // anchor, and finish WIDE beside the ears with the elbows flared back. The previous
+      // frames had the hands 48px apart at the start and only 24px apart at the finish —
+      // i.e. the hands travelled inward, the opposite of the movement.
       frames: [
         {
           caption: 'Start',
-          pose: front([46, 38], [38, 26], [74, 38], [82, 26]),
+          pose: front([52, 26], [56, 14], [68, 26], [64, 14]),
           hi: ['arm', 'arm2'],
-          imp: [36, 24],
-          imp2: [84, 24],
+          imp: [56, 12],
+          imp2: [64, 12],
           cableFrom: [60, 9],
-          arrow: arrow([28, 30], [16, 40], -8),
+          arrow: arrow([30, 26], [16, 34], -8),
         },
         {
           caption: 'Pull',
-          pose: front([32, 34], [50, 26], [88, 34], [70, 26]),
+          pose: front([34, 36], [44, 26], [86, 36], [76, 26]),
           hi: ['arm', 'arm2'],
-          imp: [48, 25],
-          imp2: [72, 25],
+          imp: [42, 26],
+          imp2: [78, 26],
           cableFrom: [60, 9],
-          arrow: arrow([16, 40], [28, 30], 8),
+          arrow: arrow([16, 34], [30, 26], 8),
         },
       ],
     },
@@ -1355,37 +1534,42 @@ function buildRigs(): Record<string, Rig> {
       label: 'Plank',
       view: 'side',
       implement: 'none',
+      // Forearm plank: the ELBOW AND FOREARM rest on the floor (y=104) with the shoulder
+      // stacked over the elbow, and the body is supported on the TOES. The old rig floated
+      // the elbow 12px above the floor, stretched the upper arm from 15px to 22px between
+      // frames, and drew the foot with the ankle on the ground and the toes in the air in
+      // "Set up" but the opposite way round in "Hold".
       frames: [
         {
           caption: 'Set up',
           pose: {
-            head: [92, 72],
-            neck: [84, 75],
-            sh: [80, 77],
-            el: [80, 92],
-            wr: [92, 102],
-            hip: [54, 86],
-            kn: [36, 98],
-            an: [24, 104],
-            toe: [16, 100],
+            head: [96, 82],
+            neck: [86, 84],
+            sh: [78, 88],
+            el: [78, 104],
+            wr: [92, 104],
+            hip: [52, 88],
+            kn: [34, 94],
+            an: [20, 99],
+            toe: [12, 104],
           },
           hi: ['torso'],
         },
         {
           caption: 'Hold',
           pose: {
-            head: [92, 64],
-            neck: [84, 68],
-            sh: [80, 70],
-            el: [80, 92],
-            wr: [92, 102],
-            hip: [54, 80],
-            kn: [36, 90],
-            an: [20, 100],
+            head: [96, 85],
+            neck: [86, 86],
+            sh: [78, 88],
+            el: [78, 104],
+            wr: [92, 104],
+            hip: [52, 93],
+            kn: [34, 96],
+            an: [20, 99],
             toe: [12, 104],
           },
           hi: ['torso'],
-          arrow: arrow([80, 56], [24, 88], -6),
+          arrow: arrow([76, 82], [26, 92], -5),
         },
       ],
     },
@@ -1394,38 +1578,55 @@ function buildRigs(): Record<string, Rig> {
       label: 'Dead bug',
       view: 'side',
       implement: 'none',
+      // Lying supine, the back is ON THE FLOOR — the old pose floated the spine 14px above
+      // the floor line. The far arm and far leg stay locked at 90/90 while the near arm and
+      // near leg reach out, so the frames show the CONTRALATERAL pattern the drill trains.
       frames: [
         {
           caption: 'Set up',
           pose: {
-            head: [26, 86],
-            neck: [34, 89],
-            sh: [38, 90],
-            el: [38, 74],
-            wr: [40, 60],
-            hip: [64, 94],
-            kn: [80, 72],
-            an: [92, 84],
-            toe: [100, 82],
+            head: [26, 94],
+            neck: [34, 97],
+            sh: [38, 98],
+            el: [38, 84],
+            wr: [40, 70],
+            hip: [64, 100],
+            kn: [80, 78],
+            an: [92, 90],
+            toe: [100, 88],
+            sh2: [38, 98],
+            el2: [38, 84],
+            wr2: [40, 70],
+            hip2: [64, 100],
+            kn2: [80, 78],
+            an2: [92, 90],
+            toe2: [100, 88],
           },
           hi: ['arm', 'leg'],
-          arrow: arrow([96, 66], [110, 82], 8),
+          arrow: arrow([96, 74], [110, 88], 8),
         },
         {
           caption: 'Extend',
           pose: {
-            head: [26, 86],
-            neck: [34, 89],
-            sh: [38, 90],
-            el: [30, 76],
-            wr: [16, 74],
-            hip: [64, 94],
-            kn: [86, 84],
-            an: [106, 90],
-            toe: [112, 84],
+            head: [26, 94],
+            neck: [34, 97],
+            sh: [38, 98],
+            el: [30, 84],
+            wr: [16, 82],
+            hip: [64, 100],
+            kn: [86, 90],
+            an: [106, 96],
+            toe: [112, 90],
+            sh2: [38, 98],
+            el2: [38, 84],
+            wr2: [40, 70],
+            hip2: [64, 100],
+            kn2: [80, 78],
+            an2: [92, 90],
+            toe2: [100, 88],
           },
           hi: ['arm', 'leg'],
-          arrow: arrow([110, 82], [96, 66], -8),
+          arrow: arrow([110, 88], [96, 74], -8),
         },
       ],
     },
@@ -1573,54 +1774,56 @@ function buildRigs(): Record<string, Rig> {
       id: 'russian-twist',
       label: 'Russian twist',
       view: 'front',
+      // Seated ON THE FLOOR: hips just above the floor line and heels down. The old pose sat
+      // the whole figure 12px up in mid-air, which read as a standing/crouching twist.
       frames: [
         {
           caption: 'Left',
           pose: {
-            head: [60, 32],
-            neck: [60, 42],
-            sh: [50, 46],
-            el: [38, 54],
-            wr: [30, 62],
-            sh2: [70, 46],
-            el2: [62, 56],
-            wr2: [36, 64],
-            hip: [56, 80],
-            hip2: [64, 80],
-            kn: [44, 72],
-            kn2: [76, 72],
-            an: [36, 88],
-            an2: [84, 88],
-            toe: [30, 92],
-            toe2: [90, 92],
+            head: [60, 44],
+            neck: [60, 54],
+            sh: [50, 58],
+            el: [38, 66],
+            wr: [30, 74],
+            sh2: [70, 58],
+            el2: [62, 68],
+            wr2: [36, 76],
+            hip: [56, 92],
+            hip2: [64, 92],
+            kn: [44, 84],
+            kn2: [76, 84],
+            an: [36, 100],
+            an2: [84, 100],
+            toe: [30, 104],
+            toe2: [90, 104],
           },
           hi: ['torso'],
-          imp: [26, 64],
-          arrow: arrow([34, 44], [86, 44], -14),
+          imp: [26, 76],
+          arrow: arrow([34, 56], [86, 56], -14),
         },
         {
           caption: 'Right',
           pose: {
-            head: [60, 32],
-            neck: [60, 42],
-            sh: [50, 46],
-            el: [58, 56],
-            wr: [84, 64],
-            sh2: [70, 46],
-            el2: [82, 54],
-            wr2: [90, 62],
-            hip: [56, 80],
-            hip2: [64, 80],
-            kn: [44, 72],
-            kn2: [76, 72],
-            an: [36, 88],
-            an2: [84, 88],
-            toe: [30, 92],
-            toe2: [90, 92],
+            head: [60, 44],
+            neck: [60, 54],
+            sh: [50, 58],
+            el: [58, 68],
+            wr: [84, 76],
+            sh2: [70, 58],
+            el2: [82, 66],
+            wr2: [90, 74],
+            hip: [56, 92],
+            hip2: [64, 92],
+            kn: [44, 84],
+            kn2: [76, 84],
+            an: [36, 100],
+            an2: [84, 100],
+            toe: [30, 104],
+            toe2: [90, 104],
           },
           hi: ['torso'],
-          imp: [94, 64],
-          arrow: arrow([86, 44], [34, 44], 14),
+          imp: [94, 76],
+          arrow: arrow([86, 56], [34, 56], 14),
         },
       ],
     },
@@ -1784,22 +1987,26 @@ function buildRigs(): Record<string, Rig> {
       ),
       frames: [
         {
+          // The figure faces the flywheel (-x). At the CATCH the torso is hinged FORWARD over
+          // the knees (~1 o'clock shoulders ahead of the hips); the old pose leaned it back
+          // by the same 8px as the finish, so the stroke showed no body swing at all and the
+          // catch looked like a lay-back.
           caption: 'Catch',
           pose: {
-            head: [78, 54],
-            neck: [70, 60],
-            sh: [68, 62],
-            el: [54, 66],
-            wr: [40, 70],
+            head: [46, 57],
+            neck: [54, 62],
+            sh: [56, 64],
+            el: [44, 68],
+            wr: [32, 72],
             hip: [62, 86],
             kn: [46, 70],
             an: [34, 84],
             toe: [28, 80],
           },
           hi: ['leg', 'arm'],
-          imp: [38, 70],
+          imp: [30, 72],
           impAngle: 90,
-          cableFrom: [22, 72],
+          cableFrom: [20, 72],
           arrow: arrow([56, 42], [88, 40], -8),
         },
         {
@@ -1834,7 +2041,9 @@ function buildRigs(): Record<string, Rig> {
           pose: front([48, 50], [46, 62], [72, 50], [74, 62]),
           hi: ['arm', 'arm2'],
           art: <path d="M46 62 C24 2 96 2 74 62" strokeWidth={2} stroke="var(--accent)" opacity={0.75} />,
-          arrow: arrow([96, 34], [96, 76], 10),
+          // Rope overhead → the next thing that happens is the JUMP, so this arrow points up
+          // (and the airborne frame's arrow points down into the landing). They were swapped.
+          arrow: arrow([96, 76], [96, 34], -10),
         },
         {
           caption: 'Jump',
@@ -1854,7 +2063,7 @@ function buildRigs(): Record<string, Rig> {
           }),
           hi: ['leg', 'leg2'],
           art: <path d="M46 56 C26 112 94 112 74 56" strokeWidth={2} stroke="var(--accent)" opacity={0.75} />,
-          arrow: arrow([96, 76], [96, 34], -10),
+          arrow: arrow([96, 34], [96, 76], 10),
         },
       ],
     },
@@ -1890,71 +2099,3 @@ export const PATTERN_DEFAULT_RIG: Record<string, string> = {
   calf_raise: 'calf-raise',
   cardio: 'run',
 };
-
-interface SeedRow {
-  slug: string;
-  movement_pattern: string;
-  equipment: string[][];
-  pose_pattern?: string;
-}
-
-const SEED = exercisesSeed as unknown as SeedRow[];
-
-const RIG_BY_EXERCISE = new Map<string, string>();
-const EQUIP_BY_EXERCISE = new Map<string, string[]>();
-for (const e of SEED) {
-  RIG_BY_EXERCISE.set(e.slug, e.pose_pattern ?? PATTERN_DEFAULT_RIG[e.movement_pattern] ?? 'plank');
-  EQUIP_BY_EXERCISE.set(e.slug, e.equipment.flat());
-}
-
-/** Equipment slug → the glyph drawn in the figure's hands. First match wins. */
-const IMPLEMENT_BY_EQUIPMENT: Array<[ImplementKind, string[]]> = [
-  ['bar', ['barbell', 'ez-curl-bar', 'smith-machine']],
-  ['dumbbell', ['dumbbell']],
-  ['kettlebell', ['kettlebell']],
-  ['cable', ['cable-machine', 'lat-pulldown', 'seated-row-machine']],
-  ['band', ['resistance-bands', 'suspension-trainer']],
-  ['ball', ['medicine-ball']],
-  ['wheel', ['ab-wheel']],
-  [
-    'machine',
-    [
-      'leg-press',
-      'hack-squat-machine',
-      'leg-extension-machine',
-      'leg-curl-machine',
-      'chest-press-machine',
-      'pec-deck',
-      'shoulder-press-machine',
-      'hip-thrust-machine',
-      'calf-raise-machine',
-    ],
-  ],
-  ['plate', ['weight-plates']],
-];
-
-export function implementFor(equipment: string[]): ImplementKind {
-  for (const [kind, slugs] of IMPLEMENT_BY_EQUIPMENT) {
-    if (equipment.some((e) => slugs.includes(e))) return kind;
-  }
-  return 'none';
-}
-
-/** Resolve a rig from an exercise slug, a rig id, or a movement_pattern. */
-export function resolveRig(exerciseSlug?: string, pattern?: string): Rig | null {
-  if (exerciseSlug) {
-    const id = RIG_BY_EXERCISE.get(exerciseSlug);
-    if (id && POSE_RIGS[id]) return POSE_RIGS[id];
-  }
-  if (pattern) {
-    if (POSE_RIGS[pattern]) return POSE_RIGS[pattern];
-    const id = PATTERN_DEFAULT_RIG[pattern];
-    if (id && POSE_RIGS[id]) return POSE_RIGS[id];
-  }
-  return null;
-}
-
-/** Equipment slugs recorded in the seed for an exercise. */
-export function equipmentForExercise(exerciseSlug?: string): string[] {
-  return (exerciseSlug && EQUIP_BY_EXERCISE.get(exerciseSlug)) || [];
-}

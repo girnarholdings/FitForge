@@ -78,6 +78,13 @@ export interface Frame {
   impAngle?: number;
   /** origin of the cable/band line (pulley, anchor point, bar). */
   cableFrom?: Pt;
+  /**
+   * Origin for the SECOND implement's cable/band. Two-stack movements (a cable
+   * fly has one weight stack per side) must not run both handles back to a
+   * single pulley — that draws a cable straight across the lifter's chest.
+   * Defaults to `cableFrom` when omitted (rope/single-pulley movements).
+   */
+  cableFrom2?: Pt;
   arrow?: Arrow;
   /** frame-specific scenery (rope arc, platform position…). */
   art?: React.ReactNode;
@@ -94,8 +101,6 @@ export interface Rig {
   ground?: boolean;
   /** force an implement kind regardless of the exercise's equipment. */
   implement?: ImplementKind;
-  /** rotate scenery + figure (used for incline variants). */
-  tilt?: { deg: number; cx: number; cy: number };
   frames: Frame[];
 }
 
