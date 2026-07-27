@@ -66,8 +66,9 @@ export async function answerEquipmentDeck(page: Page, count = 3): Promise<void> 
 }
 
 /**
- * Walk onboarding as far as the EQUIPMENT step (goals → experience → schedule → split → location),
- * leaving the page on `/onboarding/equipment` with the "Home gym" preset already seeded.
+ * Walk onboarding as far as the EQUIPMENT step (goals → experience → schedule → split →
+ * progression → location), leaving the page on `/onboarding/equipment` with the "Home gym" preset
+ * already seeded.
  */
 export async function advanceToEquipment(page: Page): Promise<void> {
   await enterDemo(page);
@@ -80,6 +81,9 @@ export async function advanceToEquipment(page: Page): Promise<void> {
   await cont(page);
   await page.waitForURL(/\/onboarding\/split/);
   await cont(page);
+  // Progression — a scheme is already selected (the recommendation), so Continue alone advances.
+  await page.waitForURL(/\/onboarding\/progression/);
+  await cont(page);
   await page.waitForURL(/\/onboarding\/location/);
   await page.getByText('Home gym').click();
   await cont(page);
@@ -89,6 +93,13 @@ export async function advanceToEquipment(page: Page): Promise<void> {
 export interface OnboardingHooks {
   /** Runs on the split step, before Continue — e.g. to pick a specific program. */
   onSplit?: (page: Page) => Promise<void>;
+  /** Runs on the progression step, before Continue — e.g. to pick a specific scheme. */
+  onProgression?: (page: Page) => Promise<void>;
+  /**
+   * Runs on the FINAL plan-preview step, before "Start plan" — the only place the generated week
+   * can be inspected against a fully-answered profile without re-walking the wizard by hand.
+   */
+  onPlanPreview?: (page: Page) => Promise<void>;
 }
 
 /**
@@ -119,18 +130,26 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   if (hooks.onSplit) await hooks.onSplit(page);
   await cont(page);
 
-  // 6 · Location — home gym.
+  // 6 · Progression (NEW, WS-P) — a scheme is always selected: the athlete's explicit choice, or
+  // the recommendation for their level and goal. Assert the step really did prescribe something
+  // (the per-set preview) rather than just rendering a list of names.
+  await page.waitForURL(/\/onboarding\/progression/);
+  await expect(page.getByTestId('progression-preview')).toBeVisible();
+  if (hooks.onProgression) await hooks.onProgression(page);
+  await cont(page);
+
+  // 7 · Location — home gym.
   await page.waitForURL(/\/onboarding\/location/);
   await page.getByText('Home gym').click();
   await cont(page);
 
-  // 7 · Equipment — now a SWIPE DECK (WS-1). Walk it via the accessible buttons, then continue
+  // 8 · Equipment — now a SWIPE DECK (WS-1). Walk it via the accessible buttons, then continue
   // from the review screen.
   await page.waitForURL(/\/onboarding\/equipment/);
   await answerEquipmentDeck(page);
   await cont(page);
 
-  // 8 · Exercise prefs — add a favorite from the suggestion chips.
+  // 9 · Exercise prefs — add a favorite from the suggestion chips.
   await page.waitForURL(/\/onboarding\/exercise_prefs/);
   const popular = page
     .locator('section')
@@ -140,7 +159,7 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   }
   await cont(page);
 
-  // 9 · Exclusions — protect a body area + exclude an exercise and accept a substitution.
+  // 10 · Exclusions — protect a body area + exclude an exercise and accept a substitution.
   await page.waitForURL(/\/onboarding\/exclusions/);
   await page.getByRole('button', { name: 'Knees' }).click();
   const avoid = page.getByRole('combobox', { name: 'Search exercises to avoid' });
@@ -159,25 +178,26 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   }
   await cont(page);
 
-  // 10 · Body metrics — medians pre-filled; set sex and continue.
+  // 11 · Body metrics — medians pre-filled; set sex and continue.
   await page.waitForURL(/\/onboarding\/body_metrics/);
   await page.getByRole('button', { name: 'Male', exact: true }).click();
   await cont(page);
 
-  // 11 · Nutrition prefs — diet + allergy.
+  // 12 · Nutrition prefs — diet + allergy.
   await page.waitForURL(/\/onboarding\/nutrition_prefs/);
   await page.getByText('Vegetarian', { exact: true }).click();
   await page.getByRole('button', { name: 'Tree nut' }).click();
   await cont(page);
 
-  // 12 · Targets review — computed by the shared macros rule.
+  // 13 · Targets review — computed by the shared macros rule.
   await page.waitForURL(/\/onboarding\/targets_review/);
   await expect(page.getByText('kcal / day')).toBeVisible();
   await cont(page);
 
-  // 13 · Plan preview — routine generated; "Start plan" → /today.
+  // 14 · Plan preview — routine generated; "Start plan" → /today.
   await page.waitForURL(/\/onboarding\/plan_preview/);
   await expect(page.getByTestId('onboarding-continue')).toBeEnabled();
+  if (hooks.onPlanPreview) await hooks.onPlanPreview(page);
   await cont(page);
 
   await page.waitForURL(/\/today/);

@@ -9,17 +9,16 @@ import Link from 'next/link';
 import { getSplit, AUTO_SPLIT_SLUG } from '@fitforge/shared/rules';
 import type { GoalType, ExperienceLevel } from '@fitforge/shared/types';
 import { Card, CardTitle, CardDescription, Button } from '@/components/ui';
-import { DumbbellIcon, PlusIcon, RepeatIcon, InfoIcon } from '@/components/ui/icons';
+import { PlusIcon, RepeatIcon, InfoIcon, ClockIcon } from '@/components/ui/icons';
+import { m, staggerList } from '@/components/ui/motion';
 import { useActiveRoutine, useDemoState } from '@/lib/demo/useDemo';
-import {
-  applySplit,
-  describeDay,
-  exerciseCountLabel,
-  planCoverageForDraft,
-} from '@/lib/demo/generate';
-import { WEEKDAY_LABELS } from '@/components/features/_mock/data';
+import { resolveProgressionScheme } from '@/lib/demo/store';
+import { applySplit, exerciseCountLabel, planCoverageForDraft } from '@/lib/demo/generate';
+import { routineStats } from '@/lib/demo/insights';
 import { DayStrip, daysLabel, levelLabel } from './SplitCard';
 import { SplitLibrarySheet } from './SplitLibrarySheet';
+import { SessionCard } from './SessionCard';
+import { PlanTargets } from './PlanTargets';
 
 const GOAL_LABEL: Record<string, string> = {
   strength: 'Strength',
@@ -35,8 +34,18 @@ export function RoutineList() {
   const totalExercises = routine.days.reduce((n, d) => n + d.exercises.length, 0);
 
   const [browsing, setBrowsing] = React.useState(false);
+  // One session open at a time. Two expanded cards on a 664 px-tall phone means neither is
+  // readable without scrolling, and comparing sessions is not what this screen is for.
+  const [openDay, setOpenDay] = React.useState<string | null>(null);
   const splitSlug = state.draft.split_slug ?? null;
   const split = getSplit(splitSlug);
+
+  // Resolved ONCE for the whole rail. Every card then quotes the same scheme by construction, and
+  // the list subscribes to the store once instead of once per session.
+  const scheme = React.useMemo(() => resolveProgressionScheme(state), [state]);
+  // Declared AFTER the scheme because it now depends on it: a capped scheme performs fewer sets
+  // than the rows prescribe, and this header used to quote the row total under every scheme.
+  const stats = React.useMemo(() => routineStats(routine, scheme), [routine, scheme]);
 
   // M1 — never silently ship a skeleton plan. When the user's equipment / protected areas were
   // what thinned the week out, say it here with a concrete next step.
@@ -92,6 +101,13 @@ export function RoutineList() {
                   {routine.days.length} {routine.days.length === 1 ? 'day' : 'days'} ·{' '}
                   {exerciseCountLabel(totalExercises)}
                 </span>
+                {/* Weekly time commitment — the number that decides whether a plan is realistic,
+                    and the one the athlete previously had to start a session to discover. */}
+                {stats.minutes > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11px] text-muted-foreground">
+                    <ClockIcon size={11} aria-hidden />~{stats.minutes} min / week
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -156,7 +172,9 @@ export function RoutineList() {
                 type="button"
                 onClick={() => setBrowsing(true)}
                 data-testid="change-split"
-                className="flex shrink-0 items-center gap-1 rounded-chip border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-semibold text-accent transition-colors hover:border-accent"
+                /* min-h-[44px]: measured 80 × 31. It is the only way to change the program from
+                   this screen, so it does not get to be the smallest target on it. */
+                className="flex min-h-[44px] shrink-0 items-center gap-1 rounded-chip border border-border bg-surface-2 px-2.5 py-1.5 text-[11px] font-semibold text-accent transition-colors hover:border-accent"
               >
                 <RepeatIcon size={13} />
                 Change
@@ -164,39 +182,32 @@ export function RoutineList() {
             </div>
           </div>
 
-          {/* Day rail */}
-          <ul className="mt-4 space-y-1.5">
+          {/* Day rail — every session now shows what it trains, what it costs and how long it
+              takes, and opens to its full exercise list. "Start" is one of two actions, not the
+              only thing on offer. */}
+          <m.ul
+            className="mt-4 space-y-2"
+            variants={staggerList}
+            initial="hidden"
+            animate="show"
+            data-testid="routine-days"
+          >
             {routine.days.map((d) => (
-              <li
+              <SessionCard
                 key={d.id}
-                className="flex items-center justify-between rounded-xl bg-surface px-3 py-2 text-sm"
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-muted text-accent">
-                    <DumbbellIcon size={16} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate font-semibold text-foreground">{d.name}</span>
-                    {/* Honest, pluralised day line (M1 / m1) — the movements listed are the ones
-                        this day actually contains, not the template's promise. */}
-                    <span
-                      className="block truncate text-xs text-muted-foreground"
-                      data-testid={`routine-day-summary-${d.day_index}`}
-                    >
-                      {d.weekday != null ? `${WEEKDAY_LABELS[d.weekday]} · ` : ''}
-                      {describeDay(d)}
-                    </span>
-                  </span>
-                </span>
-                <Link
-                  href={`/workout/${d.id}`}
-                  className="shrink-0 text-xs font-semibold text-accent"
-                >
-                  Start
-                </Link>
-              </li>
+                day={d}
+                href={`/workout/${d.id}`}
+                expanded={openDay === d.id}
+                onToggle={() => setOpenDay((cur) => (cur === d.id ? null : d.id))}
+                scheme={scheme}
+              />
             ))}
-          </ul>
+          </m.ul>
+
+          {/* The week's total, AFTER the sessions. The complaint was that you could not see what
+              a session is; putting a five-row volume table above the sessions would have pushed
+              them off the first screen and answered a different question first. */}
+          <PlanTargets routine={routine} scheme={scheme} />
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Link href={`/routines/${routine.id}`}>

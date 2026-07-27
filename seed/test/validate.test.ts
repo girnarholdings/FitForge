@@ -41,11 +41,16 @@ test('the real seed data validates with zero errors', () => {
 
 test('the real seed data has the expected row counts', () => {
   const data = loadSeed(DATA_DIR);
-  assert.equal(data.equipment.length, 30, 'equipment count');
+  // Floors, not equalities, for the catalogs we expect to KEEP GROWING (equipment, categories,
+  // exercises). Exact counts here made every legitimate catalog expansion break CI, which is how
+  // this job ended up red-and-ignored after the 59→91 exercise commit. What actually needs
+  // guarding is accidental LOSS — a bad merge or a truncated write dropping rows — and a floor
+  // catches that. Anatomy (groups/muscles) stays exact because it is a closed set, not a catalog.
+  assert.ok(data.equipment.length >= 31, 'at least 31 equipment');
   assert.equal(data.muscles.groups.length, 7, 'muscle group count');
   assert.equal(data.muscles.muscles.length, 20, 'muscle count');
-  assert.equal(data.categories.length, 9, 'category count');
-  assert.ok(data.exercises.length >= 48, 'at least 48 exercises');
+  assert.ok(data.categories.length >= 12, 'at least 12 categories');
+  assert.ok(data.exercises.length >= 91, 'at least 91 exercises');
   assert.equal(data.foods.length, 32, 'food count');
 });
 

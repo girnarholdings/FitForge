@@ -14,6 +14,7 @@ import {
   type SplitDefinition,
   type SplitRecommendationInput,
 } from '@fitforge/shared/rules';
+import type { OnboardingDraft } from '@/components/onboarding/types';
 import { Sheet, Chip, Button } from '@/components/ui';
 import { SplitCard } from './SplitCard';
 
@@ -31,6 +32,12 @@ export interface SplitLibrarySheetProps {
   onSelect: (slug: string) => void;
   /** profile used to sort the list best-first; omit for plain library order */
   profile?: SplitRecommendationInput;
+  /**
+   * The athlete's live draft, threaded to each card so "See the full week" can show the REAL plan
+   * this program would build. Onboarding must pass it; post-onboarding surfaces may omit it and
+   * the card falls back to the stored draft, which is the same thing once onboarding is done.
+   */
+  draft?: Partial<OnboardingDraft> | null;
   /** show the "Let FitForge pick" row at the top (onboarding does; the Workouts sheet does too) */
   includeAuto?: boolean;
   title?: string;
@@ -42,17 +49,37 @@ export function SplitLibrarySheet({
   value,
   onSelect,
   profile,
+  draft,
   includeAuto = true,
   title = 'All training splits',
 }: SplitLibrarySheetProps) {
   const [days, setDays] = React.useState<number | null>(null);
   const [level, setLevel] = React.useState<string | null>(null);
+  // One program open at a time, same reason as the onboarding step: this sheet is for comparing.
+  const [openSlug, setOpenSlug] = React.useState<string | null>(null);
 
   // Best-first when we know the profile, library order otherwise.
   const ordered = React.useMemo<SplitDefinition[]>(() => {
     if (!profile) return [...SPLIT_LIBRARY];
     return recommendSplits(profile).map((r) => r.split);
   }, [profile]);
+
+  // Why each program scored where it did. The sheet used to render SplitCard with no reason at
+  // all, which made "Browse all 26" the LEAST informative surface in the app — the one place an
+  // athlete goes precisely because the four recommendations did not convince them.
+  const reasonsBySlug = React.useMemo<Record<string, string[]>>(() => {
+    if (!profile) return {};
+    return Object.fromEntries(recommendSplits(profile).map((r) => [r.split.slug, r.reasons]));
+  }, [profile]);
+
+  // A closed sheet must not reopen with someone else's card expanded, and a filter change can take
+  // the open card off the list entirely — collapse rather than leave a phantom open row.
+  React.useEffect(() => {
+    if (!open) setOpenSlug(null);
+  }, [open]);
+  React.useEffect(() => {
+    setOpenSlug(null);
+  }, [days, level]);
 
   const visible = React.useMemo(
     () =>
@@ -142,7 +169,12 @@ export function SplitLibrarySheet({
                 onSelect(split.slug);
                 onClose();
               }}
+              reason={reasonsBySlug[split.slug]?.[0]}
+              reasons={reasonsBySlug[split.slug]}
+              draft={draft}
               testId={`split-option-${split.slug}`}
+              expanded={openSlug === split.slug}
+              onExpandedChange={(next) => setOpenSlug(next ? split.slug : null)}
             />
           ))}
 

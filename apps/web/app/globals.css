@@ -71,6 +71,12 @@
   --muscle-base: #1b2231;   /* unhighlighted muscle fill (muscle map) */
   --muscle-line: #2c3549;   /* muscle separation strokes */
   --body-outline: #3a4356;  /* silhouette outline */
+
+  /* Knurling — the cross-hatch grip cut into the part of a bar you actually hold. Used ONLY on
+     the middle band of a hero CTA (see `.ff-knurl`). Dark theme: the gold accent carries
+     near-black ink text, so a dark knurl is invisible where the label sits and reads only on
+     the bare gold either side of it. */
+  --knurl: rgba(0, 0, 0, 0.07);
 }
 
 /* Dark "Forged Gold" is THE default brand (above). Light Ivory is opt-in only
@@ -104,6 +110,10 @@
     --muscle-base: #e6e2d5;
     --muscle-line: #cfc9b8;
     --body-outline: #a49d87;
+    /* INVERTED on light, and that is the whole reason this is a token rather than a literal: the
+       light accent is bronze #8a6710 carrying WHITE text, so a dark knurl would cut into the
+       label's contrast. A light knurl lifts the bronze instead. */
+    --knurl: rgba(255, 255, 255, 0.11);
 }
 
 /* utility classes the primitives lean on */
@@ -120,6 +130,48 @@
     linear-gradient(160deg, rgba(228, 184, 77, 0.55), rgba(228, 184, 77, 0.08) 70%) border-box;
 }
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* ── the gym material layer ──────────────────────────────────────────────────
+   Two static surface treatments. Neither animates, so neither has anything to
+   say to prefers-reduced-motion — that is exactly why they are CSS and the
+   plate spin / collar latch are not (those go through `m.*`, which the root
+   MotionConfig already governs).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Knurling on the grip band of a hero CTA. Vertical hairlines at a 4px pitch,
+   masked to fade out before either end so the button still reads as a button
+   rather than as a hatched rectangle. Alpha is capped at the token (≤12%) —
+   this is a TEXTURE, never a bevel. */
+.ff-knurl {
+  position: relative;
+}
+.ff-knurl::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  /* 5px pitch, 1px line. The first pass used a 4px pitch across a mask that was effectively the
+     whole button, and on a 390px screenshot it read as corduroy — a stripe pattern, not a
+     material. Wider pitch + a mask that is genuinely a BAND (hard stops at 22/38 and 62/78%)
+     keeps it to the grip zone either side of the label. */
+  background-image: repeating-linear-gradient(90deg, transparent 0 4px, var(--knurl) 4px 5px);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 22%,
+    #000 38%,
+    #000 62%,
+    transparent 78%
+  );
+  mask-image: linear-gradient(90deg, transparent 22%, #000 38%, #000 62%, transparent 78%);
+}
+
+/* The 48×48 equipment portraits carry a decorative ground shadow. At icon
+   sizes it stops reading as a shadow and starts reading as an underline
+   beneath the label beside it — see EquipmentIllustration's `dense`. */
+[data-dense] .ff-ground {
+  display: none;
+}
 
 html {
   -webkit-text-size-adjust: 100%;

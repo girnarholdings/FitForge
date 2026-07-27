@@ -32,20 +32,21 @@ import {
   type SelectableOption,
 } from '@/components/ui';
 import { StarIcon } from '@/components/ui/SwipeDeck';
+import { EquipmentIllustration } from '@/components/illustrations/equipment';
+import { ProgressionEvidenceNote } from '@/components/features/shared/ProgressionEvidence';
 import {
-  TrophyIcon,
+  BarbellIcon,
   DumbbellIcon,
   FlameIcon,
-  RunIcon,
+  JumpRopeIcon,
   HeartIcon,
   HomeIcon,
-  BuildingIcon,
+  RackIcon,
   PlaneIcon,
   LogOutIcon,
   ExportIcon,
   ImportIcon,
   TrashIcon,
-  CheckIcon,
   RepeatIcon,
 } from '@/components/ui/icons';
 import {
@@ -54,6 +55,8 @@ import {
   exportAllState,
   importAllState,
   eraseAllLocalData,
+  setProgressionScheme,
+  resolveProgressionScheme,
   type DemoState,
 } from '@/lib/demo/store';
 import { useDemoState } from '@/lib/demo/useDemo';
@@ -65,7 +68,18 @@ import {
   exerciseCountLabel,
 } from '@/lib/demo/generate';
 import { DEMO_EQUIPMENT } from '@/lib/demo/catalog';
-import { resolveBodyAreaExclusions } from '@fitforge/shared/rules';
+import {
+  resolveBodyAreaExclusions,
+  describeSetTarget,
+  prescribeSets,
+  recommendProgressionScheme,
+  schemeCaution,
+  suggestOnboardingDefaults,
+  trimNoticeFor,
+  PROGRESSION_OPTIONS,
+  PROGRESSION_PICKER_LEDE,
+  type ProgressionScheme,
+} from '@fitforge/shared/rules';
 import {
   BODY_AREAS,
   ALLERGEN_TAGS,
@@ -99,10 +113,10 @@ function OptionBadge({ children }: { children: React.ReactNode }) {
 }
 
 const GOAL_OPTIONS: SelectableOption<GoalType>[] = [
-  { value: 'strength', title: 'Strength', icon: <OptionBadge><TrophyIcon size={20} /></OptionBadge> },
+  { value: 'strength', title: 'Strength', icon: <OptionBadge><BarbellIcon size={20} /></OptionBadge> },
   { value: 'hypertrophy', title: 'Build muscle', icon: <OptionBadge><DumbbellIcon size={20} /></OptionBadge> },
   { value: 'fat_loss', title: 'Lose fat', icon: <OptionBadge><FlameIcon size={20} /></OptionBadge> },
-  { value: 'endurance', title: 'Endurance', icon: <OptionBadge><RunIcon size={20} /></OptionBadge> },
+  { value: 'endurance', title: 'Endurance', icon: <OptionBadge><JumpRopeIcon size={20} /></OptionBadge> },
   { value: 'general_health', title: 'General health', icon: <OptionBadge><HeartIcon size={20} /></OptionBadge> },
 ];
 const GOAL_LABEL: Record<GoalType, string> = {
@@ -119,7 +133,9 @@ const EXPERIENCE_OPTIONS: SelectableOption<ExperienceLevel>[] = [
 ];
 const LOCATION_OPTIONS: SelectableOption<TrainingLocation>[] = [
   { value: 'home', title: 'Home', description: 'Dumbbells, bands, a bench', icon: <OptionBadge><HomeIcon size={20} /></OptionBadge> },
-  { value: 'commercial_gym', title: 'Commercial gym', description: 'Full equipment', icon: <OptionBadge><BuildingIcon size={20} /></OptionBadge> },
+  // An office block was the wrong building. A squat rack is the one object that unambiguously
+  // means "commercial gym"; home and plane were already correct and stay.
+  { value: 'commercial_gym', title: 'Commercial gym', description: 'Full equipment', icon: <OptionBadge><RackIcon size={20} /></OptionBadge> },
   { value: 'minimal', title: 'Minimal', description: 'Bodyweight & travel', icon: <OptionBadge><PlaneIcon size={20} /></OptionBadge> },
 ];
 const DIET_OPTIONS: SelectableOption<DietType>[] = [
@@ -154,6 +170,7 @@ const EQUIPMENT_CATEGORY_LABEL: Record<EquipmentCategory, string> = {
   cables: 'Cables',
   bodyweight_accessories: 'Bodyweight kit',
   cardio: 'Cardio',
+  other: 'Plyo & conditioning',
 };
 const EQUIPMENT_CATEGORY_ORDER: EquipmentCategory[] = [
   'free_weights',
@@ -162,6 +179,7 @@ const EQUIPMENT_CATEGORY_ORDER: EquipmentCategory[] = [
   'cables',
   'machines',
   'cardio',
+  'other',
 ];
 
 function prettyPattern(p: MovementPattern | string): string {
@@ -170,6 +188,11 @@ function prettyPattern(p: MovementPattern | string): string {
     .filter((w) => w !== 'iso')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
+}
+
+/** Display name for a progression scheme (the library is the single source of these strings). */
+function schemeName(scheme: ProgressionScheme): string {
+  return PROGRESSION_OPTIONS.find((o) => o.slug === scheme)?.name ?? scheme;
 }
 
 function allergenLabel(tag: string): string {
@@ -470,6 +493,47 @@ export function SettingsView() {
     [answers.movementExclusions],
   );
 
+  /* ------------------------------------------------------------------------ progression scheme
+   * `progression` is the scheme IN FORCE (explicit choice, else the recommendation for the answers
+   * above — which is why changing Experience here can change what this section says). The preview
+   * runs the real shared rule over the real compound prescription this athlete's plan uses, so the
+   * numbers on screen are the numbers the player will show, not an illustration. */
+  const progression = resolveProgressionScheme(state);
+  const recommendedScheme = recommendProgressionScheme({
+    experience_level: answers.experience,
+    primary_goal: answers.primaryGoal,
+  });
+  // Recommended first, exactly as the onboarding step orders them, so the two screens agree.
+  const progressionOptions = React.useMemo<SelectableOption<ProgressionScheme>[]>(
+    () =>
+      [...PROGRESSION_OPTIONS]
+        .sort((a, b) => Number(b.slug === recommendedScheme) - Number(a.slug === recommendedScheme))
+        .map((meta) => ({
+          value: meta.slug,
+          title: meta.slug === recommendedScheme ? `${meta.name} · recommended for you` : meta.name,
+          description: meta.tagline,
+        })),
+    [recommendedScheme],
+  );
+  const progressionPreview = React.useMemo(() => {
+    const defaults = suggestOnboardingDefaults(answers.primaryGoal, answers.experience);
+    return prescribeSets(
+      {
+        sets: 4,
+        rep_min: defaults.rep_min,
+        rep_max: defaults.rep_max,
+        // The RPE the generator writes on every row, so a back-off that runs one notch easier
+        // shows up here as the different number it is.
+        target_rpe: 7,
+        mechanics: 'compound',
+        experience: answers.experience,
+      },
+      progression,
+    );
+  }, [answers.primaryGoal, answers.experience, progression]);
+  const progressionCaution = schemeCaution(progression, answers.experience);
+  const progressionTrim = trimNoticeFor(progressionPreview);
+
   return (
     <div className="space-y-6 pb-4">
       <h1 className="font-display text-2xl font-bold tracking-tight">Settings</h1>
@@ -566,6 +630,71 @@ export function SettingsView() {
         />
       </Section>
 
+      {/* Progression — the one setting that changes what happens on EVERY set, so it lives with
+          the plan rather than buried under preferences. */}
+      <Section
+        title="Progression"
+        hint="How your sets are loaded, and what makes the weight go up."
+      >
+        <p className="text-xs text-muted-foreground" data-testid="settings-progression-current">
+          {state.progressionScheme
+            ? `You chose ${schemeName(progression)}.`
+            : `Following our recommendation for you: ${schemeName(progression)}.`}
+        </p>
+        {/* The same sentence the onboarding picker leads with, so the two screens teach the same
+            thing and the default stays the endorsed answer rather than the leftover one. */}
+        <p className="text-xs text-muted-foreground" data-testid="settings-progression-lede">
+          {PROGRESSION_PICKER_LEDE}
+        </p>
+        <SelectableCardGrid
+          options={progressionOptions}
+          value={progression}
+          onChange={(v) => setProgressionScheme(v)}
+          columns={1}
+        />
+        <div className="rounded-xl border border-border bg-surface px-3 py-2" data-testid="settings-progression-preview">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+            A 4-set compound, set by set
+          </p>
+          <p className="mt-1 text-sm tabular text-foreground" data-testid="settings-progression-shape">
+            {/* `describeSetTarget` is the shared formatter, so a rep RANGE under straight sets and
+                a missing percentage on a bodyweight lift render identically everywhere. */}
+            {progressionPreview.sets.map(describeSetTarget).join('  ·  ')}
+          </p>
+          {progressionTrim && (
+            <p className="mt-1 text-xs text-muted-foreground" data-testid="settings-progression-trim">
+              {progressionTrim}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground">{progressionPreview.nextSession}</p>
+        </div>
+        {progressionCaution && (
+          <p
+            className="rounded-xl border border-accent bg-accent-muted px-3 py-2 text-xs leading-snug text-accent"
+            role="status"
+            data-testid="settings-progression-caution"
+          >
+            {progressionCaution}
+          </p>
+        )}
+        {state.progressionScheme && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setProgressionScheme(null)}
+            data-testid="settings-progression-reset"
+            /* min-h-[44px]: `size="sm"` lands this at 245 × 36. It hands the athlete's training
+               back to the recommendation, which is a bigger decision than its height suggested. */
+            className="min-h-[44px]"
+          >
+            Use the recommendation instead
+          </Button>
+        )}
+        {/* Provenance for every percentage above — including, explicitly, the ones that rest on
+            coaching convention rather than a trial. Same treatment volume targets already get. */}
+        <ProgressionEvidenceNote testId="settings-progression-evidence" />
+      </Section>
+
       <Section title="Schedule">
         <div className="flex items-center justify-between gap-3">
           <FieldLabel>Days per week</FieldLabel>
@@ -639,14 +768,18 @@ export function SettingsView() {
                     <Chip
                       key={row.slug}
                       selected={owned}
+                      // THE KIT, DRAWN. Thirty finished object portraits existed and this grid —
+                      // the one screen that is entirely ABOUT equipment — was a wall of text
+                      // chips. The gold star still wins when a slug is a favourite, because that
+                      // is a state the glyph cannot carry. `Chip`'s leading slot is aria-hidden
+                      // and adds no text node, so `{ name: 'Barbell', exact: true }` still
+                      // resolves in the settings spec.
                       leading={
-                        owned ? (
-                          loved ? (
-                            <StarIcon size={13} className="text-accent" />
-                          ) : (
-                            <CheckIcon size={13} />
-                          )
-                        ) : undefined
+                        loved ? (
+                          <StarIcon size={13} className="text-accent" />
+                        ) : (
+                          <EquipmentIllustration slug={row.slug} size={18} selected={owned} />
+                        )
                       }
                       onClick={() => cycleEquipment(row.slug)}
                       data-testid={`settings-equipment-${row.slug}`}

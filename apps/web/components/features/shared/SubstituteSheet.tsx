@@ -7,8 +7,22 @@
  */
 import * as React from 'react';
 import { Sheet, Button } from '@/components/ui';
+import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { matchQuality } from '@/lib/utils';
+import { slugForExercise } from '@/lib/equipment/slugForExercise';
 import { mockSuggestSubstitutes, type SubstituteRow } from '@/components/features/_mock/data';
+
+/**
+ * First equipment slug of a candidate; `dumbbell` only when the row genuinely names none — a swap
+ * that lists no kit is most likely something you can do with a pair of dumbbells.
+ *
+ * The LOOKUP now lives in `lib/equipment/slugForExercise`, so this sheet, the player header and the
+ * PR list can never disagree about what one exercise looks like. The FALLBACK stays here because it
+ * is a per-surface judgement rather than a shared fact — see that file's header.
+ */
+function equipmentSlugFor(exerciseId: string): string {
+  return slugForExercise(exerciseId, 'dumbbell');
+}
 
 export interface SubstituteSheetProps {
   open: boolean;
@@ -51,7 +65,13 @@ export function SubstituteSheet({
                 }}
                 className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface-2 px-4 py-3 text-left transition-colors hover:border-accent/60"
               >
-                <span className="min-w-0">
+                {/* THE WHOLE POINT OF THIS SHEET is "what can I do instead with what's free", and
+                    the equipment was the one fact it never showed. Decorative: the row's name and
+                    reason are the accessible content. */}
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-sm bg-muted/60">
+                  <EquipmentIllustration slug={equipmentSlugFor(s.exercise_id)} size={22} />
+                </span>
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-foreground">
                     {s.name}
                   </span>

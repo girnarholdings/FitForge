@@ -27,10 +27,11 @@ import {
   SuspensionTrainerGlyph,
   AbWheelGlyph,
   MedicineBallGlyph,
+  PlyoBoxGlyph,
 } from './accessories';
 import { TreadmillGlyph, StationaryBikeGlyph, RowingMachineGlyph } from './cardio';
 
-/** slug → glyph (all 30 seed equipment items, §4.2). */
+/** slug → glyph (all 31 seed equipment items, §4.2). */
 export const EQUIPMENT_REGISTRY: Record<EquipmentSlug, EquipmentGlyph> = {
   // free weights
   barbell: BarbellGlyph,
@@ -68,6 +69,8 @@ export const EQUIPMENT_REGISTRY: Record<EquipmentSlug, EquipmentGlyph> = {
   treadmill: TreadmillGlyph,
   'stationary-bike': StationaryBikeGlyph,
   'rowing-machine': RowingMachineGlyph,
+  // other
+  'plyo-box': PlyoBoxGlyph,
 };
 
 /** Most-generic representative glyph per category (fallback target, §4.2). */
@@ -78,6 +81,7 @@ const CATEGORY_GENERIC: Record<EquipmentCategory, EquipmentGlyph> = {
   cables: CableMachineGlyph,
   bodyweight_accessories: ResistanceBandsGlyph,
   cardio: TreadmillGlyph,
+  other: PlyoBoxGlyph,
 };
 
 /** Keyword → category guess so unknown future slugs still render an on-theme glyph. */
@@ -86,6 +90,7 @@ const CATEGORY_KEYWORDS: ReadonlyArray<[RegExp, EquipmentCategory]> = [
   [/cable|pulldown|row|crossover|pulley/, 'cables'],
   [/machine|press|deck|sled|smith|leg-|calf|hip-thrust|extension|curl/, 'machines'],
   [/band|pull-up|dip|suspension|trx|ab-wheel|wheel|med|ball|bodyweight/, 'bodyweight_accessories'],
+  [/plyo|box|jump/, 'other'],
   [/tread|bike|row(ing)?|erg|cardio|elliptical|stair/, 'cardio'],
   [/bar|bell|dumbbell|kettle|plate|weight/, 'free_weights'],
 ];

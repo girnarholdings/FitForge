@@ -450,6 +450,18 @@ export function describeDay(day: RoutineDay): string {
   return labels.length > 0 ? `${count} · ${labels.slice(0, 4).join(' · ')}` : count;
 }
 
+/**
+ * Every distinct movement pattern a day trains, in the order it is performed — UNABRIDGED.
+ *
+ * `describeDay` stops at four labels because it has to survive on one line; a surface with room to
+ * breathe must not inherit that cap, or a six-slot day silently loses its 5th and 6th pattern.
+ * Same rows, same label table, no slice — so the one-liner and the detail view can differ in how
+ * MUCH they show but never in WHAT they claim the day contains.
+ */
+export function dayPatternLabels(day: RoutineDay): string[] {
+  return patternLabelsFor(day.exercises);
+}
+
 function describeRoutine(days: readonly RoutineDay[], limited: boolean): string {
   const labels: string[] = [];
   for (const day of days) {

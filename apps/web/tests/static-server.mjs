@@ -46,7 +46,17 @@ const TYPES = new Map(
 
 /** Resolve a URL pathname to a file inside ROOT, or null if it escapes / does not exist. */
 function resolveFile(pathname) {
-  const decoded = decodeURIComponent(pathname.split('?')[0] ?? '/');
+  // `decodeURIComponent` THROWS a URIError on a malformed escape (a bare `%`, or a truncated
+  // multi-byte sequence). That throw happened synchronously inside the request listener, which
+  // takes the whole process down — and a dead server fails every REMAINING test in the run with
+  // ERR_CONNECTION_REFUSED, which reads exactly like a product regression and isn't one. A
+  // request we cannot decode is just a request for a file that does not exist.
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathname.split('?')[0] ?? '/');
+  } catch {
+    return null;
+  }
   const candidate = path.resolve(ROOT, '.' + path.posix.normalize(decoded));
   // Directory traversal guard: everything served must stay under ROOT.
   if (candidate !== ROOT && !candidate.startsWith(ROOT + path.sep)) return null;
@@ -62,10 +72,21 @@ function resolveFile(pathname) {
 }
 
 const server = http.createServer((req, res) => {
+  // A browser cancels in-flight subresource requests on every navigation, so responses routinely
+  // finish against a socket that is already gone. Writing to one throws, and inside the `.catch`
+  // below that throw becomes an unhandled rejection — fatal in Node 20+. Bail instead.
+  res.on('error', () => {});
+  let url;
+  try {
+    url = new URL(req.url ?? '/', 'http://localhost');
+  } catch {
+    url = new URL('/', 'http://localhost');
+  }
   // `readFile` (not `createReadStream`) so no descriptor can outlive the response — that leak is
   // the whole reason this file exists.
-  const file = resolveFile(new URL(req.url ?? '/', 'http://localhost').pathname);
+  const file = resolveFile(url.pathname);
   const send = (status, body, type) => {
+    if (res.writableEnded || res.headersSent || res.destroyed) return;
     res.writeHead(status, {
       'content-type': type,
       'content-length': Buffer.byteLength(body),
@@ -90,6 +111,20 @@ const server = http.createServer((req, res) => {
 // the live socket count bounded across a long run.
 server.keepAliveTimeout = 5_000;
 server.headersTimeout = 5_000;
+
+// A malformed request line must close ONE socket, never the server.
+server.on('clientError', (_err, socket) => {
+  if (!socket.destroyed) socket.destroy();
+});
+
+// LAST LINE OF DEFENCE. Whatever else goes wrong in here, the harness must not die silently
+// halfway through a run: a dead server turns every later test red and sends the next engineer
+// hunting a product bug that does not exist. Log loudly, stay up.
+for (const signal of ['uncaughtException', 'unhandledRejection']) {
+  process.on(signal, (err) => {
+    process.stderr.write(`static-server: survived ${signal}: ${err?.stack ?? err}\n`);
+  });
+}
 
 server.listen(PORT, () => {
   process.stdout.write(`static-server: ${ROOT} on http://localhost:${PORT}\n`);

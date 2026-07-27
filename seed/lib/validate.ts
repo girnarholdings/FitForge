@@ -19,10 +19,19 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-// ---------- enum vocabularies (frozen — match 0001_extensions_enums.sql) ----------
+// ---------- enum vocabularies (match 0001_extensions_enums.sql + 0006_catalog_vocabulary.sql) ----------
+//
+// THESE FOUR LISTS ARE NOT THE CONTRACT ON THEIR OWN. A movement pattern or equipment category
+// is only real once it exists in ALL FOUR of: the Postgres enum (supabase/migrations), the
+// `MovementPattern`/`EquipmentCategory` unions (packages/shared/src/types/database.ts), the
+// runtime arrays (packages/shared/src/types/enums.ts) and here. The 59→91 catalog expansion
+// added data using vocabulary that existed in none of them, which put this validator — the only
+// guard against genuinely bad seed data — permanently red and therefore ignored. If you add a
+// value below, add it to the other three in the same commit.
 
 export const EQUIPMENT_CATEGORY = [
   'free_weights', 'machines', 'cables', 'bodyweight_accessories', 'cardio', 'benches_racks',
+  'other',
 ] as const;
 
 export const MUSCLE_REGION = ['upper', 'lower', 'core'] as const;
@@ -32,6 +41,9 @@ export const MOVEMENT_PATTERN = [
   'vertical_pull', 'elbow_flexion', 'elbow_extension', 'shoulder_isolation', 'core_flexion',
   'core_stability', 'carry', 'hip_extension_iso', 'knee_flexion_iso', 'knee_extension_iso',
   'calf_raise', 'cardio',
+  // Trained but not lifted — kept distinct from the lifting patterns so the prep builder can
+  // find them and so volume accounting can exclude them from sets-per-muscle-per-week.
+  'conditioning', 'mobility', 'static_stretch',
 ] as const;
 
 export const MECHANICS_TYPE = ['compound', 'isolation'] as const;

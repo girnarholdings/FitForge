@@ -29,13 +29,13 @@ import {
   BodyIcon,
   XIcon,
   ClockIcon,
-  TargetIcon,
   BookIcon,
   ChevronRightIcon,
   type IconProps,
 } from '@/components/ui/icons';
 import { MuscleMap, MuscleMapThumb, MUSCLE_NAMES } from '@/components/illustrations';
 import type { MuscleSlug } from '@/components/illustrations';
+import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { MuscleVolume, type VolumeSource } from '@/components/features/shared/MuscleVolume';
 import { useActiveRoutine } from '@/lib/demo/useDemo';
 import { useWorkoutSessions } from '@/components/features/shared/workoutLog';
@@ -141,6 +141,16 @@ function equipmentSummary(ex: ExerciseFull): string {
   const names = ex.equipment.flatMap((g) => g.names);
   if (names.length === 0) return ex.is_bodyweight_ok ? 'Bodyweight' : 'No equipment';
   return names.slice(0, 2).join(' / ');
+}
+
+/**
+ * The slug behind that summary line, so the row can DRAW the equipment instead of only naming it.
+ * "Which equipment does this need" is the most decision-relevant fact when scanning the catalog,
+ * and it was prose. Null for bodyweight work, which correctly draws nothing rather than picking an
+ * arbitrary object.
+ */
+function equipmentGlyphSlug(ex: ExerciseFull): string | null {
+  return ex.equipment[0]?.slugs[0] ?? null;
 }
 
 type Tab = 'library' | 'targets';
@@ -311,7 +321,7 @@ export function ExerciseCatalog() {
           id="targets"
           active={tab === 'targets'}
           onClick={() => setTab('targets')}
-          Icon={TargetIcon}
+          Icon={BodyIcon}
           testId="exercises-tab-targets"
         >
           Plan targets
@@ -484,8 +494,15 @@ export function ExerciseCatalog() {
           {/* The inventory itself */}
           {sorted.length === 0 ? (
             <Card className="flex flex-col items-center gap-3 border-2 border-dashed border-border py-10 text-center shadow-none">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-accent-muted text-accent">
-                <SearchIcon size={24} />
+              {/* An empty state is a place the app has room to be itself. Bands, because the
+                  answer to "nothing matched" is usually "widen the kit you told us about".
+                  AT FULL SIZE NOW, matching Progress: these portraits were drawn on a 48-unit
+                  canvas with a delicate 2 px stroke and a contact shadow, and squeezing one into a
+                  26 px lozenge threw away both. The lozenge fill goes with it — `.ff-ground` is
+                  invisible against `bg-accent-muted`, which is precisely what made these read as
+                  flat stickers instead of objects standing on a floor. */}
+              <span className="grid h-20 w-20 place-items-center">
+                <EquipmentIllustration slug="resistance-bands" size={48} selected />
               </span>
               <div>
                 <p className="font-semibold text-foreground">No exercises match these filters</p>
@@ -528,8 +545,14 @@ export function ExerciseCatalog() {
                               <p className="truncate text-sm font-semibold text-foreground">
                                 {ex.name}
                               </p>
-                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                {equipmentSummary(ex)}
+                              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                                {(() => {
+                                  const slug = equipmentGlyphSlug(ex);
+                                  return slug ? (
+                                    <EquipmentIllustration slug={slug} size={18} />
+                                  ) : null;
+                                })()}
+                                <span className="truncate">{equipmentSummary(ex)}</span>
                               </p>
                               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                                 <TagPill>{patternName(ex.movement_pattern)}</TagPill>
@@ -628,6 +651,7 @@ export function ExerciseCatalog() {
             facets={EQUIPMENT_FACETS}
             value={equipment}
             onChange={setEquipment}
+            glyphs
           />
           <FilterRow
             label="Movement pattern"
@@ -736,7 +760,7 @@ function PlanTargets({ onMuscleSelect }: { onMuscleSelect: (slug: MuscleSlug) =>
 
       <Card className="flex items-start gap-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-muted text-accent">
-          <TargetIcon size={18} />
+          <BodyIcon size={18} />
         </span>
         <div className="min-w-0 text-sm">
           <p className="font-semibold text-foreground">Want more of a muscle?</p>
@@ -875,11 +899,21 @@ function FilterRow({
   facets,
   value,
   onChange,
+  glyphs,
 }: {
   label: string;
   facets: { slug: string; name: string }[];
   value: string | null;
   onChange: (v: string | null) => void;
+  /**
+   * Draw each facet's equipment portrait as the chip's leading mark. Opt-in, because a movement
+   * pattern and a difficulty are not objects and would get the registry's fallback dumbbell.
+   *
+   * SAFE BY CONSTRUCTION: `Chip`'s `leading` slot is already wrapped in `aria-hidden` and adds no
+   * text node, so `getByRole('button', { name: 'Barbell', exact: true })` in the settings spec
+   * still resolves.
+   */
+  glyphs?: boolean;
 }) {
   return (
     <div>
@@ -895,6 +929,11 @@ function FilterRow({
             key={f.slug}
             selected={value === f.slug}
             onClick={() => onChange(value === f.slug ? null : f.slug)}
+            leading={
+              glyphs ? (
+                <EquipmentIllustration slug={f.slug} size={18} selected={value === f.slug} />
+              ) : undefined
+            }
           >
             {f.name}
           </Chip>

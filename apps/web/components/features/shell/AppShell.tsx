@@ -21,15 +21,21 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  HomeIcon,
-  DumbbellIcon,
-  AppleIcon,
-  TrendingUpIcon,
+  AnvilIcon,
+  AnvilSolidIcon,
+  BarbellIcon,
+  BarbellSolidIcon,
+  KettlebellIcon,
+  KettlebellSolidIcon,
+  PlateChartIcon,
+  PlateChartSolidIcon,
+  ShakerIcon,
+  ShakerSolidIcon,
   SettingsIcon,
-  BookIcon,
-  ChatIcon,
+  WhistleIcon,
   type IconProps,
 } from '@/components/ui/icons';
+import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import { Sheet } from '@/components/ui';
 import { LogoLockup } from '@/components/illustrations';
 import { useProfileName } from '@/lib/demo/useDemo';
@@ -43,6 +49,11 @@ interface NavItem {
   href: string;
   label: string;
   Icon: (p: IconProps) => React.ReactElement;
+  /**
+   * The FILLED twin of `Icon`, rendered while this destination is the current one. Primary tabs
+   * all carry one; Coach and Settings do not (see {@link NavIcon}).
+   */
+  IconSolid?: (p: IconProps) => React.ReactElement;
   /** also treat these path prefixes as "active" for this tab */
   match: string[];
   primary: boolean;
@@ -53,17 +64,79 @@ interface NavItem {
 /**
  * `primary` = shown in the mobile bottom tab bar (max 5, thumb zone). The sidebar renders the
  * full list. Settings is intentionally NOT primary — it is reached from the mobile top bar gear.
+ *
+ * THE TAB ICONS ARE GYM OBJECTS, WITH TWO DELIBERATE EXCEPTIONS.
+ *
+ * Anvil ties Today to the app's own logo mark, so the brand asset finally earns a second
+ * appearance. Workouts (your loaded programme) is the barbell; Exercises (the library of other
+ * things you could do) is the kettlebell.
+ *
+ * THE KETTLEBELL IS A LEGIBILITY CALL, NOT A SEMANTIC ONE, and it was made from a 390 px
+ * screenshot. A dumbbell is the obvious icon for a movement library, but Workouts and Exercises
+ * are ADJACENT tabs: at 22 px a dumbbell beside a barbell is two horizontal bars with lumps on
+ * the ends, and the tab bar is the one place where a wrong guess costs a navigation. A bell and a
+ * bar cannot be confused at any size. A shaker is the one gym object that is genuinely about
+ * food; a whistle is a coach, which a speech bubble never was.
+ *
+ * PROGRESS IS NOW PLATES TOO, which reverses what this comment used to say. The previous note
+ * kept the generic rising arrow on the grounds that "an ascending plate stack at 22 px is
+ * ambiguous between progress and weights" — and it was right about a HORIZONTAL stack, which is
+ * the shape of the Workouts barbell two slots away. {@link PlateChartIcon} stands the plates on
+ * end on a floor line: ascending-and-vertical still reads instantly as a chart, and nothing else
+ * in the bar has that silhouette. Settings still KEEPS the gear — it is already a machine part and
+ * is the universal settings signal, so gym-ifying it would be pure novelty.
+ *
+ * EVERY PRIMARY TAB CARRIES AN OUTLINE/SOLID PAIR. Active state used to be gold-vs-grey and
+ * nothing else, which is a WCAG 1.4.1 problem (colour as the only channel) as well as the single
+ * loudest "this is a web app" tell in the shell. Coach and Settings have no solid twin on purpose:
+ * neither lives in the tab bar, the sidebar already gives Coach a gold gradient border of its own,
+ * and a filled gear is a worse gear.
  */
 const NAV: NavItem[] = [
-  { href: '/today', label: 'Today', Icon: HomeIcon, match: ['/today', '/workout'], primary: true },
-  { href: '/routines', label: 'Workouts', Icon: DumbbellIcon, match: ['/routines'], primary: true },
-  { href: '/exercises', label: 'Exercises', Icon: BookIcon, match: ['/exercises'], primary: true },
-  { href: '/nutrition', label: 'Nutrition', Icon: AppleIcon, match: ['/nutrition'], primary: true },
-  { href: '/progress', label: 'Progress', Icon: TrendingUpIcon, match: ['/progress'], primary: true },
+  {
+    href: '/today',
+    label: 'Today',
+    Icon: AnvilIcon,
+    IconSolid: AnvilSolidIcon,
+    match: ['/today', '/workout'],
+    primary: true,
+  },
+  {
+    href: '/routines',
+    label: 'Workouts',
+    Icon: BarbellIcon,
+    IconSolid: BarbellSolidIcon,
+    match: ['/routines'],
+    primary: true,
+  },
+  {
+    href: '/exercises',
+    label: 'Exercises',
+    Icon: KettlebellIcon,
+    IconSolid: KettlebellSolidIcon,
+    match: ['/exercises'],
+    primary: true,
+  },
+  {
+    href: '/nutrition',
+    label: 'Nutrition',
+    Icon: ShakerIcon,
+    IconSolid: ShakerSolidIcon,
+    match: ['/nutrition'],
+    primary: true,
+  },
+  {
+    href: '/progress',
+    label: 'Progress',
+    Icon: PlateChartIcon,
+    IconSolid: PlateChartSolidIcon,
+    match: ['/progress'],
+    primary: true,
+  },
   {
     href: '/coach',
     label: 'Coach',
-    Icon: ChatIcon,
+    Icon: WhistleIcon,
     match: ['/coach'],
     primary: false,
     accent: true,
@@ -76,6 +149,58 @@ const COACH_ITEM = NAV.find((i) => i.href === '/coach')!;
 
 function isActive(pathname: string, item: NavItem): boolean {
   return item.match.some((m) => pathname === m || pathname.startsWith(m + '/'));
+}
+
+/**
+ * One nav glyph, crossfading outline → solid when its destination becomes the current one.
+ *
+ * THE TWO ICONS OVERLAP DURING THE SWAP rather than taking turns. `AnimatePresence` with
+ * `mode="wait"` would empty the slot for the length of the exit before the entrance starts, and an
+ * icon that blinks out on tap reads as a broken image, not as a state change. Both are absolutely
+ * positioned inside a fixed-size box so they cross-dissolve in place and the row never reflows.
+ *
+ * `SPRING.press` because this IS the press: it fires on the same tap that navigates.
+ *
+ * REDUCED MOTION IS HANDLED FOR FREE and deliberately not re-implemented here. The root
+ * `MotionConfig reducedMotion="user"` drops transforms and keeps opacity for every `m.*` element,
+ * so this stays a plain fade for users who ask for less motion, and `AnimatePresence` still runs
+ * it to completion — no half-faded glyph can be left parked on screen. A raw CSS `@keyframes`
+ * crossfade would have been collapsed to 0.001 s by the global reduced-motion rule and frozen on
+ * whichever frame it landed on; see the warning in globals.css.
+ */
+function NavIcon({
+  item,
+  active,
+  size,
+}: {
+  item: NavItem;
+  active: boolean;
+  size: number;
+}) {
+  const Solid = item.IconSolid;
+  // Destinations without a filled twin (Coach, Settings) keep the plain glyph and cost nothing.
+  if (!Solid) return <item.Icon size={size} />;
+  const showSolid = active;
+  return (
+    <span
+      aria-hidden
+      className="relative grid shrink-0 place-items-center"
+      style={{ width: size, height: size }}
+    >
+      <AnimatePresence initial={false}>
+        <m.span
+          key={showSolid ? 'solid' : 'outline'}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={SPRING.press}
+          className="absolute inset-0 grid place-items-center"
+        >
+          {showSolid ? <Solid size={size} /> : <item.Icon size={size} />}
+        </m.span>
+      </AnimatePresence>
+    </span>
+  );
 }
 
 /** Gold-outline "Local" chip → taps open the Local Mode explainer (§5.1). */
@@ -136,7 +261,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
                 data-testid={item.accent ? 'nav-coach-desktop' : undefined}
               >
-                <item.Icon size={20} />
+                <NavIcon item={item} active={active} size={20} />
                 {item.label}
               </Link>
             );
@@ -176,7 +301,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   : 'border-[color-mix(in_srgb,var(--accent)_45%,transparent)] text-accent-soft hover:bg-accent-muted hover:text-accent',
               )}
             >
-              <ChatIcon size={18} />
+              <WhistleIcon size={18} />
             </Link>
             <Link
               href="/settings"
@@ -223,7 +348,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       active ? 'bg-accent-muted' : 'bg-transparent',
                     )}
                   >
-                    <item.Icon size={22} />
+                    <NavIcon item={item} active={active} size={22} />
                   </span>
                   <span className="max-w-full truncate">{item.label}</span>
                 </Link>

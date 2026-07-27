@@ -24,7 +24,7 @@ const spaceGrotesk = Space_Grotesk({
 
 // Origin only — the /FitForge base path is added per-asset via withBase(); Next does not prefix
 // basePath onto metadata icon/OG URLs, so we do it ourselves. Overridable for other deploys.
-const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://zeusnightbolt.github.io';
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://girnarholdings.github.io';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
@@ -32,8 +32,11 @@ export const metadata: Metadata = {
     default: 'FitForge — your personal trainer, forged around you.',
     template: '%s · FitForge',
   },
+  // COPY RULE (shared with the landing page): no "offline" claim. There is no service worker, so
+  // a cold load needs a connection — the app's own Coach answer says so, and the share cards must
+  // not contradict it. "Stays in your browser" is the claim that IS true and is the differentiator.
   description:
-    'FitForge builds a training plan and nutrition targets from your preferences — equipment, goals, and the exercises you actually enjoy. Free, offline-friendly, and your data stays in your browser.',
+    'FitForge builds a training plan and nutrition targets from your preferences — equipment, goals, and the exercises you actually enjoy. Free, no account, and your data never leaves your browser.',
   applicationName: 'FitForge',
   manifest: withBase('/site.webmanifest'),
   icons: {
@@ -48,14 +51,14 @@ export const metadata: Metadata = {
     siteName: 'FitForge',
     title: 'FitForge — your personal trainer, forged around you.',
     description:
-      'Training plans, macro targets, and a muscle-smart exercise library — free and offline-friendly.',
+      '26 real training programs, 91 coached exercises, macros that match. Free, no account, and your data stays in your browser.',
     images: [{ url: withBase('/og.png'), width: 1200, height: 630, alt: 'FitForge' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FitForge — your personal trainer, forged around you.',
     description:
-      'Training plans, macro targets, and a muscle-smart exercise library — free and offline-friendly.',
+      '26 real training programs, 91 coached exercises, macros that match. Free, no account, and your data stays in your browser.',
     images: [withBase('/og.png')],
   },
 };

@@ -14,7 +14,7 @@
  */
 import * as React from 'react';
 import { Card } from '@/components/ui';
-import { BookIcon, SparkleIcon } from '@/components/ui/icons';
+import { BookIcon, ClipboardIcon } from '@/components/ui/icons';
 import type { KbEntry } from '@/lib/kb/types';
 import { SourceChips } from './SourceChips';
 
@@ -49,7 +49,11 @@ function Badge({ source, label }: { source: AnswerSource; label: string }) {
         (kb ? 'bg-muted text-muted-foreground' : 'bg-accent-muted text-accent')
       }
     >
-      <span aria-hidden>{kb ? <BookIcon size={13} /> : <SparkleIcon size={13} />}</span>
+      {/* A book for the curated guide, a coach's CLIPBOARD for the generated answer. The AI badge
+          used to be the generic product sparkle, which said "a language model wrote this" — true,
+          and the wrong emphasis: what the reader is being handed is coaching, and the provenance
+          is already spelled out in the badge's own words. */}
+      <span aria-hidden>{kb ? <BookIcon size={13} /> : <ClipboardIcon size={13} />}</span>
       {label}
     </span>
   );

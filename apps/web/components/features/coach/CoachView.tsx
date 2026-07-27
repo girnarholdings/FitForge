@@ -28,11 +28,12 @@
 import * as React from 'react';
 import { Button, Card } from '@/components/ui';
 import {
-  ChatIcon,
+  ClipboardIcon,
   InfoIcon,
   SearchIcon,
   SendIcon,
   SparkleIcon,
+  WhistleIcon,
 } from '@/components/ui/icons';
 import { KB_ENTRIES, entryById, routeQuery, searchKb } from '@/lib/kb';
 import type { KbRoutePlus } from '@/lib/kb/route';
@@ -266,7 +267,11 @@ export function CoachView() {
           aria-hidden
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent-muted text-accent shadow-[var(--shadow-card)]"
         >
-          <ChatIcon size={22} />
+          {/* The Coach TAB is a whistle. This header badge was a speech bubble, so the entry
+              point and the destination were two different objects for one place — and a speech
+              bubble frames the coach as a chatbot rather than as someone who tells you what to
+              do, which is the opposite of what this screen is. */}
+          <WhistleIcon size={22} />
         </span>
       </header>
 
@@ -416,7 +421,9 @@ function EmptyAsk({
         aria-hidden
         className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent-muted text-accent"
       >
-        <SparkleIcon size={24} />
+        {/* A clipboard, not a sparkle: the sparkle is the house glyph of every AI product
+            shipped since 2023 and it was standing for this coach's entire value. */}
+        <ClipboardIcon size={24} />
       </span>
       <p className="mt-3 font-semibold text-foreground">What do you want to know?</p>
       <p className="mt-1 text-sm text-muted-foreground">
@@ -517,7 +524,7 @@ function TurnBlock({
                 onClick={() => onPersonalize(turn)}
                 data-testid="coach-personalize"
               >
-                <SparkleIcon size={16} /> Personalize this for me
+                <ClipboardIcon size={16} /> Personalize this for me
               </Button>
             ) : undefined
           }

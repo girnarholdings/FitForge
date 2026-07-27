@@ -6,6 +6,7 @@ import { GoalsStep } from './GoalsStep';
 import { ExperienceStep } from './ExperienceStep';
 import { ScheduleStep } from './ScheduleStep';
 import { SplitStep } from './SplitStep';
+import { ProgressionStep } from './ProgressionStep';
 import { LocationStep } from './LocationStep';
 import { EquipmentStep } from './EquipmentStep';
 import { ExercisePrefsStep } from './ExercisePrefsStep';
@@ -24,6 +25,7 @@ export const STEP_COMPONENTS: Record<OnboardingStep, ComponentType> = {
   experience: ExperienceStep,
   schedule: ScheduleStep,
   split: SplitStep,
+  progression: ProgressionStep,
   location: LocationStep,
   equipment: EquipmentStep,
   exercise_prefs: ExercisePrefsStep,

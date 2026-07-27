@@ -5,7 +5,7 @@ export { ONBOARDING_STEPS };
 
 export interface StepMeta {
   step: OnboardingStep;
-  /** screen number from §2.2 (0..12); `done` is terminal */
+  /** screen number from §2.2 (0..15); `done` is terminal */
   screen: number;
   title: string;
   subtitle?: string;
@@ -45,63 +45,70 @@ export const STEP_META: Record<OnboardingStep, StepMeta> = {
     subtitle: 'Real programs, matched to your days and level. One is picked already.',
     wizard: true,
   },
+  progression: {
+    step: 'progression',
+    screen: 6,
+    title: 'How should your sets progress?',
+    subtitle: 'This decides the weight and reps of every single set. One is picked for you already.',
+    wizard: true,
+  },
   location: {
     step: 'location',
-    screen: 6,
+    screen: 7,
     title: 'Where will you train?',
     subtitle: "We'll preselect the equipment that fits.",
     wizard: true,
   },
   equipment: {
     step: 'equipment',
-    screen: 7,
+    screen: 8,
     title: 'What equipment do you have?',
     subtitle: 'Swipe right if you have it, up if you love it. Presets work too.',
     wizard: true,
   },
   exercise_prefs: {
     step: 'exercise_prefs',
-    screen: 8,
+    screen: 9,
     title: 'Any exercises you love?',
     subtitle: "We'll prioritise these in your plan.",
     wizard: true,
   },
   exclusions: {
     step: 'exclusions',
-    screen: 9,
+    screen: 10,
     title: 'Anything we should protect?',
     subtitle: "Pick sore areas or exercises to avoid — we'll substitute automatically.",
     wizard: true,
   },
   body_metrics: {
     step: 'body_metrics',
-    screen: 10,
+    screen: 11,
     title: 'A few body basics',
     subtitle: 'Used to compute your calorie and macro targets. All optional.',
     wizard: true,
   },
   nutrition_prefs: {
     step: 'nutrition_prefs',
-    screen: 11,
+    screen: 12,
     title: 'How do you eat?',
     subtitle: 'Diet style, allergies, and anything to avoid.',
     wizard: true,
   },
   targets_review: {
     step: 'targets_review',
-    screen: 12,
+    screen: 13,
     title: 'Your daily targets',
     subtitle: 'Computed from your profile. Adjust if you like.',
     wizard: true,
   },
   plan_preview: {
     step: 'plan_preview',
-    screen: 13,
+    screen: 14,
     title: 'Your starter plan',
     subtitle: 'Generated from everything you told us. Swap anything.',
     wizard: true,
   },
-  done: { step: 'done', screen: 14, title: "You're all set", wizard: false },
+  done: { step: 'done', screen: 15, title: "You're all set", wizard: false },
 };
 
 /** The questionnaire steps that render progress + back/next chrome. */

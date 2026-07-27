@@ -40,7 +40,8 @@ import {
 import { useVolumeGoalContext } from '@/components/features/shared/MuscleVolume';
 import { fmtPct, fmtSets } from '@/components/features/shared/volumeMath';
 import { useActiveRoutine, useDemoState, useWeights } from '@/lib/demo/useDemo';
-import { CalendarIcon, SparkIcon, TrendingUpIcon, TrophyIcon, ScaleIcon } from '@/components/ui/icons';
+import { CalendarIcon, SparkIcon, MedalIcon, ScaleIcon } from '@/components/ui/icons';
+import { EquipmentIllustration } from '@/components/illustrations/equipment';
 
 const WEEKS = 12;
 
@@ -132,8 +133,13 @@ function TrendsEmptyState({ targetDays, routineName }: { targetDays: number; rou
       className="flex flex-col items-center gap-3 border-2 border-dashed border-border py-8 text-center shadow-none"
       data-testid="progress-trends-empty"
     >
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-muted text-accent">
-        <TrendingUpIcon size={26} />
+      {/* The largest quiet surface in Progress, and it was a 26 px rising arrow in a lozenge — the
+          most template-looking thing on the screen. The 48-unit equipment portraits were drawn at
+          exactly this size, ground shadow and all, and until now were only ever seen this big
+          inside the onboarding equipment step. A bare barbell is the honest object for "you have
+          not trained yet"; the lozenge fill is dropped so the portrait's contact shadow reads. */}
+      <span className="grid h-20 w-20 place-items-center">
+        <EquipmentIllustration slug="barbell" size={48} selected />
       </span>
       <CardTitle>No training history yet</CardTitle>
       <p className="mx-auto max-w-sm text-sm text-muted-foreground">
@@ -407,7 +413,9 @@ function StrengthCard({ sessions }: { sessions: ReturnType<typeof useWorkoutSess
       <Card className="shadow-[var(--shadow-card)]" data-testid="chart-strength">
         <div className="flex items-baseline justify-between gap-2">
           <CardTitle>Strength trend</CardTitle>
-          <TrophyIcon size={16} />
+          {/* Medal, not trophy — an estimated 1RM IS the record this card is about, and the
+              trophy meant three different things across the app before it was retired. */}
+          <MedalIcon size={16} />
         </div>
         <p className="mt-2 rounded-field bg-surface-2 px-4 py-5 text-center text-sm text-muted-foreground">
           Log the same exercise across two sessions and its estimated 1RM (Epley:{' '}

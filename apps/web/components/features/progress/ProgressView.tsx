@@ -13,7 +13,9 @@ import * as React from 'react';
 import { Button, Card, CardTitle, Chip, Sheet } from '@/components/ui';
 import { LineChart } from '@/components/features/progress/charts';
 import { TrendsTab } from '@/components/features/progress/TrendsTab';
-import { ScaleIcon, TrendingUpIcon, PlusIcon, TargetIcon, TrophyIcon } from '@/components/ui/icons';
+import { ScaleIcon, PlusIcon, TapeIcon, MedalIcon } from '@/components/ui/icons';
+import { EquipmentIllustration } from '@/components/illustrations/equipment';
+import { slugForExercise } from '@/lib/equipment/slugForExercise';
 import { useActiveRoutine, useWeights } from '@/lib/demo/useDemo';
 import {
   useWorkoutSessions,
@@ -42,22 +44,47 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/**
+ * An empty tab, drawn rather than iconed wherever a real gym object exists for it.
+ *
+ * WHY `slug` OUTRANKS `icon`. The 30 equipment portraits in `components/illustrations/equipment`
+ * were drawn on a 48-unit canvas with a delicate 2 px stroke and a decorative ground shadow — i.e.
+ * they were designed for exactly this size — and until now they were only ever SEEN at 48 inside
+ * the onboarding equipment step. Empty states are the largest quiet surfaces in the app and were
+ * its worst-looking ones: a 26 px glyph in a coloured lozenge. Passing a slug swaps that for the
+ * full portrait at its native size, which costs nothing to draw and is the one place a full object
+ * belongs.
+ *
+ * The lozenge FILL is dropped in that mode on purpose: `.ff-ground` is the portrait's own contact
+ * shadow and it disappears against `bg-accent-muted`, which is what made these read as flat
+ * stickers. `icon` is still the right answer where no gym object exists for the concept — a tape
+ * measure, a bathroom scale, "add a photo" — and keeps the original lozenge.
+ */
 function EmptyState({
   icon,
+  slug,
   title,
   body,
   action,
 }: {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
+  /** an equipment slug, rendered as its full 48 px portrait instead of `icon` */
+  slug?: string;
   title: string;
   body: string;
   action?: React.ReactNode;
 }) {
   return (
     <Card className="flex flex-col items-center gap-3 border-2 border-dashed border-border py-9 text-center shadow-none">
-      <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-muted text-accent">
-        {icon}
-      </span>
+      {slug ? (
+        <span className="grid h-20 w-20 place-items-center">
+          <EquipmentIllustration slug={slug} size={48} selected />
+        </span>
+      ) : (
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-muted text-accent">
+          {icon}
+        </span>
+      )}
       <CardTitle>{title}</CardTitle>
       <p className="mx-auto max-w-sm text-sm text-muted-foreground">{body}</p>
       {action}
@@ -332,7 +359,9 @@ function WeightSheet({
 function MeasurementsTab() {
   return (
     <EmptyState
-      icon={<TargetIcon size={26} />}
+      // A dartboard for "measure your arms and waist" meant nothing. TapeIcon was authored for
+      // exactly this row and had never been connected to anything.
+      icon={<TapeIcon size={26} />}
       title="No measurements yet"
       body="Track chest, waist, arms and more to see how your body composition changes — not just the scale."
       action={
@@ -351,7 +380,7 @@ function PrTab() {
   if (prs.length === 0) {
     return (
       <EmptyState
-        icon={<TrendingUpIcon size={26} />}
+        slug="weight-plates"
         title="No personal records yet"
         body="Finish a logged workout and your best sets — plus an estimated 1-rep max (Epley) — show up here automatically."
       />
@@ -361,7 +390,10 @@ function PrTab() {
   return (
     <Card className="!p-0 shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-2 border-b border-border px-4 py-3 text-accent">
-        <TrophyIcon size={18} />
+        {/* A medal, not a trophy: a trophy is the generic gamification glyph and it was standing
+            for three different things across the app. A medal on a ribbon is the object a lifter
+            actually earns, and it now means exactly one thing — a personal record. */}
+        <MedalIcon size={18} />
         <CardTitle>Personal records</CardTitle>
       </div>
       <ul>
@@ -374,6 +406,16 @@ function PrTab() {
               <span className="w-5 shrink-0 text-center text-xs font-bold tabular-nums text-muted-foreground">
                 {i + 1}
               </span>
+              {/* A PR list was a list of exercises rendered as bare strings. The movement's own
+                  equipment portrait makes the rows scannable by TYPE at a glance — bars here,
+                  cables there — which is the one place in Progress a real gym object belongs.
+                  Resolved through the shared helper so this row can never disagree with the
+                  player header or the swap sheet about what the exercise looks like. */}
+              <EquipmentIllustration
+                slug={slugForExercise(p.exercise_id, 'barbell')}
+                size={18}
+                className="shrink-0"
+              />
               <span className="truncate text-sm font-semibold text-foreground">
                 {p.exercise_name}
               </span>

@@ -30,6 +30,9 @@ const RECOMMENDED_COUNT = 4;
 export function SplitStep() {
   const { draft, patch } = useOnboarding();
   const [browsing, setBrowsing] = React.useState(false);
+  // ONE card open at a time. Two expanded programs on a 664 px-tall phone means neither can be
+  // read without scrolling, and this screen exists to COMPARE programs, not to stack them.
+  const [openSlug, setOpenSlug] = React.useState<string | null>(null);
 
   const profile = React.useMemo<SplitRecommendationInput>(
     () => ({
@@ -86,7 +89,13 @@ export function SplitStep() {
             selected={selected === rec.split.slug}
             onSelect={() => patch({ split_slug: rec.split.slug })}
             reason={i === 0 ? `Best match · ${rec.reasons[0] ?? 'Recommended'}` : rec.reasons[0]}
+            // The face keeps ONE reason because it has one line; the detail gets all of them.
+            // `recommendSplits` builds up to four and three of them used to be discarded here.
+            reasons={rec.reasons}
+            draft={draft}
             testId={`split-option-${rec.split.slug}`}
+            expanded={openSlug === rec.split.slug}
+            onExpandedChange={(next) => setOpenSlug(next ? rec.split.slug : null)}
           />
         ))}
 
@@ -96,7 +105,11 @@ export function SplitStep() {
             selected
             onSelect={() => patch({ split_slug: extra.split.slug })}
             reason="Chosen from the full library"
+            reasons={extra.reasons}
+            draft={draft}
             testId={`split-option-${extra.split.slug}`}
+            expanded={openSlug === extra.split.slug}
+            onExpandedChange={(next) => setOpenSlug(next ? extra.split.slug : null)}
           />
         )}
 
@@ -134,6 +147,9 @@ export function SplitStep() {
         value={selected ?? AUTO_SPLIT_SLUG}
         onSelect={(slug) => patch({ split_slug: slug })}
         profile={profile}
+        // The onboarding draft has not been written through to the store yet, so the sheet has to
+        // be handed the live one or its previews would answer for the previous screen's answers.
+        draft={draft}
       />
 
       <div className="flex-1" />

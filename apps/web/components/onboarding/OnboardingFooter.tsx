@@ -49,10 +49,14 @@ export function OnboardingFooter({
           {error}
         </p>
       )}
+      {/* KNURLED. This is the one button an athlete taps on every screen of the flow, so it is
+          where a grip texture earns its keep — and it is the only button in onboarding that gets
+          it, which is what stops a material cue becoming wallpaper. */}
       <Button
         size="lg"
         block
         glow
+        texture
         loading={saving}
         disabled={!canContinue}
         onClick={handle}

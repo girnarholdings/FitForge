@@ -21,7 +21,7 @@ import * as React from 'react';
 import { MuscleMap, MUSCLE_NAMES, ALL_MUSCLE_SLUGS } from '@/components/illustrations';
 import type { MuscleSlug } from '@/components/illustrations';
 import { mockExerciseBySlug, mockExerciseById } from '@/components/features/_mock/data';
-import { TargetIcon, SlidersIcon } from '@/components/ui/icons';
+import { BodyIcon, SlidersIcon } from '@/components/ui/icons';
 import { m, staggerList, staggerItem, Pressable } from '@/components/ui/motion';
 import { useDemoState } from '@/lib/demo/useDemo';
 import { TargetTuner } from './TargetTuner';
@@ -372,7 +372,8 @@ export function MuscleGoalHeat({
       ) : (
         <div className="flex h-[136px] flex-col items-center justify-center gap-1.5 rounded-field border border-dashed border-border-strong/70 bg-surface/60 px-4 text-center">
           <span className="grid h-8 w-8 place-items-center rounded-full bg-accent-muted text-accent">
-            <TargetIcon size={16} />
+            {/* A dartboard was standing for "the muscles this hits" in seven places while ALSO standing for a numeric goal on the landing page and in onboarding. BodyIcon is an authored silhouette that already means exactly this elsewhere; one glyph with two meanings is worse than either. */}
+            <BodyIcon size={16} />
           </span>
           <p className="text-[13px] font-semibold text-foreground">
             Tap any muscle for its sets, goal and % of goal

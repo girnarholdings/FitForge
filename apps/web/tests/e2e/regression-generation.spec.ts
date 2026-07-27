@@ -63,6 +63,10 @@ test.describe('regression · generation', () => {
     await page.waitForURL(/\/onboarding\/split/);
     await cont(page);
 
+    // Progression (WS-P) — the recommendation is already selected for this novice persona.
+    await page.waitForURL(/\/onboarding\/progression/);
+    await cont(page);
+
     await page.waitForURL(/\/onboarding\/location/);
     await page.getByText('Minimal / travel', { exact: true }).click();
     await cont(page);

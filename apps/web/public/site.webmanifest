@@ -1,7 +1,7 @@
 {
   "name": "FitForge",
   "short_name": "FitForge",
-  "description": "Your personal trainer, forged around you. Training plans, macro targets, and a muscle-smart exercise library — free and offline-friendly.",
+  "description": "Your personal trainer, forged around you. 26 real training programs, 91 coached exercises, macros that match. Free, no account, and your data stays in your browser.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

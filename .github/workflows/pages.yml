@@ -10,6 +10,15 @@ on:
     paths:
       - "apps/web/**"
       - "packages/shared/**"
+      # seed/ IS a deploy input, not just a database concern: the web app imports
+      # seed/data/exercises.json directly (components/illustrations/poses/catalog.ts,
+      # components/features/exercises/ExerciseDetail.tsx), and seed/import-usda.mjs is the
+      # tier-2 food catalog builder run below. Without this a seed-only commit — e.g. the
+      # 59→91 exercise expansion — silently never reaches Pages.
+      - "seed/**"
+      # A dependency change alters the bundle even when no app file moves.
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -55,9 +64,29 @@ jobs:
         continue-on-error: true
         run: node seed/import-usda.mjs
 
+      # MUST run whatever the importer did. The importer stages its downloads INSIDE the output
+      # directory (apps/web/public/food/.branded.zip and the unzipped .branded/ tree — see
+      # fetchDataset in seed/import-usda.mjs), so a fetch that dies partway leaves multi-GB
+      # scratch files sitting in public/. Next copies public/ into out/ verbatim, dotfiles
+      # included, so with continue-on-error above those leftovers would be published to Pages as
+      # part of the site. Nothing but the shards and the manifest may survive this step.
+      #
+      # A shard directory with no manifest.json is likewise deleted rather than shipped: the
+      # manifest is written last, so its absence means the shard set is incomplete, and the app
+      # keys tier-2 availability off the manifest alone (lib/food/tier2.ts) — orphan shards would
+      # be dead weight in the artifact that nothing can ever read.
+      - name: Prune tier-2 scratch files
+        if: always()
+        run: |
+          rm -rf apps/web/public/food/.[!.]* || true
+          if [ -d apps/web/public/food ] && [ ! -f apps/web/public/food/manifest.json ]; then
+            echo "::warning::Tier-2 import left shards without a manifest; discarding the partial catalog"
+            rm -rf apps/web/public/food
+          fi
+
       - name: Report tier-2 outcome
         run: |
-          if [ "${{ steps.food.outcome }}" = "success" ]; then
+          if [ -f apps/web/public/food/manifest.json ]; then
             echo "::notice::Tier-2 food catalog built — $(node -p "require('./apps/web/public/food/manifest.json').total") foods"
           else
             echo "::warning::Tier-2 food catalog unavailable; deploying with the 509-food curated core only"
@@ -66,7 +95,18 @@ jobs:
       - name: Build web static export
         run: npm run build -w @fitforge/web
         env:
-          # Project Pages serve from https://girnarholdings.github.io/FitForge/
+          # Project Pages serve from https://<owner>.github.io/<repo>/.
+          #
+          # The owner is girnarholdings, NOT the ZeusNightBolt in `git remote -v`. The repository
+          # was TRANSFERRED: `GET /repos/ZeusNightBolt/FitForge` answers 301 Moved Permanently to
+          # repository id 1305324070, whose full_name is girnarholdings/FitForge, and the Pages
+          # API reports html_url https://girnarholdings.github.io/FitForge/. Git follows that
+          # redirect silently on push, which is why the stale remote still works and why reading
+          # the owner off `git remote -v` gets this exactly backwards.
+          #
+          # `metadataBase` in app/layout.tsx is built from this, so getting it wrong points every
+          # OpenGraph and Twitter image at a host with no such file and breaks every link preview.
+          # Verify with the API before changing it, never from the remote URL.
           NEXT_PUBLIC_BASE_PATH: /FitForge
           NEXT_PUBLIC_SITE_URL: https://girnarholdings.github.io
           NEXT_PUBLIC_DEMO: "1"

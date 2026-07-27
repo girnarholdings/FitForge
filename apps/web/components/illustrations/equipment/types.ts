@@ -2,7 +2,7 @@ import type * as React from 'react';
 import type { EquipmentCategory } from '@fitforge/shared/types';
 
 /**
- * Equipment illustration system (§4.2). The 30 seed equipment slugs, authored as
+ * Equipment illustration system (§4.2). The 31 seed equipment slugs, authored as
  * 48×48 inline-SVG "object portraits": muted round-capped strokes (`currentColor`,
  * inheriting `text-muted-foreground`) plus exactly ONE gold accent element per item.
  * Selected → the whole glyph turns gold (host sets `color: var(--accent)`) and the
@@ -44,7 +44,9 @@ export type EquipmentSlug =
   // cardio
   | 'treadmill'
   | 'stationary-bike'
-  | 'rowing-machine';
+  | 'rowing-machine'
+  // other
+  | 'plyo-box';
 
 /** Public props for the wrapper component. */
 export interface IllustrationProps {
@@ -54,6 +56,12 @@ export interface IllustrationProps {
   size?: number;
   /** selected state → glyph turns full gold. */
   selected?: boolean;
+  /**
+   * "Render this portrait as an ICON, not a picture": fattens the stroke and drops the ground
+   * line so the glyph survives at row/chip sizes. Defaults to on at ≤28 px — pass `false` to
+   * force the delicate treatment, `true` to force the dense one at a larger size.
+   */
+  dense?: boolean;
   className?: string;
 }
 

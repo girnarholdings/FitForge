@@ -9,7 +9,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
-import { ChatIcon, ChevronRightIcon } from '@/components/ui/icons';
+import { ChevronRightIcon, WhistleIcon } from '@/components/ui/icons';
 
 const PROMPTS = ['How much protein?', 'When do I add weight?', 'Why am I not losing fat?'];
 
@@ -24,7 +24,9 @@ export function CoachEntryCard() {
           aria-hidden
           className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent-muted text-accent"
         >
-          <ChatIcon size={22} />
+          {/* Same whistle the Coach tab and the Coach screen's own header wear — an entry point
+              and its destination must not be two different objects. */}
+          <WhistleIcon size={22} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-semibold text-foreground">Ask your coach</span>

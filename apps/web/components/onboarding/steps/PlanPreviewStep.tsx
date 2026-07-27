@@ -3,16 +3,27 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, Sheet } from '@/components/ui';
-import { SwapIcon, ChevronDownIcon, InfoIcon } from '@/components/ui/icons';
+import {
+  SwapIcon,
+  ChevronDownIcon,
+  ClipboardIcon,
+  InfoIcon,
+  ClockIcon,
+  PlateStackIcon,
+} from '@/components/ui/icons';
+import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import { MuscleMapThumb } from '@/components/illustrations';
-import type { MuscleSlug } from '@/components/illustrations';
-import { finalizeOnboarding, planCoverageForDraft, describeDay } from '@/lib/demo/generate';
-import { getState, update } from '@/lib/demo/store';
+import {
+  finalizeOnboarding,
+  planCoverageForDraft,
+  describeDay,
+  exerciseCountLabel,
+} from '@/lib/demo/generate';
+import { dayStats, routineStats, setCountLabel } from '@/lib/demo/insights';
+import { getState, update, resolveProgressionScheme } from '@/lib/demo/store';
 import {
   mockSuggestSubstitutes,
-  mockExerciseById,
   type Routine,
-  type RoutineDay,
   type RoutineExercise,
 } from '@/components/features/_mock/data';
 import { useOnboarding } from '../OnboardingProvider';
@@ -26,20 +37,24 @@ interface SubHit {
   reason: string | null;
 }
 
-/** Union of a day's primary muscles (first few exercises) for the per-day map thumb (§P2-14). */
-function dayPrimaryMuscles(day: RoutineDay): MuscleSlug[] {
-  const out = new Set<string>();
-  for (const row of day.exercises) {
-    const ex = mockExerciseById(row.exercise_id);
-    for (const m of ex?.primary_muscles ?? []) out.add(m);
-  }
-  return [...out] as MuscleSlug[];
-}
-
 /**
  * Screen 12 · Plan preview (§2.2 / §7.5) — DEMO MODE. Generates the starter routine from the draft
  * with the §7.5 split rule over the fixture catalog, persists it, shows it, and allows swaps
  * (§7.4). "Start plan" routes to /today.
+ *
+ * THIS IS THE LAST SCREEN BEFORE THE PLAN IS THE ATHLETE'S PLAN, and it was the last place in
+ * onboarding still answering "what am I committing to?" with a truncated line. The day row computed
+ * a full `dayStats` and rendered two fields of it, then clipped both the day's name and its summary
+ * with `truncate` — so "Workout A · Squat · Bench · Row" arrived as "Workout A · Squ…" on a 390 px
+ * phone, with the rest in a `title` attribute no touch device can reach. That is the same
+ * "the details are cut out, it's just summary" the split cards were reported for, and it is fixed
+ * the same way: nothing on the face is truncated, and the numbers that were already in hand — hard
+ * sets, wall-clock minutes, the movement patterns the day covers — are shown instead of discarded.
+ *
+ * Every figure here comes from `lib/demo/insights` (`dayStats` / `routineStats`), which is the same
+ * derivation the split detail and the Workouts screen read. The week totals used to be two
+ * hand-rolled reductions in this file; a second implementation of a number is how two screens end
+ * up quoting different figures for one plan.
  */
 export function PlanPreviewStep() {
   const { draft, goTo } = useOnboarding();
@@ -94,9 +109,23 @@ export function PlanPreviewStep() {
   };
 
   const targets = getState().targets;
-  const trainingDays = routine?.days.filter((d) => d.exercises.length > 0).length ?? 0;
-  const totalExercises =
-    routine?.days.reduce((n, d) => n + d.exercises.length, 0) ?? 0;
+  // The whole week in one derivation. Two inline reductions used to live here and answered only
+  // "days" and "exercises"; `routineStats` answers those PLUS the two figures that decide whether a
+  // week is livable — hard sets and wall-clock minutes — from the same composition every other
+  // screen reads, so the plan preview can never disagree with the Workouts screen about its own plan.
+  // The scheme is chosen one step earlier, so this screen — the last look before the plan becomes
+  // the athlete's plan — must quote the sets it will actually run. Without it, a lifter who picked
+  // reverse pyramid would be shown a week that is several sets and several minutes longer than the
+  // one the player then hands them.
+  const scheme = React.useMemo(
+    () => resolveProgressionScheme(getState()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-read whenever the draft moves
+    [draft],
+  );
+  const week = React.useMemo(
+    () => (routine ? routineStats(routine, scheme) : null),
+    [routine, scheme],
+  );
 
   // M1 — when equipment / protected areas genuinely thin the plan out, SAY SO here rather than
   // quietly shipping a skeleton week. Derived from the same generation pass that built `routine`.
@@ -106,29 +135,37 @@ export function PlanPreviewStep() {
     <div className="space-y-4">
       {!routine && <p className="text-sm text-muted-foreground">Building your plan…</p>}
 
-      {routine && (
+      {routine && week && (
         <>
           {/* Forged-plan summary — the "money moment" premium card (§P2-14). */}
           <Card premium className="p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent">
+            {/* The clipboard is the coach handing the programme over — the same glyph the Coach
+                screen now puts on a personalized answer, because this card is the same act. This
+                is the last screen before the plan becomes the athlete's plan and it was carrying
+                no object at all. Decorative; the eyebrow text is still the content. */}
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-accent">
+              <ClipboardIcon size={13} />
               Your forged plan
             </p>
             <p className="mt-1 text-xl font-bold tracking-tight text-foreground">{routine.name}</p>
             <div className="mt-4 grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="font-display text-3xl font-semibold leading-none tabular-nums text-accent">
-                  {trainingDays}
+                  {week.trainingDays}
                 </p>
                 <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
                   days / week
                 </p>
               </div>
               <div>
+                {/* HARD SETS, not exercise count. Six exercises at two sets and four at five sets
+                    are not the same week, and sets is the currency every volume target in this app
+                    is expressed in — the exercise count moves to the line below, where it belongs. */}
                 <p className="font-display text-3xl font-semibold leading-none tabular-nums text-foreground">
-                  {totalExercises}
+                  {week.setCount}
                 </p>
                 <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  exercises
+                  sets / week
                 </p>
               </div>
               <div>
@@ -140,6 +177,13 @@ export function PlanPreviewStep() {
                 </p>
               </div>
             </div>
+            <p
+              className="mt-3 text-center text-[11px] leading-snug text-muted-foreground"
+              data-testid="plan-week-summary"
+            >
+              {exerciseCountLabel(week.exerciseCount)} across the week · about {week.minutes} min of
+              training
+            </p>
           </Card>
           {coverage.limited && (
             <Card className="border-accent-soft/60 bg-surface-2" data-testid="plan-limited-notice">
@@ -183,68 +227,134 @@ export function PlanPreviewStep() {
           <div className="space-y-3">
             {routine.days.map((day) => {
               const expanded = openDay === day.id;
+              const stats = dayStats(day, scheme);
+              const panelId = `plan-day-panel-${day.day_index}`;
               return (
-                <Card key={day.id} className="p-0">
+                <Card key={day.id} className="overflow-hidden p-0">
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between gap-3 p-4 text-left"
+                    className="flex w-full items-start justify-between gap-3 p-4 text-left"
                     onClick={() => setOpenDay(expanded ? null : day.id)}
+                    aria-expanded={expanded}
+                    aria-controls={panelId}
+                    data-testid={`plan-day-toggle-${day.day_index}`}
                   >
-                    <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex min-w-0 flex-1 items-start gap-3">
                       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-sm bg-muted/60">
-                        <MuscleMapThumb primary={dayPrimaryMuscles(day)} height={40} />
+                        {/* Same silhouette rule as the Workouts session card, from the same
+                            shared derivation — a day must never light up differently on two
+                            screens. The secondary wash comes with it, which the private copy this
+                            replaced never had. */}
+                        <MuscleMapThumb
+                          primary={stats.primary}
+                          secondary={stats.secondary}
+                          height={40}
+                        />
                       </span>
-                      <span className="min-w-0">
-                        <span className="block truncate font-semibold text-foreground">{day.name}</span>
+                      <span className="min-w-0 flex-1">
+                        {/* WRAPS, deliberately. This used to `truncate`, which turned a day called
+                            "Upper body · push emphasis" into "Upper body · pu…" and pushed the rest
+                            into a tooltip a phone cannot open. A second line costs ~16 px; a clipped
+                            day name costs the athlete the ability to tell their sessions apart. */}
+                        <span
+                          className="block font-semibold leading-snug text-foreground"
+                          data-testid={`plan-day-name-${day.day_index}`}
+                        >
+                          {day.name}
+                        </span>
                         {/* Honest per-day copy (M1 / m1): the count is pluralised and the
                             movements listed are the ones the day ACTUALLY contains. */}
                         <span
-                          className="block truncate text-xs text-muted-foreground"
+                          className="block text-xs leading-snug text-muted-foreground"
                           data-testid={`plan-day-summary-${day.day_index}`}
                         >
-                          {day.exercises.length > 0 ? describeDay(day) : 'Rest / recovery'}
+                          {stats.empty ? 'Rest / recovery' : describeDay(day)}
                         </span>
+                        {/* WHAT IT COSTS. `dayStats` was already being computed on this line and
+                            only its two silhouette fields were used — the hard-set count and the
+                            minute estimate were derived and thrown away, on the one screen where
+                            "can I actually do this week?" is the question being asked. */}
+                        {!stats.empty && (
+                          <span
+                            className="mt-1.5 flex flex-wrap items-center gap-1.5"
+                            data-testid={`plan-day-stats-${day.day_index}`}
+                          >
+                            <StatChip icon={<PlateStackIcon size={10} />}>
+                              {setCountLabel(stats.setCount)}
+                            </StatChip>
+                            <StatChip icon={<ClockIcon size={10} />}>~{stats.minutes} min</StatChip>
+                          </span>
+                        )}
                       </span>
                     </span>
                     <ChevronDownIcon
                       size={18}
                       aria-hidden
                       className={
-                        'shrink-0 text-muted-foreground transition-transform duration-200 ' +
+                        'mt-0.5 shrink-0 text-muted-foreground transition-transform duration-200 ' +
                         (expanded ? 'rotate-180' : '')
                       }
                     />
                   </button>
-                  {expanded && (
-                    <ul className="border-t border-border">
-                      {day.exercises.map((row) => (
-                        <li
-                          key={row.id}
-                          className="flex items-center justify-between px-4 py-3 text-sm"
-                        >
-                          <span>
-                            <span className="block text-foreground">{row.exercise_name}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {row.sets} × {row.rep_min}–{row.rep_max} · {row.rest_seconds}s rest
-                            </span>
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`Swap ${row.exercise_name}`}
-                            onClick={() => openSwap(day.id, row)}
-                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-accent hover:bg-accent-muted"
+                  {/* Height-animated like the split card's disclosure, so the day reads as having
+                      PUSHED the list down rather than replaced it — the row you tapped stays under
+                      your finger. */}
+                  <AnimatePresence initial={false}>
+                    {expanded && (
+                      <m.div
+                        key="detail"
+                        id={panelId}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={SPRING.panel}
+                        className="overflow-hidden border-t border-border"
+                        data-testid={`plan-day-detail-${day.day_index}`}
+                      >
+                        <ul>
+                          {day.exercises.map((row) => (
+                            <li
+                              key={row.id}
+                              className="flex items-start justify-between gap-2 px-4 py-3 text-sm"
+                            >
+                              <span className="min-w-0">
+                                <span className="block leading-snug text-foreground">
+                                  {row.exercise_name}
+                                </span>
+                                <span className="block text-xs leading-snug text-muted-foreground">
+                                  {row.sets} × {row.rep_min}–{row.rep_max} · {row.rest_seconds}s rest
+                                </span>
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Swap ${row.exercise_name}`}
+                                onClick={() => openSwap(day.id, row)}
+                                className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-accent hover:bg-accent-muted"
+                              >
+                                <SwapIcon size={13} /> Swap
+                              </button>
+                            </li>
+                          ))}
+                          {stats.empty && (
+                            <li className="px-4 py-3 text-xs text-muted-foreground">
+                              Rest / recovery day.
+                            </li>
+                          )}
+                        </ul>
+                        {/* UNABRIDGED, unlike the one-line `describeDay` above it. Same rows, same
+                            label table, no slice — the face may show LESS than the detail, but the
+                            two can never claim different things about what the day contains. */}
+                        {stats.patterns.length > 0 && (
+                          <p
+                            className="border-t border-border px-4 py-2.5 text-[11px] leading-snug text-muted-foreground"
+                            data-testid={`plan-day-patterns-${day.day_index}`}
                           >
-                            <SwapIcon size={13} /> Swap
-                          </button>
-                        </li>
-                      ))}
-                      {day.exercises.length === 0 && (
-                        <li className="px-4 py-3 text-xs text-muted-foreground">
-                          Rest / recovery day.
-                        </li>
-                      )}
-                    </ul>
-                  )}
+                            Covers {stats.patterns.join(' · ')}
+                          </p>
+                        )}
+                      </m.div>
+                    )}
+                  </AnimatePresence>
                 </Card>
               );
             })}
@@ -280,5 +390,24 @@ export function PlanPreviewStep() {
         onContinue={startPlan}
       />
     </div>
+  );
+}
+
+/**
+ * The same stat chip the split detail uses, so a set count and a minute estimate look identical
+ * wherever a session is described. A `<span>` rather than a `<div>`: it renders inside the day
+ * row's `<button>`, and a block element inside a button is invalid HTML that React will not warn
+ * about but hydration and screen readers both dislike.
+ */
+function StatChip({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-chip bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+      {icon && (
+        <span className="text-accent" aria-hidden>
+          {icon}
+        </span>
+      )}
+      {children}
+    </span>
   );
 }

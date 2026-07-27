@@ -1,28 +1,54 @@
 'use client';
 
 /**
- * Workout player (§2.3 · WS-F). One exercise per screen (pager); set list with last-session values
- * ghosted in as defaults; plate calculator; quick-swap to substitutes; and the P0-5 rest timer —
- * auto-starts on set completion, defaults by mechanics (compound 150s / isolation 90s), editable in
- * ±15s steps, skippable, big gold countdown, and dims everything but the active set while it runs.
- * Finishing persists the session (WS-F workoutLog) so the heatmap, PRs and streaks update, and PRs
- * beaten in-session fire the gold spark.
+ * Workout player (§2.3 · WS-F). One exercise per screen (pager); a specific WARM-UP RAMP in the
+ * movement being trained; PER-SET targets from the athlete's progression scheme; set list with
+ * last-session values ghosted in as defaults; plate calculator; quick-swap to substitutes; and the
+ * P0-5 rest timer — auto-starts on set completion, sized by the ROUTINE ROW's own `rest_seconds`,
+ * editable in ±15s steps, skippable, big gold countdown, and dims everything but the active set
+ * while it runs. Finishing persists the session (WS-F workoutLog) so the heatmap, PRs and streaks
+ * update, and PRs beaten in-session fire the gold spark.
+ *
+ * TWO RULES THIS FILE MUST NEVER BREAK:
+ *
+ *  1. WARM-UP RAMPS ARE NOT SETS. They live in their own list with their own `warmup-row-N`
+ *     testids, they are excluded from `totalSets`/`doneSets`, and they are never written to the
+ *     logged session. The app's entire training currency is HARD SETS per muscle per week,
+ *     calibrated against the Pelland / Baz-Valle bands — a ramp leaking into that count would
+ *     silently inflate every weekly goal reading, every heat colour and every PlanTargets bar in
+ *     the app. (It would also renumber every `set-row-N` the Playwright suite addresses.)
+ *
+ *  2. REST COMES FROM THE ROW. `routineExercise.rest_seconds` is goal-aware — a hypertrophy
+ *     compound rests 90s, not 150s — and this file used to ignore it in favour of a mechanics
+ *     constant, so the session card's minute estimate, the header text and the timer that actually
+ *     ran were three different numbers for the same session.
  */
 import * as React from 'react';
 import Link from 'next/link';
-import { Button, Card, CardTitle, Sheet } from '@/components/ui';
 import {
-  ScaleIcon,
+  Button,
+  Card,
+  CardTitle,
+  Sheet,
+  ProgressBar,
+  PlateStepper,
+  CollarLatch,
+} from '@/components/ui';
+import {
+  PlateIcon,
   CheckIcon,
   SwapIcon,
   TimerIcon,
-  TrophyIcon,
+  MedalIcon,
   SparkIcon,
   XIcon,
   ArrowRightIcon,
   ChevronLeftIcon,
+  ChevronDownIcon,
   DumbbellIcon,
 } from '@/components/ui/icons';
+import { EquipmentIllustration } from '@/components/illustrations/equipment';
+import { slugForExercise } from '@/lib/equipment/slugForExercise';
 import { SubstituteSheet } from '@/components/features/shared/SubstituteSheet';
 import {
   mockPreviousSets,
@@ -32,7 +58,25 @@ import {
   type SubstituteRow,
   type Mechanics,
 } from '@/components/features/_mock/data';
+import type { SetTarget } from '@fitforge/shared/rules';
+import { ProgressionEvidenceNote } from '@/components/features/shared/ProgressionEvidence';
 import { useActiveRoutine, useDemoState } from '@/lib/demo/useDemo';
+import { resolveProgressionScheme, setProgressionScheme } from '@/lib/demo/store';
+import { isBodyweightOnly, dayPrescriptions } from '@/lib/demo/prescription';
+import { prepForDay, PREP_EVIDENCE, type PrepItem } from '@/lib/demo/prep';
+import { dayStats } from '@/lib/demo/insights';
+import {
+  prescribeSets,
+  restSecondsForSet,
+  schemeCaution,
+  suggestedLoadKg,
+  trimNoticeFor,
+  warmupRamp,
+  type Prescription,
+  type ProgressionScheme,
+  type WarmupSet,
+} from '@fitforge/shared/rules';
+import type { ExperienceLevel } from '@fitforge/shared/types';
 import {
   logSession,
   getSessions,
@@ -54,35 +98,169 @@ interface ExerciseState {
   exerciseId: string;
   exerciseName: string;
   sets: SetEntry[];
+  /**
+   * Which warm-up ramp steps have been ticked. Deliberately a SEPARATE array from `sets` — see the
+   * file header: a warm-up is not a working set, and the two must never share an index space.
+   */
+  warmups: boolean[];
+  /**
+   * "I warmed up already" — the escape hatch for someone who warmed up on another lift. The heavy
+   * first set of a reverse pyramid is DIMMED until this or a ramp row is ticked, never disabled.
+   */
+  warmupAck: boolean;
+  /**
+   * Whether an EARLIER exercise in this session already trained this pattern. Carried on the state
+   * rather than recomputed per render because it is a property of the day's running order, and the
+   * running order does not change mid-session — see `dayPrescriptions`.
+   */
+  patternAlreadyWarm: boolean;
 }
 
-/** Rest default by mechanics (§6 P0-5): compound 150s, isolation 90s. */
-const REST_COMPOUND = 150;
-const REST_ISOLATION = 90;
-function restForMechanics(mechanics: Mechanics | undefined): number {
-  return mechanics === 'isolation' ? REST_ISOLATION : REST_COMPOUND;
-}
 function mechanicsOf(exerciseId: string): Mechanics | undefined {
   return mockExerciseById(exerciseId)?.mechanics;
 }
 
-function buildInitialState(day: RoutineDay): ExerciseState[] {
+/**
+ * The exercise's own equipment, for the header portrait. "What am I standing in front of" is the
+ * first thing you check when you look up mid-session, and it was being answered by a hardcoded
+ * generic dumbbell regardless of whether the movement was a cable row or a leg press.
+ *
+ * Falls back to `barbell` only when the row genuinely carries no equipment (bodyweight work still
+ * resolves through the registry's keyword guess), so the header can never render blank.
+ *
+ * The LOOKUP is shared with the swap sheet and the PR list via `lib/equipment/slugForExercise` —
+ * one exercise must never show a barbell on one screen and a cable on another. The FALLBACK stays
+ * here because it is this surface's own call: a planned working set skews barbell.
+ */
+function equipmentSlugOf(exerciseId: string): string {
+  return slugForExercise(exerciseId, 'barbell');
+}
+
+/**
+ * The prescription for one routine row under the athlete's scheme. Mechanics decide whether a
+ * compound-only scheme (reverse pyramid, top set + back-offs) applies at all — accessories quietly
+ * run straight sets, which is the coaching call, not a limitation.
+ */
+function prescriptionFor(
+  re: RoutineExercise,
+  exerciseId: string,
+  scheme: ProgressionScheme,
+  setCount: number,
+  experience: ExperienceLevel,
+): Prescription {
+  return prescribeSets(
+    {
+      sets: setCount,
+      rep_min: re.rep_min,
+      rep_max: re.rep_max,
+      target_rpe: re.target_rpe,
+      mechanics: mechanicsOf(exerciseId) ?? null,
+      isBodyweight: isBodyweightOnly(exerciseId),
+      experience,
+    },
+    scheme,
+  );
+}
+
+/**
+ * The warm-up steps for one exercise, in the movement being trained.
+ *
+ * `topSetKg` is whatever weight is on working set 1 right now, so the ramp's kilos follow the
+ * athlete's own number as they type it. With no number there is nothing honest to print and the
+ * steps show percentages alone — the ramp itself never disappears, because the athlete with no
+ * history is the one most likely to need it.
+ *
+ * `patternAlreadyWarm` comes from the DAY, not from this row: a lat pulldown that follows bent-over
+ * rows does not need the same four steps as the first lift of the session. It is computed once in
+ * `dayPrescriptions` so the player and the minute estimate size the ramp identically.
+ */
+function rampFor(
+  plan: Prescription,
+  exerciseId: string,
+  topSetKg: number | null,
+  patternAlreadyWarm: boolean,
+): WarmupSet[] {
+  return warmupRamp({
+    topSetKg,
+    mechanics: mechanicsOf(exerciseId) ?? null,
+    scheme: plan.scheme,
+    isBodyweight: plan.isBodyweight,
+    targetReps: plan.sets[0]?.reps ?? null,
+    patternAlreadyWarm,
+  });
+}
+
+/**
+ * One set entry, pre-filled FROM THE PRESCRIPTION with last session as the fallback.
+ *
+ * THE BUG THIS FIXES WAS THE WORST ONE IN THE APP. Under reverse pyramid the row rendered targets
+ * of 'Set 1 · 6 reps · 100%', 'Set 2 · 8 reps · 90%', 'Set 3 · 10 reps · 81%' and then pre-filled
+ * the inputs underneath them from last session's ghost — 80/80/80 kg and 8/8/7 reps. Tapping the
+ * three collars persisted three sets at one weight: straight sets. The app told the athlete to drop
+ * 10% a set and then wrote down that they didn't, and every downstream number (e1RM, PRs, the
+ * heatmap, tonnage) was computed from a session nobody prescribed.
+ *
+ * So the ghost is now an ANCHOR for set 1 and a fallback everywhere else, never an override:
+ *
+ *  · WEIGHT — always derived: `topSetKg × loadPct`. Under straight sets `loadPct` is 100, so this
+ *    is last session's top set on every row, which is exactly what straight sets prescribes.
+ *  · REPS — taken from the target only where the target is a single number (the shaped schemes say
+ *    "8 reps on set 2", which is an instruction). Under straight sets the prescription is a RANGE,
+ *    8–12; asserting the top of it would log 12 reps for an athlete who got 9, so the ghost's
+ *    achieved reps stay the default there. That is byte-identical to the previous behaviour under
+ *    the scheme 100% of athletes start on.
+ *  · RPE — from the target, which varies by role and is capped on a heavy first set.
+ *
+ * The ghost keeps its real job in the `placeholder`, which is what the "greyed numbers are last
+ * session's sets" hint has always promised.
+ */
+function entryFor(
+  target: SetTarget | undefined,
+  ghost: { reps: number; weight_kg: number; rpe: number | null } | undefined,
+  topKg: number | null,
+  re: RoutineExercise,
+): SetEntry {
+  const shapedReps = target != null && target.repsLow === target.repsHigh;
+  return {
+    reps: shapedReps ? target.reps : (ghost?.reps ?? target?.reps ?? re.rep_max),
+    // A bodyweight target carries `loadPct: null`, so there is nothing to scale and the field stays
+    // empty rather than offering a fabricated 0 kg.
+    weight_kg: suggestedLoadKg(topKg, target?.loadPct) ?? ghost?.weight_kg ?? 0,
+    rpe: target?.rpe ?? ghost?.rpe ?? re.target_rpe,
+    done: false,
+  };
+}
+
+function buildInitialState(
+  day: RoutineDay,
+  scheme: ProgressionScheme,
+  experience: ExperienceLevel,
+): ExerciseState[] {
+  // Walked through `dayPrescriptions` so the ramp knows its POSITION in the session — the fourth
+  // compound of a day does not get the same four-step ramp as the first.
+  const plans = dayPrescriptions(day, scheme, experience);
+  const warmByRowId = new Map(plans.map((p) => [p.row.id, p.patternAlreadyWarm]));
+
   return day.exercises.map((re) => {
     const prev = mockPreviousSets(re.exercise_slug, re.sets);
-    const sets: SetEntry[] = Array.from({ length: re.sets }, (_, i) => {
-      const p = prev[i];
-      return {
-        reps: p ? p.reps : re.rep_max,
-        weight_kg: p ? p.weight_kg : 0,
-        rpe: p ? p.rpe : re.target_rpe,
-        done: false,
-      };
-    });
+    const plan = prescriptionFor(re, re.exercise_id, scheme, re.sets, experience);
+    // The athlete's own heaviest logged set is the only honest anchor for a relative load — the
+    // app never invents a starting weight (see `suggestedLoadKg`).
+    const topKg = prev[0]?.weight_kg ?? null;
+    const warm = warmByRowId.get(re.id) ?? false;
+    // The SCHEME decides how many working sets there are, not the row: reverse pyramid caps at 3,
+    // and rendering a 4th input the prescription does not contain would be a set nobody prescribed.
+    const sets: SetEntry[] = plan.sets.map((target, i) =>
+      entryFor(target, prev[i], topKg, re),
+    );
     return {
       routineExercise: re,
       exerciseId: re.exercise_id,
       exerciseName: re.exercise_name,
       sets,
+      warmups: rampFor(plan, re.exercise_id, topKg, warm).map(() => false),
+      warmupAck: false,
+      patternAlreadyWarm: warm,
     };
   });
 }
@@ -109,7 +287,13 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   // DEMO MODE: resolve the day from the active (generated or default) routine; fall back to the
   // first day so a stale/unknown session id never dead-ends.
   const routine = useActiveRoutine();
-  const quick = useDemoState().quickSession;
+  const state = useDemoState();
+  const quick = state.quickSession;
+  // The scheme in force right now (explicit choice, else the recommendation for this athlete).
+  const scheme = resolveProgressionScheme(state);
+  // Drives the RPE cap on a heavy first set, and whether the coaching caution applies at all.
+  const experience: ExperienceLevel =
+    state.draft.experience_level ?? state.profile?.experience_level ?? 'beginner';
   const day = React.useMemo<RoutineDay | undefined>(() => {
     // `/workout/quick` runs the one-off session the quick-workout picker built. It is a real
     // RoutineDay, so logging, volume credit and PRs all treat it identically to a planned day.
@@ -119,8 +303,17 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   }, [routine, sessionId, quick]);
 
   const [exercises, setExercises] = React.useState<ExerciseState[]>(() =>
-    day ? buildInitialState(day) : [],
+    day ? buildInitialState(day, scheme, experience) : [],
   );
+  /* The coaching caution, shown HERE and not only in onboarding. A warning read weeks before the
+   * first heavy-first session is a warning nobody reads at the moment it matters. Dismissible for
+   * the session, because repeating it on every exercise would train the athlete to ignore it. */
+  const [cautionDismissed, setCautionDismissed] = React.useState(false);
+  /* The scheme explainer + trim notice, behind the scheme chip. One-time explanations do not earn
+   * permanent space above the primary action of the screen — see the chip's own comment. */
+  const [schemeInfoOpen, setSchemeInfoOpen] = React.useState(false);
+  /** The caution's full text. Clamped to two lines by default — see its own comment. */
+  const [cautionOpen, setCautionOpen] = React.useState(false);
   const [index, setIndex] = React.useState(0);
   const [finished, setFinished] = React.useState(false);
   const [startedAt] = React.useState(() => Date.now());
@@ -148,11 +341,84 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   const [swapOpen, setSwapOpen] = React.useState(false);
   const [plateForSet, setPlateForSet] = React.useState<number | null>(null);
 
+  /* THE PREP BLOCKS — dynamic mobility before, static stretches after. Session-level, not
+   * exercise-level, so they render once each rather than on every pager step. The cooldown is keyed
+   * off the muscles this day actually loads DIRECTLY, which is why `dayStats().loads` is threaded
+   * in rather than recomputed. Like the ramp, neither block is a set: they carry their own testids
+   * and never reach `totalSets`, `doneSets` or the logged session. */
+  const prep = React.useMemo(
+    () => (day ? prepForDay(day, dayStats(day, scheme, experience).loads) : { pre: [], post: [] }),
+    [day, scheme, experience],
+  );
+
   // Keep the pager index inside the exercise list at all times (belt and braces for the guard
   // below — a stale index must never be able to read past the end of the array).
   React.useEffect(() => {
     setIndex((i) => (i > 0 && i > exercises.length - 1 ? Math.max(0, exercises.length - 1) : i));
   }, [exercises.length]);
+
+  /* ═══════════════════════════════════════════════ RECONCILE THE SESSION WHEN THE SCHEME CHANGES
+   *
+   * THE SAFETY ESCAPE HATCH USED TO DELETE A WORKING SET. `exercises` was built once in a useState
+   * initializer and never rebuilt, while `plan` recomputed every render — so a novice who followed
+   * the caution banner's own advice and tapped "Switch to straight sets" mid-session got a header
+   * reading "Target 4 × 6–10" above only THREE set rows, and a counter still stuck on 0/18 instead
+   * of 0/20. Every compound in the day silently lost its fourth set. The warm-up desynced the same
+   * way: four booleans against a three-step ramp, so a fully ticked ramp could display "4/3". The
+   * athlete who took the app's safety advice was punished with less training than one who ignored
+   * it, which is the exact opposite of what a safety affordance is for.
+   *
+   * RECONCILE, NEVER REBUILD. A rebuild would wipe every set the athlete has already logged. This
+   * grows or truncates each list and preserves what survives:
+   *   · `sets` grows with entries pre-filled from the NEW targets, or truncates from the end
+   *   · `done` is carried on every surviving row
+   *   · a row whose target changed but which is NOT yet done is re-prefilled, so switching scheme
+   *     actually changes the numbers you are about to log; a row already logged is left alone,
+   *     because a performed set is a record, not a prescription
+   *   · `warmups` resizes to the new ramp length, keeping the ticks that survive
+   */
+  const reconcileKey = `${scheme}|${day?.id ?? ''}|${experience}`;
+  const lastReconcileKey = React.useRef(reconcileKey);
+  React.useEffect(() => {
+    // Guard the initial mount: the useState initializer already built this exact shape, and running
+    // the reconcile over it would re-prefill rows for no reason.
+    if (lastReconcileKey.current === reconcileKey) return;
+    lastReconcileKey.current = reconcileKey;
+    if (!day) return;
+
+    const plans = dayPrescriptions(day, scheme, experience);
+    const warmByRowId = new Map(plans.map((p) => [p.row.id, p.patternAlreadyWarm]));
+
+    setExercises((prev) =>
+      prev.map((ex) => {
+        const re = ex.routineExercise;
+        const warm = warmByRowId.get(re.id) ?? false;
+        // `Math.max` keeps any sets the athlete added by hand: the scheme changed, their intent
+        // did not.
+        const next = prescriptionFor(
+          re,
+          ex.exerciseId,
+          scheme,
+          Math.max(re.sets, ex.sets.length),
+          experience,
+        );
+        const topKg = ex.sets[0]?.weight_kg ?? null;
+        const prevGhost = mockPreviousSets(re.exercise_slug, re.sets);
+
+        const sets: SetEntry[] = next.sets.map((target, i) => {
+          const existing = ex.sets[i];
+          if (existing?.done) return existing;
+          const fresh = entryFor(target, prevGhost[i], topKg, re);
+          return existing ? { ...fresh, done: false } : fresh;
+        });
+
+        const rampLen = rampFor(next, ex.exerciseId, topKg, warm).length;
+        const warmups = Array.from({ length: rampLen }, (_, i) => ex.warmups[i] ?? false);
+
+        return { ...ex, sets, warmups, patternAlreadyWarm: warm };
+      }),
+    );
+  }, [reconcileKey, day, scheme, experience]);
 
   if (!day) {
     return (
@@ -179,17 +445,49 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
     );
   }
 
+  /* WORKING SETS ONLY — see the file header. `e.warmups` is deliberately not summed here: the
+   * progress bar, the "3/12 sets" counter and everything downstream of them are denominated in
+   * hard sets. */
   const totalSets = exercises.reduce((n, e) => n + e.sets.length, 0);
   const doneSets = exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
   const resting = restLeft != null;
 
+  /**
+   * Edit one set — and, when that set is the ANCHOR, re-derive the sets that hang off it.
+   *
+   * Set 1's weight is not just another field: every relative load on this screen is a percentage
+   * of it. An athlete with no logged history is asked for exactly this number ("what can you do
+   * for about 10 solid reps?"), and if typing it left sets 2 and 3 empty, the app would have asked
+   * for an anchor and then anchored nothing to it — the original complaint with an extra step in
+   * front of it.
+   *
+   * Only sets that are NOT YET DONE move. A logged set is a record of what happened; no later edit
+   * gets to rewrite it.
+   */
   function updateSet(exIdx: number, setIdx: number, patch: Partial<SetEntry>) {
     setExercises((prev) =>
-      prev.map((ex, i) =>
-        i === exIdx
-          ? { ...ex, sets: ex.sets.map((s, j) => (j === setIdx ? { ...s, ...patch } : s)) }
-          : ex,
-      ),
+      prev.map((ex, i) => {
+        if (i !== exIdx) return ex;
+        const sets = ex.sets.map((s, j) => (j === setIdx ? { ...s, ...patch } : s));
+        if (setIdx !== 0 || patch.weight_kg == null) return { ...ex, sets };
+
+        const anchor = patch.weight_kg;
+        const shape = prescriptionFor(
+          ex.routineExercise,
+          ex.exerciseId,
+          scheme,
+          Math.max(ex.routineExercise.sets, ex.sets.length),
+          experience,
+        );
+        return {
+          ...ex,
+          sets: sets.map((s, j) => {
+            if (j === 0 || s.done) return s;
+            const derived = suggestedLoadKg(anchor, shape.sets[j]?.loadPct);
+            return derived == null ? s : { ...s, weight_kg: derived };
+          }),
+        };
+      }),
     );
   }
 
@@ -200,11 +498,40 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
     const nextDone = !s.done;
     updateSet(index, setIdx, { done: nextDone });
     if (nextDone) {
-      // Rest timer auto-starts on set completion (§6 P0-5), sized by mechanics.
-      const total = restForMechanics(mechanicsOf(active.exerciseId));
+      /* Rest timer auto-starts on set completion (§6 P0-5), sized by the ROW's own goal-aware
+       * `rest_seconds` — a hypertrophy compound rests 90s, and running 150s for it made the
+       * session card's "~45 min" promise and the session the athlete actually got disagree by
+       * minutes. The heaviest set of the day earns 1.25× that, because the set after a top set is
+       * the one most likely to be cut short by a timer sized for an average set. */
+      const role = plan.sets[setIdx]?.role ?? 'work';
+      const total = restSecondsForSet(
+        active.routineExercise.rest_seconds,
+        role,
+        mechanicsOf(active.exerciseId) ?? null,
+      );
       restTotalRef.current = total;
       setRestLeft(total);
     }
+  }
+
+  /**
+   * Tick a warm-up step. NO REST TIMER: a ramp step is 5 easy reps, and dropping a 90-second
+   * countdown over the screen between them would turn a two-minute warm-up into a six-minute one.
+   */
+  function toggleWarmup(stepIdx: number) {
+    setExercises((prev) =>
+      prev.map((ex, i) =>
+        i === index
+          ? { ...ex, warmups: ex.warmups.map((w, j) => (j === stepIdx ? !w : w)) }
+          : ex,
+      ),
+    );
+  }
+
+  function ackWarmup() {
+    setExercises((prev) =>
+      prev.map((ex, i) => (i === index ? { ...ex, warmupAck: true } : ex)),
+    );
   }
 
   function addSet() {
@@ -212,14 +539,28 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
       prev.map((ex, i) => {
         if (i !== index) return ex;
         const last = ex.sets[ex.sets.length - 1];
+        // An extra set keeps the SHAPE: under a pyramid the new set continues the drop instead of
+        // copying the previous one and flattening the scheme. A scheme with a hard set cap
+        // (reverse pyramid) prescribes nothing for the extra set, so it inherits the last one —
+        // the athlete asked for it, and the app does not pretend to have programmed it.
+        const plan = prescriptionFor(
+          ex.routineExercise,
+          ex.exerciseId,
+          scheme,
+          Math.max(ex.routineExercise.sets, ex.sets.length + 1),
+          experience,
+        );
+        const target = plan.sets[ex.sets.length];
+        const topKg = ex.sets[0]?.weight_kg ?? null;
         return {
           ...ex,
           sets: [
             ...ex.sets,
             {
-              reps: last?.reps ?? ex.routineExercise.rep_max,
-              weight_kg: last?.weight_kg ?? 0,
-              rpe: last?.rpe ?? ex.routineExercise.target_rpe,
+              reps: target?.reps ?? last?.reps ?? ex.routineExercise.rep_max,
+              weight_kg:
+                suggestedLoadKg(topKg, target?.loadPct) ?? last?.weight_kg ?? 0,
+              rpe: target?.rpe ?? last?.rpe ?? ex.routineExercise.target_rpe,
               done: false,
             },
           ],
@@ -280,9 +621,55 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
 
   const re = current.routineExercise;
   const isLast = index === exercises.length - 1;
+  // Per-set targets for the exercise on screen. Recomputed every render (it is a pure function of
+  // the row + the scheme + how many sets are on screen), so "+ Add set" and a mid-session scheme
+  // change are both reflected immediately.
+  /* The prescription is computed from what the ROW asked for, not from how many rows are on
+   * screen. Those differ whenever a scheme caps the set count (reverse pyramid runs 3), and
+   * feeding the already-trimmed number back in would make the prescription forget it had trimmed
+   * anything — so the "set 4 dropped" notice would never appear on the one screen that owes the
+   * athlete the explanation. `Math.max` keeps "+ Add set" working. */
+  const plan = prescriptionFor(
+    re,
+    current.exerciseId,
+    scheme,
+    Math.max(re.sets, current.sets.length),
+    experience,
+  );
+  // Relative loads need an anchor, and the only honest one is a weight the athlete owns: whatever
+  // is on set 1 right now. Type 100 into the top set and every back-off suggestion follows it.
+  const topSetKg = current.sets[0]?.weight_kg ?? null;
+  // "The set you are on" = the first one not yet logged. −1 once the exercise is finished, which
+  // correctly collapses every row back to compact.
+  const activeSetIdx = current.sets.findIndex((s) => !s.done);
+  // The specific warm-up for THIS lift. Its kilos follow whatever is on working set 1 right now,
+  // and its LENGTH follows where the lift sits in the session — a fourth compound on an already-
+  // warm pattern gets one feeler step, not the full four.
+  const ramp = rampFor(plan, current.exerciseId, topSetKg, current.patternAlreadyWarm);
+  const rampDone = current.warmups.filter(Boolean).length;
+  /* THE ANCHOR PROBLEM, stated. Every number this screen prints for a loaded lift is a PERCENTAGE
+   * of the top set — "5 × 40%", "8 reps · 90%" — and with no logged history there was nothing for
+   * those percentages to be a percentage OF. All four weight fields came back empty, the helper
+   * copy promised "the load your scheme suggests", and no load was suggested. The app must never
+   * invent a starting weight, so it asks for one instead, once, in the athlete's own terms. */
+  const needsAnchor = !plan.isBodyweight && !(topSetKg != null && topSetKg > 0);
+  /* THE SOFT GATE. Reverse pyramid walks the athlete into their heaviest set of the day as set 1,
+   * so that row is dimmed with a "warm up first" helper until a ramp step is ticked or they say
+   * they warmed up elsewhere. DIMMED, NEVER DISABLED — the house pattern (the rest timer dims the
+   * pager but leaves it reachable), and someone who warmed up on another lift has to be able to
+   * proceed. */
+  const warmupSatisfied = current.warmupAck || rampDone > 0 || ramp.length === 0;
+  const topSetGated = plan.scheme === 'reverse_pyramid' && !warmupSatisfied;
+  // The caution, at the moment it matters rather than weeks earlier in onboarding.
+  const caution = cautionDismissed ? null : schemeCaution(plan.scheme, experience);
+  const trimNotice = trimNoticeFor(plan);
+  const baseRest = restSecondsForSet(re.rest_seconds, 'work', mechanicsOf(current.exerciseId) ?? null);
 
   return (
-    <div className="space-y-4 pb-4">
+    /* space-y-3, not 4. Four gaps of 16 px sit between the top of this screen and the first working
+       set; at 12 px they buy back the last dozen pixels that kept set 1 off a 664 px viewport, and
+       nothing on the screen reads as crowded at 12. */
+    <div className="space-y-3 pb-4">
       {/* Header / progress */}
       <div className="flex items-center justify-between">
         <Link
@@ -300,21 +687,26 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         >
           {day.name}
         </span>
-        <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
+        <span
+          className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground"
+          data-testid="workout-set-counter"
+        >
           {doneSets}/{totalSets} sets
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-accent transition-[width]"
-          style={{ width: `${totalSets ? (doneSets / totalSets) * 100 : 0}%` }}
-        />
-      </div>
+      {/* A hand-rolled div became the shared primitive, in its `bar` dress: collars on each end, so
+          a session filling up reads as a barbell loading rather than as a browser download. */}
+      <ProgressBar
+        current={doneSets}
+        total={totalSets}
+        variant="bar"
+        label={`${doneSets} of ${totalSets} sets logged`}
+      />
 
       {/* Active exercise block. Mid-workout discipline (§6 P0-5): while resting, the current set
           card glows and the surrounding chrome dims — but nothing is disabled, so the pager and
           skip stay reachable. */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Exercise header */}
         <div
           className={
@@ -322,35 +714,213 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             (resting ? 'opacity-40' : 'opacity-100')
           }
         >
-          <div className="min-w-0">
+          {/* THE OBJECT YOU ARE ABOUT TO PICK UP. This was a hardcoded generic dumbbell for every
+              exercise in the app; it is now the movement's real equipment portrait, at row size
+              with the dense treatment so the 48-unit strokes survive. */}
+          <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-muted text-accent">
+            <EquipmentIllustration slug={equipmentSlugOf(current.exerciseId)} size={28} dense selected />
+          </span>
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
               Exercise {index + 1} of {exercises.length}
             </p>
-            <h1 className="truncate font-display text-2xl font-bold tracking-tight">
+            {/* TWO LINES, NOT ELLIPSIS. This was `truncate`, so "Conventional Deadlift" rendered
+                as "Conventional De…" (203 px of clientWidth against 239 px of scrollWidth) — and
+                day 1 of the DEFAULT generated plan contains both that and "Barbell Overhead
+                Press", making it the out-of-the-box first impression rather than an edge case.
+                The Swap control beside it went icon-only in the same pass, which returns ~60 px. */}
+            <h1 className="line-clamp-2 font-display text-2xl font-bold leading-tight tracking-tight">
               {current.exerciseName}
             </h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Target {re.sets} × {re.rep_min}–{re.rep_max}
-              {re.target_rpe ? ` · RPE ${re.target_rpe}` : ''} · rest{' '}
-              {restForMechanics(mechanicsOf(current.exerciseId))}s
+            {/* The rest figure here is the ROW's, which is the same number the session card's
+                minute estimate is built from and the same number the timer counts down. Three
+                surfaces, one source. */}
+            <p className="mt-0.5 text-sm text-muted-foreground" data-testid="workout-target-line">
+              Target {plan.sets.length} × {re.rep_min}–{re.rep_max}
+              {re.target_rpe ? ` · RPE ${re.target_rpe}` : ''} · rest {baseRest}s
             </p>
+            {/* THE SCHEME CHIP IS NOW THE DISCLOSURE. The chip already names the scheme; the
+                two-line explainer and the three-line trim notice underneath it were rendered on
+                every exercise transition, on every session, forever — one-time explanations
+                occupying permanent space above the primary action. Together with the folded ramp
+                they are what pushed set 1 to 672 px (straight sets) and ~930 px (reverse pyramid)
+                on a 664 px-tall phone. Tap the chip to read them; they are never removed. */}
+            <button
+              type="button"
+              onClick={() => setSchemeInfoOpen((v) => !v)}
+              aria-expanded={schemeInfoOpen}
+              aria-controls="progression-explainer"
+              data-testid="progression-headline"
+              className="mt-1.5 inline-flex min-h-[44px] items-center gap-1 rounded-chip bg-accent-muted px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-accent"
+            >
+              {plan.headline}
+              <ChevronDownIcon
+                size={13}
+                aria-hidden
+                className={'transition-transform duration-200 ' + (schemeInfoOpen ? 'rotate-180' : '')}
+              />
+            </button>
+            {schemeInfoOpen && (
+              <div id="progression-explainer">
+                <p
+                  className="mt-1 text-xs leading-snug text-muted-foreground"
+                  data-testid="progression-explainer-text"
+                >
+                  {plan.explainer}
+                </p>
+                {/* A set the row asked for that the scheme will not run. Said out loud: a set
+                    disappearing without explanation reads as a bug, not as coaching. */}
+                {trimNotice && (
+                  <p
+                    className="mt-1 text-xs leading-snug text-muted-foreground"
+                    data-testid="progression-trim"
+                  >
+                    {trimNotice}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-          <Button variant="secondary" size="sm" onClick={() => setSwapOpen(true)}>
-            <SwapIcon size={16} /> Swap
-          </Button>
+          {/* ICON-ONLY, 44 × 44. The labelled button cost ~60 px of title width on a 390 px phone,
+              which is most of what "Conventional Deadlift" was missing. The accessible name is
+              carried by aria-label, so the swap spec's /Swap/ matcher is unaffected. */}
+          <button
+            type="button"
+            aria-label="Swap exercise"
+            onClick={() => setSwapOpen(true)}
+            data-testid="workout-swap"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-field border border-border bg-surface-2 text-muted-foreground transition-colors hover:text-accent"
+          >
+            <SwapIcon size={18} />
+          </button>
         </div>
 
-        {/* Set list — the "current set card"; glows while resting */}
+        {/* THE CAUTION, HERE. It was only ever shown in onboarding — weeks before the first
+            heavy-first session, which is not when anyone needs it. It carries the one-tap way out,
+            because a warning with no action is decoration. */}
+        {caution && (
+          <div
+            className="rounded-card border border-accent bg-accent-muted px-3 py-2"
+            role="status"
+            data-testid="workout-scheme-caution"
+          >
+            {/* Clamped to two lines with the rest one tap away. The full text is five lines plus
+                two buttons, and it rendered on EVERY exercise transition — a warning that costs a
+                fifth of the screen every time you page forward is a warning people learn to scroll
+                past. The actionable half (the two buttons) stays visible unconditionally. */}
+            <p
+              className={
+                'text-xs leading-snug text-accent ' + (cautionOpen ? '' : 'line-clamp-2')
+              }
+            >
+              {caution}
+            </p>
+            <button
+              type="button"
+              onClick={() => setCautionOpen((v) => !v)}
+              data-testid="workout-scheme-caution-more"
+              className="mt-0.5 text-[11px] font-semibold text-accent underline"
+            >
+              {cautionOpen ? 'Less' : 'Read all'}
+            </button>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setProgressionScheme('straight_sets');
+                  setCautionDismissed(true);
+                }}
+                data-testid="workout-scheme-switch"
+                className="min-h-[44px] rounded-field bg-accent px-3 py-2 text-[11px] font-bold text-accent-foreground"
+              >
+                Switch to straight sets
+              </button>
+              <button
+                type="button"
+                onClick={() => setCautionDismissed(true)}
+                data-testid="workout-scheme-caution-dismiss"
+                className="min-h-[44px] rounded-field border border-accent px-3 py-2 text-[11px] font-semibold text-accent"
+              >
+                Keep {plan.scheme === 'reverse_pyramid' ? 'reverse pyramid' : 'this scheme'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* THE MOBILITY BLOCK, BEFORE THE SESSION. Only on the first exercise, because it belongs
+            to the session and not to each lift. Rendered here rather than nowhere because the ramp
+            card below tells the athlete verbatim that they need both — an app that names a
+            prerequisite it does not supply sends a beginner to look for it somewhere else. */}
+        {index === 0 && prep.pre.length > 0 && (
+          <PrepBlock
+            testId="workout-prep-pre"
+            title="Before you start · mobility"
+            note="Dynamic work first — it warms the body. The ramp below warms the lift. Neither replaces the other, and neither counts as a set."
+            items={prep.pre}
+            dimmed={resting}
+          />
+        )}
+
+        {/* THE WARM-UP RAMP — its own list, its own numbering, its own testids. Never folded into
+            the working sets: a warm-up is not a hard set, and the app counts hard sets. */}
+        {ramp.length > 0 && (
+          <WarmupList
+            steps={ramp}
+            done={current.warmups}
+            onToggle={toggleWarmup}
+            dimmed={resting}
+            required={plan.scheme === 'reverse_pyramid'}
+            alreadyWarm={current.patternAlreadyWarm}
+          />
+        )}
+
+        {/* THE ANCHOR. With no logged history there is no honest number behind "40%" or "81%", and
+            the app must not invent one — so it asks, once, in terms an athlete can answer without
+            a calculator. Everything on the screen (ramp kilos, back-off suggestions, the plate
+            math) derives from whatever goes in here. */}
+        {needsAnchor && (
+          <div
+            className="rounded-card border border-accent bg-accent-muted px-4 py-3"
+            data-testid="workout-anchor-prompt"
+          >
+            <p className="text-xs font-semibold text-accent">
+              What can you {plan.isBodyweight ? 'do' : 'lift'} for about{' '}
+              {plan.sets[0]?.repsHigh ?? re.rep_max} solid reps?
+            </p>
+            <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+              Every percentage on this screen — the warm-up ramp and the back-off sets — is worked
+              out from this one number. We have nothing logged for {current.exerciseName} yet, and
+              we will not guess a starting weight for you. A best estimate is fine; it is a starting
+              point, not a commitment.
+            </p>
+            <PlateStepper
+              className="mt-2"
+              aria-label="Working weight"
+              value={current.sets[0]?.weight_kg ?? 0}
+              onChange={(v) => updateSet(index, 0, { weight_kg: v })}
+              placeholder=""
+            />
+          </div>
+        )}
+
+        {/* Set list — the "current set card"; glows while resting.
+            STEEL, NOT GOLD. This panel now holds the plate stepper and the collar latches, so it
+            wants to read as the machined faceplate they are bolted to. Handing the gold hairline
+            back also makes it scarce again — it stays for the genuinely premium moments (plan
+            preview, PR card, streak) instead of being the default for "important". The
+            glow-while-resting treatment is unaffected; it rides on the className. */}
         <Card
-          premium
+          variant="steel"
           className={
             '!p-0 transition-shadow duration-300 ' +
             (resting ? 'shadow-[var(--shadow-glow)]' : '')
           }
         >
-          <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem_2.75rem] items-center gap-2 border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            <span>Set</span>
-            <span>Weight (kg)</span>
+          <div className="grid grid-cols-[1fr_1fr_2.5rem_2.75rem] items-center gap-2 border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {/* On a chin-up the weight column is not "the weight" — it is whatever you HUNG on a
+                belt, usually nothing. Naming it honestly is the difference between an empty field
+                that makes sense and one that looks broken. */}
+            <span>{plan.isBodyweight ? 'Added kg' : 'Weight (kg)'}</span>
             <span>Reps</span>
             <span>RPE</span>
             <span className="text-right">Done</span>
@@ -358,70 +928,186 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
           <ul>
             {current.sets.map((s, i) => {
               const ghost = mockPreviousSets(re.exercise_slug, current.sets.length)[i];
+              const target = plan.sets[i];
+              // THE PLATE STEPPER ONLY EXPANDS THE SET YOU ARE ACTUALLY ON, and that is a
+              // measurement rather than a taste. At 390 px the row grid is
+              // [1fr 1fr 2.5rem 2.75rem] with gap-2 inside a px-4 card inside a px-4 page:
+              // ~326 px of usable width, 84 px of fixed columns and 24 px of gaps, leaving ~109 px
+              // per flexible column. A plate stepper is two 44 px plates plus a legible field —
+              // 150 px minimum. It cannot fit five times over, and forcing it would collapse reps
+              // and RPE to unusable widths. Expanding one row keeps the control AND keeps the
+              // screen readable.
+              const isActive = i === activeSetIdx;
+              /* The heavy first set of a reverse pyramid, before any warm-up has been ticked.
+                 Dimmed and captioned, never disabled — see `topSetGated`. */
+              const gated = topSetGated && target?.role === 'top';
+              /* A percentage on an unloadable movement is a fabricated number, so there is no
+                 weight to suggest either — the field stays empty instead of offering 0 kg. */
+              const suggested = suggestedLoadKg(topSetKg, target?.loadPct);
+              const placeholder = ghost
+                ? String(ghost.weight_kg)
+                : suggested != null
+                  ? String(suggested)
+                  : '';
               return (
                 <li
                   key={i}
+                  data-testid={`set-row-${i + 1}`}
                   className={
-                    'grid grid-cols-[2rem_1fr_1fr_2.5rem_2.75rem] items-center gap-2 border-b border-border px-4 py-2 last:border-b-0 transition-colors ' +
-                    (s.done ? 'bg-accent-muted/40' : '')
+                    'border-b border-border px-4 py-2 last:border-b-0 transition-colors ' +
+                    (s.done ? 'bg-accent-muted/40 ' : '') +
+                    (gated ? 'opacity-50' : '')
                   }
                 >
-                  <span className="text-sm font-semibold tabular-nums text-muted-foreground">
-                    {i + 1}
-                  </span>
-                  <div className="flex items-center gap-1">
+                  {/* THE PRESCRIPTION, per set. A relative load rather than kilos: the app knows
+                      the shape of the session, the athlete's own history supplies the weight.
+                      Straight sets print the RANGE — double progression means "work up the range,
+                      THEN add load", and a hard 12 makes a lifter who got 9 on set 4 read a
+                      success as a failure. */}
+                  {target && (
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold tabular-nums">Set {i + 1}</span>
+                      <span
+                        className="text-[11px] font-semibold tabular-nums text-accent"
+                        data-testid={`set-target-${i + 1}`}
+                      >
+                        {target.repsLow === target.repsHigh
+                          ? `${target.reps} reps`
+                          : `${target.repsLow}–${target.repsHigh} reps`}
+                        {target.loadPct == null
+                          ? ''
+                          : target.role === 'work'
+                            ? ' · same weight'
+                            : ` · ${target.loadPct}%`}
+                        {/* THE PERCENTAGE, RESOLVED. "81%" of what? The whole prescription was
+                            expressed as a fraction of a number the screen never printed, so an
+                            athlete reading "8 reps · 90%" had to do the arithmetic themselves —
+                            mid-set, on a phone. `suggested` is null only when there is genuinely
+                            nothing to anchor on, and the prompt above handles that case. */}
+                        {suggested != null && target.role !== 'work' ? ` · ${suggested} kg` : ''}
+                        {target.rpe == null ? '' : ` · RPE ${target.rpe}`}
+                      </span>
+                    </div>
+                  )}
+                  {/* The cue is the coaching, so it only appears where the scheme actually shapes
+                      the set — straight sets would just repeat themselves four times. */}
+                  {target && target.role !== 'work' && (
+                    <p
+                      className="mt-0.5 text-[11px] leading-snug text-muted-foreground"
+                      data-testid={`set-cue-${i + 1}`}
+                    >
+                      {target.cue}
+                    </p>
+                  )}
+                  {/* The gate, stated. A dimmed row with no explanation is a bug; a dimmed row that
+                      says why, and offers the way past, is coaching. */}
+                  {gated && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2" data-testid={`set-gate-${i + 1}`}>
+                      <span className="text-[11px] font-semibold text-accent">Warm up first</span>
+                      <button
+                        type="button"
+                        onClick={ackWarmup}
+                        data-testid="warmup-ack"
+                        /* min-h-[44px]: measured 130 × 31. This is the escape hatch on the
+                           SAFETY gate — the one control on the row a hurried athlete reaches
+                           for — and it was the smallest target on the screen. */
+                        className="min-h-[44px] rounded-field border border-border bg-surface-2 px-3 py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-accent"
+                      >
+                        I warmed up already
+                      </button>
+                    </div>
+                  )}
+                  {/* THE ACTIVE SET gets the loaded bar: two plates you spin on a sleeve either
+                      side of the weight, on their own line so the control has room to be a real
+                      44 px target. The centre stays a genuine <input type="number"> — the numeric
+                      keypad, arrow keys and the `Set N weight` spinbutton name all depend on it.
+                      A bodyweight movement has no plates to spin, so it does not get one. */}
+                  {isActive && !plan.isBodyweight && (
+                    <PlateStepper
+                      className="mt-1.5"
+                      aria-label={`Set ${i + 1} weight`}
+                      value={s.weight_kg}
+                      onChange={(v) => updateSet(index, i, { weight_kg: v })}
+                      placeholder={placeholder}
+                    />
+                  )}
+                  <div className="mt-1.5 grid grid-cols-[1fr_1fr_2.5rem_2.75rem] items-center gap-2">
+                    {isActive && !plan.isBodyweight ? (
+                      // The weight column is already spent above, so it carries the plate-math
+                      // trigger instead — keeping reps, RPE and Done aligned under their headers.
+                      <button
+                        type="button"
+                        aria-label={`Plate math for set ${i + 1}`}
+                        onClick={() => setPlateForSet(i)}
+                        className="inline-flex h-11 min-w-[44px] items-center gap-1.5 justify-self-start rounded-field border border-border bg-surface-2 px-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-accent"
+                      >
+                        <PlateIcon size={15} /> Plates
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          aria-label={`Set ${i + 1} weight`}
+                          value={s.weight_kg || ''}
+                          placeholder={placeholder}
+                          onChange={(e) => updateSet(index, i, { weight_kg: Number(e.target.value) })}
+                          className="h-9 w-full rounded-field border border-border bg-surface px-2 text-sm tabular-nums outline-none focus:border-accent"
+                        />
+                        {/* A bathroom-scale glyph on the button that opens a BARBELL PLATE diagram
+                            was a straight semantic mismatch. ScaleIcon keeps its job on the
+                            weigh-in card, where a scale is the correct object. A movement with no
+                            bar has no plate math either, so the trigger is simply absent. */}
+                        {!plan.isBodyweight && (
+                          <button
+                            type="button"
+                            aria-label={`Plate math for set ${i + 1}`}
+                            onClick={() => setPlateForSet(i)}
+                            /* 44 × 44, matching sets 2-4 to set 1 and to every other latch on this
+                               screen. These measured 36 × 36 while set 1's read 76 × 36, so the
+                               plate affordance both missed the minimum AND changed shape between
+                               rows of the same list. */
+                            className="grid h-11 w-11 shrink-0 place-items-center rounded-field border border-border bg-surface-2 text-muted-foreground transition-colors hover:text-accent"
+                          >
+                            <PlateIcon size={16} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      aria-label={`Set ${i + 1} reps`}
+                      value={s.reps || ''}
+                      /* GHOST FIRST in the placeholder, because the target is now in the VALUE.
+                         The hint under this card promises the greyed numbers are last session's
+                         sets, so the greyed number has to be last session's set. */
+                      placeholder={String(ghost?.reps ?? target?.reps ?? re.rep_max)}
+                      onChange={(e) => updateSet(index, i, { reps: Number(e.target.value) })}
+                      className="h-9 w-full rounded-field border border-border bg-surface px-2 text-sm tabular-nums outline-none focus:border-accent"
+                    />
                     <input
                       type="number"
                       inputMode="decimal"
-                      aria-label={`Set ${i + 1} weight`}
-                      value={s.weight_kg || ''}
-                      placeholder={ghost ? String(ghost.weight_kg) : '0'}
-                      onChange={(e) => updateSet(index, i, { weight_kg: Number(e.target.value) })}
-                      className="h-9 w-full rounded-field border border-border bg-surface px-2 text-sm tabular-nums outline-none focus:border-accent"
+                      aria-label={`Set ${i + 1} RPE`}
+                      value={s.rpe ?? ''}
+                      placeholder={ghost?.rpe != null ? String(ghost.rpe) : '—'}
+                      onChange={(e) =>
+                        updateSet(index, i, { rpe: e.target.value ? Number(e.target.value) : null })
+                      }
+                      className="h-9 w-full rounded-field border border-border bg-surface px-1 text-center text-sm tabular-nums outline-none focus:border-accent"
                     />
-                    <button
-                      type="button"
-                      aria-label={`Plate math for set ${i + 1}`}
-                      onClick={() => setPlateForSet(i)}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-field border border-border bg-surface-2 text-muted-foreground transition-colors hover:text-accent"
-                    >
-                      <ScaleIcon size={16} />
-                    </button>
+                    {/* Was a to-do-list checkbox. Now a spring collar that closes — the gesture a
+                        lifter already performs to lock a bar. aria-label and aria-pressed are
+                        byte-for-byte what they were; the workout spec matches /Mark set 1/. */}
+                    <CollarLatch
+                      className="ml-auto"
+                      done={s.done}
+                      onClick={() => completeSet(i)}
+                      aria-label={`Mark set ${i + 1} ${s.done ? 'not done' : 'done'}`}
+                      data-testid={`set-latch-${i}`}
+                    />
                   </div>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    aria-label={`Set ${i + 1} reps`}
-                    value={s.reps || ''}
-                    placeholder={ghost ? String(ghost.reps) : String(re.rep_max)}
-                    onChange={(e) => updateSet(index, i, { reps: Number(e.target.value) })}
-                    className="h-9 w-full rounded-field border border-border bg-surface px-2 text-sm tabular-nums outline-none focus:border-accent"
-                  />
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    aria-label={`Set ${i + 1} RPE`}
-                    value={s.rpe ?? ''}
-                    placeholder={ghost?.rpe != null ? String(ghost.rpe) : '—'}
-                    onChange={(e) =>
-                      updateSet(index, i, { rpe: e.target.value ? Number(e.target.value) : null })
-                    }
-                    className="h-9 w-full rounded-field border border-border bg-surface px-1 text-center text-sm tabular-nums outline-none focus:border-accent"
-                  />
-                  <button
-                    type="button"
-                    aria-label={`Mark set ${i + 1} ${s.done ? 'not done' : 'done'}`}
-                    aria-pressed={s.done}
-                    onClick={() => completeSet(i)}
-                    className={
-                      'ml-auto grid h-9 w-9 place-items-center rounded-field border transition-colors ' +
-                      (s.done
-                        ? 'border-accent bg-accent text-accent-foreground'
-                        : 'border-border bg-surface text-muted-foreground hover:border-accent')
-                    }
-                  >
-                    <CheckIcon size={16} />
-                  </button>
                 </li>
               );
             })}
@@ -440,8 +1126,49 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             (resting ? 'opacity-40' : 'opacity-100')
           }
         >
-          Greyed numbers are last session&rsquo;s sets — tap ✓ to log the same, or edit first.
+          {/* THE COPY HAS TO MATCH THE FIELDS. It used to promise "the load your scheme suggests"
+              to an athlete looking at four empty boxes, because with no history there was nothing
+              to suggest. Now the fields carry the PRESCRIPTION and the greyed numbers behind them
+              carry last session, which is exactly what this sentence says. */}
+          Boxes are pre-filled with what your scheme prescribes today. Greyed numbers behind them
+          are last session&rsquo;s sets. Tap ✓ to log what you actually did — edit first if it
+          differs.
         </p>
+
+        {/* What makes the weight go up. Without this a scheme is decoration. */}
+        <p
+          className={
+            'text-xs leading-snug text-muted-foreground transition-opacity duration-300 ' +
+            (resting ? 'opacity-40' : 'opacity-100')
+          }
+          data-testid="progression-next-session"
+        >
+          <span className="font-semibold text-foreground">Next session:</span> {plan.nextSession}
+        </p>
+
+        {/* THE COOLDOWN, AFTER THE WORK. Only on the last exercise, and only ever below the set
+            list — the position IS the coaching (Behm 2016: static stretching before lifting costs
+            about 3.7% of subsequent performance, dynamic warm-up adds about 1.3%). Rendering it
+            anywhere above the sets would contradict the rule it exists to teach. */}
+        {isLast && prep.post.length > 0 && (
+          <PrepBlock
+            testId="workout-prep-post"
+            title="After you finish · stretches"
+            note={`Hold each for about 30 seconds, AFTER training — never before. ${PREP_EVIDENCE.cite}: static stretching beforehand costs strength, dynamic warm-up adds a little. These do not count as sets.`}
+            items={prep.post}
+            dimmed={resting}
+          />
+        )}
+
+        {/* Every percentage on this screen is asserted by the app, so the app shows its working —
+            including where the number is coaching convention rather than a trial result. */}
+        <div
+          className={
+            'transition-opacity duration-300 ' + (resting ? 'opacity-40' : 'opacity-100')
+          }
+        >
+          <ProgressionEvidenceNote testId="workout-progression-evidence" />
+        </div>
 
         {/* Pager controls — dimmed (never disabled) while the rest timer holds focus */}
         <div
@@ -458,7 +1185,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             <ChevronLeftIcon size={16} /> Prev
           </Button>
           {isLast ? (
-            <Button block glow={!resting} onClick={finishWorkout}>
+            <Button block texture glow={!resting} onClick={finishWorkout}>
               Finish workout
             </Button>
           ) : (
@@ -496,6 +1223,223 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
           <PlateCalculator total={current.sets[plateForSet]?.weight_kg ?? 0} />
         )}
       </Sheet>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------------ warm-up ramp */
+
+/**
+ * The warm-up ramp, in its OWN list.
+ *
+ * Two reasons it is not folded into the working sets, and both are load-bearing:
+ *
+ *   COACHING — a warm-up is not a hard set. The app's whole training currency is hard sets per
+ *   muscle per week; a ramp counted as work would inflate every weekly goal reading, every heat
+ *   colour and every target bar in the app against bands calibrated in hard sets.
+ *
+ *   ENGINEERING — the Playwright suite addresses working sets by 1-based index (`set-row-1`,
+ *   `set-latch-0`). Sharing a list would renumber all of them.
+ *
+ * IT STARTS FOLDED. It used to fold only AFTER every step was ticked, which helps at the end of a
+ * warm-up and not at all at the start — and the start is precisely when a first-time reverse-
+ * pyramid athlete arrives, with the first working set roughly 930 px down a 664 px screen. The
+ * summary row states what is required and how many steps there are, the soft gate on set 1 still
+ * points at it, and one tap opens it. Nothing is hidden; it is one tap instead of ~190 px.
+ */
+function WarmupList({
+  steps,
+  done,
+  onToggle,
+  dimmed,
+  required,
+  alreadyWarm,
+}: {
+  steps: WarmupSet[];
+  done: boolean[];
+  onToggle: (i: number) => void;
+  dimmed: boolean;
+  required: boolean;
+  /** true when an earlier lift already trained this pattern — the ramp is tapered, and says so */
+  alreadyWarm: boolean;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const doneCount = done.filter(Boolean).length;
+  const allDone = doneCount === steps.length && steps.length > 0;
+  const collapsed = !expanded;
+
+  return (
+    <div
+      className={
+        'rounded-card border border-border bg-surface-2 transition-opacity duration-300 ' +
+        (dimmed ? 'opacity-40' : 'opacity-100')
+      }
+      data-testid="warmup-block"
+    >
+      {/* The whole header IS the toggle, at a full 44 px, because on a folded card the header is
+          the only thing to tap and a 16 px "Show" link is not a target with chalky hands. */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        data-testid="warmup-toggle"
+        className="flex min-h-[44px] w-full items-center justify-between gap-2 px-4 py-2 text-left"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Warm-up{required ? ' · required' : ''}{' '}
+          <span className="tabular-nums" data-testid="warmup-progress">
+            {doneCount}/{steps.length}
+          </span>
+        </span>
+        <span className="flex items-center gap-1 text-[11px] font-semibold text-accent">
+          {expanded ? 'Hide' : allDone ? 'Show' : 'Open'}
+          <ChevronDownIcon
+            size={13}
+            aria-hidden
+            className={'transition-transform duration-200 ' + (expanded ? 'rotate-180' : '')}
+          />
+        </span>
+      </button>
+
+      {collapsed ? (
+        <p
+          className="border-t border-border px-4 py-2 text-xs text-muted-foreground"
+          data-testid="warmup-summary"
+        >
+          {allDone
+            ? `Warm-up · ${steps.length} ${steps.length === 1 ? 'set' : 'sets'} done.`
+            : `${steps.length} ${steps.length === 1 ? 'step' : 'steps'} in the movement you are about to train${alreadyWarm ? ' — tapered, because an earlier lift already warmed this pattern' : ''}. Tap to open.`}{' '}
+          These do not count towards your working sets.
+        </p>
+      ) : (
+        <>
+          <ul>
+            {steps.map((w, i) => (
+              <li
+                key={w.index}
+                data-testid={`warmup-row-${w.index}`}
+                className={
+                  'flex items-center gap-2 border-t border-border px-4 py-2 ' +
+                  (done[i] ? 'bg-accent-muted/30' : '')
+                }
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold tabular-nums text-foreground">
+                    {/* Percentage and reps always; kilos only when the athlete's own history
+                        supplies one. Nothing here invents a starting weight. */}
+                    {w.loadPct == null ? `${w.reps} reps` : `${w.reps} × ${w.loadPct}%`}
+                    {w.loadKg != null ? ` · ${w.loadKg} kg` : ''}
+                  </p>
+                  <p className="text-[11px] leading-snug text-muted-foreground">{w.cue}</p>
+                </div>
+                <CollarLatch
+                  done={done[i] ?? false}
+                  onClick={() => onToggle(i)}
+                  aria-label={`Mark warm-up ${w.index} ${done[i] ? 'not done' : 'done'}`}
+                  data-testid={`warmup-latch-${i}`}
+                />
+              </li>
+            ))}
+          </ul>
+          {/* Mobility warms the BODY. This warms the LIFT. That sentence used to end "under a
+              heavy-first scheme you need both" while the app supplied no mobility block at all —
+              naming a prerequisite it did not provide. It provides one now (the block above the
+              ramp on exercise 1), so the sentence points at it instead of at nothing. */}
+          <p className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground">
+            These don&rsquo;t count towards your working sets. Mobility work warms your body; this
+            warms the lift &mdash; under a heavy-first scheme you need both, and the mobility block
+            for this session is at the top of exercise 1.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------------------------- prep blocks */
+
+/**
+ * A prep block — dynamic mobility before the session, static stretches after it.
+ *
+ * NOT SETS, and the rule is identical to the ramp's: its own testids, excluded from `totalSets` /
+ * `doneSets`, never written to the logged session. The app's currency is hard sets per muscle per
+ * week, and a cat-cow counted as one would inflate every weekly reading in the product.
+ *
+ * NO LATCHES either, deliberately. A tick per stretch is five more taps in a session that is
+ * already asking for a lot of them, and unlike a ramp step there is no gate that depends on knowing
+ * whether it was done. The rows link out to the real how-to page instead, which is the thing a
+ * beginner actually needs from "World's Greatest Stretch".
+ */
+function PrepBlock({
+  testId,
+  title,
+  note,
+  items,
+  dimmed,
+}: {
+  testId: string;
+  title: string;
+  note: string;
+  items: readonly PrepItem[];
+  dimmed: boolean;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  return (
+    <div
+      className={
+        'rounded-card border border-border bg-surface-2 transition-opacity duration-300 ' +
+        (dimmed ? 'opacity-40' : 'opacity-100')
+      }
+      data-testid={testId}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        data-testid={`${testId}-toggle`}
+        className="flex min-h-[44px] w-full items-center justify-between gap-2 px-4 py-2 text-left"
+      >
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}{' '}
+          <span className="tabular-nums">
+            {items.length} {items.length === 1 ? 'move' : 'moves'}
+          </span>
+        </span>
+        <span className="flex items-center gap-1 text-[11px] font-semibold text-accent">
+          {expanded ? 'Hide' : 'Open'}
+          <ChevronDownIcon
+            size={13}
+            aria-hidden
+            className={'transition-transform duration-200 ' + (expanded ? 'rotate-180' : '')}
+          />
+        </span>
+      </button>
+      {expanded && (
+        <>
+          <ul>
+            {items.map((item) => (
+              <li
+                key={item.slug}
+                data-testid={`${testId}-row-${item.slug}`}
+                className="border-t border-border px-4 py-2"
+              >
+                <Link
+                  href={`/exercises/${item.slug}`}
+                  className="text-xs font-semibold text-foreground hover:text-accent"
+                >
+                  {item.name}
+                </Link>{' '}
+                <span className="text-xs tabular-nums text-accent">{item.seconds}s</span>
+                <p className="text-[11px] leading-snug text-muted-foreground">{item.cue}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground">
+            {note}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -575,13 +1519,17 @@ function PlateCalculator({ total }: { total: number }) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Loading{' '}
-          <span className="font-semibold text-foreground tabular-nums">
-            {totalDisplay} {unit}
-          </span>{' '}
-          on a {barDisplay} {unit} bar
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          {/* The object the sheet is about, drawn rather than named. */}
+          <EquipmentIllustration slug="barbell" size={22} selected />
+          <span>
+            Loading{' '}
+            <span className="font-semibold text-foreground tabular-nums">
+              {totalDisplay} {unit}
+            </span>{' '}
+            on a {barDisplay} {unit} bar
+          </span>
         </p>
         <div className="flex overflow-hidden rounded-chip border border-border text-xs font-semibold">
           {(['kg', 'lb'] as const).map((u) => (
@@ -671,6 +1619,9 @@ function PlateCalculator({ total }: { total: number }) {
 
 /* -------------------------------------------------------------------------------- rest timer */
 
+/** Eight evenly-spaced grip ticks around the rest ring — what makes it read as a plate face. */
+const TICKS = [0, 45, 90, 135, 180, 225, 270, 315];
+
 function RestTimer({
   left,
   total,
@@ -693,8 +1644,25 @@ function RestTimer({
       <div className="rounded-card border-gradient-gold bg-surface-2 p-4 shadow-[var(--shadow-glow)]">
         <div className="flex items-center gap-4">
           <div className="relative grid h-24 w-24 shrink-0 place-items-center">
+            {/* THE RING IS A PLATE FACE. It is the largest single object on screen mid-workout, so
+                making it the app's own object costs nine SVG nodes and no layout: eight grip ticks
+                around the rim, and a filled hub under the countdown. The numeral is more legible
+                for it — it finally sits on solid ground instead of over a moving track. */}
             <svg viewBox="0 0 104 104" className="h-24 w-24 -rotate-90">
               <circle cx={52} cy={52} r={r} fill="none" stroke="var(--color-muted)" strokeWidth={7} />
+              {TICKS.map((deg) => (
+                <line
+                  key={deg}
+                  x1={52 + (r - 9.5) * Math.cos((deg * Math.PI) / 180)}
+                  y1={52 + (r - 9.5) * Math.sin((deg * Math.PI) / 180)}
+                  x2={52 + (r - 5.5) * Math.cos((deg * Math.PI) / 180)}
+                  y2={52 + (r - 5.5) * Math.sin((deg * Math.PI) / 180)}
+                  stroke="var(--color-border-strong)"
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                />
+              ))}
+              <circle cx={52} cy={52} r={22} fill="var(--color-surface)" />
               <circle
                 cx={52}
                 cy={52}
@@ -794,7 +1762,9 @@ function Summary({
       {hasPRs && (
         <Card premium>
           <div className="flex items-center gap-2 text-accent">
-            <TrophyIcon size={18} />
+            {/* A medal is a record. The trophy now means one thing only — session complete — and
+                is no longer doing double duty for goals, PRs and finishing. */}
+            <MedalIcon size={18} />
             <CardTitle className="text-gradient-gold">
               New {prs.length === 1 ? 'PR' : 'PRs'}!
             </CardTitle>

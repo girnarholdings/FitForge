@@ -8,7 +8,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Card, CardTitle, Button, MacroRing } from '@/components/ui';
-import { PlusIcon, ScaleIcon, UtensilsIcon, ArrowRightIcon, FlameSolidIcon } from '@/components/ui/icons';
+import { PlusIcon, ScaleIcon, ShakerIcon, ArrowRightIcon, FlameSolidIcon } from '@/components/ui/icons';
 import { todaysRoutineDay, WEEKDAY_LABELS, blueprintWeekday } from '@/components/features/_mock/data';
 import {
   useActiveRoutine,
@@ -82,7 +82,10 @@ export function TodayView() {
 
       {/* Today's workout */}
       {day ? (
-        <Card className="overflow-hidden !p-0 shadow-[var(--shadow-card)]">
+        // STEEL. The hero and the workout player's set card are the two structural surfaces that
+        // anchor a screen; making them read as machined metal rather than paper is enough to shift
+        // the app's whole material feel without flattening the premium/standard hierarchy.
+        <Card variant="steel" className="overflow-hidden !p-0 shadow-[var(--shadow-card)]">
           <div className="bg-accent px-5 py-4 text-accent-foreground">
             <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
               Today&rsquo;s workout
@@ -107,7 +110,7 @@ export function TodayView() {
               )}
             </ul>
             <Link href={`/workout/${day.id}`} className="block">
-              <Button size="lg" block glow>
+              <Button size="lg" block glow texture>
                 Start workout
               </Button>
             </Link>
@@ -167,7 +170,10 @@ export function TodayView() {
         ) : (
           <div className="mt-3 flex flex-col items-center gap-3 rounded-2xl bg-muted/60 px-4 py-6 text-center">
             <span className="grid h-12 w-12 place-items-center rounded-full bg-surface-2 text-accent shadow-[var(--shadow-card)]">
-              <UtensilsIcon size={24} />
+              {/* The Nutrition TAB this card links to is a protein shaker; this was a knife and
+                  fork, so one destination had two icons. Restaurant cutlery is also the wrong
+                  register — the app logs macros, it does not book dinner. */}
+              <ShakerIcon size={24} />
             </span>
             <div>
               <p className="font-semibold text-foreground">Nothing logged yet today</p>

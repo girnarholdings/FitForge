@@ -18,18 +18,46 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardTitle, Sheet } from '@/components/ui';
-import { BoltIcon, ClockIcon, ArrowRightIcon, LayersIcon, TargetIcon } from '@/components/ui/icons';
+import {
+  BoltIcon,
+  ClockIcon,
+  ArrowRightIcon,
+  PlateStackIcon,
+  BodyIcon,
+  BenchIcon,
+} from '@/components/ui/icons';
+import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { m, staggerList, staggerItem, SPRING, haptic } from '@/components/ui/motion';
 import { useActiveRoutine } from '@/lib/demo/useDemo';
 import { setQuickSession } from '@/lib/demo/store';
 import { QUICK_BUDGETS, quickOptions, type QuickBudget, type QuickOption } from '@/lib/demo/quick';
 import { describeDay } from '@/lib/demo/generate';
+import { mockExerciseById } from '@/components/features/_mock/data';
 
 const KIND_ICON: Record<QuickOption['kind'], React.ReactNode> = {
   'pull-forward': <ArrowRightIcon size={18} />,
-  condense: <LayersIcon size={18} />,
-  isolate: <TargetIcon size={18} />,
+  // "Several days condensed into one" is literally MORE PLATES ON THE BAR. The old LayersIcon's
+  // own comment admitted it was reaching for stacked plates and settling for a generic layers
+  // glyph; now it does not have to settle.
+  condense: <PlateStackIcon size={18} />,
+  // "One day, on its own" is a day that hits a specific set of muscles — a body silhouette,
+  // not a dartboard. The dartboard now only ever means a numeric goal.
+  isolate: <BodyIcon size={18} />,
 };
+
+/**
+ * The dominant piece of equipment a quick session needs — the first slug on the first exercise
+ * that names any. "What will I have to queue for" is a real part of choosing a session on a busy
+ * gym floor, and it was not on the card at all. Returns null rather than guessing when the day
+ * carries nothing, so the row falls back to the kind icon instead of inventing a barbell.
+ */
+function dominantEquipment(option: QuickOption): string | null {
+  for (const ex of option.day.exercises) {
+    const slug = mockExerciseById(ex.exercise_id)?.equipment[0]?.slugs[0];
+    if (slug) return slug;
+  }
+  return null;
+}
 
 const KIND_TAG: Record<QuickOption['kind'], string> = {
   'pull-forward': 'Keeps your week on plan',
@@ -47,7 +75,18 @@ export function QuickWorkoutCard({ restDay = false }: QuickWorkoutCardProps) {
   return (
     <>
       <Card className="shadow-[var(--shadow-card)]">
-        <CardTitle>{restDay ? 'Rest day' : 'Want to train anyway?'}</CardTitle>
+        <div className="flex items-center gap-2.5">
+          {/* An empty day is still a gym day in this app's world — an empty bench, not a blank
+              card. Decorative; the title beside it is the accessible content.
+              THE OBJECT IS UNCHANGED, THE DRAWING OF IT IS NOT: this was the 48-unit `flat-bench`
+              PORTRAIT squeezed to 24 with the dense-stroke workaround. {@link BenchIcon} is the
+              same bench drawn natively on the 24 canvas every other glyph in this card uses, so it
+              carries the row's real optical weight instead of approximating it. The portrait keeps
+              the sizes it was actually drawn for — the equipment picker, and the 48 px empty
+              states in Progress. */}
+          {restDay && <BenchIcon size={22} className="shrink-0 text-accent" />}
+          <CardTitle>{restDay ? 'Rest day' : 'Want to train anyway?'}</CardTitle>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {restDay
             ? 'No workout scheduled today — recovery is part of the plan. Want to move anyway?'
@@ -142,6 +181,10 @@ export function QuickWorkoutSheet({ open, onClose }: { open: boolean; onClose: (
               data-testid={`quick-option-${option.kind}`}
               className="flex w-full items-center gap-3 rounded-card border border-border bg-surface-2 p-3 text-left transition-colors hover:border-accent/60"
             >
+              {/* The KIND badge stays the kind icon — it is the one thing that distinguishes the
+                  three options from each other, and three identical barbells would be a
+                  regression. The equipment goes on the meta line below, where it adds a fact
+                  instead of replacing one. */}
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent-muted text-accent">
                 {KIND_ICON[option.kind]}
               </span>
@@ -154,6 +197,14 @@ export function QuickWorkoutSheet({ open, onClose }: { open: boolean; onClose: (
                 </span>
                 <span className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-accent-soft">
                   <ClockIcon size={12} /> ~{option.minutes} min
+                  {(() => {
+                    const slug = dominantEquipment(option);
+                    // "What will I have to queue for" is a real part of choosing a session on a
+                    // busy floor. Drawn, not written — the line is already carrying two facts.
+                    return slug ? (
+                      <EquipmentIllustration slug={slug} size={16} selected className="ml-0.5" />
+                    ) : null;
+                  })()}
                   <span className="font-medium text-muted-foreground">· {KIND_TAG[option.kind]}</span>
                 </span>
               </span>

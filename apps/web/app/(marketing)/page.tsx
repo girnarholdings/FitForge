@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, Sheet } from '@/components/ui';
-import { TargetIcon, AppleIcon, SwapIcon, type IconProps } from '@/components/ui/icons';
+import { TargetIcon, ShakerIcon, SwapIcon, type IconProps } from '@/components/ui/icons';
 import { LogoLockup, LandingHero } from '@/components/illustrations';
 import { getState, resetDemo } from '@/lib/demo/store';
 
@@ -19,8 +19,12 @@ import { getState, resetDemo } from '@/lib/demo/store';
  * still, `.scroll-region` scrolls and the `.cta-dock` stays pinned.
  */
 const VALUE_ROWS: { Icon: (p: IconProps) => React.ReactElement; title: string }[] = [
+  // TargetIcon stays here and ONLY here (plus WelcomeStep): a target that means a numeric goal is
+  // the correct reading of a dartboard. Everywhere it meant "the muscles this hits" it is now
+  // BodyIcon. The apple became a shaker so the promise on the landing page is the same object the
+  // Nutrition tab wears once you are inside.
   { Icon: TargetIcon, title: 'A plan tuned to you' },
-  { Icon: AppleIcon, title: 'Macros, explained' },
+  { Icon: ShakerIcon, title: 'Macros, explained' },
   { Icon: SwapIcon, title: 'Smart substitutions' },
 ];
 
@@ -59,8 +63,15 @@ export default function LandingPage() {
             <br />
             <span className="text-gradient-gold">Forged around you.</span>
           </h1>
+          {/* COPY BUDGET: this line must stay within ~2 lines at 390px (see the layout note at the
+              top of the file) — about 90 characters. It also may NOT claim offline support: there
+              is no service worker, so a cold load still needs a connection, and the Coach KB entry
+              "Does the app work offline?" states that precisely. Marketing does not get to out-run
+              the app's own honest answer. Every figure here is checkable: 26 programs in
+              seed/data/splits.json, 91 rows in seed/data/exercises.json, macros from
+              @fitforge/shared → rules/macros.ts. */}
           <p className="mt-2 text-[0.9375rem] leading-snug text-muted-foreground">
-            Plans, macro targets, and a muscle-smart exercise library — free and offline-friendly.
+            26 real training programs, 91 coached exercises, macros that match. Free, no account.
           </p>
         </section>
 

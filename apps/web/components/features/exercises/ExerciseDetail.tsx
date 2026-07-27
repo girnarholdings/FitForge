@@ -26,7 +26,7 @@ import {
   SparkleIcon,
   TimerIcon,
   HeartIcon,
-  TargetIcon,
+  BodyIcon,
 } from '@/components/ui/icons';
 import { MuscleMap, MuscleMapThumb } from '@/components/illustrations';
 import { PoseFrames } from '@/components/illustrations/poses';
@@ -195,7 +195,7 @@ export function ExerciseDetail({ slug }: { slug: string }) {
       <Card>
         <CardTitle className="mb-2 flex items-center gap-2 text-base">
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent-muted text-accent">
-            <TargetIcon size={16} />
+            <BodyIcon size={16} />
           </span>
           Muscles worked
         </CardTitle>

@@ -118,6 +118,14 @@ export const ScaleIcon = (p: IconProps) => (
   </Svg>
 );
 
+/**
+ * NO CALL SITES as of the gym-vocabulary pass, and kept deliberately rather than deleted like
+ * TrophyIcon was. Today's nutrition card — its only user — now wears the {@link ShakerIcon} the
+ * Nutrition tab wears, because one destination must not have two icons, and because restaurant
+ * cutlery is the wrong register for an app that logs macros rather than booking dinner. It stays
+ * exported because a FOOD-ITEM context (a meal row, a recipe) is a different subject from a macro
+ * target and would want it. If nothing claims it by the next pass, delete it.
+ */
 export const UtensilsIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M6 3v7a2 2 0 0 0 2 2v9M8 3v6M4 3v6M17 3c-1.5 0-2.5 2-2.5 5S15.5 13 17 13v8" />
@@ -137,6 +145,14 @@ export const SparkleIcon = (p: IconProps) => (
   </Svg>
 );
 
+/**
+ * NO CALL SITES as of the gym-vocabulary pass, and kept for the same reason as
+ * {@link UtensilsIcon}. Both of its users — the Coach header and Today's coach entry card — now
+ * wear the {@link WhistleIcon} the Coach tab wears: an entry point and its destination cannot be
+ * two different objects, and a speech bubble framed the coach as a chatbot rather than as someone
+ * who tells you what to do. A genuine MESSAGE (a note left on a set, a comment) is a different
+ * subject and would want this. If nothing claims it by the next pass, delete it.
+ */
 export const ChatIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9.5L4.5 20Z" />
@@ -151,6 +167,16 @@ export const SendIcon = (p: IconProps) => (
   </Svg>
 );
 
+/**
+ * Dartboard — a NUMERIC GOAL, and nothing else any more.
+ *
+ * It used to mean two things: a goal, and "the muscles this exercise hits". Seven screens carried
+ * the second meaning, which made it the most-repeated generic-web metaphor left in the app, and one
+ * glyph with two meanings is worse than either of them alone. Those seven now use {@link BodyIcon},
+ * an authored silhouette that already meant exactly that on the heat map. Two call sites survive —
+ * the landing page's "A plan tuned to you" and onboarding's welcome highlight — where the subject
+ * genuinely is a target you are aiming at.
+ */
 export const TargetIcon = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="8.5" />
@@ -165,13 +191,10 @@ export const ArrowRightIcon = (p: IconProps) => (
   </Svg>
 );
 
-export const TrophyIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
-    <path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3" />
-    <path d="M12 14v3M9 21h6M10 21c0-1.5.7-2.5 2-3 1.3.5 2 1.5 2 3" />
-  </Svg>
-);
+/* TrophyIcon used to live here. It is gone on purpose — see {@link MedalIcon}, which already
+ * claimed "a personal record" and now holds both of the call sites the trophy had (the PR card
+ * header and the strength-trend header). A trophy is a generic gamification glyph; a medal on a
+ * ribbon is the object a lifter actually earns. A dead export is a lie about what the set covers. */
 
 export const HeartIcon = (p: IconProps) => (
   <Svg {...p}>
@@ -387,4 +410,419 @@ export const TrashIcon = (p: IconProps) => (
     <path d="M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7" />
     <path d="M10 11v6M14 11v6" />
   </Svg>
+);
+
+/* ══════════════════════════════════════════════════════ the GYM sub-family (24×24) ══
+ *
+ * WHY THIS EXISTS. The set above is a competent generic-web icon family — house, book, apple,
+ * chat, layers — and that is exactly the complaint: it could belong to any product. These are the
+ * app's own vocabulary: the objects a lifter actually touches. They live in the same `Svg`
+ * wrapper (1.75 stroke, round caps/joins, `currentColor`, 0 0 24 24) so nothing about the family's
+ * optical weight changes; only what it depicts does.
+ *
+ * DESIGNED AT 24, NOT SHRUNK FROM 48. The `components/illustrations/equipment` portraits carry
+ * 6–12 elements plus a ground line on a 48-unit canvas — at 16–20 px their strokes render
+ * sub-pixel and smear into a blob. Everything below is capped at ~6 drawn elements and was laid
+ * out for the sizes it is actually used at (16 px buttons, 18 px rows, 22 px tab bar). An
+ * unreadable barbell is worse than the generic icon it replaced.
+ *
+ * DELIBERATELY NOT GYM-IFIED (see the call sites, not this file): chevrons, ×, search, filter,
+ * gear, calendar, info, export/import, trash. Those are the app's GRAMMAR — a dumbbell as a close
+ * button costs comprehension for zero theme gain.
+ */
+
+/**
+ * Anvil — the Today tab, tying it to the "Anvil Bar" logo mark so the brand asset earns a second
+ * appearance instead of living only on the landing page.
+ */
+export const AnvilIcon = (p: IconProps) => (
+  <Svg {...p}>
+    {/* face + horn: the horn is the one silhouette cue that separates an anvil from a plain block */}
+    <path d="M3.2 8h10.3c2.1 0 3.6 1 5.6 2.4-2 1.4-3.5 2.1-5.6 2.1H3.2Z" />
+    {/* waist */}
+    <path d="M8.6 12.5 7.6 16.6M12.4 12.5l1 4.1" />
+    {/* base */}
+    <path d="M5.8 16.6h12v3.9h-12z" />
+  </Svg>
+);
+
+/**
+ * Barbell — programmed barbell work (the Workouts tab). Horizontal with two plates a side, which
+ * is what distinguishes it at 22 px from the diagonal single-plate {@link DumbbellIcon}.
+ * The three centre ticks are knurling: at 22 px they resolve as texture rather than as three
+ * countable lines, which is precisely what knurling looks like in the hand.
+ */
+export const BarbellIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M7 12h10" />
+    <path d="M10.8 10.7v2.6M12.4 10.7v2.6M14 10.7v2.6" strokeWidth={1.1} />
+    <rect x="1.9" y="7.4" width="2.7" height="9.2" rx="1.1" />
+    <rect x="5.2" y="9.4" width="2" height="5.2" rx="0.9" />
+    <rect x="16.8" y="9.4" width="2" height="5.2" rx="0.9" />
+    <rect x="19.4" y="7.4" width="2.7" height="9.2" rx="1.1" />
+  </Svg>
+);
+
+/**
+ * Weight plate seen face-on: rim, hub, four grip cut-outs. Used wherever the subject is LOAD —
+ * the plate-math trigger, the ± buttons of {@link PlateStepper} and {@link Stepper}.
+ */
+export const PlateIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="8.8" />
+    <circle cx="12" cy="12" r="2.7" />
+    <path d="M12 4.2v4.4M12 15.4v4.4M4.2 12h4.4M15.4 12h4.4" />
+  </Svg>
+);
+
+/**
+ * A loaded sleeve — 1, 2 or 3 plates on the bar, unloaded slots ghosted at 0.28.
+ *
+ * API-COMPATIBLE DROP-IN for {@link SignalBarsIcon}: same `level={1|2|3}` contract, same fill +
+ * opacity convention, so the experience step swaps one identifier and nothing else. Signal bars
+ * are a phone-reception metaphor; "how much can you handle" is plates.
+ */
+export const PlateStackIcon = ({
+  level = 3,
+  size = 24,
+  ...p
+}: IconProps & { level?: 1 | 2 | 3 }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden="true"
+    {...p}
+  >
+    <rect x="2" y="11" width="20" height="2" rx="1" fill="currentColor" opacity={0.45} />
+    <rect x="3.6" y="8" width="4" height="8" rx="1.4" fill="currentColor" opacity={level >= 1 ? 1 : 0.28} />
+    <rect x="9.8" y="6" width="4" height="12" rx="1.4" fill="currentColor" opacity={level >= 2 ? 1 : 0.28} />
+    <rect x="16" y="4" width="4" height="16" rx="1.4" fill="currentColor" opacity={level >= 3 ? 1 : 0.28} />
+  </svg>
+);
+
+/**
+ * Kettlebell — the Exercises tab.
+ *
+ * THE WINDOW UNDER THE HANDLE IS THE WHOLE ICON. The first pass drew a shallow arc sitting 0.2
+ * units above the bell, and at 22 px the two strokes merged: it rendered as a cloud. The handle is
+ * now a proper inverted U with a neck bar closing it off, so there is a real hole to see through
+ * at tab-bar size, which is the only thing that says "kettlebell" rather than "blob".
+ */
+export const KettlebellIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8.4 12.2V9.6a3.6 3.6 0 0 1 7.2 0v2.6" />
+    <path d="M7.6 12.4h8.8" />
+    <path d="M7.8 12.6C5.6 14.2 4.5 16.3 4.5 18.3A2.7 2.7 0 0 0 7.2 21h9.6a2.7 2.7 0 0 0 2.7-2.7c0-2-1.1-4.1-3.3-5.7" />
+  </Svg>
+);
+
+/**
+ * Ascending plates seen EDGE-ON on a floor line — the Progress tab, and every "your numbers over
+ * time" header under it.
+ *
+ * THE HUB NOTCH IS THE WHOLE ICON. Three rising rounded rectangles is a bar chart in any product
+ * on the app store; the short tick at each plate's mid-height is the centre hole you thread onto a
+ * sleeve, and it is the one cue that says "these are plates" rather than "these are bars". At the
+ * 22 px tab size the notches resolve as texture, which is acceptable — the ascending silhouette
+ * still reads as a chart, so nothing is lost when the detail smears.
+ *
+ * VERTICAL ON PURPOSE. {@link BarbellIcon} (Workouts) and {@link PlateStackIcon} are both a
+ * horizontal bar with plates on it. A third horizontal plate glyph in the same five-slot tab bar
+ * would be indistinguishable from the Workouts tab at thumb speed, and a wrong guess in a tab bar
+ * costs a navigation. Standing the plates up is the entire defence.
+ */
+export const PlateChartIcon = (p: IconProps) => (
+  <Svg {...p}>
+    {/* the floor the plates are stood on — without it they float and read as bars */}
+    <path d="M3 20.5h18" />
+    <rect x="4.4" y="13" width="4" height="7" rx="1.6" />
+    <rect x="10" y="9" width="4" height="11" rx="1.6" />
+    <rect x="15.6" y="4.8" width="4" height="15.2" rx="1.6" />
+    {/* hub holes, thinned so they read as a detail ON the plate rather than as a fourth element */}
+    <path d="M5.4 16.5h2M11 14.5h2M16.6 12.4h2" strokeWidth={1.1} />
+  </Svg>
+);
+
+/**
+ * A coach's clipboard with a BARBELL written on it — the coach's output: a personalized answer,
+ * a generated plan, "personalize this for me".
+ *
+ * It replaces {@link SparkleIcon} at those call sites. A sparkle is the house glyph of every
+ * AI product shipped since 2023 and it was standing for the coach's entire value; a clipboard is
+ * what a coach physically carries. The mini barbell on the board is what stops it reading as a
+ * shopping list — and at 16 px, where the barbell collapses to a smudge, the clip plus the tall
+ * rounded board still identifies the object.
+ */
+export const ClipboardIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="4.5" y="4" width="15" height="17" rx="2.5" />
+    <rect x="9" y="1.8" width="6" height="3.2" rx="1.2" />
+    {/* what is written on it: a bar with a plate a side, not a to-do rule */}
+    <path d="M8 12h8" />
+    <rect x="6.6" y="10.4" width="1.6" height="3.2" rx="0.7" />
+    <rect x="15.8" y="10.4" width="1.6" height="3.2" rx="0.7" />
+    <path d="M8 16.5h8" />
+  </Svg>
+);
+
+/** Flat bench — pad on two uprights with feet. Reads as "somewhere to lie down and press". */
+export const BenchIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="2.8" y="7.8" width="18.4" height="3.4" rx="1.7" />
+    <path d="M6.6 11.2V18M17.4 11.2V18" />
+    <path d="M4.4 18h4.4M15.2 18h4.4" />
+  </Svg>
+);
+
+/**
+ * Squat / power rack — the single object that unambiguously means "commercial gym", which is why
+ * it replaces the office-block {@link BuildingIcon} on the location question.
+ */
+export const RackIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5.6 20.6V4.4M18.4 20.6V4.4" />
+    <path d="M5.6 4.4h12.8" />
+    <path d="M2.6 10.4h18.8" />
+    <path d="M3.4 20.6h4.4M16.2 20.6h4.4" />
+  </Svg>
+);
+
+/**
+ * Spring collar — the thing you squeeze onto a sleeve to lock a bar. `open` splays the lever ears
+ * and cuts a ~50° gap out of the ring; clamped closes both. Drives {@link CollarLatch}, the
+ * set-completion control, where "logged" is a collar closing rather than a checkbox ticking.
+ */
+export const CollarIcon = ({ open = false, ...p }: IconProps & { open?: boolean }) => (
+  <Svg {...p}>
+    {/* A ~76° gap, not a hairline one. The first pass cut ~50° and at 20 px the C simply read as a
+        circle — the state the control exists to communicate was invisible. */}
+    {open ? <path d="M16.5 7.7A7 7 0 1 0 16.5 16.3" /> : <circle cx="10.6" cy="12" r="7" />}
+    {/* The squeeze levers: splayed apart while the collar is off the bar, pinched together once
+        it is clamped. */}
+    <path
+      d={
+        open
+          ? 'M17.1 7.3 21.5 5.4M17.1 16.7 21.5 18.6'
+          : 'M17.3 10.8 21.5 10M17.3 13.2 21.5 14'
+      }
+    />
+    <circle cx="10.6" cy="12" r="2.3" />
+  </Svg>
+);
+
+/** Coach's whistle — the Coach tab. A person who tells you what to do, not a speech bubble. */
+export const WhistleIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="10" cy="14.6" r="5.6" />
+    <path d="M15.4 12.6h4.8a1.5 1.5 0 0 1 0 3h-4.8" />
+    <circle cx="10" cy="14.6" r="1.7" />
+    <path d="M13 9.8 15.6 6" />
+  </Svg>
+);
+
+/** Protein shaker — the Nutrition tab. The one gym object that is genuinely about food. */
+export const ShakerIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="7.8" y="2.6" width="8.4" height="3.2" rx="1.1" />
+    <path d="M9 5.8h6l1.7 3.4v10.1a2.2 2.2 0 0 1-2.2 2.2H9.5a2.2 2.2 0 0 1-2.2-2.2V9.2Z" />
+    <path d="M7.4 13.2h9.3" />
+  </Svg>
+);
+
+/** Medal — a personal record. Retires the trophy from three meanings down to one (session done). */
+export const MedalIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M8.4 2.6 10.9 9M15.6 2.6 13.1 9" />
+    <circle cx="12" cy="15.4" r="6" />
+    <path d="m12 12.2 1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3Z" />
+  </Svg>
+);
+
+/** Jump rope — conditioning / "build endurance". A training tool, not a stick figure running. */
+export const JumpRopeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5.4 3.8 6.7 8.4" strokeWidth={3} />
+    <path d="M18.6 3.8 17.3 8.4" strokeWidth={3} />
+    <path d="M6.9 8.8c-3.5 3.4-2.3 11.2 5.1 11.2s8.6-7.8 5.1-11.2" />
+  </Svg>
+);
+
+/** Tape measure — body measurements. Ticks make it a measuring tape rather than a plain band. */
+export const TapeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="2.6" y="8.4" width="18.8" height="7.2" rx="2" />
+    <path d="M7 8.4v3M11 8.4v4M15 8.4v3M19 8.4v4" />
+  </Svg>
+);
+
+/**
+ * Chevron up. GENUINELY MISSING until now — the routine editor was shipping a raw "↑" text glyph
+ * as a button label, which renders in the user's fallback font at whatever optical weight iOS or
+ * Android happens to pick. Mirror of {@link ChevronDownIcon}, so up/down finally match.
+ */
+export const ChevronUpIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m5 15 7-7 7 7" />
+  </Svg>
+);
+
+/* ════════════════════════════════════════════════════════ the SOLID pair-family (24×24) ══
+ *
+ * WHY THESE EXIST. The five primary tabs used to signal "you are here" with COLOUR ALONE — the
+ * same outline glyph, gold instead of grey. That is a design tell (every native tab bar in this
+ * category swaps outline for filled) and a WCAG 1.4.1 failure: colour was the only channel
+ * carrying the state. Each primary tab now owns an outline/solid PAIR and {@link AppShell}
+ * crossfades between them, so the state is carried by SHAPE as well as by colour and by the
+ * accent-muted pill behind it. {@link DumbbellSolidIcon} was the orphan that started the family.
+ *
+ * NO KNOCKOUTS. Not one glyph below separates its parts with a background-coloured stroke or
+ * fill. The active tab sits on `bg-accent-muted` (mobile pill AND desktop sidebar row), not on
+ * `--color-surface`, so a `stroke="var(--color-surface)"` knockout — the trick the 48-unit
+ * equipment portraits can legitimately use, because they only ever sit on a surface-coloured
+ * field — would paint a surface-coloured bar across an accent-muted pill and either vanish or
+ * gash the icon. Interior detail is therefore carried by `fillRule="evenodd"` (the kettlebell's
+ * handle window) or by a real gap between two subpaths (the shaker's lid), both of which show the
+ * pill through and are correct on any background.
+ *
+ * DRAWN AT 22, CHECKED AT 22. These are only ever rendered at 20 px (sidebar) and 22 px (tab bar)
+ * and the silhouettes were chosen so that no two ADJACENT tabs share one. Only one is ever solid
+ * at a time and a text label sits directly under it, which is the mitigation of last resort.
+ */
+
+/** Filled dumbbell — for solid/active states where a stroke glyph would disappear against a fill. */
+export const DumbbellSolidIcon = ({ size = 24, ...p }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...p}
+  >
+    <rect x="1.8" y="7.8" width="2.9" height="8.4" rx="1.3" />
+    <rect x="5.3" y="9.4" width="2.6" height="5.2" rx="1.1" />
+    <rect x="7.9" y="10.8" width="8.2" height="2.4" rx="1.2" />
+    <rect x="16.1" y="9.4" width="2.6" height="5.2" rx="1.1" />
+    <rect x="19.3" y="7.8" width="2.9" height="8.4" rx="1.3" />
+  </svg>
+);
+
+/**
+ * Filled anvil — the Today tab, active. ONE closed path: face + horn, waist, base, traced as a
+ * single outline so the three parts weld into one silhouette instead of reading as a stack of
+ * three shapes at 22 px. The horn is still the only cue that separates an anvil from a block, so
+ * it keeps its full length even though the fill makes everything else heavier.
+ */
+export const AnvilSolidIcon = ({ size = 24, ...p }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...p}
+  >
+    <path d="M3.2 7.4H13.6c2.3 0 4 1.1 6.2 2.6-2.2 1.6-3.9 2.5-6.2 2.5h-1l1.2 3.6h4.9a1.2 1.2 0 0 1 1.2 1.2v2.1a1.2 1.2 0 0 1-1.2 1.2H5.5a1.2 1.2 0 0 1-1.2-1.2v-2.1a1.2 1.2 0 0 1 1.2-1.2h2.7l1.2-3.6H3.2A1.2 1.2 0 0 1 2 11.3V8.6a1.2 1.2 0 0 1 1.2-1.2Z" />
+  </svg>
+);
+
+/**
+ * Filled barbell — the Workouts tab, active. Five separate bodies (two plates a side plus the
+ * bar) rather than one welded blob: the GAPS are what make it a loaded bar. They are ≥0.6 units,
+ * which survives at 22 px, and they show the accent-muted pill through rather than a knockout.
+ * The outline's knurling ticks are dropped — at this weight they would only muddy the bar.
+ */
+export const BarbellSolidIcon = ({ size = 24, ...p }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...p}
+  >
+    <rect x="1.9" y="7.4" width="2.7" height="9.2" rx="1.2" />
+    <rect x="5.3" y="9.4" width="2" height="5.2" rx="0.9" />
+    <rect x="7.9" y="11" width="8.2" height="2" rx="1" />
+    <rect x="16.7" y="9.4" width="2" height="5.2" rx="0.9" />
+    <rect x="19.4" y="7.4" width="2.7" height="9.2" rx="1.2" />
+  </svg>
+);
+
+/**
+ * Filled kettlebell — the Exercises tab, active.
+ *
+ * THE HANDLE WINDOW IS THE ICON, and filling a kettlebell is exactly where that window gets lost.
+ * It survives here as an `evenodd` hole: one path, two subpaths — the outer silhouette, then the
+ * window as a second closed region. The handle wall left around it is 1.7 units (~1.5 px at tab
+ * size) and the window itself is 5.4 units tall, so there is a genuine hole to see the pill
+ * through. Painting that window with a background-coloured shape instead would render an
+ * accent-muted bar on an accent-muted pill: invisible, and the glyph blobs.
+ */
+export const KettlebellSolidIcon = ({ size = 24, ...p }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...p}
+  >
+    <path
+      fillRule="evenodd"
+      d="M7.55 12.4V9.7a4.45 4.45 0 0 1 8.9 0v2.7c2.5 1.9 3.75 4.2 3.75 6.2a2.8 2.8 0 0 1-2.8 2.8H6.6a2.8 2.8 0 0 1-2.8-2.8c0-2 1.25-4.3 3.75-6.2ZM9.25 12.4V9.7a2.75 2.75 0 0 1 5.5 0v2.7Z"
+    />
+  </svg>
+);
+
+/**
+ * Filled protein shaker — the Nutrition tab, active. The lid is a SEPARATE body with a real
+ * 1.4-unit gap under it, not a knockout line: at 22 px that gap is ~1.3 px of pill showing
+ * through, which is what makes the object read as "a bottle with a screw top" instead of a
+ * rounded slab. A `stroke="var(--color-surface)"` divider would have been invisible on the
+ * accent-muted active pill, which is the one background this icon is guaranteed to sit on.
+ */
+export const ShakerSolidIcon = ({ size = 24, ...p }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...p}
+  >
+    <rect x="7.6" y="2.4" width="8.8" height="3" rx="1.2" />
+    <path d="M9.2 6.8h5.6l1.9 3.6v8.6a2.4 2.4 0 0 1-2.4 2.4H9.7a2.4 2.4 0 0 1-2.4-2.4v-8.6Z" />
+  </svg>
+);
+
+/**
+ * Filled ascending plates — the Progress tab, active. The outline's hub notches are dropped
+ * rather than knocked out (see the family note above), so what remains must not degrade into a
+ * plain bar chart: the plates are drawn as full STADIUMS (`rx` = half the width), which is the
+ * rounded rim of a plate stood on its edge and is not a shape any bar chart uses.
+ */
+export const PlateChartSolidIcon = ({ size = 24, ...p }: IconProps) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    {...p}
+  >
+    <rect x="3" y="19.7" width="18" height="1.8" rx="0.9" />
+    <rect x="4.3" y="12.4" width="4.4" height="6.3" rx="2.2" />
+    <rect x="9.8" y="8.2" width="4.4" height="10.5" rx="2.2" />
+    <rect x="15.3" y="4" width="4.4" height="14.7" rx="2.2" />
+  </svg>
 );

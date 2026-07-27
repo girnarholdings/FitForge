@@ -11,7 +11,7 @@ const ACCENT = 'var(--accent)';
 
 /** shared 3px ground shadow line */
 const Ground = () => (
-  <line x1="10" y1="43" x2="38" y2="43" strokeWidth={3} className="opacity-30" />
+  <line x1="10" y1="43" x2="38" y2="43" strokeWidth={3} className="ff-ground opacity-30" />
 );
 
 export const BarbellGlyph: EquipmentGlyph = () => (

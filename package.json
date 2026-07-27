@@ -24,6 +24,8 @@
     "test:e2e": "npm run test:e2e -w @fitforge/web",
     "seed:check": "npm run seed:check -w @fitforge/seed",
     "seed:generate": "npm run seed:generate -w @fitforge/seed",
+    "food:import": "npm run food:import -w @fitforge/seed",
+    "food:import:fixture": "npm run food:import:fixture -w @fitforge/seed",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",

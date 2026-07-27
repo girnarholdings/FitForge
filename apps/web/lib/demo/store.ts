@@ -29,6 +29,11 @@ import type {
 import type { OnboardingDraft } from '@/components/onboarding/types';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
 import {
+  recommendProgressionScheme,
+  isRetiredProgressionScheme,
+  type ProgressionScheme,
+} from '@fitforge/shared/rules';
+import {
   WORKOUT_LOG_KEY,
   readWorkoutLog,
   replaceWorkoutLog,
@@ -71,6 +76,17 @@ export interface DemoState {
    */
   volumeTargets: Record<string, number>;
   /**
+   * How the sets of every exercise are SHAPED, and what makes the weight go up (see
+   * `@fitforge/shared/rules` → `progression.ts`). Chosen in onboarding, changeable in Settings,
+   * read by the workout player to compute per-set targets.
+   *
+   * `null` = "use FitForge's recommendation", exactly as an absent {@link DemoState.volumeTargets}
+   * key does: we store the CHOICE, not a snapshot of the recommendation, so an athlete who never
+   * picked keeps tracking the right scheme as their experience and goal change — and a novice can
+   * never end up parked on a heavy-first scheme they were silently defaulted into.
+   */
+  progressionScheme: ProgressionScheme | null;
+  /**
    * A one-off session built by the quick-workout picker (pull tomorrow forward / isolate a split
    * day / condense the split into one full-body session). Transient by design: replaced every
    * time the picker runs, and read by the player when the route is `/workout/quick`.
@@ -97,6 +113,7 @@ export function defaultState(): DemoState {
     logsByDate: {},
     weights: [],
     volumeTargets: {},
+    progressionScheme: null,
     quickSession: null,
   };
 }
@@ -127,6 +144,7 @@ const ONBOARDING_STEP_VALUES = allowed<OnboardingStep>({
   experience: true,
   schedule: true,
   split: true,
+  progression: true,
   location: true,
   equipment: true,
   exercise_prefs: true,
@@ -177,6 +195,11 @@ const MEAL_SLOT_VALUES = allowed<NutritionLog['meal_slot']>({
   snack: true,
 });
 const ROUTINE_SOURCE_VALUES = allowed<Routine['source']>({ generated: true, custom: true });
+const PROGRESSION_SCHEME_VALUES = allowed<ProgressionScheme>({
+  straight_sets: true,
+  top_set_backoff: true,
+  reverse_pyramid: true,
+});
 
 /* ------------------------------------------------------------------------- field readers
  * Every reader takes the raw value, a dotted path (for the error message) and the issue sink.
@@ -634,8 +657,30 @@ export function normalizeDemoState(value: unknown, issues: ShapeIssues = []): De
     logsByDate: readLogsByDate(value.logsByDate, 'state.logsByDate', issues),
     weights: readWeights(value.weights, 'state.weights', issues),
     volumeTargets: readVolumeTargets(value.volumeTargets, 'state.volumeTargets', issues),
+    // An unknown scheme (older build, hand-edited file) must never reach the player: it would
+    // prescribe nothing at all. It reads as "no choice made", which resolves to the recommendation
+    // for this athlete — safe by construction (see `resolveProgressionScheme`).
+    progressionScheme: readProgressionScheme(value.progressionScheme, 'state.progressionScheme', issues),
     quickSession: readQuickSession(value.quickSession, 'state.quickSession', issues),
   };
+}
+
+/**
+ * The athlete's progression-scheme choice.
+ *
+ * A RETIRED scheme is not a corrupt store. `ascending_pyramid` shipped once and was cut (it is the
+ * warm-up ramp plus one top set, with the heaviest work landing when the athlete is most fatigued),
+ * so a backup carrying it reads as "no choice made" — the athlete falls back to the recommendation
+ * for their level and goal, silently and safely. Reporting it as a shape issue would refuse an
+ * otherwise perfectly good import over a value the app itself used to write.
+ */
+function readProgressionScheme(
+  v: unknown,
+  path: string,
+  issues: ShapeIssues,
+): ProgressionScheme | null {
+  if (isRetiredProgressionScheme(v)) return null;
+  return readEnumOrNull<ProgressionScheme>(v, path, issues, PROGRESSION_SCHEME_VALUES);
 }
 
 /**
@@ -712,9 +757,15 @@ function load(): DemoState {
     const raw = window.localStorage.getItem(DEMO_STORAGE_KEY);
     if (raw) {
       const issues: ShapeIssues = [];
-      cache = normalizeDemoState(JSON.parse(raw), issues);
-      // Storage-only: `load()` runs inside render (via `getSnapshot`), so it must not notify.
-      if (issues.length > 0) writeStorage(cache);
+      const parsed: unknown = JSON.parse(raw);
+      cache = normalizeDemoState(parsed, issues);
+      /* Storage-only: `load()` runs inside render (via `getSnapshot`), so it must not notify.
+       * A RETIRED scheme forces the same rewrite without being an "issue" — `readProgressionScheme`
+       * drops it deliberately rather than reporting it, so an old backup still imports cleanly, but
+       * leaving the dead value sitting in storage would keep it alive in every future export. */
+      const retired =
+        isPlainObject(parsed) && isRetiredProgressionScheme(parsed.progressionScheme);
+      if (issues.length > 0 || retired) writeStorage(cache);
     } else {
       cache = defaultState();
     }
@@ -1048,6 +1099,34 @@ export function setVolumeTarget(muscle: string, sets: number | null): void {
 /** Drop every calibration at once — "use the recommendations for everything". */
 export function resetVolumeTargets(): void {
   update((s) => ({ ...s, volumeTargets: {} }));
+}
+
+/* ------------------------------------------------------------------------ progression scheme */
+
+/**
+ * Choose how every exercise's sets are shaped (onboarding, and Settings afterwards).
+ *
+ * Deliberately NOT stored on the onboarding draft: the scheme is not an input to plan generation —
+ * it re-shapes whatever plan exists, every session, forever. Keeping it a first-class field means
+ * changing it in Settings takes effect on the next set the athlete opens, with no re-generation
+ * and no chance of the draft and the plan disagreeing about how to train.
+ */
+export function setProgressionScheme(scheme: ProgressionScheme | null): void {
+  update((s) => ({ ...s, progressionScheme: scheme }));
+}
+
+/**
+ * The scheme actually in force: the athlete's explicit choice, else FitForge's recommendation for
+ * the answers on file. The recommendation is computed fresh (never snapshotted) so it follows the
+ * athlete as their experience level and goal change, and it can never hand a novice a scheme above
+ * their level — see `progression.ts`.
+ */
+export function resolveProgressionScheme(state: DemoState): ProgressionScheme {
+  if (state.progressionScheme) return state.progressionScheme;
+  return recommendProgressionScheme({
+    experience_level: state.draft.experience_level ?? state.profile?.experience_level ?? null,
+    primary_goal: state.draft.primary_goal ?? state.profile?.primary_goal ?? null,
+  });
 }
 
 /* ------------------------------------------------------------------------ the quick session */

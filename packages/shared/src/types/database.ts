@@ -31,7 +31,11 @@ export type EquipmentCategory =
   | 'cables'
   | 'bodyweight_accessories'
   | 'cardio'
-  | 'benches_racks';
+  | 'benches_racks'
+  // 'other' exists because plyometric kit (a plyo box) is furniture you jump on: it is not a
+  // weight, not a stack-and-pulley machine, and not cardio. Widened in migration 0006 alongside
+  // the conditioning/mobility/static_stretch movement patterns from the 59→91 catalog expansion.
+  | 'other';
 export type MuscleRegion = 'upper' | 'lower' | 'core';
 export type MovementPattern =
   | 'squat'

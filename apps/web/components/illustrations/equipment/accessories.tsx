@@ -4,11 +4,15 @@ import type { EquipmentGlyph } from './types';
 /**
  * Bodyweight & accessories group (§4.2, 6 items): pull-up-bar, dip-station,
  * resistance-bands, suspension-trainer, ab-wheel, medicine-ball.
+ *
+ * Also hosts the single 'other'-category item (plyo-box). It lives here rather than in
+ * machines.tsx because it has no stack, no bar and no seat — visually it belongs to the
+ * light-kit language of this file, not the heavy-machine one.
  */
 
 const ACCENT = 'var(--accent)';
 const Ground = () => (
-  <line x1="10" y1="43" x2="38" y2="43" strokeWidth={3} className="opacity-30" />
+  <line x1="10" y1="43" x2="38" y2="43" strokeWidth={3} className="ff-ground opacity-30" />
 );
 
 export const PullUpBarGlyph: EquipmentGlyph = () => (
@@ -93,5 +97,20 @@ export const MedicineBallGlyph: EquipmentGlyph = () => (
     <circle cx="20" cy="23" r="0.8" fill="currentColor" stroke="none" />
     <circle cx="28" cy="30" r="0.8" fill="currentColor" stroke="none" />
     <circle cx="24" cy="26" r="0.8" fill="currentColor" stroke="none" />
+  </>
+);
+
+export const PlyoBoxGlyph: EquipmentGlyph = () => (
+  <>
+    {/* box front face — drawn in isometric so a novice reads "solid thing you jump onto",
+        not "flat square". The jump-height cue matters more than the outline. */}
+    <path d="M13 24 L13 40 L31 40 L31 24 Z" />
+    {/* top face ★ — the landing surface is the whole point of the object */}
+    <path d="M13 24 L20 19 L38 19 L31 24 Z" stroke={ACCENT} strokeWidth={2.4} />
+    {/* side face */}
+    <path d="M31 24 L38 19 L38 35 L31 40" />
+    {/* soft-edge seam */}
+    <line x1="13" y1="32" x2="31" y2="32" className="opacity-40" />
+    <Ground />
   </>
 );

@@ -28,6 +28,13 @@
  */
 import type { RoutineDay, RoutineExercise, Routine } from '@/components/features/_mock/data';
 import { mockExerciseById, WEEKDAY_LABELS, blueprintWeekday } from '@/components/features/_mock/data';
+import {
+  restSecondsForSet,
+  SECONDS_PER_WARMUP_SET,
+  type ProgressionScheme,
+} from '@fitforge/shared/rules';
+import type { ExperienceLevel } from '@fitforge/shared/types';
+import { dayPrescriptions } from './prescription';
 
 /** How long a set takes end-to-end, excluding rest: work + re-rack + setup. Seconds. */
 const SECONDS_PER_SET = 45;
@@ -88,19 +95,63 @@ function patternOf(row: RoutineExercise): string {
   return mockExerciseById(row.exercise_id)?.movement_pattern ?? 'cardio';
 }
 
-/** Estimated wall-clock minutes for a day, counting sets, rest and per-exercise transitions. */
-export function estimateMinutes(day: RoutineDay): number {
+/**
+ * Seconds of WARM-UP a day costs — the ramp the app now mandates before every loaded lift.
+ *
+ * Broken out from {@link estimateMinutes} because `DayStats.prepMinutes` reports it separately: the
+ * session card's disclosure says "~13 min warm-up" rather than burying it in one total, so an
+ * athlete deciding whether they have time can see which part of the number is preparation.
+ *
+ * This was simply missing. `estimateMinutes` counted working sets and rest and knew nothing about
+ * ramps, so a reverse-pyramid day with 18 ramp sets promised "~49 min" for a ~62-minute session —
+ * a 20-28% under-estimate on the one number that answers "is this the session I want right now".
+ */
+export function estimatePrepSeconds(
+  day: RoutineDay,
+  scheme?: ProgressionScheme,
+  experience?: ExperienceLevel,
+): number {
+  return dayPrescriptions(day, scheme, experience).reduce(
+    (n, p) => n + p.ramp.length * SECONDS_PER_WARMUP_SET,
+    0,
+  );
+}
+
+/**
+ * Estimated wall-clock minutes for a day: warm-up ramps, working sets, rest and transitions.
+ *
+ * SCHEME-AWARE, and it has to be. Reverse pyramid caps the big lifts at three working sets and adds
+ * a fourth ramp step to each of them, so the same routine day is a materially different session
+ * under a different scheme — and until now this function returned a byte-identical number for all
+ * three, because it read `ex.sets` off the row and ignored ramps entirely.
+ *
+ * Rest is asked for PER SET rather than multiplied, because the rest after a top set is 1.25× the
+ * row's own figure (`restSecondsForSet`) — another ~2 minutes a day the flat multiplication missed.
+ */
+export function estimateMinutes(
+  day: RoutineDay,
+  scheme?: ProgressionScheme,
+  experience?: ExperienceLevel,
+): number {
+  const plans = dayPrescriptions(day, scheme, experience);
   let seconds = 0;
   // Supersetted exercises alternate, so their rest is spent doing the other movement. Count each
   // superset group's rest ONCE rather than once per member.
   const countedGroups = new Set<number>();
-  for (const ex of day.exercises) {
-    seconds += SECONDS_PER_EXERCISE + ex.sets * SECONDS_PER_SET;
-    if (ex.superset_group !== null) {
-      if (countedGroups.has(ex.superset_group)) continue;
-      countedGroups.add(ex.superset_group);
+  for (const { row, prescription, ramp } of plans) {
+    const mechanics = mockExerciseById(row.exercise_id)?.mechanics ?? null;
+    const sets = prescription.sets;
+    seconds +=
+      SECONDS_PER_EXERCISE +
+      sets.length * SECONDS_PER_SET +
+      ramp.length * SECONDS_PER_WARMUP_SET;
+    if (row.superset_group !== null) {
+      if (countedGroups.has(row.superset_group)) continue;
+      countedGroups.add(row.superset_group);
     }
-    seconds += ex.sets * ex.rest_seconds;
+    for (const target of sets) {
+      seconds += restSecondsForSet(row.rest_seconds, target.role, mechanics);
+    }
   }
   return Math.max(1, Math.round(seconds / 60));
 }

@@ -9,13 +9,35 @@ export interface ProgressBarProps {
   total: number;
   className?: string;
   label?: string;
+  /**
+   * `'bar'` puts a collar cap on each end of the track, so a progress bar filling up reads as a
+   * BARBELL loading — which is the most on-theme possible drawing of "progress" in this app.
+   * Reserved for training progress (sets logged, weekly volume); the onboarding step counter keeps
+   * the plain track, because an onboarding flow is not a lift.
+   */
+  variant?: 'bar';
 }
 
-/** Thin top progress bar shown on every onboarding screen (§2.2). */
-export function ProgressBar({ current, total, className, label }: ProgressBarProps) {
+/** Thin progress bar — onboarding step counter (§2.2), workout set progress, volume meters. */
+export function ProgressBar({ current, total, className, label, variant }: ProgressBarProps) {
   const pct = clamp((current / Math.max(1, total)) * 100, 0, 100);
+  const loaded = variant === 'bar';
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('w-full', loaded && 'relative px-1.5', className)}>
+      {loaded && (
+        // The collars. `aria-hidden` scenery, and outside the clipped track so they read as caps
+        // ON the bar rather than as fill inside it.
+        <>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-0 top-1/2 h-3.5 w-2 -translate-y-1/2 rounded-sm bg-border-strong"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute right-0 top-1/2 h-3.5 w-2 -translate-y-1/2 rounded-sm bg-border-strong"
+          />
+        </>
+      )}
       <div
         role="progressbar"
         aria-valuenow={current}

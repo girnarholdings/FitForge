@@ -39,6 +39,17 @@ export interface ButtonProps
    * CTA, active workout's current-set action, PR moments). Never two glows on screen.
    */
   glow?: boolean;
+  /**
+   * KNURLING on the grip band — the cross-hatch cut into the part of a bar you actually hold.
+   *
+   * Gated by convention to the ONE full-width primary CTA on a screen (Start workout, Finish
+   * workout, onboarding Continue) and nothing else. That thumb-zone button is the surface a finger
+   * lands on constantly, so
+   * it is where a tactile read pays off; letting it spread to every button would turn a material
+   * cue into wallpaper. It is a ≤12% alpha overlay (`--knurl`, inverted on the light theme so it
+   * cannot eat into the white-on-bronze label) and NEVER a bevel.
+   */
+  texture?: boolean;
 }
 
 const VARIANTS: Record<Variant, string> = {
@@ -58,7 +69,18 @@ const SIZES: Record<Size, string> = {
 };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', block, loading, glow, className, children, disabled, ...rest },
+  {
+    variant = 'primary',
+    size = 'md',
+    block,
+    loading,
+    glow,
+    texture,
+    className,
+    children,
+    disabled,
+    ...rest
+  },
   ref,
 ) {
   const inert = disabled || loading;
@@ -79,6 +101,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
         VARIANTS[variant],
         SIZES[size],
         glow && !inert && 'shadow-[var(--shadow-glow)] hover:shadow-[var(--shadow-glow)]',
+        // `.ff-knurl` is a static ::after overlay (globals.css) — no animation, so nothing here
+        // for reduced-motion to honour. Suppressed while inert: a disabled CTA should look flat.
+        texture && !inert && 'ff-knurl',
         block && 'w-full',
         className,
       )}

@@ -3,15 +3,23 @@
 import * as React from 'react';
 import type { GoalType } from '@fitforge/shared/types';
 import { SelectableCardGrid, type SelectableOption } from '@/components/ui';
-import { TrophyIcon, DumbbellIcon, FlameIcon, RunIcon, HeartIcon } from '@/components/ui/icons';
+import { BarbellIcon, DumbbellIcon, FlameIcon, JumpRopeIcon, HeartIcon } from '@/components/ui/icons';
 import { useOnboarding } from '../OnboardingProvider';
 import { OnboardingFooter } from '../OnboardingFooter';
 
+/**
+ * "Get stronger" used to be a trophy and "build endurance" a running figure — both OUTCOME
+ * metaphors borrowed from generic app iconography. A loaded bar is what getting stronger actually
+ * looks like; a jump rope is a training tool rather than a picture of a person. Flame and heart
+ * stay as they are: already non-widget, already gym-legible, and swapping them would be change
+ * for its own sake. Retiring the trophy from here lets it mean exactly one thing elsewhere
+ * (session complete) instead of three.
+ */
 const GOAL_OPTIONS: SelectableOption<GoalType>[] = [
-  { value: 'strength', title: 'Get stronger', description: 'Lift heavier over time', icon: <TrophyIcon size={22} /> },
+  { value: 'strength', title: 'Get stronger', description: 'Lift heavier over time', icon: <BarbellIcon size={22} /> },
   { value: 'hypertrophy', title: 'Build muscle', description: 'Add size and definition', icon: <DumbbellIcon size={22} /> },
   { value: 'fat_loss', title: 'Lose fat', description: 'Lean out while keeping muscle', icon: <FlameIcon size={22} /> },
-  { value: 'endurance', title: 'Build endurance', description: 'Last longer, recover faster', icon: <RunIcon size={22} /> },
+  { value: 'endurance', title: 'Build endurance', description: 'Last longer, recover faster', icon: <JumpRopeIcon size={22} /> },
   { value: 'general_health', title: 'General health', description: 'Feel good and stay consistent', icon: <HeartIcon size={22} /> },
 ];
 

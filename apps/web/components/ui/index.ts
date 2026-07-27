@@ -18,6 +18,15 @@ export type { SelectableCardGridProps, SelectableOption } from './SelectableCard
 export { Stepper } from './Stepper';
 export type { StepperProps } from './Stepper';
 
+/* ── the gym controls (see each file's header for WHY it is not a stock widget) ── */
+export { PlateStepper } from './PlateStepper';
+export type { PlateStepperProps } from './PlateStepper';
+
+export { CollarLatch } from './CollarLatch';
+export type { CollarLatchProps } from './CollarLatch';
+
+export { PlateFace } from './PlateFace';
+
 export { SearchInput } from './SearchInput';
 export type { SearchInputProps } from './SearchInput';
 

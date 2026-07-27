@@ -7,7 +7,9 @@
   "scripts": {
     "seed:check": "tsx generate.ts check",
     "seed:generate": "tsx generate.ts",
-    "test": "tsx --test test/validate.test.ts"
+    "test": "tsx --test test/validate.test.ts",
+    "food:import": "node import-usda.mjs",
+    "food:import:fixture": "node import-usda.mjs --fixture fixtures/fdc-sample.json"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

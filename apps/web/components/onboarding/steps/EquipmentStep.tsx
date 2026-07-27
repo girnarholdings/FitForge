@@ -38,6 +38,10 @@ const CATEGORY_META: Record<EquipmentCategory, { label: string; blurb: string }>
     blurb: 'Weight stacks on a pulley, so you can pull from any angle.',
   },
   cardio: { label: 'Cardio', blurb: 'Machines for warm-ups, conditioning and finishers.' },
+  other: {
+    label: 'Plyo & conditioning',
+    blurb: 'Kit for jumping and circuit work rather than lifting.',
+  },
 };
 
 /** Deck order: start with gear everyone recognises, end with the niche stuff (research §3). */
@@ -48,6 +52,7 @@ const CATEGORY_ORDER: EquipmentCategory[] = [
   'machines',
   'cables',
   'cardio',
+  'other',
 ];
 
 /**
@@ -85,6 +90,7 @@ const EQUIPMENT_DESCRIPTOR: Record<string, string> = {
   treadmill: 'A motorised belt for walking, jogging or interval running indoors.',
   'stationary-bike': 'A bike that stays put — steady cardio or hard intervals.',
   'rowing-machine': 'Sliding seat plus a handle: full-body cardio in one pulling motion.',
+  'plyo-box': 'A sturdy box you jump onto and step down from — box jumps and step-ups.',
 };
 
 function descriptorFor(row: DemoEquipmentRow): string {

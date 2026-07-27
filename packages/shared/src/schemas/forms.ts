@@ -31,6 +31,9 @@ export const ONBOARDING_STEPS = [
   'schedule',
   // WS-5: choose a named program from the split library (or let FitForge pick).
   'split',
+  // How the sets inside that program are shaped, and what makes the weight go up
+  // (see `rules/progression.ts`). It follows the split because it progresses the split.
+  'progression',
   'location',
   'equipment',
   'exercise_prefs',

@@ -61,6 +61,7 @@ export const EQUIPMENT_CATEGORIES = [
   'bodyweight_accessories',
   'cardio',
   'benches_racks',
+  'other',
 ] as const satisfies readonly EquipmentCategory[];
 
 export const MUSCLE_REGIONS = ['upper', 'lower', 'core'] as const satisfies readonly MuscleRegion[];
@@ -84,6 +85,14 @@ export const MOVEMENT_PATTERNS = [
   'knee_extension_iso',
   'calf_raise',
   'cardio',
+  // The 59→91 catalog expansion introduced three patterns that are trained, not lifted:
+  // 'conditioning' (burpee, thruster, wall-ball — metabolic work with no single hinge/push
+  // classification), 'mobility' (the dynamic pre-session ramp) and 'static_stretch' (the
+  // post-session cooldown). They are separate patterns rather than squeezed into an existing
+  // one because the prep builder keys off them to pick warm-up vs cooldown movements.
+  'conditioning',
+  'mobility',
+  'static_stretch',
 ] as const satisfies readonly MovementPattern[];
 
 export const MECHANICS_TYPES = [

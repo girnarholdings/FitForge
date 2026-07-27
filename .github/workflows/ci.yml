@@ -65,6 +65,84 @@ jobs:
       - name: Validator unit tests
         run: npm run test -w @fitforge/seed
 
+      # The tier-2 importer is only ever RUN in the Pages workflow, where it is
+      # continue-on-error — so a regression in it (a bad rejection rule, a broken shard key, a
+      # syntax error) would not fail anything: the deploy would just quietly ship tier-1 only and
+      # nobody would learn the importer is broken. This runs the same code path offline against
+      # seed/fixtures/fdc-sample.json, which deliberately carries BOTH FDC nutrient shapes, and
+      # then asserts the manifest it wrote actually describes the shards it wrote.
+      - name: Tier-2 importer smoke test (offline fixture)
+        run: |
+          npm run food:import:fixture -w @fitforge/seed
+          node -e '
+            const fs = require("node:fs");
+            const dir = "apps/web/public/food";
+            const manifest = JSON.parse(fs.readFileSync(dir + "/manifest.json", "utf8"));
+            if (!(manifest.total > 0)) throw new Error("importer wrote an empty catalog");
+            for (const [key, count] of Object.entries(manifest.shards)) {
+              const shard = JSON.parse(fs.readFileSync(`${dir}/${key}.json`, "utf8"));
+              if (shard.foods.length !== count) {
+                throw new Error(`shard ${key}: manifest says ${count}, file has ${shard.foods.length}`);
+              }
+              for (const food of shard.foods) {
+                // The whole point of the importer: no invented numbers reach the catalog.
+                if (typeof food.per_100g?.kcal !== "number") throw new Error(`${food.id}: no kcal`);
+              }
+            }
+            console.log(`importer OK — ${manifest.total} foods, ${Object.keys(manifest.shards).length} shards`);
+          '
+      - name: Clean importer output
+        if: always()
+        run: rm -rf apps/web/public/food
+
+  # Web app end-to-end (@fitforge/web): the Playwright suite against the real static export.
+  #
+  # WHY THIS JOB EXISTS: typecheck + build only prove the bundle compiles. Every behaviour that
+  # actually defines this product — onboarding completing, a workout persisting to localStorage,
+  # the generator not producing an empty day — is client-side and invisible to tsc. Without this
+  # job a change can be green in CI and broken the moment Pages serves it.
+  e2e:
+    name: web · e2e (playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Build shared dependency
+        run: npm run build -w @fitforge/shared
+
+      # Only Chromium: the suite pins the iPhone 13 device profile on a Chromium engine
+      # (playwright.config.ts), so the other browsers would be downloaded and never launched.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # The suite serves apps/web/out — it does not build it. Base path MUST be empty here: the
+      # test server mounts out/ at the root, so a /FitForge prefix would 404 every asset.
+      - name: Build static export
+        run: npm run build -w @fitforge/web
+        env:
+          NEXT_PUBLIC_BASE_PATH: ""
+          NEXT_PUBLIC_DEMO: "1"
+
+      # --workers=1 is not a performance choice. The specs share one out/ directory and one
+      # screenshot directory; running them in parallel makes them race and report failures that
+      # do not exist in the product.
+      - name: Run E2E suite
+        run: npm run test:e2e -w @fitforge/web -- --workers=1
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-output
+          path: apps/web/tests/.output
+          retention-days: 7
+          if-no-files-found: ignore
+
   # NOTE: the database (Supabase local stack + pgTAP) and iOS (macOS + xcodebuild)
   # jobs are deferred until those layers are wired to a live stack / verified on a
   # Mac. Their sources live under supabase/ and apps/ios/. Re-add dedicated
