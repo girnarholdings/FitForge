@@ -65,6 +65,17 @@ export interface DemoState {
   logsByDate: Record<string, NutritionLog[]>;
   /** body-weight log, ascending by date (empty for a fresh user) */
   weights: WeightEntry[];
+  /**
+   * Per-muscle weekly set targets the athlete calibrated for themselves, keyed by muscle slug.
+   * Absent = use FitForge's recommendation. See `features/shared/volumeMath`.
+   */
+  volumeTargets: Record<string, number>;
+  /**
+   * A one-off session built by the quick-workout picker (pull tomorrow forward / isolate a split
+   * day / condense the split into one full-body session). Transient by design: replaced every
+   * time the picker runs, and read by the player when the route is `/workout/quick`.
+   */
+  quickSession: RoutineDay | null;
 }
 
 export interface WeightEntry {
@@ -85,6 +96,8 @@ export function defaultState(): DemoState {
     targets: null,
     logsByDate: {},
     weights: [],
+    volumeTargets: {},
+    quickSession: null,
   };
 }
 
@@ -620,7 +633,46 @@ export function normalizeDemoState(value: unknown, issues: ShapeIssues = []): De
     targets: readTargets(value.targets, 'state.targets', issues),
     logsByDate: readLogsByDate(value.logsByDate, 'state.logsByDate', issues),
     weights: readWeights(value.weights, 'state.weights', issues),
+    volumeTargets: readVolumeTargets(value.volumeTargets, 'state.volumeTargets', issues),
+    quickSession: readQuickSession(value.quickSession, 'state.quickSession', issues),
   };
+}
+
+/**
+ * Calibrated per-muscle weekly set targets. Values are clamped to the range the evidence supports
+ * (see `volumeMath.MED_WEEKLY_SETS` / `MAX_WEEKLY_SETS`) rather than trusted: a hand-edited backup
+ * saying `{"quads": 1e9}` must not paint the whole silhouette red forever.
+ */
+function readVolumeTargets(v: unknown, path: string, issues: ShapeIssues): Record<string, number> {
+  if (v === undefined || v === null) return {};
+  if (!isPlainObject(v)) {
+    noteIssue(issues, path, 'expected an object of muscle → weekly sets');
+    return {};
+  }
+  const out: Record<string, number> = {};
+  for (const [slug, raw] of Object.entries(v)) {
+    const n = finiteNumber(raw);
+    if (n === null) {
+      noteIssue(issues, `${path}.${slug}`, 'expected a finite number');
+      continue;
+    }
+    // VOLUME_TARGET_MIN/MAX mirror volumeMath's MED_WEEKLY_SETS / MAX_WEEKLY_SETS. Duplicated as
+    // literals so the persistence layer stays free of feature imports.
+    const clamped = Math.min(30, Math.max(4, Math.round(n)));
+    if (clamped !== n) noteIssue(issues, `${path}.${slug}`, 'out of the supported 4–30 set range');
+    out[slug] = clamped;
+  }
+  return out;
+}
+
+/** The transient quick-workout session. Anything malformed simply means "no quick session". */
+function readQuickSession(v: unknown, path: string, issues: ShapeIssues): RoutineDay | null {
+  if (v === undefined || v === null) return null;
+  if (!isPlainObject(v)) {
+    noteIssue(issues, path, 'expected a routine-day object or null');
+    return null;
+  }
+  return readRoutineDay(v, path, issues, 0);
 }
 
 /**
@@ -975,4 +1027,32 @@ export function logWeight(date: string, kg: number): void {
     const next = [...others, { date, kg }].sort((a, b) => (a.date < b.date ? -1 : 1));
     return { ...s, weights: next };
   });
+}
+
+/* ------------------------------------------------------------------ calibrated volume targets */
+
+/**
+ * Set one muscle's weekly set target. Passing `null` clears the calibration, which puts that
+ * muscle back on FitForge's recommendation — deleting the key rather than storing the current
+ * recommended value, so the target keeps tracking the recommendation as the profile changes.
+ */
+export function setVolumeTarget(muscle: string, sets: number | null): void {
+  update((s) => {
+    const next = { ...s.volumeTargets };
+    if (sets === null) delete next[muscle];
+    else next[muscle] = Math.min(30, Math.max(4, Math.round(sets)));
+    return { ...s, volumeTargets: next };
+  });
+}
+
+/** Drop every calibration at once — "use the recommendations for everything". */
+export function resetVolumeTargets(): void {
+  update((s) => ({ ...s, volumeTargets: {} }));
+}
+
+/* ------------------------------------------------------------------------ the quick session */
+
+/** Stash the session the quick-workout picker built; `/workout/quick` reads it. */
+export function setQuickSession(day: RoutineDay | null): void {
+  update((s) => ({ ...s, quickSession: day }));
 }

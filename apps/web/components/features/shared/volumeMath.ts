@@ -10,28 +10,111 @@
  * Pure, dependency-free, SSR-safe. No React, no storage, no fetching.
  *
  * ─────────────────────────────────────────────────────────────────────────────────────────────
- * WHERE THE NUMBERS COME FROM
+ * WHERE THE NUMBERS COME FROM — see {@link VOLUME_EVIDENCE} for the on-screen citations
  * ─────────────────────────────────────────────────────────────────────────────────────────────
- * The dose-response literature on resistance-training volume (Schoenfeld/Krieger meta-analyses;
- * Baz-Valle et al. 2022) converges on roughly **10–20 hard sets per muscle per week** as the
- * productive range for hypertrophy in trained lifters, with benefit plateauing and recovery cost
- * rising beyond ~20. Practitioner volume-landmark frameworks (Israetel's MEV/MAV/MRV) put small
- * or heavily-indirectly-trained muscles lower (forearms, hip flexors, rear/front delts) and the
- * big pulling/pushing/leg muscles higher.
+ * Three independent lines of evidence, cross-checked against each other:
  *
- * So each muscle gets a single BASE weekly goal placed inside that range according to (a) muscle
- * size and (b) how much indirect volume it already absorbs from compounds — e.g. front delts sit
- * low because every press hits them, side delts sit high because almost nothing else does.
+ *  1. **Pelland et al. (2025)** — a Bayesian meta-regression over 67 studies / 2,058 participants.
+ *     Hypertrophy keeps rising with weekly sets but with clear diminishing returns beyond roughly
+ *     **12–20 sets per muscle per week** (≈ +0.24 % hypertrophy per extra set at 12.25 sets).
+ *     Critically for this app, it quantifies volume *fractionally*: a set that trains a muscle
+ *     INDIRECTLY counts **0.5**, a direct set counts 1.0. That is precisely the primary-1.0 /
+ *     secondary-0.5 convention `MuscleVolume` already uses, so our set counts are commensurable
+ *     with the numbers the meta-regression fitted — the goals below are in the same units.
+ *
+ *  2. **Baz-Valle et al. (2022)** — systematic review; **12–20 weekly sets** per muscle as the
+ *     standard recommendation for young trained men, with an inverted-U beyond it. Converges with
+ *     (1) from a different method, which is why the productive band here reads 12–20 and not the
+ *     older 10–20.
+ *
+ *  3. **Iversen et al. (2021), "No time to lift?"** — the *floor*. Roughly **4 hard sets per
+ *     muscle per week**, taken close to failure at 6–15 reps, is the minimum effective dose for
+ *     hypertrophy; 2–3 sets per exercise per week at 70–85 % 1RM suffices for strength. This is
+ *     where {@link MED_WEEKLY_SETS} comes from, and it is why goals are floored rather than
+ *     allowed to scale to nothing for a 2-day beginner.
+ *
+ * Each muscle gets a BASE weekly goal placed inside the 12–20 band according to (a) muscle size
+ * and (b) how much indirect volume it already absorbs from compounds — front delts sit low
+ * because every press hits them, side delts sit high because almost nothing else does. That
+ * per-muscle placement is the one part with no direct trial evidence: it follows practitioner
+ * volume-landmark frameworks (Israetel's MEV/MAV/MRV) and is labelled as such on screen.
  *
  * The base is then scaled by GOAL and EXPERIENCE (and gently by training days available), because
  * a 2-day/week beginner training for general health should not be told they are 70 % under target
- * on twenty muscles. Every factor is declared below and documented on-screen.
+ * on twenty muscles.
+ *
+ * FINALLY — the athlete overrides all of it. {@link VolumeGoalContext.targetOverrides} lets a user
+ * calibrate any muscle's target for themselves; the recommendation stays visible next to it, and
+ * everything downstream (heat colours, statuses, plan advice) recomputes against the calibrated
+ * number. Populations differ, recovery differs, and a number a user does not believe is a number
+ * they will ignore.
  */
 import type { MuscleSlug } from '@/components/illustrations';
 import { MUSCLE_NAMES, ALL_MUSCLE_SLUGS } from '@/components/illustrations';
 import type { Difficulty, GoalType, Profile } from '@/components/features/_mock/data';
 
+/* ═════════════════════════════════════════════════════════════════════════════ the evidence ══ */
+
+/** One citation, rendered on screen wherever a volume number is asserted. */
+export interface EvidenceSource {
+  /** what this source actually establishes, in the app's own units */
+  claim: string;
+  /** short attribution, e.g. "Pelland et al., 2025" */
+  cite: string;
+  /** where it was published / can be read */
+  where: string;
+  url: string;
+}
+
+/**
+ * The sources behind every weekly-set number in this module. Shown in the UI rather than kept in
+ * a comment: a training app asserting "your goal is 14 sets" owes the user the provenance.
+ */
+export const VOLUME_EVIDENCE: readonly EvidenceSource[] = [
+  {
+    claim:
+      'Hypertrophy keeps improving with weekly sets but with strong diminishing returns past ~12–20 sets per muscle. Volume is counted fractionally — an indirect set counts 0.5 — which is the same convention this app uses.',
+    cite: 'Pelland et al., 2025',
+    where: 'Meta-regression, 67 studies / 2,058 participants',
+    url: 'https://pubmed.ncbi.nlm.nih.gov/41343037/',
+  },
+  {
+    claim:
+      '12–20 weekly sets per muscle is the standard recommendation for young trained men; past that the dose-response curve turns over.',
+    cite: 'Baz-Valle et al., 2022',
+    where: 'Systematic review',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC8884877/',
+  },
+  {
+    claim:
+      'The minimum effective dose is about 4 hard sets per muscle per week near failure at 6–15 reps. No goal here is ever floored below that.',
+    cite: 'Iversen et al., 2021',
+    where: '“No time to lift?” — time-efficient training review',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11127831/',
+  },
+  {
+    claim:
+      'How the 12–20 band is split BETWEEN muscles (side delts high, front delts low) follows practitioner volume landmarks, not trial data. Treat per-muscle placement as a starting point and calibrate it.',
+    cite: 'Israetel et al. (MEV/MAV/MRV)',
+    where: 'Practitioner framework — lower evidence tier, flagged deliberately',
+    url: 'https://rpstrength.com/blogs/articles/training-volume-landmarks-muscle-growth',
+  },
+] as const;
+
 /* ══════════════════════════════════════════════════════════════════════ weekly set goals ══ */
+
+/**
+ * Minimum effective dose — 4 hard sets/muscle/week (Iversen et al. 2021). Both the floor under a
+ * scaled-down recommendation and the lower bound on what a user may calibrate a target to: below
+ * this the app would be endorsing a target the literature says does approximately nothing.
+ */
+export const MED_WEEKLY_SETS = 4;
+
+/** Upper bound on a user-calibrated target. Past ~30 fractional sets every model turns over hard. */
+export const MAX_WEEKLY_SETS = 30;
+
+/** The productive band both meta-analyses converge on, for on-screen copy. */
+export const PRODUCTIVE_BAND = { low: 12, high: 20 } as const;
 
 /**
  * BASE weekly hard-set goal per muscle for an INTERMEDIATE lifter training for general fitness on
@@ -108,16 +191,32 @@ export interface VolumeGoalContext {
   goal?: GoalType | null;
   experience?: Difficulty | null;
   daysPerWeek?: number | null;
+  /**
+   * Per-muscle targets the athlete set for themselves, in weekly fractional sets. Any muscle
+   * present here uses this number INSTEAD of the computed recommendation; the recommendation is
+   * still reachable via {@link recommendedWeeklySetGoal} so both can be shown side by side.
+   */
+  targetOverrides?: Partial<Record<MuscleSlug, number>> | null;
 }
 
 /** Pull a {@link VolumeGoalContext} out of the Local Mode profile (null-safe). */
-export function goalContextFromProfile(profile: Profile | null | undefined): VolumeGoalContext {
-  if (!profile) return {};
+export function goalContextFromProfile(
+  profile: Profile | null | undefined,
+  targetOverrides?: Partial<Record<MuscleSlug, number>> | null,
+): VolumeGoalContext {
+  if (!profile) return { targetOverrides: targetOverrides ?? null };
   return {
     goal: profile.primary_goal,
     experience: profile.experience_level,
     daysPerWeek: profile.days_per_week,
+    targetOverrides: targetOverrides ?? null,
   };
+}
+
+/** Clamp a user-entered target into the range the evidence supports asserting anything about. */
+export function clampWeeklyTarget(sets: number): number {
+  if (!Number.isFinite(sets)) return MED_WEEKLY_SETS;
+  return Math.min(MAX_WEEKLY_SETS, Math.max(MED_WEEKLY_SETS, Math.round(sets)));
 }
 
 /** The combined multiplier applied to every base goal. */
@@ -128,12 +227,35 @@ export function volumeGoalMultiplier(ctx: VolumeGoalContext = {}): number {
 }
 
 /**
- * Personalised weekly set goal for one muscle. Rounded to a whole set and floored at 4 — below
- * that a "goal" is noise (one exercise clears it).
+ * What FitForge RECOMMENDS for one muscle, ignoring any calibration the athlete has done.
+ * Floored at the minimum effective dose (Iversen et al. 2021) — a scaled-down recommendation
+ * should still be a dose that does something.
+ */
+export function recommendedWeeklySetGoal(slug: MuscleSlug, ctx: VolumeGoalContext = {}): number {
+  const base = BASE_WEEKLY_SET_GOAL[slug] ?? 10;
+  return Math.max(MED_WEEKLY_SETS, Math.round(base * volumeGoalMultiplier(ctx)));
+}
+
+/**
+ * The weekly set goal actually in force for one muscle: the athlete's calibrated target if they
+ * set one, otherwise {@link recommendedWeeklySetGoal}. Everything downstream — heat colour,
+ * status, "short of goal" advice — resolves through here, so calibrating a target genuinely
+ * re-plans rather than just re-labelling.
  */
 export function weeklySetGoal(slug: MuscleSlug, ctx: VolumeGoalContext = {}): number {
-  const base = BASE_WEEKLY_SET_GOAL[slug] ?? 10;
-  return Math.max(4, Math.round(base * volumeGoalMultiplier(ctx)));
+  const override = ctx.targetOverrides?.[slug];
+  if (typeof override === 'number' && Number.isFinite(override)) return clampWeeklyTarget(override);
+  return recommendedWeeklySetGoal(slug, ctx);
+}
+
+/** Has the athlete calibrated this muscle away from the recommendation? */
+export function isCalibrated(slug: MuscleSlug, ctx: VolumeGoalContext = {}): boolean {
+  const override = ctx.targetOverrides?.[slug];
+  return (
+    typeof override === 'number' &&
+    Number.isFinite(override) &&
+    clampWeeklyTarget(override) !== recommendedWeeklySetGoal(slug, ctx)
+  );
 }
 
 /** Personalised weekly set goals for all 20 muscles. */
@@ -191,10 +313,24 @@ export function goalStatus(pct: number, sets: number): GoalStatus {
 export interface MuscleGoalRow {
   slug: MuscleSlug;
   name: string;
-  /** weighted sets landed this week */
+  /** weighted sets landed this week (direct 1.0 + indirect 0.5) */
   sets: number;
-  /** personalised weekly goal in sets */
+  /**
+   * Of those, how many came from exercises that train this muscle DIRECTLY.
+   *
+   * This is the difference between advice that works and advice that does not. Forearms pick up
+   * ~16 fractional sets from a normal pulling week without a single direct exercise; telling that
+   * athlete to "drop 11 sets" would mean cutting their rows and pull-ups, which is nonsense. When
+   * `directSets` is ~0 there is nothing to trim, and the UI has to say so instead of issuing an
+   * instruction that cannot be followed.
+   */
+  directSets: number;
+  /** the weekly goal IN FORCE — the athlete's calibrated target if set, else `recommended` */
   goal: number;
+  /** what FitForge recommends, always available so both can be shown side by side */
+  recommended: number;
+  /** true when the athlete has moved this target off the recommendation */
+  calibrated: boolean;
   /** sets / goal (0 = untouched, 1 = exactly on goal, >1 = over) */
   pct: number;
   status: GoalStatus;
@@ -206,16 +342,24 @@ export interface MuscleGoalRow {
 export function buildGoalRows(
   setsByMuscle: Partial<Record<MuscleSlug, number>>,
   ctx: VolumeGoalContext = {},
+  /** direct-only sets per muscle; omitted = treat all volume as direct (legacy callers) */
+  directByMuscle?: Partial<Record<MuscleSlug, number>>,
 ): MuscleGoalRow[] {
   return ALL_MUSCLE_SLUGS.map((slug) => {
     const sets = Math.round((setsByMuscle[slug] ?? 0) * 10) / 10;
+    const directSets =
+      directByMuscle === undefined ? sets : Math.round((directByMuscle[slug] ?? 0) * 10) / 10;
     const goal = weeklySetGoal(slug, ctx);
+    const recommended = recommendedWeeklySetGoal(slug, ctx);
     const pct = goal > 0 ? sets / goal : 0;
     return {
       slug,
       name: MUSCLE_NAMES[slug],
       sets,
+      directSets,
       goal,
+      recommended,
+      calibrated: goal !== recommended,
       pct,
       status: goalStatus(pct, sets),
       color: heatColor(pct, sets),

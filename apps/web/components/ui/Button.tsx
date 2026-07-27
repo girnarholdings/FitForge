@@ -1,10 +1,34 @@
+'use client';
+
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { m, SPRING, PRESS } from './motion';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+/**
+ * DOM handlers whose names collide with Motion's own callbacks of the same name (Motion's
+ * `onAnimationStart` takes an animation *definition*, the DOM's takes an `AnimationEvent`).
+ * Dropped from the public surface rather than papered over with a cast — nothing in the app
+ * attaches CSS-animation or HTML5-drag handlers to a Button, and a silent type lie here would
+ * hand the wrong argument shape to whoever first tried.
+ */
+type MotionCollidingProps =
+  | 'onAnimationStart'
+  | 'onAnimationEnd'
+  | 'onAnimationIteration'
+  | 'onDrag'
+  | 'onDragStart'
+  | 'onDragEnd'
+  | 'onDragEnter'
+  | 'onDragExit'
+  | 'onDragLeave'
+  | 'onDragOver'
+  | 'onDrop';
+
+export interface ButtonProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, MotionCollidingProps> {
   variant?: Variant;
   size?: Size;
   /** stretch to full width — used for the bottom-anchored primary CTA (§1.3) */
@@ -37,10 +61,16 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
   { variant = 'primary', size = 'md', block, loading, glow, className, children, disabled, ...rest },
   ref,
 ) {
+  const inert = disabled || loading;
   return (
-    <button
+    // The press scale is the app's core "your finger landed" signal — it fires on pointerdown and
+    // releases on pointerup, so it reads as connected to the touch rather than to whatever
+    // navigation follows. Colour/shadow stay on CSS transitions; only transform is animated here.
+    <m.button
       ref={ref}
-      disabled={disabled || loading}
+      disabled={inert}
+      whileTap={inert ? undefined : PRESS}
+      transition={SPRING.press}
       className={cn(
         'inline-flex select-none items-center justify-center gap-2 font-medium',
         'transition-[opacity,background-color,box-shadow,border-color] duration-150 ease-out',
@@ -48,9 +78,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
         'disabled:cursor-not-allowed touch-manipulation',
         VARIANTS[variant],
         SIZES[size],
-        glow &&
-          !(disabled || loading) &&
-          'shadow-[var(--shadow-glow)] hover:shadow-[var(--shadow-glow)]',
+        glow && !inert && 'shadow-[var(--shadow-glow)] hover:shadow-[var(--shadow-glow)]',
         block && 'w-full',
         className,
       )}
@@ -63,6 +91,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
         />
       )}
       {children}
-    </button>
+    </m.button>
   );
 });

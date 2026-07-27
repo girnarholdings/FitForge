@@ -245,6 +245,31 @@ export const RepeatIcon = (p: IconProps) => (
   </Svg>
 );
 
+/** Lightning bolt — the quick-workout entry point. */
+export const BoltIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
+  </Svg>
+);
+
+/** Stacked plates — "several days condensed into one" in the quick-workout picker. */
+export const LayersIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+    <path d="m3 13 9 5 9-5" />
+  </Svg>
+);
+
+/** Sliders — "tune this target" on a muscle row. */
+export const SlidersIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2" />
+    <circle cx="16" cy="6" r="2" />
+    <circle cx="10" cy="12" r="2" />
+    <circle cx="16" cy="18" r="2" />
+  </Svg>
+);
+
 export const ChevronDownIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="m5 9 7 7 7-7" />

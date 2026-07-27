@@ -20,6 +20,7 @@ import {
 import { exerciseCountLabel } from '@/lib/demo/generate';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
 import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
+import { QuickWorkoutCard } from './QuickWorkoutCard';
 
 export function TodayView() {
   const routine = useActiveRoutine();
@@ -113,18 +114,12 @@ export function TodayView() {
           </div>
         </Card>
       ) : (
-        <Card className="shadow-[var(--shadow-card)]">
-          <CardTitle>Rest day</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            No workout scheduled today — recovery is part of the plan. Want to move anyway?
-          </p>
-          <Link href={`/workout/${routine.days[0]?.id ?? 'freestyle'}`} className="mt-4 block">
-            <Button variant="secondary" block>
-              Start a freestyle workout
-            </Button>
-          </Link>
-        </Card>
+        <QuickWorkoutCard restDay />
       )}
+
+      {/* Even on a training day, "not today's session" is a real need — pulling tomorrow forward
+          is the whole reason this exists. Shown second so it never competes with the plan. */}
+      {day && <QuickWorkoutCard />}
 
       {/* Ask your coach — the knowledge base is one tap from home (§KB). */}
       <CoachEntryCard />

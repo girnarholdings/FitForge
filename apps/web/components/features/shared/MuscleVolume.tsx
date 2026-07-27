@@ -21,8 +21,10 @@ import * as React from 'react';
 import { MuscleMap, MUSCLE_NAMES, ALL_MUSCLE_SLUGS } from '@/components/illustrations';
 import type { MuscleSlug } from '@/components/illustrations';
 import { mockExerciseBySlug, mockExerciseById } from '@/components/features/_mock/data';
-import { TargetIcon } from '@/components/ui/icons';
+import { TargetIcon, SlidersIcon } from '@/components/ui/icons';
+import { m, staggerList, staggerItem, Pressable } from '@/components/ui/motion';
 import { useDemoState } from '@/lib/demo/useDemo';
+import { TargetTuner } from './TargetTuner';
 import {
   buildGoalRows,
   fmtPct,
@@ -32,6 +34,8 @@ import {
   GOAL_STATUS_HELP,
   GOAL_STATUS_LABEL,
   heatGradientCss,
+  MED_WEEKLY_SETS,
+  PRODUCTIVE_BAND,
   type GoalStatus,
   type MuscleGoalRow,
   type VolumeGoalContext,
@@ -106,26 +110,51 @@ function resolveMuscles(src: VolumeSource): { primary: string[]; secondary: stri
   return { primary: ex?.primary_muscles ?? [], secondary: ex?.secondary_muscles ?? [] };
 }
 
-/** The raw aggregation step: sources → weighted sets per muscle per week. */
-export function setsByMuscleFromSources(
+/**
+ * The raw aggregation step: sources → weighted sets per muscle per week, split into TOTAL
+ * (direct 1.0 + indirect 0.5) and DIRECT-only.
+ *
+ * The split matters downstream: a muscle can sit far over target purely on indirect credit from
+ * compounds, and "you are over target" is only an actionable statement when there is direct work
+ * to remove. See `MuscleGoalRow.directSets`.
+ */
+export function aggregateSets(
   sources: VolumeSource[],
   weeks = 1,
-): Partial<Record<MuscleSlug, number>> {
+): {
+  total: Partial<Record<MuscleSlug, number>>;
+  direct: Partial<Record<MuscleSlug, number>>;
+} {
   const totals = new Map<string, number>();
+  const directs = new Map<string, number>();
   for (const src of sources) {
     const n = Math.max(0, src.sets);
     if (n === 0) continue;
     const { primary, secondary } = resolveMuscles(src);
-    for (const m of primary) totals.set(m, (totals.get(m) ?? 0) + n * PRIMARY_CREDIT);
+    for (const m of primary) {
+      totals.set(m, (totals.get(m) ?? 0) + n * PRIMARY_CREDIT);
+      directs.set(m, (directs.get(m) ?? 0) + n * PRIMARY_CREDIT);
+    }
     for (const m of secondary) totals.set(m, (totals.get(m) ?? 0) + n * SECONDARY_CREDIT);
   }
   const div = Math.max(1, weeks);
-  const out: Partial<Record<MuscleSlug, number>> = {};
+  const total: Partial<Record<MuscleSlug, number>> = {};
+  const direct: Partial<Record<MuscleSlug, number>> = {};
   for (const slug of ALL_MUSCLE_SLUGS) {
-    const v = (totals.get(slug) ?? 0) / div;
-    if (v > 0) out[slug] = Math.round(v * 10) / 10;
+    const t = (totals.get(slug) ?? 0) / div;
+    if (t > 0) total[slug] = Math.round(t * 10) / 10;
+    const d = (directs.get(slug) ?? 0) / div;
+    if (d > 0) direct[slug] = Math.round(d * 10) / 10;
   }
-  return out;
+  return { total, direct };
+}
+
+/** Total weighted sets per muscle per week. Thin wrapper over {@link aggregateSets}. */
+export function setsByMuscleFromSources(
+  sources: VolumeSource[],
+  weeks = 1,
+): Partial<Record<MuscleSlug, number>> {
+  return aggregateSets(sources, weeks).total;
 }
 
 /**
@@ -155,12 +184,17 @@ function fmt(n: number): string {
   return fmtSets(n);
 }
 
-/** The athlete's personalised goal context, read from the Local Mode profile. */
+/**
+ * The athlete's personalised goal context: profile-derived scaling PLUS any per-muscle targets
+ * they calibrated for themselves. Both live here so every consumer of a goal number — heat
+ * colours, statuses, the "short of goal" advice — resolves through the same place and a
+ * calibration genuinely re-plans rather than just re-labelling one row.
+ */
 export function useVolumeGoalContext(override?: VolumeGoalContext): VolumeGoalContext {
   const state = useDemoState();
   return React.useMemo(
-    () => override ?? goalContextFromProfile(state.profile),
-    [override, state.profile],
+    () => override ?? goalContextFromProfile(state.profile, state.volumeTargets as Partial<Record<MuscleSlug, number>>),
+    [override, state.profile, state.volumeTargets],
   );
 }
 
@@ -189,6 +223,8 @@ export interface MuscleGoalHeatProps {
   height?: number;
   /** "Show exercises" deep-link from the selected-muscle detail */
   onMuscleSelect?: (slug: MuscleSlug) => void;
+  /** open the weekly-target tuner for a muscle, from the selected-muscle detail */
+  onTuneMuscle?: (slug: MuscleSlug) => void;
   /** rendered above the body (e.g. a Planned / Logged switch) */
   header?: React.ReactNode;
   /** drop the card chrome — for when the caller already provides a surface */
@@ -218,6 +254,7 @@ export function MuscleGoalHeat({
   rows,
   height = 224,
   onMuscleSelect,
+  onTuneMuscle,
   header,
   bare = false,
   rail = true,
@@ -286,7 +323,11 @@ export function MuscleGoalHeat({
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2 text-center">
             <Stat label="This week" value={fmt(detail.sets)} unit="sets" />
-            <Stat label="Goal" value={fmt(detail.goal)} unit="sets" />
+            <Stat
+              label={detail.calibrated ? 'Your goal' : 'Goal'}
+              value={fmt(detail.goal)}
+              unit="sets"
+            />
             <Stat
               label="Of goal"
               value={fmtPct(detail.pct)}
@@ -296,17 +337,37 @@ export function MuscleGoalHeat({
           </div>
           <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
             {GOAL_STATUS_HELP[detail.status]}
+            {detail.calibrated && (
+              <>
+                {' '}
+                <span className="font-semibold text-foreground">
+                  Your target, not ours — we&rsquo;d suggest {detail.recommended}.
+                </span>
+              </>
+            )}
           </p>
-          {onMuscleSelect && (
-            <button
-              type="button"
-              onClick={() => onMuscleSelect(detail.slug)}
-              data-testid="muscle-goal-detail-exercises"
-              className="mt-2 text-sm font-semibold text-accent"
-            >
-              Show {detail.name} exercises →
-            </button>
-          )}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {onMuscleSelect && (
+              <button
+                type="button"
+                onClick={() => onMuscleSelect(detail.slug)}
+                data-testid="muscle-goal-detail-exercises"
+                className="text-sm font-semibold text-accent"
+              >
+                Show {detail.name} exercises →
+              </button>
+            )}
+            {onTuneMuscle && (
+              <button
+                type="button"
+                onClick={() => onTuneMuscle(detail.slug)}
+                data-testid="muscle-goal-detail-tune"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-muted-foreground"
+              >
+                <SlidersIcon size={14} /> Tune this target
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="flex h-[136px] flex-col items-center justify-center gap-1.5 rounded-field border border-dashed border-border-strong/70 bg-surface/60 px-4 text-center">
@@ -436,12 +497,14 @@ export function MuscleVolume({
   className,
 }: MuscleVolumeProps) {
   const ctx = useVolumeGoalContext(goalContext);
-  const setsByMuscle = React.useMemo(
-    () => setsByMuscleFromSources(sources, weeks),
-    [sources, weeks],
+  const agg = React.useMemo(() => aggregateSets(sources, weeks), [sources, weeks]);
+  const goalRows = React.useMemo(
+    () => buildGoalRows(agg.total, ctx, agg.direct),
+    [agg, ctx],
   );
-  const goalRows = React.useMemo(() => buildGoalRows(setsByMuscle, ctx), [setsByMuscle, ctx]);
   const [expanded, setExpanded] = React.useState(false);
+  const [tuning, setTuning] = React.useState<MuscleSlug | null>(null);
+  const tuningRow = tuning ? (goalRows.find((r) => r.slug === tuning) ?? null) : null;
 
   const order = React.useMemo(() => new Map(ALL_MUSCLE_SLUGS.map((s, i) => [s, i])), []);
   const ranked = React.useMemo(
@@ -493,30 +556,56 @@ export function MuscleVolume({
       {/* View 1 — the % of weekly goal heat gradient */}
       {/* the ranked list below is this view's alternative selection path, so the heat card
           drops its own rail rather than showing two lists of the same twenty muscles */}
-      <MuscleGoalHeat rows={goalRows} onMuscleSelect={onMuscleSelect} header={heatHeader} rail={false} />
+      <MuscleGoalHeat
+        rows={goalRows}
+        onMuscleSelect={onMuscleSelect}
+        onTuneMuscle={setTuning}
+        header={heatHeader}
+        rail={false}
+      />
 
-      {/* View 2 — ranked bars, each scaled to that muscle's OWN weekly goal */}
-      <ul className="space-y-1.5" data-testid="muscle-volume-bars">
+      {/* View 2 — ranked bars, each scaled to that muscle's OWN weekly goal.
+          Every row carries a TUNE button: a row that says "Over target" and offers no way to act
+          on it is a diagnosis with no treatment, which is exactly what this view used to be. */}
+      <m.ul
+        className="space-y-1.5"
+        data-testid="muscle-volume-bars"
+        variants={staggerList}
+        initial="hidden"
+        animate="show"
+      >
         {shown.map((r) => (
-          <li key={r.slug}>
+          <m.li key={r.slug} variants={staggerItem} className="flex items-center gap-1">
             {onMuscleSelect ? (
-              <button
-                type="button"
+              <Pressable
+                soft
                 onClick={() => onMuscleSelect(r.slug)}
                 data-testid={`muscle-volume-row-${r.slug}`}
                 aria-label={`${r.name}: ${fmt(r.sets)} of ${fmt(r.goal)} weekly sets, ${fmtPct(r.pct)} of goal. ${GOAL_STATUS_LABEL[r.status]}. Show exercises.`}
-                className="w-full rounded-field px-2.5 py-2 text-left transition-colors hover:bg-surface-2"
+                className="min-w-0 flex-1 rounded-field px-2.5 py-2 text-left transition-colors hover:bg-surface-2"
               >
                 <GoalRowBody row={r} />
-              </button>
+              </Pressable>
             ) : (
-              <div className="px-2.5 py-2">
+              <div className="min-w-0 flex-1 px-2.5 py-2">
                 <GoalRowBody row={r} />
               </div>
             )}
-          </li>
+            <Pressable
+              onClick={() => setTuning(r.slug)}
+              data-testid={`muscle-tune-${r.slug}`}
+              aria-label={`Tune the weekly target for ${r.name}`}
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition-colors ${
+                r.status === 'above' || r.status === 'over'
+                  ? 'border-accent/60 bg-accent-muted text-accent'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <SlidersIcon size={16} />
+            </Pressable>
+          </m.li>
         ))}
-      </ul>
+      </m.ul>
 
       {ranked.length > initialRows && (
         <button
@@ -569,12 +658,22 @@ export function MuscleVolume({
           <li className="pt-1 text-xs">
             Every set counts <span className="font-semibold text-foreground">1.0</span> toward each
             primary muscle and <span className="font-semibold text-foreground">0.5</span> toward each
-            secondary muscle. Weekly goals are evidence-informed (≈10–20 hard sets for major
-            muscles) and scaled to your goal, experience and training days — no guesswork, no fake
-            percentages.
+            secondary muscle — the same fractional weighting Pelland et al. (2025) used to fit the
+            dose-response curve over 67 studies, so these numbers are in the units the research is
+            in. Goals sit in the{' '}
+            <span className="font-semibold text-foreground">
+              {PRODUCTIVE_BAND.low}–{PRODUCTIVE_BAND.high}
+            </span>{' '}
+            set band both that meta-regression and Baz-Valle et al. (2022) converge on, floored at
+            the {MED_WEEKLY_SETS}-set minimum effective dose, then scaled to your goal, experience
+            and training days.{' '}
+            <span className="font-semibold text-foreground">Tap the sliders on any row</span> to set
+            your own target — everything above recomputes against it.
           </li>
         </ul>
       </div>
+
+      <TargetTuner row={tuningRow} onClose={() => setTuning(null)} onShowExercises={onMuscleSelect} />
     </div>
   );
 }

@@ -10,7 +10,7 @@ import { DEMO_ROUTINE_ID, demoDayId } from '@/lib/demo/ids';
  * routine's first day for any unknown id, so navigation never dead-ends.
  */
 export function generateStaticParams() {
-  const ids = new Set<string>([DEMO_ROUTINE_ID]);
+  const ids = new Set<string>([DEMO_ROUTINE_ID, 'quick']);
   for (const d of MOCK_ROUTINE.days) ids.add(d.id);
   for (let i = 0; i < 7; i++) ids.add(demoDayId(i));
   return [...ids].map((sessionId) => ({ sessionId }));

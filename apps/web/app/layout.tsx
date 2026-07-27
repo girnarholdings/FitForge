@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { withBase } from '@/lib/utils';
+import { MotionProvider } from '@/components/ui/motion';
 import './globals.css';
 
 /*
@@ -75,7 +76,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* One motion context for the whole app: the lazy DOM feature bundle plus the global
+            reduced-motion contract, so no individual component has to remember either. */}
+        <MotionProvider>{children}</MotionProvider>
+      </body>
     </html>
   );
 }

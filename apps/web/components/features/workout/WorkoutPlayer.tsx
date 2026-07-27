@@ -32,7 +32,7 @@ import {
   type SubstituteRow,
   type Mechanics,
 } from '@/components/features/_mock/data';
-import { useActiveRoutine } from '@/lib/demo/useDemo';
+import { useActiveRoutine, useDemoState } from '@/lib/demo/useDemo';
 import {
   logSession,
   getSessions,
@@ -109,9 +109,14 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   // DEMO MODE: resolve the day from the active (generated or default) routine; fall back to the
   // first day so a stale/unknown session id never dead-ends.
   const routine = useActiveRoutine();
+  const quick = useDemoState().quickSession;
   const day = React.useMemo<RoutineDay | undefined>(() => {
+    // `/workout/quick` runs the one-off session the quick-workout picker built. It is a real
+    // RoutineDay, so logging, volume credit and PRs all treat it identically to a planned day.
+    // A missing one (deep link, cleared store) falls through rather than dead-ending.
+    if (sessionId === 'quick' && quick) return quick;
     return routine.days.find((d) => d.id === sessionId) ?? routine.days[0];
-  }, [routine, sessionId]);
+  }, [routine, sessionId, quick]);
 
   const [exercises, setExercises] = React.useState<ExerciseState[]>(() =>
     day ? buildInitialState(day) : [],
@@ -286,7 +291,16 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         >
           <XIcon size={15} /> Close
         </Link>
-        <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+        {/* Which session am I actually in? Obvious when you arrived from a named plan card, not at
+            all obvious for a quick workout you picked from a sheet — and landing in an unnamed
+            session is the same disorientation the quick-workout picker exists to fix. */}
+        <span
+          className="min-w-0 flex-1 truncate px-3 text-center text-sm font-semibold text-foreground"
+          data-testid="workout-day-name"
+        >
+          {day.name}
+        </span>
+        <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
           {doneSets}/{totalSets} sets
         </span>
       </div>
