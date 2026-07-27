@@ -42,6 +42,27 @@ jobs:
       - name: Build shared package
         run: npm run build -w @fitforge/shared
 
+      # Tier-2 food catalog. Fetches USDA FoodData Central (public domain) and emits the lazy
+      # shards under apps/web/public/food/. It runs HERE rather than being committed because the
+      # artefact is ~40 MB and goes stale on every USDA release — and because this runner has
+      # network access to fdc.nal.usda.gov that a sandboxed dev machine does not.
+      #
+      # continue-on-error is deliberate: if USDA is down or moves a dated filename, the deploy
+      # should still ship with the curated 509-food tier-1 core rather than failing outright. The
+      # app already treats a missing tier 2 as a normal state and says so in the UI.
+      - name: Build tier-2 food catalog (USDA FoodData Central)
+        id: food
+        continue-on-error: true
+        run: node seed/import-usda.mjs
+
+      - name: Report tier-2 outcome
+        run: |
+          if [ "${{ steps.food.outcome }}" = "success" ]; then
+            echo "::notice::Tier-2 food catalog built — $(node -p "require('./apps/web/public/food/manifest.json').total") foods"
+          else
+            echo "::warning::Tier-2 food catalog unavailable; deploying with the 509-food curated core only"
+          fi
+
       - name: Build web static export
         run: npm run build -w @fitforge/web
         env:
