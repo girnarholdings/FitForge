@@ -30,22 +30,37 @@ const AA = 24;
 /**
  * Does a tap at (x, y) reach `el` — directly or through a pseudo-element/child of it?
  * This is the question a bounding box cannot answer.
+ *
+ * Returns `'ok'` or a DESCRIPTION OF WHAT BLOCKED IT, not a boolean. A bare false tells you a
+ * corner is unreachable and nothing else, which on a machine you cannot attach a debugger to
+ * (a CI runner) is barely more useful than the exit code — the first CI-only failure of this
+ * spec cost a full diagnostic round-trip for want of the blocking element's tag name.
  */
 async function tapReaches(
   page: import('@playwright/test').Page,
   testId: string,
   dx: number,
   dy: number,
-): Promise<boolean> {
+): Promise<string> {
   return page.evaluate(
     ({ id, ox, oy }) => {
       const el = document.querySelector(`[data-testid="${id}"]`);
-      if (!el) return false;
+      if (!el) return `no element matches [data-testid="${id}"]`;
       const r = el.getBoundingClientRect();
       const cx = r.left + r.width / 2 + ox;
       const cy = r.top + r.height / 2 + oy;
       const hit = document.elementFromPoint(cx, cy);
-      return Boolean(hit && (hit === el || el.contains(hit) || hit.contains(el)));
+      // An ANCESTOR counts: the point landed inside the control's own layout row with nothing
+      // painted over it, which is still a tap the browser routes to the control.
+      if (hit && (hit === el || el.contains(hit) || hit.contains(el))) return 'ok';
+      if (!hit) {
+        return `nothing at (${cx.toFixed(1)}, ${cy.toFixed(1)}) — point is outside the viewport`;
+      }
+      const cls = String((hit as HTMLElement).className || '').slice(0, 60);
+      const testid = (hit as HTMLElement).dataset?.testid;
+      return `blocked by <${hit.tagName.toLowerCase()}${testid ? ` data-testid="${testid}"` : ''}${
+        cls ? ` class="${cls}"` : ''
+      }>`;
     },
     { id: testId, ox: dx, oy: dy },
   );
@@ -54,17 +69,24 @@ async function tapReaches(
 /**
  * Assert the full `size` x `size` region around an element's centre is tappable.
  *
- * The element is scrolled into view FIRST: `elementFromPoint` is viewport-relative and returns
- * null for anything outside it, so probing an off-screen control silently reports "not tappable"
- * for every offset — including the centre — and the failure looks like a product bug rather than
- * a harness one.
+ * The element is scrolled to the VERTICAL CENTRE of the viewport first, not merely "into view".
+ * `elementFromPoint` is viewport-relative and returns null outside it, so an off-screen control
+ * reports as untappable at every offset and the failure reads as a product bug rather than a
+ * harness one. `scrollIntoViewIfNeeded` is not enough: it stops as soon as the element is
+ * technically visible, which can leave it under the sticky top bar or the sticky rest-timer
+ * footer — and then the probe measures the overlay's z-order, not the control's hit area.
+ * Centring puts the whole probe region in open space, where the only thing that can block it is
+ * a genuine layout neighbour.
  */
 async function expectTarget(
   page: import('@playwright/test').Page,
   testId: string,
   size: number,
 ) {
-  await page.locator(`[data-testid="${testId}"]`).first().scrollIntoViewIfNeeded();
+  await page
+    .locator(`[data-testid="${testId}"]`)
+    .first()
+    .evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'center' }));
   const edge = size / 2 - 1; // 1px inside the required box, to avoid boundary rounding
   for (const [dx, dy] of [
     [0, 0],
@@ -76,7 +98,7 @@ async function expectTarget(
     expect(
       await tapReaches(page, testId, dx, dy),
       `${testId}: a tap at offset (${dx}, ${dy}) from centre must land on the control (${size}px target)`,
-    ).toBe(true);
+    ).toBe('ok');
   }
 }
 
