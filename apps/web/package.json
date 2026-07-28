@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "assets:render": "node scripts/render-brand-assets.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:unit": "tsx --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@fitforge/shared": "*",

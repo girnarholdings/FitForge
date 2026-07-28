@@ -49,6 +49,13 @@ jobs:
         run: npm run build -w @fitforge/shared
       - name: Typecheck
         run: npm run typecheck -w @fitforge/web
+
+      # Unit tests for the app's PURE logic. Everything in apps/web was covered only by Playwright
+      # until now, which exercises it through a browser — fine for behaviour, useless for the cases
+      # that matter in a parser: a record split across a stream chunk, a near-midnight timestamp, two
+      # devices reporting the same steps. None of those are reachable by clicking.
+      - name: Unit tests
+        run: npm run test:unit -w @fitforge/web
       - name: Build (static export)
         run: npm run build -w @fitforge/web
         env:
