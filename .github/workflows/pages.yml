@@ -154,6 +154,15 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: /FitForge
           NEXT_PUBLIC_SITE_URL: https://girnarholdings.github.io
           NEXT_PUBLIC_DEMO: "1"
+          # The deployed Coach worker, supplied as a REPOSITORY VARIABLE rather than hardcoded:
+          # the workers.dev subdomain is account-specific, so committing one would be wrong for
+          # every other fork, and rotating it should not require a code change. Set it under
+          # Settings → Secrets and variables → Actions → Variables, named AI_ENDPOINT.
+          #
+          # Unset is the SUPPORTED DEFAULT, not a broken state: it expands to an empty string,
+          # `isCoachConfigured()` reads that as "no worker", and Coach answers from the local
+          # knowledge base exactly as it does today. Nothing needs to change to keep it off.
+          NEXT_PUBLIC_AI_ENDPOINT: ${{ vars.AI_ENDPOINT }}
 
       - name: Add .nojekyll (serve _next/ assets)
         run: touch apps/web/out/.nojekyll

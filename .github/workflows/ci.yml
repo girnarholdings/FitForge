@@ -101,6 +101,31 @@ jobs:
         if: always()
         run: rm -rf apps/web/public/food
 
+  # Optional Coach worker (workers/coach). Not a workspace of the root package.json — it deploys
+  # on its own from its own directory — so it needs its own install step here.
+  #
+  # WHY IT IS TESTED AT ALL, given the app works without it: the browser calls this worker
+  # DIRECTLY, with no server in between to sanitise a bad request or clamp a runaway response. The
+  # origin allow-list and the token caps are the only thing between a published URL and someone
+  # else's Workers AI bill, and neither is exercised by any other job.
+  worker:
+    name: worker · typecheck + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install
+        working-directory: workers/coach
+        run: npm ci
+      - name: Typecheck
+        working-directory: workers/coach
+        run: npx tsc --noEmit src/index.ts --target es2022 --module esnext --moduleResolution bundler --skipLibCheck --lib es2022,dom
+      - name: Test the worker contract
+        working-directory: workers/coach
+        run: npm test
+
   # Web app end-to-end (@fitforge/web): the Playwright suite against the real static export.
   #
   # WHY THIS JOB EXISTS: typecheck + build only prove the bundle compiles. Every behaviour that
@@ -125,6 +150,13 @@ jobs:
       # (playwright.config.ts), so the other browsers would be downloaded and never launched.
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+
+      # Tier-2 shards, from the OFFLINE FIXTURE. Without a catalog present the tier2-cache specs
+      # skip themselves — correctly, since a missing tier 2 is a supported deployment state — but
+      # that means the persistent shard cache would never actually be exercised anywhere. Building
+      # the fixture catalog here costs a second and turns those four specs from skipped to real.
+      - name: Build tier-2 fixture catalog (for the cache specs)
+        run: npm run food:import:fixture -w @fitforge/seed
 
       # The suite serves apps/web/out — it does not build it. Base path MUST be empty here: the
       # test server mounts out/ at the root, so a /FitForge prefix would 404 every asset.
