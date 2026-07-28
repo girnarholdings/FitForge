@@ -43,6 +43,11 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { ARRAY_KEYS, streamArrayObjects } from './lib/stream-json.mjs';
+import {
+  duplicateSignature,
+  rankForShard,
+  slimFood,
+} from './lib/food-shrink.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, '..', 'apps', 'web', 'public', 'food');
@@ -67,6 +72,20 @@ const BRANDED_LIMIT = Number(process.env.FITFORGE_BRANDED_LIMIT ?? 50_000);
 
 /** Foods are sharded by the first two characters of their folded name. */
 const SHARD_KEY_LENGTH = 2;
+
+/**
+ * Hard ceiling on rows in any one shard, and therefore on what a single search can cost.
+ *
+ * A shard is fetched and parsed in full the first time a query lands in it, so the BIGGEST bucket
+ * is what "does search feel instant?" actually depends on — the average is irrelevant. At roughly
+ * 190 bytes per slimmed row, 600 rows is ~110 kB raw and ~25 kB over the wire gzipped: one round
+ * trip and a parse comfortably under a frame at 60 Hz on a mid-range phone.
+ *
+ * Buckets over the cap keep their highest-ranked rows (see `rankForShard`), which in practice
+ * means the generic lab-analysed foods and the shorter, more general names survive and the long
+ * tail of near-identical branded rows is what goes.
+ */
+const MAX_SHARD_ROWS = Number(process.env.FITFORGE_MAX_SHARD_ROWS ?? 600);
 
 /** FDC nutrient ids we care about. Anything else in the row is ignored. */
 const NUTRIENT = {
@@ -299,6 +318,7 @@ async function* streamDataset(url, label, expectedKey) {
 async function main() {
   const foods = [];
   const seenNames = new Set();
+  let duplicates = 0;
 
   // `for await` so this accepts both the plain arrays the fixture supplies and the async
   // generators the network path supplies. Breaking out of the loop finalises a generator, which
@@ -313,11 +333,20 @@ async function main() {
         rejected += 1;
         continue;
       }
-      // Exact duplicate names add nothing but search noise.
-      const key = fold(food.name);
-      if (seenNames.has(key)) continue;
+      // NEAR-duplicates, not just exact name matches. FDC repeats the same product across pack
+      // sizes and the same generic item across manufacturers; an exact-name check catches almost
+      // none of that, because the repetition arrives as "Cookies, chocolate chip (Brand A)" versus
+      // "COOKIES CHOCOLATE CHIP 12 oz (Brand B)". See lib/food-shrink.mjs for what counts as the
+      // same food — it takes agreement on BOTH the normalised name and the macros.
+      const key = duplicateSignature(food);
+      if (seenNames.has(key)) {
+        duplicates += 1;
+        continue;
+      }
       seenNames.add(key);
-      foods.push(food);
+      // `source` rides along so the shard cap can prefer generic foods over brands. Stripped again
+      // before anything is written.
+      foods.push({ food, source });
       kept += 1;
     }
     console.log(`  ${source}: kept ${kept.toLocaleString()}, rejected ${rejected.toLocaleString()}`);
@@ -351,24 +380,55 @@ async function main() {
 
   // ── shard ──────────────────────────────────────────────────────────────────────────────────
   const shards = new Map();
-  for (const food of foods) {
-    const key = shardKeyFor(fold(food.name));
+  for (const entry of foods) {
+    const key = shardKeyFor(fold(entry.food.name));
     if (!shards.has(key)) shards.set(key, []);
-    shards.get(key).push(food);
+    shards.get(key).push(entry);
   }
 
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
 
-  const manifest = { version: new Date().toISOString().slice(0, 10), total: foods.length, shards: {} };
   let bytes = 0;
-  for (const [key, rows] of [...shards].sort(([a], [b]) => (a < b ? -1 : 1))) {
-    rows.sort((a, b) => a.name.localeCompare(b.name));
+  let shipped = 0;
+  let capped = 0;
+  let largest = { key: null, rows: 0, bytes: 0 };
+  const shardCounts = {};
+
+  for (const [key, entries] of [...shards].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    // CAP THE BUCKET, BY QUALITY. Food names are nowhere near uniformly distributed over their
+    // first two letters — "ch" and "or" ("Organic …") draw thousands of branded rows while "xy"
+    // draws none — and a shard is fetched and parsed whole, so the worst bucket alone sets how
+    // slow search feels. Sorting by usefulness first means an over-subscribed bucket loses its
+    // least useful brand rows rather than whatever happened to sort last alphabetically.
+    if (entries.length > MAX_SHARD_ROWS) {
+      entries.sort((a, b) => rankForShard(b.food, b.source) - rankForShard(a.food, a.source));
+      capped += entries.length - MAX_SHARD_ROWS;
+      entries.length = MAX_SHARD_ROWS;
+    }
+
+    // Alphabetical on the wire regardless of how the cap ordered things: the client scans the
+    // array in order and shows the first matches, so this is the order the user sees.
+    entries.sort((a, b) => a.food.name.localeCompare(b.food.name));
+
+    const rows = entries.map((e) => slimFood(e.food));
     const json = JSON.stringify({ key, foods: rows });
     await writeFile(join(OUT_DIR, `${key}.json`), json);
-    manifest.shards[key] = rows.length;
-    bytes += gzipSync(json).length;
+    shardCounts[key] = rows.length;
+    shipped += rows.length;
+    const gz = gzipSync(json).length;
+    bytes += gz;
+    if (json.length > largest.bytes) largest = { key, rows: rows.length, bytes: json.length };
   }
+
+  const manifest = {
+    version: new Date().toISOString().slice(0, 10),
+    // What was SHIPPED, not what was parsed. `catalogLabel` puts this number in front of the user
+    // as "N foods · USDA FoodData Central", and quoting the pre-cap figure would overstate the
+    // catalog by everything the shard cap dropped.
+    total: shipped,
+    shards: shardCounts,
+  };
 
   await writeFile(
     join(OUT_DIR, 'manifest.json'),
@@ -385,7 +445,16 @@ async function main() {
   );
 
   console.log(
-    `\n✓ ${foods.length.toLocaleString()} foods across ${shards.size} shards · ${(bytes / 1024 / 1024).toFixed(1)} MB gzipped total`,
+    `\n✓ ${shipped.toLocaleString()} foods across ${shards.size} shards · ${(bytes / 1024 / 1024).toFixed(1)} MB gzipped total`,
+  );
+  console.log(
+    `  collapsed ${duplicates.toLocaleString()} duplicate rows · dropped ${capped.toLocaleString()} over the ${MAX_SHARD_ROWS}/shard cap`,
+  );
+  // The number that decides whether search feels instant: one shard is one fetch and one parse.
+  // Printed every run so a distribution change shows up in the build log rather than as a phone
+  // that got slower for no visible reason.
+  console.log(
+    `  largest shard: ${largest.key}.json — ${largest.rows} rows, ${(largest.bytes / 1024).toFixed(0)} kB raw`,
   );
   console.log(`  → ${OUT_DIR}`);
 }

@@ -69,12 +69,36 @@ export function shardKeyFor(folded: string, keyLength = 2): string {
   return key.length === keyLength ? key : '_';
 }
 
+/** A shard row as it travels: fields that are empty or recomputable are omitted by the importer. */
+type SlimFood = Omit<Food, 'aliases' | 'serving_name' | 'household_measures'> &
+  Partial<Pick<Food, 'aliases' | 'serving_name' | 'household_measures'>>;
+
+/**
+ * Put back what `slimFood` in seed/lib/food-shrink.mjs left out.
+ *
+ * The wire format drops `aliases` (the importer never generates any), `household_measures` when
+ * empty, and `serving_name` when it only restates the gram weight — about 59 bytes a row, ~3.4 MB
+ * across the catalog, paid on every shard fetch.
+ *
+ * This is NOT cosmetic tidying. `Food` declares those two as required arrays and `measures.ts`
+ * calls `.find` on them without a guard, so a slimmed row reaching the app is a TypeError the
+ * moment anyone picks it. The two functions are inverses and have to be changed together.
+ */
+function hydrateFood(row: SlimFood): Food {
+  return {
+    ...row,
+    aliases: row.aliases ?? [],
+    serving_name: row.serving_name ?? `${row.serving_grams} g`,
+    household_measures: row.household_measures ?? [],
+  };
+}
+
 function loadShard(key: string): Promise<Food[]> {
   const cached = shardCache.get(key);
   if (cached) return cached;
   const p = fetch(withBase(`/food/${key}.json`))
     .then((res) => (res.ok ? res.json() : { foods: [] }))
-    .then((data: { foods?: Food[] }) => data.foods ?? [])
+    .then((data: { foods?: SlimFood[] }) => (data.foods ?? []).map(hydrateFood))
     .catch(() => [] as Food[]);
   shardCache.set(key, p);
   return p;

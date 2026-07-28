@@ -103,10 +103,33 @@ jobs:
             rm -rf apps/web/public/food
           fi
 
+      # Reports the LARGEST SHARD alongside the total, because that is the number search latency
+      # actually depends on: a shard is fetched and parsed whole the first time a query lands in
+      # it, so the worst bucket sets the worst case and the average hides it. The importer caps
+      # rows per shard, but the byte size of a capped shard still moves with the data, and this is
+      # the only place it can be observed — the shards are a build artefact that never reaches a
+      # dev machine, and the job log is served from a host a restricted egress policy may refuse.
       - name: Report tier-2 outcome
         run: |
           if [ -f apps/web/public/food/manifest.json ]; then
-            echo "::notice::Tier-2 food catalog built — $(node -p "require('./apps/web/public/food/manifest.json').total") foods"
+            stats=$(node -e '
+              const fs = require("node:fs");
+              const dir = "apps/web/public/food";
+              const m = JSON.parse(fs.readFileSync(dir + "/manifest.json", "utf8"));
+              let worst = { key: "-", bytes: 0, rows: 0 };
+              let total = 0;
+              for (const key of Object.keys(m.shards)) {
+                const bytes = fs.statSync(`${dir}/${key}.json`).size;
+                total += bytes;
+                if (bytes > worst.bytes) worst = { key, bytes, rows: m.shards[key] };
+              }
+              const kb = (n) => (n / 1024).toFixed(0);
+              process.stdout.write(
+                `${m.total} foods across ${Object.keys(m.shards).length} shards, ${kb(total)} kB total; ` +
+                `largest ${worst.key}.json ${kb(worst.bytes)} kB (${worst.rows} rows)`
+              );
+            ')
+            echo "::notice::Tier-2 food catalog built — ${stats}"
           else
             echo "::warning::Tier-2 food catalog unavailable; deploying with the 509-food curated core only"
           fi
