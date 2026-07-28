@@ -440,7 +440,12 @@ async function main() {
   }
 
   const manifest = {
-    version: new Date().toISOString().slice(0, 10),
+    // FULL TIMESTAMP, not just the date. The client names its persistent shard cache after this
+    // (see lib/food/tier2.ts), and shard URLs are stable across builds while their contents are
+    // not — so anything coarser than "one value per build" means a second deploy on the same day
+    // reuses the previous build's cache and serves its food data indefinitely. This repo deploys
+    // several times a day, so a date alone defeated the invalidation it existed to provide.
+    version: new Date().toISOString(),
     // What was SHIPPED, not what was parsed. `catalogLabel` puts this number in front of the user
     // as "N foods · USDA FoodData Central", and quoting the pre-cap figure would overstate the
     // catalog by everything the shard cap dropped.
