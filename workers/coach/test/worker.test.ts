@@ -209,3 +209,197 @@ test('an AI failure fails fast and explicitly so the client can fall back', asyn
   const body = (await res.json()) as { error: string };
   assert.equal(body.error, 'ai_unavailable');
 });
+
+/* ── model retirement ─────────────────────────────────────────────────────────────────────────
+ *
+ * THE REGRESSION TESTS FOR THE OUTAGE. The worker was pinned to one model; Cloudflare retired it on
+ * 2026-05-30; every request returned 5028 from that day until it was noticed. No test here could
+ * have failed, because the code was correct — the environment moved. What is testable, and what
+ * these cover, is that a retirement now costs one skipped candidate instead of the whole service.
+ */
+
+/** An AI stub where only `live` answers; everything else is retired, exactly as 5028 arrives. */
+function chainEnv(live: string | null, extra: Partial<Env> = {}) {
+  const attempts: string[] = [];
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    AI: {
+      run: async (model: string) => {
+        attempts.push(model);
+        if (model !== live)
+          throw new Error(`AiError: 5028: This model was deprecated on 2026-05-30. Please use an alternative model.`);
+        return { response: 'Ten to twenty hard sets per muscle per week.' };
+      },
+    },
+    ...extra,
+  } as unknown as Env;
+  return { env, attempts };
+}
+
+test('A RETIRED MODEL IS SKIPPED, not served as an outage', async () => {
+  // Nothing is live except the last candidate — the worker must still answer.
+  const probe = chainEnv(null);
+  await worker.fetch(post({ question: 'how many sets?' }), probe.env);
+  const last = probe.attempts.at(-1)!;
+
+  const { env, attempts } = chainEnv(last);
+  const res = await worker.fetch(post({ question: 'how many sets?' }), env);
+  assert.equal(res.status, 200, 'a live model later in the chain must still produce an answer');
+  const body = (await res.json()) as { answer: string; model: string; provider: string };
+  assert.match(body.answer, /Ten to twenty/);
+  assert.equal(body.model, last, 'the response must name the model that actually answered');
+  assert.ok(attempts.length > 1, 'the retired candidates should have been tried and skipped');
+});
+
+test('a non-deprecation error does NOT walk the chain', async () => {
+  // Quota and timeouts fail identically on every candidate. Retrying would turn one user's failed
+  // request into four inference calls — the opposite of what a rate limit needs.
+  const attempts: string[] = [];
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    AI: {
+      run: async (model: string) => {
+        attempts.push(model);
+        throw new Error('AiError: 3036: Account limited');
+      },
+    },
+  } as unknown as Env;
+  const res = await worker.fetch(post({ question: 'how many sets?' }), env);
+  assert.equal(res.status, 503);
+  assert.equal(attempts.length, 1, 'a quota error must not be retried against every model');
+});
+
+test('the 503 names every model it tried, so the next fix needs no guesswork', async () => {
+  const { env } = chainEnv(null);
+  const res = await worker.fetch(post({ question: 'how many sets?' }), env);
+  assert.equal(res.status, 503);
+  const body = (await res.json()) as { error: string; detail: string };
+  assert.equal(body.error, 'ai_unavailable');
+  assert.match(body.detail, /@cf\//, 'the detail must list the candidates, not just say it failed');
+  assert.match(body.detail, /5028/, 'and must preserve the upstream reason verbatim');
+});
+
+test('an explicitly pinned MODEL is tried first but is not a dead end', async () => {
+  const { env, attempts } = chainEnv('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+    MODEL: '@cf/meta/llama-3.1-8b-instruct',
+  } as Partial<Env>);
+  const res = await worker.fetch(post({ question: 'how many sets?' }), env);
+  assert.equal(attempts[0], '@cf/meta/llama-3.1-8b-instruct', 'the pin must be honoured first');
+  assert.equal(res.status, 200, 'but a retired pin must fall through, not fail');
+});
+
+test('the health check publishes the fallback chain', async () => {
+  const { env } = chainEnv(null);
+  const res = await worker.fetch(
+    new Request('https://worker.test/', { method: 'GET', headers: { Origin: ORIGIN } }),
+    env,
+  );
+  const body = (await res.json()) as { fallbacks: string[] };
+  assert.ok(body.fallbacks.length > 1, 'a probe should see the chain without spending an inference');
+});
+
+/* ── Mistral ──────────────────────────────────────────────────────────────────────────────────
+ *
+ * WHY THE KEY LIVES IN THE WORKER. The web app is a static export, so any value handed to it —
+ * environment variable included — is inlined into JavaScript every visitor downloads. A key in the
+ * bundle is a published key. The worker is the only server-side surface in the project, which is
+ * what makes it the right and only place for it.
+ */
+
+/** Stubs `fetch` for the duration of one call, recording what Mistral was sent. */
+async function withMistral(
+  reply: { status: number; body: unknown },
+  run: () => Promise<Response>,
+): Promise<{ res: Response; sent: { url: string; auth: string; body: any } | null }> {
+  const original = globalThis.fetch;
+  let sent: { url: string; auth: string; body: any } | null = null;
+  globalThis.fetch = (async (url: any, init: any) => {
+    sent = {
+      url: String(url),
+      auth: String(init?.headers?.Authorization ?? ''),
+      body: JSON.parse(String(init?.body ?? '{}')),
+    };
+    return new Response(JSON.stringify(reply.body), {
+      status: reply.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }) as typeof fetch;
+  try {
+    return { res: await run(), sent };
+  } finally {
+    globalThis.fetch = original;
+  }
+}
+
+const mistralOk = (content: string) => ({
+  status: 200,
+  body: { choices: [{ message: { content } }] },
+});
+
+test('a Mistral key takes priority over the AI binding', async () => {
+  const env = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test', AI: { run: async () => ({ response: 'from workers ai' }) } } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('Ten to twenty sets.'), () =>
+    worker.fetch(post({ question: 'how many sets?' }), env),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { answer: string; provider: string };
+  assert.equal(body.provider, 'mistral');
+  assert.match(body.answer, /Ten to twenty/);
+  assert.match(sent!.url, /api\.mistral\.ai/);
+  assert.equal(sent!.auth, 'Bearer sk-test', 'the key must go in the Authorization header');
+});
+
+test('the same caps and system prompt apply to Mistral', async () => {
+  // The caps are what stop a published URL becoming someone else's bill; they cannot be a property
+  // of one backend.
+  const env = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test' } as unknown as Env;
+  const { sent } = await withMistral(mistralOk('ok'), () =>
+    worker.fetch(
+      post({
+        question: 'what should I train?',
+        snippets: [{ question: 'Weekly volume', answer: '10-20 hard sets per muscle per week.' }],
+        profile: { exclusions: ['overhead press'] },
+      }),
+      env,
+    ),
+  );
+  assert.ok(sent!.body.max_tokens <= 300);
+  assert.ok(sent!.body.temperature <= 0.5);
+  assert.match(String(sent!.body.messages[0].content), /REFERENCE NOTES/);
+  assert.match(String(sent!.body.messages[0].content), /overhead press/);
+});
+
+test('a rejected Mistral key says so, instead of a generic failure', async () => {
+  const env = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'wrong' } as unknown as Env;
+  const { res } = await withMistral({ status: 401, body: { message: 'Unauthorized' } }, () =>
+    worker.fetch(post({ question: 'how many sets?' }), env),
+  );
+  const body = (await res.json()) as { detail: string };
+  assert.match(body.detail, /401/);
+  assert.match(body.detail, /MISTRAL_API_KEY/, 'the message must name the thing to fix');
+});
+
+test('when Mistral fails and the AI binding exists, the answer degrades rather than disappears', async () => {
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    AI: { run: async () => ({ response: 'Ten to twenty hard sets.' }) },
+  } as unknown as Env;
+  const { res } = await withMistral({ status: 500, body: { message: 'upstream' } }, () =>
+    worker.fetch(post({ question: 'how many sets?' }), env),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { provider: string; model: string };
+  assert.equal(body.provider, 'workers-ai', 'the response must report which backend really answered');
+  assert.ok(body.model.startsWith('@cf/'));
+});
+
+test('a worker with no binding and no key says exactly what is missing', async () => {
+  const env = { ALLOWED_ORIGINS: ORIGIN } as unknown as Env;
+  const res = await worker.fetch(post({ question: 'how many sets?' }), env);
+  assert.equal(res.status, 500);
+  const body = (await res.json()) as { error: string; detail: string };
+  assert.equal(body.error, 'no_provider');
+  assert.match(body.detail, /MISTRAL_API_KEY/);
+  assert.match(body.detail, /binding named AI/);
+});

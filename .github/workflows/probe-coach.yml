@@ -70,8 +70,8 @@ jobs:
           case "$code" in
             200) echo "::notice::POST 200 — ${payload}" ;;
             403) echo "::error::POST 403 — the Origin is not in ALLOWED_ORIGINS. Body: ${payload}" ;;
-            500) echo "::error::POST 500 — usually the AI binding is missing or misnamed (must be exactly AI). Body: ${payload}" ;;
-            503) echo "::error::POST 503 — the worker reached Workers AI and it failed. This is the model name, the account's Workers AI access, or quota. Body: ${payload}" ;;
+            500) echo "::error::POST 500 — no backend configured (binding must be named exactly AI), or a rejected MISTRAL_API_KEY. Body: ${payload}" ;;
+            503) echo "::error::POST 503 — the worker reached the model provider and it refused. The detail lists every model tried; '5028 deprecated' means Cloudflare retired them. Body: ${payload}" ;;
             *)   echo "::error::POST ${code} — ${payload}" ;;
           esac
           [ "$code" = "200" ] || exit 1

@@ -23,5 +23,21 @@ binding = "AI"
 # Comma-separated list of origins allowed to call this worker (CORS allow-list).
 # Include your Pages origin. "*" is accepted for local testing but not recommended.
 ALLOWED_ORIGINS = "https://girnarholdings.github.io,http://localhost:3000,http://localhost:4599"
-# Small, free-tier-friendly instruct model. Swap for any Workers AI text model.
-MODEL = "@cf/meta/llama-3.1-8b-instruct"
+# MODEL is deliberately NOT set.
+#
+# It used to be pinned to "@cf/meta/llama-3.1-8b-instruct". Cloudflare retired that model on
+# 2026-05-30 and every request returned "AiError: 5028: This model was deprecated" from that day on —
+# nothing in this project changed, the model was withdrawn underneath it. Pinning a replacement here
+# would just restart the same clock, so the worker now carries a fallback chain (see
+# WORKERS_AI_MODELS in src/index.ts) and skips retired candidates automatically.
+#
+# Set MODEL only to force a specific model. It is tried FIRST and the chain still backs it up, so a
+# stale pin degrades instead of breaking.
+# MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+
+# MISTRAL_API_KEY is a SECRET and must never be written here — this file is committed.
+#   npx wrangler secret put MISTRAL_API_KEY
+# or Dashboard → the worker → Settings → Variables and Secrets → Add → type "Secret".
+# When it is set, Mistral becomes the primary backend and Workers AI becomes the fallback.
+# Optional, and safe to commit since it is not a credential:
+# MISTRAL_MODEL = "mistral-small-latest"

@@ -14,7 +14,11 @@
  */
 
 export interface Env {
-  AI: {
+  /**
+   * Workers AI. Present whenever the `[ai]` binding is declared in wrangler.toml — no key needed,
+   * because the binding authorises against the account that owns the worker.
+   */
+  AI?: {
     run: (
       model: string,
       input: Record<string, unknown>,
@@ -22,9 +26,187 @@ export interface Env {
   };
   ALLOWED_ORIGINS?: string;
   MODEL?: string;
+  /**
+   * Mistral API key, as a Cloudflare SECRET (`wrangler secret put MISTRAL_API_KEY`, or Settings →
+   * Variables → Add → Encrypt).
+   *
+   * THE KEY MUST LIVE HERE AND NOWHERE ELSE. The web app is a static export, so anything given to
+   * it — including an env var — is inlined into JavaScript that every visitor downloads. A key in
+   * the bundle is a key published. The worker is the only server-side surface this project has,
+   * which is exactly why routing through it keeps the key secret: the browser talks to the worker,
+   * the worker talks to Mistral, and the key never leaves Cloudflare.
+   */
+  MISTRAL_API_KEY?: string;
+  /** Overrides the default Mistral model. Ignored unless MISTRAL_API_KEY is set. */
+  MISTRAL_MODEL?: string;
 }
 
-const DEFAULT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+/**
+ * WORKERS AI MODEL CHAIN — tried in order, first one that answers wins.
+ *
+ * This is a chain rather than a constant because of exactly how this worker broke. It was pinned to
+ * `@cf/meta/llama-3.1-8b-instruct`; Cloudflare retired that model on 2026-05-30; every request from
+ * that day on returned:
+ *
+ *     AiError: 5028: This model was deprecated on 2026-05-30. Please use an alternative model.
+ *
+ * Nothing in the worker, the account, the binding or the deployment changed — the model was
+ * withdrawn underneath it, and a one-line constant turned that into total, silent failure. Swapping
+ * in a different name would only reset the same timer, so a retirement now costs one skipped
+ * candidate instead of an outage.
+ *
+ * The order is deliberate: strongest first, then progressively smaller and cheaper, and the families
+ * are deliberately mixed (Meta, Mistral, Google) so that one vendor's generation being retired
+ * wholesale still leaves something live. `MODEL`, if set, is tried ahead of all of them.
+ */
+const WORKERS_AI_MODELS = [
+  '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+  '@cf/meta/llama-4-scout-17b-16e-instruct',
+  '@cf/mistralai/mistral-small-3.1-24b-instruct',
+  '@cf/google/gemma-3-12b-it',
+] as const;
+
+const DEFAULT_MODEL = WORKERS_AI_MODELS[0];
+
+/** The chain for this environment: an explicit `MODEL` first, then the defaults, deduplicated. */
+function workersAiModels(env: Env): string[] {
+  const pinned = env.MODEL?.trim();
+  const chain = pinned ? [pinned, ...WORKERS_AI_MODELS] : [...WORKERS_AI_MODELS];
+  return [...new Set(chain)];
+}
+
+/**
+ * Does this error mean "that model is gone", as opposed to "inference failed"?
+ *
+ * The distinction decides whether trying the next candidate is worth an inference call. A retired or
+ * misspelled model fails identically for every request, so moving on is the only way forward; a
+ * timeout or a quota rejection would fail the same way on the next model too, and retrying the whole
+ * chain would multiply one user's failed request into four.
+ *
+ * Cloudflare surfaces these as codes inside the message (5028 deprecated, 5007 no such model), so
+ * the codes are matched first and the prose second, since the prose is theirs to reword.
+ */
+function isModelUnavailable(err: unknown): boolean {
+  const msg = String(err instanceof Error ? err.message : err);
+  return /\b(5028|5007)\b/.test(msg) || /deprecat|no such model|model not found|unknown model/i.test(msg);
+}
+
+/**
+ * Run the chain. Returns the answer together with the model that actually produced it, so the
+ * response and the health check report reality rather than the first name in the list.
+ */
+async function askWorkersAI(
+  env: Env,
+  system: string,
+  question: string,
+): Promise<
+  { ok: true; answer: string; model: string } | { ok: false; status: number; detail: string }
+> {
+  const tried: string[] = [];
+  for (const model of workersAiModels(env)) {
+    try {
+      const result = (await env.AI!.run(model, {
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: question },
+        ],
+        max_tokens: MAX_TOKENS,
+        temperature: TEMPERATURE,
+      })) as { response?: string };
+      return { ok: true, answer: result?.response ?? '', model };
+    } catch (err) {
+      tried.push(`${model}: ${String(err instanceof Error ? err.message : err).slice(0, 120)}`);
+      // Anything that is not "this model is gone" would fail identically on the next candidate.
+      if (!isModelUnavailable(err)) break;
+    }
+  }
+  return {
+    ok: false,
+    status: 503,
+    detail: `No Workers AI model answered. Tried — ${tried.join(' | ')}`.slice(0, 400),
+  };
+}
+
+/**
+ * Mistral's small instruct model. Cheap, fast, and far stronger than the free Workers AI tier at
+ * following the rules in the system prompt — which is most of what quality means here, since the
+ * answer is meant to come from the supplied reference notes rather than the model's own memory.
+ */
+const DEFAULT_MISTRAL_MODEL = 'mistral-small-latest';
+const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions';
+
+/** Which backend a given environment resolves to. Mistral wins when its key is present. */
+function providerFor(env: Env): 'mistral' | 'workers-ai' | 'none' {
+  if (env.MISTRAL_API_KEY && env.MISTRAL_API_KEY.trim().length > 0) return 'mistral';
+  if (env.AI) return 'workers-ai';
+  return 'none';
+}
+
+function modelFor(env: Env): string {
+  return providerFor(env) === 'mistral'
+    ? (env.MISTRAL_MODEL ?? DEFAULT_MISTRAL_MODEL)
+    : (env.MODEL ?? DEFAULT_MODEL);
+}
+
+/**
+ * Call Mistral's chat-completions endpoint. Same message shape as Workers AI, different transport.
+ *
+ * The timeout is not optional. This worker is called directly by a browser that is showing a
+ * spinner, and the client gives up at 10s — a request left hanging on Mistral's side would hold a
+ * worker invocation open long after anyone is waiting for it.
+ */
+async function askMistral(
+  env: Env,
+  system: string,
+  question: string,
+): Promise<{ ok: true; answer: string } | { ok: false; status: number; detail: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const res = await fetch(MISTRAL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.MISTRAL_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: modelFor(env),
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: question },
+        ],
+        max_tokens: MAX_TOKENS,
+        temperature: TEMPERATURE,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      // 401 is the one worth distinguishing by hand: it is always the key, and every other
+      // explanation sends the reader looking in the wrong place.
+      const detail =
+        res.status === 401
+          ? 'Mistral rejected the API key (401). Check MISTRAL_API_KEY is set as a secret on this worker.'
+          : `Mistral returned ${res.status}: ${body.slice(0, 160)}`;
+      return { ok: false, status: res.status === 401 ? 500 : 503, detail };
+    }
+
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    return { ok: true, answer: data.choices?.[0]?.message?.content ?? '' };
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError';
+    return {
+      ok: false,
+      status: 503,
+      detail: aborted ? 'Mistral did not respond within 20s' : String(err).slice(0, 160),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /** Hard caps — a weak model rambles without them, and long answers hurt on a phone. */
 const MAX_TOKENS = 200;
@@ -151,7 +333,19 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     if (request.method === 'GET')
-      return json({ ok: true, service: 'fitforge-coach', model: env.MODEL ?? DEFAULT_MODEL }, 200, cors);
+      return json(
+        {
+          ok: true,
+          service: 'fitforge-coach',
+          provider: providerFor(env),
+          model: modelFor(env),
+          // The whole chain, so a probe can see what the worker would fall through to without
+          // having to spend an inference to find out.
+          fallbacks: env.AI ? workersAiModels(env) : [],
+        },
+        200,
+        cors,
+      );
     if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, cors);
 
     let body: ChatRequest;
@@ -166,20 +360,59 @@ export default {
 
     const system = buildSystemPrompt(body);
 
-    try {
-      const result = (await env.AI.run(env.MODEL ?? DEFAULT_MODEL, {
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: question },
-        ],
-        max_tokens: MAX_TOKENS,
-        temperature: TEMPERATURE,
-      })) as { response?: string };
+    const provider = providerFor(env);
+    if (provider === 'none') {
+      // Neither backend configured. Explicit, because the alternative is a 500 that reads as a bug
+      // in the code rather than as a worker that was deployed without a binding or a key.
+      return json(
+        {
+          error: 'no_provider',
+          detail:
+            'No AI backend configured. Add the Workers AI binding named AI, or set the ' +
+            'MISTRAL_API_KEY secret on this worker.',
+        },
+        500,
+        cors,
+      );
+    }
 
-      const answer = postProcess(result?.response ?? '');
+    try {
+      let raw: string;
+      let used = modelFor(env);
+      let usedProvider: 'mistral' | 'workers-ai' = provider;
+
+      if (provider === 'mistral') {
+        const r = await askMistral(env, system, question);
+        if (r.ok) {
+          raw = r.answer;
+        } else if (env.AI) {
+          // Mistral is preferred, not required. When a key expires or Mistral has an incident, an
+          // account that also has the AI binding should degrade to a weaker answer rather than to
+          // no answer — the user is watching a spinner, and they cannot act on "the key is wrong".
+          const fallback = await askWorkersAI(env, system, question);
+          if (!fallback.ok)
+            return json(
+              { error: 'ai_unavailable', detail: `${r.detail} — and Workers AI: ${fallback.detail}` },
+              r.status,
+              cors,
+            );
+          raw = fallback.answer;
+          used = fallback.model;
+          usedProvider = 'workers-ai';
+        } else {
+          return json({ error: 'ai_unavailable', detail: r.detail }, r.status, cors);
+        }
+      } else {
+        const r = await askWorkersAI(env, system, question);
+        if (!r.ok) return json({ error: 'ai_unavailable', detail: r.detail }, r.status, cors);
+        raw = r.answer;
+        used = r.model;
+      }
+
+      const answer = postProcess(raw);
       if (!answer) return json({ error: 'empty_response' }, 502, cors);
 
-      return json({ answer, model: env.MODEL ?? DEFAULT_MODEL }, 200, cors);
+      return json({ answer, provider: usedProvider, model: used }, 200, cors);
     } catch (err) {
       // Fail fast and explicitly — the client falls back to its local knowledge base.
       return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);

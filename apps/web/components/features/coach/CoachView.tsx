@@ -362,27 +362,43 @@ export function CoachView() {
             }}
             className="sticky bottom-0 z-20 -mx-4 border-t border-border bg-surface px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] pt-3 md:bottom-2 md:mx-0 md:rounded-card md:border md:px-3 md:pb-3"
           >
-            <div className="flex items-end gap-2">
+            {/* ONE BORDERED CONTROL, not a field sitting next to a button.
+                The composer used to be a hairline box on a same-tone surface, and on a phone in
+                daylight it read as a caption rather than as somewhere you could type. Enclosing the
+                field and the send button in a single ring makes the whole strip legible as one
+                object, and the accent ring on focus-within tells you which object has the keyboard.
+                The glyph on the left is the same coach mark the tab bar and the Today card wear, so
+                the thing you are talking to is identifiable at a glance. */}
+            <div
+              data-testid="coach-composer"
+              className="flex items-center gap-2 rounded-full border-2 border-border bg-surface-2 py-1.5 pl-3 pr-1.5 shadow-[var(--shadow-card)] transition-colors focus-within:border-accent"
+            >
+              <span aria-hidden className="shrink-0 text-muted-foreground">
+                <CoachIcon size={20} />
+              </span>
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask your coach a question…"
+                placeholder="Ask your coach anything…"
                 aria-label="Ask your coach a question"
                 data-testid="coach-input"
                 enterKeyHint="send"
-                className="h-12 min-w-0 flex-1 rounded-field border border-border bg-surface-2 px-3.5 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-accent"
+                className="h-11 min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
               />
-              <Button
+              <button
                 type="submit"
-                size="md"
                 aria-label="Send question"
                 data-testid="coach-submit"
                 disabled={input.trim().length === 0}
-                className="h-12 w-12 shrink-0 !px-0"
+                // Filled and circular so it is unmistakably pressable, and it dims rather than
+                // vanishing when empty — a control that disappears reads as a rendering bug.
+                // 44px, the house minimum — the send button is the one control on this screen that
+                // is pressed with a thumb while walking.
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground transition-[opacity,transform] duration-150 active:scale-95 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               >
                 <SendIcon size={18} />
-              </Button>
+              </button>
             </div>
           </form>
         </>

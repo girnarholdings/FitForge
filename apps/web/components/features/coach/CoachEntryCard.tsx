@@ -16,25 +16,26 @@ const PROMPTS = ['How much protein?', 'When do I add weight?', 'Why am I not los
 export function CoachEntryCard() {
   return (
     <Card className="shadow-[var(--shadow-card)]" data-testid="today-coach-card">
+      {/* SHAPED LIKE THE COMPOSER IT LEADS TO — same ring, same coach glyph on the left, same
+          filled accent circle on the right where the send button sits. Tapping this should read as
+          continuing one object, not as opening an unrelated screen. */}
       <Link
         href="/coach"
-        className="flex items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="flex items-center gap-3 rounded-full border-2 border-border bg-surface-2 py-1.5 pl-3 pr-1.5 transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
-        <span
-          aria-hidden
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent-muted text-accent"
-        >
-          {/* Same whistle the Coach tab and the Coach screen's own header wear — an entry point
-              and its destination must not be two different objects. */}
-          <CoachIcon size={22} />
+        <span aria-hidden className="shrink-0 text-muted-foreground">
+          <CoachIcon size={20} />
         </span>
-        <span className="min-w-0 flex-1">
+        <span className="min-w-0 flex-1 py-0.5">
           <span className="block font-semibold text-foreground">Ask your coach</span>
           <span className="block text-sm text-muted-foreground">
             Curated answers, instantly and offline.
           </span>
         </span>
-        <span aria-hidden className="shrink-0 text-muted-foreground">
+        <span
+          aria-hidden
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground"
+        >
           <ChevronRightIcon size={18} />
         </span>
       </Link>
