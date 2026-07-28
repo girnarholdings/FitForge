@@ -77,13 +77,19 @@ const SHARD_KEY_LENGTH = 2;
  * Hard ceiling on rows in any one shard, and therefore on what a single search can cost.
  *
  * A shard is fetched and parsed in full the first time a query lands in it, so the BIGGEST bucket
- * is what "does search feel instant?" actually depends on — the average is irrelevant. At roughly
- * 190 bytes per slimmed row, 600 rows is ~110 kB raw and ~25 kB over the wire gzipped: one round
- * trip and a parse comfortably under a frame at 60 Hz on a mid-range phone.
+ * is what "does search feel instant?" actually depends on — the average is irrelevant.
+ *
+ * MEASURED ON THE REAL CATALOG, not estimated: 46,612 foods over 517 shards, and the largest
+ * bucket (`be.json`) sits exactly on this cap at 190 kB raw, so a slimmed row averages ~324 bytes
+ * rather than the ~190 this comment previously guessed. 190 kB parses in single-digit milliseconds
+ * and travels as ~40 kB gzipped, which is comfortably inside "instant" — so the cap stays at 600.
+ * Lowering it to hit a rounder byte figure would delete real foods for no latency a user could
+ * perceive.
  *
  * Buckets over the cap keep their highest-ranked rows (see `rankForShard`), which in practice
  * means the generic lab-analysed foods and the shorter, more general names survive and the long
- * tail of near-identical branded rows is what goes.
+ * tail of near-identical branded rows is what goes. `dropped` in the manifest records how many
+ * that was, so the cost of this cap stays visible on every build rather than being inferred.
  */
 const MAX_SHARD_ROWS = Number(process.env.FITFORGE_MAX_SHARD_ROWS ?? 600);
 
@@ -427,6 +433,11 @@ async function main() {
     // as "N foods · USDA FoodData Central", and quoting the pre-cap figure would overstate the
     // catalog by everything the shard cap dropped.
     total: shipped,
+    // WHAT THIS CATALOG COST. Both of these delete real rows, so they are recorded rather than
+    // left to be inferred from a total that looks plausible: `duplicates` is how many rows another
+    // row already covered, `over_cap` is how many were dropped purely to bound shard size. If the
+    // second ever grows large relative to `total`, the cap is trading away more than it is buying.
+    dropped: { duplicates, over_cap: capped },
     shards: shardCounts,
   };
 

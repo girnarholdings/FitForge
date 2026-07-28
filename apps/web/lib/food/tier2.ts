@@ -32,6 +32,13 @@ export interface Tier2Manifest {
   total: number;
   /** shard key → row count */
   shards: Record<string, number>;
+  /**
+   * Rows the build deliberately did not ship: `duplicates` covered by another row, `over_cap`
+   * dropped to bound shard size. Diagnostic only — nothing in the app branches on it — but it is
+   * in the manifest so the cost of those two rules is recorded next to the total they produced.
+   * Optional because a manifest written before this field existed is still perfectly valid.
+   */
+  dropped?: { duplicates: number; over_cap: number };
   license: string;
   source: string;
   shard_key_length: number;
