@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, completeOnboarding, readDemoState } from './helpers';
+import { readDemoState, seedOnboarded } from './helpers';
 
 /**
  * VIEWING AND EDITING OTHER DAYS.
@@ -25,8 +25,7 @@ function isoOffset(days: number): string {
 
 test.describe('day navigation', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('Today starts on today and says so', async ({ page }) => {
@@ -82,8 +81,7 @@ test.describe('day navigation', () => {
 
 test.describe('backfilling a missed day', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('food logged while viewing yesterday is stored against YESTERDAY', async ({ page }) => {

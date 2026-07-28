@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, completeOnboarding, readDemoState } from './helpers';
+import { readDemoState, seedOnboarded } from './helpers';
 
 /**
  * EXPORT / IMPORT — the promise that Local Mode is not a trap.
@@ -48,8 +48,7 @@ async function exportBundle(page: import('@playwright/test').Page): Promise<stri
 
 test.describe('data portability', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('a backup captures logs from days other than today', async ({ page }) => {

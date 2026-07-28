@@ -101,6 +101,9 @@ Icon
 
 # Playwright run artifacts
 apps/web/tests/.output/
+# The onboarded-state snapshot the e2e `setup` project writes at the start of every run.
+# Generated, per-run, and date-sensitive — committing it would let a stale one be used.
+apps/web/tests/.state/
 apps/web/tests/**/test-results/
 apps/web/playwright-report/
 

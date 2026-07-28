@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { completeOnboarding, resetDemo } from './helpers';
+import { resetDemo, seedOnboarded } from './helpers';
 
 test.describe('settings', () => {
   test.beforeEach(async ({ page }) => {
     await resetDemo(page);
     // (app) routes are gated (§5.3): complete onboarding so /settings is reachable.
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('renders and lets you edit an onboarding answer', async ({ page }) => {

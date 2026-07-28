@@ -1,5 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { completeOnboarding, readDemoState, resetDemo, pageOverflow } from './helpers';
+import {
+  completeOnboarding,
+  readDemoState,
+  resetDemo,
+  pageOverflow,
+  seedOnboarded,
+} from './helpers';
 
 /**
  * "The splits are very hard to look at properly because even in onboarding the details are cut out,
@@ -250,7 +256,7 @@ test.describe('split detail', () => {
   test('the Workouts "Change split" sheet previews against the real, finished profile', async ({
     page,
   }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/routines');
     await page.getByTestId('change-split').click();
     const sheet = page.getByTestId('split-library');

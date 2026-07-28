@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { completeOnboarding, resetDemo, readDemoState } from './helpers';
+import { resetDemo, readDemoState, seedOnboarded } from './helpers';
 
 test.describe('workout', () => {
   test.beforeEach(async ({ page }) => {
@@ -7,7 +7,7 @@ test.describe('workout', () => {
   });
 
   test('player renders exercises, logs sets, advances, and finishes', async ({ page }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
 
     // Pick the first generated day that actually has exercises so the player never dead-ends.
     const state = await readDemoState(page);

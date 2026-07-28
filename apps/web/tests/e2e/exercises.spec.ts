@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, completeOnboarding } from './helpers';
+import { resetDemo, seedOnboarded } from './helpers';
 
 async function exerciseCount(page: import('@playwright/test').Page): Promise<number> {
   const text = await page.getByTestId('exercise-count').innerText();
@@ -11,7 +11,7 @@ test.describe('exercises', () => {
     await resetDemo(page);
     // The (app) gate redirects non-onboarded visits to /onboarding/welcome, so
     // establish a completed onboarding before deep-linking into /exercises.
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('catalog lists exercises and a category filter narrows the list', async ({ page }) => {
@@ -151,8 +151,7 @@ test.describe('exercises', () => {
  */
 test.describe('exercise library access, how-to, and aggregated targeting', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('Exercises is reachable from the mobile bottom tab bar (WS-4)', async ({ page }) => {

@@ -1,0 +1,70 @@
+name: Install dependencies
+description: >
+  Node, plus a node_modules cache keyed on the lockfile so a hit skips `npm ci` altogether rather
+  than merely making it download less.
+
+# WHY THIS EXISTS.
+#
+# `actions/setup-node` with `cache: npm` caches ~/.npm — the TARBALL cache. It saves the download,
+# and then `npm ci` still deletes node_modules and re-links every package from those tarballs on
+# every job of every run. Five jobs were each paying that for a 687 MB tree.
+#
+# Caching node_modules itself removes the install instead of speeding it up. The cost is that the
+# cache is now load-bearing for correctness, which is what the two rules below are about.
+
+inputs:
+  node-version:
+    description: Node major to install.
+    required: true
+  working-directory:
+    description: Directory holding the package-lock.json to install from.
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        # Still worth keeping: it is the fallback path on a node_modules miss, which is exactly
+        # when a fast `npm ci` matters most.
+        cache: npm
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+    - id: modules
+      uses: actions/cache@v6
+      with:
+        # npm hoists nearly everything to the root, but a workspace that needs a conflicting
+        # version gets its own node_modules. Restoring only the root would leave those missing,
+        # and the job would fail in a way that looks like a broken dependency rather than a
+        # half-restored cache.
+        path: |
+          ${{ inputs.working-directory }}/node_modules
+          ${{ inputs.working-directory }}/packages/*/node_modules
+          ${{ inputs.working-directory }}/apps/*/node_modules
+          ${{ inputs.working-directory }}/seed/node_modules
+        # RULE 1: the key is the lockfile hash, and there are DELIBERATELY NO restore-keys.
+        #
+        # A partial restore would hand back a node_modules built from a DIFFERENT lockfile — and
+        # because a hit then skips `npm ci`, the whole suite would run against dependency versions
+        # nobody chose, reporting green. For a tarball cache a near-miss is a free head start; for
+        # this one it is a silent lie. Exact match, or install properly.
+        key: npm-${{ runner.os }}-node${{ inputs.node-version }}-${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory)) }}
+
+    # RULE 2: `npm ci`, not `npm install`. On a miss the lockfile is still the authority; `install`
+    # would happily resolve something newer and write a lockfile nobody reviewed.
+    - name: Install
+      if: steps.modules.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm ci
+
+    - name: Report
+      shell: bash
+      run: |
+        if [ "${{ steps.modules.outputs.cache-hit }}" = "true" ]; then
+          echo "::notice::node_modules restored from cache — install skipped"
+        else
+          echo "::notice::node_modules cache miss — ran npm ci"
+        fi

@@ -40,16 +40,14 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      # Kept in step with ci.yml's NODE_VERSION (22). Node 20 is end-of-life as of April 2026, and
+      # this workflow is the one that actually ships the bundle users load — it must not build on an
+      # older runtime than the one CI proved the bundle on. The shared composite action means the
+      # deploy install and the CI install cannot drift apart, and it reuses the same node_modules
+      # cache CI already populated.
+      - uses: ./.github/actions/install
         with:
-          # Kept in step with ci.yml's NODE_VERSION (22). Node 20 is end-of-life as of April 2026,
-          # and this workflow is the one that actually ships the bundle users load — it must not
-          # build on an older runtime than the one CI proved the bundle on.
           node-version: "22"
-          cache: npm
-
-      - name: Install
-        run: npm ci
 
       - name: Build shared package
         run: npm run build -w @fitforge/shared
@@ -135,6 +133,18 @@ jobs:
           else
             echo "::warning::Tier-2 food catalog unavailable; deploying with the 509-food curated core only"
           fi
+
+      # Deliberately a DIFFERENT key namespace from ci.yml's. This build runs with a /FitForge base
+      # path and CI's runs with an empty one, which changes emitted asset URLs — sharing one cache
+      # would have each build evicting the other's entries every run and neither ever hitting.
+      - name: Cache the Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: apps/web/.next/cache
+          key: next-pages-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('apps/web/**/*.[jt]s', 'apps/web/**/*.[jt]sx', 'apps/web/**/*.css') }}
+          restore-keys: |
+            next-pages-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-pages-${{ runner.os }}-
 
       - name: Build web static export
         run: npm run build -w @fitforge/web

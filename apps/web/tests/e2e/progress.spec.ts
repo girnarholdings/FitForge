@@ -1,11 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {
-  completeOnboarding,
-  pageOverflow,
-  resetDemo,
-  seedTrainingHistory,
-  tapMuscle,
-} from './helpers';
+import { pageOverflow, resetDemo, seedTrainingHistory, tapMuscle, seedOnboarded } from './helpers';
 
 /**
  * Progress — the training-analytics surface (WS-B).
@@ -20,7 +14,7 @@ test.describe('progress', () => {
     await resetDemo(page);
     // The (app) gate redirects non-onboarded visits to /onboarding/welcome, so
     // establish a completed onboarding before deep-linking into /progress.
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('renders with weight chart and switchable tabs', async ({ page }) => {

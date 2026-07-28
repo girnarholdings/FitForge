@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { completeOnboarding, resetDemo } from './helpers';
+import { resetDemo, seedOnboarded } from './helpers';
 
 test.describe('today', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe('today', () => {
   test('shows the generated plan, macro ring targets, and a way into a workout', async ({
     page,
   }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/today');
 
     // Header greeting + today's plan heading.

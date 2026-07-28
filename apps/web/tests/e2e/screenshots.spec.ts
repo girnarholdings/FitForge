@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 import {
   advanceToEquipment,
-  completeOnboarding,
   resetDemo,
   seedTrainingHistory,
   tapMuscle,
+  seedOnboarded,
 } from './helpers';
 
 /**
@@ -64,7 +64,7 @@ test.describe('screenshots @ 390x664', () => {
   });
 
   test('exercises — catalog, detail how-to, and aggregated targeting', async ({ page }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
 
     await page.goto('/exercises');
     await expect(page.getByRole('heading', { name: 'Exercises' })).toBeVisible();
@@ -106,7 +106,7 @@ test.describe('screenshots @ 390x664', () => {
    * charts contain actual data rather than an empty state.
    */
   test('progress — heat gradient and analytics time-series', async ({ page }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/progress');
     await seedTrainingHistory(page);
     await expect(page.getByTestId('weekly-goal-heatmap')).toBeVisible();

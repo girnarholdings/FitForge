@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, completeOnboarding } from './helpers';
+import { seedOnboarded } from './helpers';
 
 /**
  * "WHAT CAN I EAT?" — answered from the day's arithmetic, not generated.
@@ -16,8 +16,7 @@ test.use({ viewport: { width: 390, height: 664 } });
 
 test.describe('coach · meal suggestions', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('asking what to eat returns real foods with no AI configured', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, completeOnboarding } from './helpers';
+import { seedOnboarded } from './helpers';
 
 /**
  * TOUCH TARGET SIZES — measured, not eyeballed.
@@ -106,8 +106,7 @@ test.use({ viewport: { width: 390, height: 664 } });
 
 test.describe('touch targets', () => {
   test('the top-bar Coach and Settings controls are 44px to a finger', async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/today');
 
     await expect(page.getByTestId('mobile-coach')).toBeVisible();
@@ -118,8 +117,7 @@ test.describe('touch targets', () => {
   test('the glossary info button clears the AA minimum despite being a 20px glyph', async ({
     page,
   }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
 
     // Into a real session, where the glossary buttons live next to the set-row labels.
     await page.goto('/today');

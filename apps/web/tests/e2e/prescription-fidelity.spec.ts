@@ -1,11 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import {
-  resetDemo,
-  completeOnboarding,
-  readDemoState,
-  DEMO_STORAGE_KEY,
-  WORKOUT_LOG_KEY,
-} from './helpers';
+import { readDemoState, DEMO_STORAGE_KEY, WORKOUT_LOG_KEY, seedOnboarded } from './helpers';
 
 /**
  * PRESCRIPTION FIDELITY — the numbers the app SAYS and the numbers the app LOGS are one number.
@@ -59,8 +53,7 @@ async function counterDenominator(page: Page): Promise<number> {
 
 test.describe('prescription fidelity', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('under reverse pyramid the weight INPUTS drop, not just the labels', async ({ page }) => {

@@ -1,11 +1,5 @@
 import { test, expect } from '@playwright/test';
-import {
-  completeOnboarding,
-  pageOverflow,
-  resetDemo,
-  DEMO_STORAGE_KEY,
-  WORKOUT_LOG_KEY,
-} from './helpers';
+import { pageOverflow, DEMO_STORAGE_KEY, WORKOUT_LOG_KEY, seedOnboarded } from './helpers';
 
 /**
  * THE WORKOUTS SURFACE SHOWS WHAT A SESSION IS.
@@ -24,8 +18,7 @@ test.use({ viewport: { width: 390, height: 664 } });
 
 test.describe('workouts · session stats', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('every session shows sets, duration, muscles and its exercise list without starting it', async ({

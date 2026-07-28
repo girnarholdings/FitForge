@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { completeOnboarding, resetDemo, readDemoState, pageOverflow } from './helpers';
+import { readDemoState, pageOverflow, seedOnboarded } from './helpers';
 
 /**
  * THE SET-ENTRY FORM, and the glossary hanging off it.
@@ -73,8 +73,7 @@ function assertLabelsBound(
 
 test.describe('set-entry form', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('every visible field label is bound to its own control', async ({ page }) => {
@@ -155,8 +154,7 @@ test.describe('set-entry form', () => {
 
 test.describe('glossary', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('a term explains itself in one sentence and links on to the Coach', async ({ page }) => {
@@ -174,7 +172,16 @@ test.describe('glossary', () => {
     await expect(page.getByTestId('glossary-ask-rpe')).toBeVisible();
     // `exact` matters: the sheet is closed by its scrim, which is a button named exactly "Close",
     // and the screen behind it carries a "Close the collar" glossary trigger too.
-    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    //
+    // The POSITION matters just as much. The scrim is `absolute inset-0`, so its box is the whole
+    // viewport and Playwright's default click lands dead centre — which is inside the sheet panel
+    // whenever the panel is tall enough to reach the middle of the screen. The click is then
+    // intercepted and the test times out on geometry, having found nothing wrong with the product.
+    // Aiming at the top-left corner hits scrim a bottom-anchored sheet can never cover, and is also
+    // what a user tapping "somewhere off the sheet" actually does.
+    await page
+      .getByRole('button', { name: 'Close', exact: true })
+      .click({ position: { x: 8, y: 8 } });
     await expect(sheet).toHaveCount(0);
 
     // A dotted term in prose. The rep range carries a RULE, so it earns one.
@@ -209,8 +216,7 @@ test.describe('glossary', () => {
 
 test.describe('first-workout explainer', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('shows on the first session, and stays dismissed', async ({ page }) => {

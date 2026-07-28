@@ -1,8 +1,71 @@
 import { type Page, expect } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export const DEMO_STORAGE_KEY = 'fitforge.demo.v1';
 /** WS-F's additive workout-session slice (see `components/features/shared/workoutLog.ts`). */
 export const WORKOUT_LOG_KEY = 'fitforge.workoutlog.v1';
+
+/**
+ * Every `fitforge.*` key onboarding can write. The snapshot copies all of them rather than just the
+ * demo store: a spec seeded with only part of the state would see an app whose slices disagree,
+ * which is a failure mode no product code has to handle and nobody would think to look for.
+ */
+export const STORE_KEYS = [
+  DEMO_STORAGE_KEY,
+  WORKOUT_LOG_KEY,
+  'fitforge.foodAliases.v1',
+  'fitforge.recentExercises.v1',
+] as const;
+
+/**
+ * Where `onboarded.setup.ts` writes the state the rest of the suite starts from.
+ *
+ * Resolved from this module's own URL rather than `__dirname` (Playwright loads these specs as ES
+ * modules, where it does not exist) and rather than `process.cwd()` (which is whatever directory
+ * the run was launched from, so the path would silently move).
+ */
+export const ONBOARDED_STATE_FILE = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../.state/onboarded.json',
+);
+
+let cachedOnboarded: Record<string, string> | null = null;
+
+/**
+ * Put the page into "onboarding is finished" without walking the wizard.
+ *
+ * THE SUBSTITUTION IS EXACT, which is the whole reason it is safe: the state written here was
+ * produced by `completeOnboarding` itself, in `onboarded.setup.ts`, driving the real production
+ * wizard in this same run. A spec that begins `resetDemo` + `completeOnboarding` and one that
+ * begins `seedOnboarded` start from identical bytes — the difference is forty UI interactions, not
+ * the state under test.
+ *
+ * Use `completeOnboarding` instead whenever the WALK is what is being asserted, or whenever hooks
+ * are needed to steer a particular path through it. This is for the far commoner case where
+ * onboarding is merely the precondition for testing something else.
+ */
+export async function seedOnboarded(page: Page): Promise<void> {
+  if (!cachedOnboarded) {
+    if (!fs.existsSync(ONBOARDED_STATE_FILE)) {
+      throw new Error(
+        `No onboarded snapshot at ${ONBOARDED_STATE_FILE}. It is produced by the "setup" project ` +
+          'in playwright.config.ts — run the suite normally rather than --project=chromium alone.',
+      );
+    }
+    cachedOnboarded = JSON.parse(fs.readFileSync(ONBOARDED_STATE_FILE, 'utf8')) as Record<
+      string,
+      string
+    >;
+  }
+  await page.goto('/');
+  await page.evaluate((entries) => {
+    window.localStorage.clear();
+    for (const [k, v] of Object.entries(entries)) window.localStorage.setItem(k, v);
+  }, cachedOnboarded);
+  await page.reload();
+}
 
 /**
  * Clear all demo state (localStorage key `fitforge.demo.v1`) for test isolation. Must be called

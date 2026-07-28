@@ -26,11 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/install
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
       - run: npm run build -w @fitforge/shared
       - run: npm run test -w @fitforge/shared
 
@@ -40,11 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/install
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
       - name: Build shared dependency
         run: npm run build -w @fitforge/shared
       - name: Typecheck
@@ -56,6 +52,18 @@ jobs:
       # devices reporting the same steps. None of those are reachable by clicking.
       - name: Unit tests
         run: npm run test:unit -w @fitforge/web
+
+      # Same cache as the e2e job, same key — so whichever job finishes its build first populates
+      # it and the other reuses it on the next run.
+      - name: Cache the Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('apps/web/**/*.[jt]s', 'apps/web/**/*.[jt]sx', 'apps/web/**/*.css') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
+
       - name: Build (static export)
         run: npm run build -w @fitforge/web
         env:
@@ -68,11 +76,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/install
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
       - name: Validate seed data
         run: npm run seed:check -w @fitforge/seed
       - name: Validator unit tests
@@ -120,12 +126,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      # This job had NO dependency cache at all — not even the tarball cache the others got — so it
+      # re-downloaded wrangler and its tree from the registry on every single run.
+      - uses: ./.github/actions/install
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Install
-        working-directory: workers/coach
-        run: npm ci
+          working-directory: workers/coach
       # `npm run typecheck`, NOT `npx tsc` with inline flags. This job installs only
       # workers/coach, which has no root node_modules to fall back on, so the original `npx tsc`
       # silently downloaded an unpinned TypeScript from the registry at build time — it resolved on
@@ -148,21 +154,54 @@ jobs:
   e2e:
     name: web · e2e (playwright)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Was 30. The suite itself measures ~2 min now (see playwright.config.ts for the worker-count
+    # audit and tests/e2e/onboarded.setup.ts for the onboarding snapshot); 15 leaves generous room
+    # for a cold cache and still catches a hang in minutes instead of half an hour.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/install
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
       - name: Build shared dependency
         run: npm run build -w @fitforge/shared
 
+      # ── Chromium, cached ────────────────────────────────────────────────────────────────────
+      #
+      # This step used to re-download the browser on EVERY run: several hundred megabytes, every
+      # push, every PR, to get a binary byte-identical to the last one.
+      #
+      # The key is the exact @playwright/test version and nothing else, because that is precisely
+      # the constraint Playwright enforces: each release pins a browser BUILD NUMBER and refuses
+      # anything else, with "Executable doesn't exist at .../chromium_headless_shell-<build>". A
+      # looser key would restore a browser the installed Playwright will not launch — and no
+      # restore-keys, for the same reason: a near-miss here is not a partial win, it is a browser
+      # that cannot start.
+      #
       # Only Chromium: the suite pins the iPhone 13 device profile on a Chromium engine
       # (playwright.config.ts), so the other browsers would be downloaded and never launched.
+      - name: Resolve the pinned Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache the browser
+        id: pw-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      # The binary is cached; the system libraries it links against are not, because they are apt
+      # packages on a fresh runner. `install-deps` is the apt half alone and skips the download.
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "::notice::Browser restored from cache — installing system libraries only"
+            npx playwright install-deps chromium
+          else
+            echo "::notice::Browser cache miss — downloading Chromium"
+            npx playwright install --with-deps chromium
+          fi
 
       # Tier-2 shards, from the OFFLINE FIXTURE. Without a catalog present the tier2-cache specs
       # skip themselves — correctly, since a missing tier 2 is a supported deployment state — but
@@ -170,6 +209,20 @@ jobs:
       # the fixture catalog here costs a second and turns those four specs from skipped to real.
       - name: Build tier-2 fixture catalog (for the cache specs)
         run: npm run food:import:fixture -w @fitforge/seed
+
+      - name: Cache the Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('apps/web/**/*.[jt]s', 'apps/web/**/*.[jt]sx', 'apps/web/**/*.css') }}
+          # RESTORE-KEYS ARE CORRECT HERE, and wrong for node_modules and the browser above. The
+          # difference is what a near-miss costs. A stale .next/cache is a pile of hints that Next
+          # validates entry by entry and discards when they no longer apply — worst case it rebuilds
+          # what it would have rebuilt anyway. A stale node_modules would be silently tested
+          # against; a stale browser would not launch. Same mechanism, opposite correct answer.
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            next-${{ runner.os }}-
 
       # The suite serves apps/web/out — it does not build it. Base path MUST be empty here: the
       # test server mounts out/ at the root, so a /FitForge prefix would 404 every asset.
@@ -179,11 +232,11 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: ""
           NEXT_PUBLIC_DEMO: "1"
 
-      # --workers=1 is not a performance choice. The specs share one out/ directory and one
-      # screenshot directory; running them in parallel makes them race and report failures that
-      # do not exist in the product.
+      # Worker count lives in playwright.config.ts, not here, so a local run and a CI run are the
+      # same run. It used to be pinned to 1 from this line on the belief that the specs raced; they
+      # do not, and the config records what was actually checked.
       - name: Run E2E suite
-        run: npm run test:e2e -w @fitforge/web -- --workers=1
+        run: npm run test:e2e -w @fitforge/web
 
       - name: Upload failure artifacts
         if: failure()

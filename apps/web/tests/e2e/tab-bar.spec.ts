@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { resetDemo, completeOnboarding } from './helpers';
+import { seedOnboarded } from './helpers';
 
 /**
  * THE FLOATING TAB BAR and its long-press gesture.
@@ -57,8 +57,7 @@ async function longPressSwipe(page: Page, fromTestId: string, toTestId: string, 
 
 test.describe('floating tab bar', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/today');
   });
 

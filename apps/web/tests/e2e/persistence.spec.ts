@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { completeOnboarding, resetDemo, readDemoState } from './helpers';
+import { resetDemo, readDemoState, seedOnboarded } from './helpers';
 
 test.describe('persistence', () => {
   test.beforeEach(async ({ page }) => {
@@ -7,7 +7,7 @@ test.describe('persistence', () => {
   });
 
   test('completed state survives a reload; reset clears it', async ({ page }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
 
     // State written on finish.
     let state = await readDemoState(page);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, completeOnboarding, readDemoState } from './helpers';
+import { readDemoState, seedOnboarded } from './helpers';
 
 /**
  * QUICK WORKOUT — the replacement for a button that used to link straight at `routine.days[0]`.
@@ -11,8 +11,7 @@ import { resetDemo, completeOnboarding, readDemoState } from './helpers';
  */
 test.describe('quick workout', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('offers options built from the real split, not a bare start', async ({ page }) => {

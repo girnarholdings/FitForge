@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { completeOnboarding, resetDemo, readDemoState, DEMO_STORAGE_KEY } from './helpers';
+import { resetDemo, readDemoState, DEMO_STORAGE_KEY, seedOnboarded } from './helpers';
 
 /**
  * Nutrition — CONVERSATIONAL logging.
@@ -21,7 +21,7 @@ test.describe('nutrition', () => {
   test('typing a sentence parses it, the confirm step shows the maths, and confirming logs the day', async ({
     page,
   }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/nutrition');
 
     await expect(page.getByRole('heading', { name: 'Nutrition' })).toBeVisible();
@@ -67,7 +67,7 @@ test.describe('nutrition', () => {
   });
 
   test('a phrase the parser cannot match is surfaced honestly, never guessed', async ({ page }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/nutrition');
 
     await page.getByTestId('nutrition-composer').fill('asdfgh and 2 eggs');
@@ -88,7 +88,7 @@ test.describe('nutrition', () => {
   test('search returns real results for the everyday queries that used to return nothing', async ({
     page,
   }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/nutrition');
 
     await page.getByRole('button', { name: /search the food list/i }).click();
@@ -121,7 +121,7 @@ test.describe('nutrition', () => {
   test('correcting a match teaches the parser — the same words resolve to the fixed food next time', async ({
     page,
   }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/nutrition');
 
     // "bread" resolves to the generic white bread…
@@ -153,7 +153,7 @@ test.describe('nutrition', () => {
   test('copy-yesterday re-logs the previous day’s meals into today and persists', async ({
     page,
   }) => {
-    await completeOnboarding(page);
+    await seedOnboarded(page);
 
     const y = yesterdayISO();
     await page.evaluate(

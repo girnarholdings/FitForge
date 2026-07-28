@@ -2,10 +2,10 @@ import { test, expect, type Page } from '@playwright/test';
 import {
   resetDemo,
   enterDemo,
-  completeOnboarding,
   passExercisePrefs,
   readDemoState,
   WORKOUT_LOG_KEY,
+  seedOnboarded,
 } from './helpers';
 
 /**
@@ -151,8 +151,7 @@ test.describe('progression scheme · onboarding', () => {
 
 test.describe('progression scheme · the workout player', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   /** The first day of the generated routine that actually has exercises. */
@@ -318,8 +317,7 @@ test.describe('progression scheme · the workout player', () => {
 
 test.describe('progression scheme · settings', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('the choice persists, and can be handed back to the recommendation', async ({ page }) => {

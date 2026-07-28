@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { resetDemo, completeOnboarding } from './helpers';
+import { seedOnboarded } from './helpers';
 
 /**
  * TIER-2 SHARD CACHING — measured by counting network requests, not by trusting the code.
@@ -54,8 +54,7 @@ async function searchInPicker(page: Page, query: string): Promise<void> {
 
 test.describe('tier-2 shard cache', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
   });
 
   test('the manifest is fetched and reports a catalog', async ({ page }) => {

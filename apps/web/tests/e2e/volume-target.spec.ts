@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, completeOnboarding, readDemoState } from './helpers';
+import { readDemoState, seedOnboarded } from './helpers';
 
 /**
  * VOLUME TARGET CALIBRATION.
@@ -14,8 +14,7 @@ import { resetDemo, completeOnboarding, readDemoState } from './helpers';
  */
 test.describe('weekly volume targets', () => {
   test.beforeEach(async ({ page }) => {
-    await resetDemo(page);
-    await completeOnboarding(page);
+    await seedOnboarded(page);
     await page.goto('/exercises');
     await page.getByTestId('exercises-tab-targets').click();
     await expect(page.getByTestId('muscle-volume-bars')).toBeVisible();
