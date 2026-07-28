@@ -1,0 +1,24 @@
+{
+  // Standalone on purpose — this package is NOT a workspace of the root package.json (it deploys
+  // by itself from its own directory), so it cannot extend a root config that its CI job never
+  // installs.
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    // `dom` supplies Request/Response/fetch. Workers implement the same interfaces, and pulling in
+    // @cloudflare/workers-types would be a second, heavier dependency for a 190-line file whose
+    // only platform surface is the fetch handler and the AI binding it declares itself.
+    "lib": ["es2022", "dom"],
+    "types": [],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true
+  },
+  // src only. The test imports `node:test`, which would need @types/node — a dependency that buys
+  // nothing here, since the thing worth typechecking is the code that gets deployed.
+  "include": ["src/**/*.ts"]
+}
