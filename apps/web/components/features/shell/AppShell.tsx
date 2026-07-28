@@ -157,6 +157,29 @@ function isActive(pathname: string, item: NavItem): boolean {
 }
 
 /**
+ * Routes that own the bottom of the screen with a composer of their own, where the floating Coach
+ * button must NOT be drawn.
+ *
+ * THIS IS A REAL BUG, NOT A TIDINESS RULE. The Coach button floats 44px above the tab pill at the
+ * right-hand edge — which is exactly where a composer puts its submit button. The nav sits at z-40
+ * and the composer at z-30, so the Coach link silently swallowed every tap meant for "Review what
+ * you ate": the user pressed send and landed on the Coach screen with their meal unlogged. Ten
+ * end-to-end specs caught it at once, all of them food-logging paths, and the Playwright log named
+ * the culprit outright — "<a data-testid='tab-coach'> … intercepts pointer events".
+ *
+ * Hiding it here rather than padding the composer upward is the cheaper trade: clearing the button
+ * would cost ~60px of vertical space on a 664px screen, permanently, on the one screen where the
+ * list of what you have eaten is the content. And nothing is lost — /nutrition still reaches the
+ * Coach through the Today card and the sidebar, and on /coach the button is a link to the page you
+ * are already on.
+ */
+const COACH_FAB_HIDDEN_ON = ['/nutrition', '/coach'];
+
+function coachFabHidden(pathname: string): boolean {
+  return COACH_FAB_HIDDEN_ON.some((p) => pathname === p || pathname.startsWith(p + '/'));
+}
+
+/**
  * One nav glyph, crossfading outline → solid when its destination becomes the current one.
  *
  * THE TWO ICONS OVERLAP DURING THE SWAP rather than taking turns. `AnimatePresence` with
@@ -351,12 +374,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <FloatingTabBar
         items={TAB_ITEMS}
         activeIndex={activeTabIndex}
-        coach={{
-          href: COACH_ITEM.href,
-          label: COACH_ITEM.label,
-          Icon: COACH_ITEM.Icon,
-          active: isActive(pathname, COACH_ITEM),
-        }}
+        coach={
+          coachFabHidden(pathname)
+            ? undefined
+            : {
+                href: COACH_ITEM.href,
+                label: COACH_ITEM.label,
+                Icon: COACH_ITEM.Icon,
+                active: isActive(pathname, COACH_ITEM),
+              }
+        }
       />
 
       <Sheet open={explain} onClose={() => setExplain(false)} title="Local Mode">
