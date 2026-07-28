@@ -164,6 +164,27 @@ jobs:
           # knowledge base exactly as it does today. Nothing needs to change to keep it off.
           NEXT_PUBLIC_AI_ENDPOINT: ${{ vars.AI_ENDPOINT }}
 
+      # Says, on every deploy, whether the Coach worker is actually wired into the bundle.
+      #
+      # This exists because the failure it catches is invisible from the outside: the endpoint is
+      # inlined at BUILD time, so an unset variable, a typo, or an http:// URL on an https:// page
+      # all produce a site that looks identical and quietly answers from the local guide. A green
+      # deploy proved nothing about it. The URL is public by design — it ships in the client bundle
+      # — so echoing it leaks nothing that is not already served to every visitor.
+      - name: Report Coach wiring
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          if [ -z "$ENDPOINT" ]; then
+            echo "::notice::Coach AI not configured (AI_ENDPOINT unset) — answers come from the local knowledge base"
+          elif [ "${ENDPOINT#http://}" != "$ENDPOINT" ]; then
+            echo "::error::AI_ENDPOINT is http:// — the browser will block it as mixed content on an https:// site, and Coach will silently fall back to the local guide. Use https://"
+          elif grep -rqF "$ENDPOINT" apps/web/out; then
+            echo "::notice::Coach AI wired — ${ENDPOINT} is present in the built bundle"
+          else
+            echo "::error::AI_ENDPOINT is set to ${ENDPOINT} but does not appear in apps/web/out — it did not reach the build"
+          fi
+
       - name: Add .nojekyll (serve _next/ assets)
         run: touch apps/web/out/.nojekyll
 
