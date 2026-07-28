@@ -25,14 +25,20 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
    * right answer, not a bug — a steel gradient on an ivory sheet would read as a smudge.
    */
   variant?: 'steel';
+  /**
+   * No drop shadow. For long lists: 91 cards × a two-layer blur shadow is genuine paint cost and
+   * visual noise; a hairline-separated flat row reads cleaner and scrolls cheaper.
+   */
+  flat?: boolean;
 }
 
-export function Card({ selected, interactive, premium, variant, className, ...rest }: CardProps) {
+export function Card({ selected, interactive, premium, variant, flat, className, ...rest }: CardProps) {
   const steel = variant === 'steel' && !premium;
   return (
     <div
       className={cn(
-        'rounded-card p-4 shadow-[var(--shadow-card)]',
+        'rounded-card p-4',
+        !flat && 'shadow-[var(--shadow-card)]',
         // fill + border: gradient hairline when premium, otherwise the standard surface treatment
         premium ? 'border-gradient-gold' : 'bg-surface-2 border',
         steel &&
@@ -40,7 +46,7 @@ export function Card({ selected, interactive, premium, variant, className, ...re
         !premium && (selected ? 'border-accent' : 'border-border'),
         selected && 'ring-2 ring-accent',
         interactive &&
-          'cursor-pointer transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+          'ff-press-soft cursor-pointer transition-colors hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
         className,
       )}
       {...rest}

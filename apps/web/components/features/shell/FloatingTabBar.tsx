@@ -214,7 +214,7 @@ export function FloatingTabBar({
                   // pointer would end the scrub the instant the finger crossed a tab boundary.
                   style={{ touchAction: 'inherit' }}
                   className={cn(
-                    'flex select-none flex-col items-center gap-0.5 px-0.5 py-2 text-[10px] font-semibold leading-none',
+                    'group flex select-none flex-col items-center gap-0.5 px-0.5 py-2 text-[10px] font-semibold leading-none',
                     'transition-colors duration-150',
                     highlighted ? 'text-accent' : 'text-muted-foreground',
                   )}
@@ -222,6 +222,7 @@ export function FloatingTabBar({
                   <span
                     className={cn(
                       'grid h-8 w-12 place-items-center rounded-chip transition-[background-color,transform] duration-150',
+                      'group-active:scale-90',
                       highlighted ? 'bg-accent-muted' : 'bg-transparent',
                       scrubbing && preview === i && 'scale-110',
                     )}

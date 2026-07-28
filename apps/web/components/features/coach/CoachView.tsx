@@ -28,8 +28,6 @@
 import * as React from 'react';
 import { Button, Card } from '@/components/ui';
 import {
-  ClipboardIcon,
-  InfoIcon,
   SearchIcon,
   SendIcon,
   SparkleIcon,
@@ -323,44 +321,12 @@ export function CoachView() {
     <div data-testid="coach-view" className="space-y-4">
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold tracking-tight">
-            <span className="text-gradient-gold">Coach</span>
-          </h1>
+          <h1 className="font-display text-display font-bold text-foreground">Coach</h1>
           <p className="text-sm text-muted-foreground">
             {ENTRY_COUNT} curated answers, offline. Ask anything or browse the guide.
           </p>
         </div>
-        <span
-          aria-hidden
-          className="grid shrink-0 place-items-center rounded-full p-[2px] shadow-[0_8px_22px_-8px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
-          style={{
-            background:
-              'conic-gradient(from 210deg, #f6d883, #e4b84d 35%, #b8862c 60%, #f6d883 85%, #e4b84d)',
-          }}
-        >
-          <span className="grid h-11 w-11 place-items-center rounded-full bg-surface-2 text-accent">
-          {/* The Coach TAB is a whistle. This header badge was a speech bubble, so the entry
-              point and the destination were two different objects for one place — and a speech
-              bubble frames the coach as a chatbot rather than as someone who tells you what to
-              do, which is the opposite of what this screen is. */}
-            <CoachIcon size={22} />
-          </span>
-        </span>
       </header>
-
-      {/* Persistent safety disclaimer — never dismissible. */}
-      <p
-        data-testid="coach-disclaimer"
-        className="flex items-start gap-2 rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
-      >
-        <span aria-hidden className="mt-0.5 shrink-0 text-info">
-          <InfoIcon size={14} />
-        </span>
-        <span>
-          General fitness guidance, <span className="font-semibold text-foreground">not medical
-          advice</span>. For pain, injury, illness or pregnancy, speak to a doctor or physio.
-        </span>
-      </p>
 
       {/* Mode switch */}
       <div
@@ -463,7 +429,7 @@ export function CoachView() {
               e.preventDefault();
               ask(input);
             }}
-            className="sticky bottom-0 z-20 -mx-4 border-t border-border bg-surface px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] pt-3 md:bottom-2 md:mx-0 md:rounded-card md:border md:px-3 md:pb-3"
+            className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 pt-3 md:bottom-2 md:pb-0"
           >
             {/* ONE BORDERED CONTROL, not a field sitting next to a button.
                 The composer used to be a hairline box on a same-tone surface, and on a phone in
@@ -474,7 +440,7 @@ export function CoachView() {
                 the thing you are talking to is identifiable at a glance. */}
             <div
               data-testid="coach-composer"
-              className="flex items-center gap-2 rounded-full border-2 border-border bg-surface-2 py-1.5 pl-3 pr-1.5 shadow-[var(--shadow-card)] transition-colors focus-within:border-accent"
+              className="flex items-center gap-2 rounded-full border-2 border-border bg-elevated py-1.5 pl-3 pr-1.5 shadow-[var(--shadow-pop)] transition-colors focus-within:border-accent"
             >
               <span aria-hidden className="shrink-0 text-muted-foreground">
                 <CoachIcon size={20} />
@@ -503,6 +469,15 @@ export function CoachView() {
                 <SendIcon size={18} />
               </button>
             </div>
+            {/* Persistent safety disclaimer — never dismissible, but no longer a slab gating the
+                screen: one quiet line under the composer, where chat products put it. */}
+            <p
+              data-testid="coach-disclaimer"
+              className="mt-2 px-2 text-center text-[11px] leading-snug text-muted-foreground"
+            >
+              General fitness guidance, not medical advice — for pain, injury, illness or
+              pregnancy, speak to a doctor or physio.
+            </p>
           </form>
         </>
       )}
@@ -555,16 +530,8 @@ function EmptyAsk({
   configured: boolean;
 }) {
   return (
-    <Card className="text-center" data-testid="coach-empty">
-      <span
-        aria-hidden
-        className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent-muted text-accent"
-      >
-        {/* A clipboard, not a sparkle: the sparkle is the house glyph of every AI product
-            shipped since 2023 and it was standing for this coach's entire value. */}
-        <ClipboardIcon size={24} />
-      </span>
-      <p className="mt-3 font-semibold text-foreground">What do you want to know?</p>
+    <section className="pt-4 text-center" data-testid="coach-empty">
+      <p className="font-display text-title font-bold text-foreground">What do you want to know?</p>
       <p className="mt-1 text-sm text-muted-foreground">
         Answers come straight from the FitForge guide — instantly, with no network call.
         {configured
@@ -592,7 +559,7 @@ function EmptyAsk({
       >
         Or browse all {ENTRY_COUNT} entries
       </button>
-    </Card>
+    </section>
   );
 }
 

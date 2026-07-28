@@ -295,7 +295,7 @@ export function ExerciseCatalog() {
   return (
     <div className="space-y-4">
       <header>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Exercises</h1>
+        <h1 className="font-display text-display font-bold">Exercises</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Your full movement library — search it, filter it by body part, or see what your plan
           actually trains.
@@ -526,38 +526,44 @@ export function ExerciseCatalog() {
                       {group.items.length}
                     </span>
                   </div>
-                  <ul className="space-y-2.5">
+                  <ul className="grid gap-2.5 sm:grid-cols-2">
                     {group.items.map((ex) => (
-                      <li key={ex.id}>
+                      // min-w-0: a grid item's min-width is AUTO, so the row's `truncate`
+                      // (white-space: nowrap) sets the item's min-content to the full untruncated
+                      // string — 455px in a 390px viewport. That horizontal overflow made mobile
+                      // Chromium zoom the LAYOUT VIEWPORT out to ~558px, which silently broke
+                      // every `fixed inset-0` overlay on the page (the muscle sheet landed 288px
+                      // below the visual viewport). One class, and the truncation actually
+                      // truncates again.
+                      <li key={ex.id} className="min-w-0">
                         <Link
                           href={`/exercises/${ex.slug}`}
                           onClick={() => rememberExercise(ex.slug)}
                         >
-                          <Card interactive className="flex items-center gap-3 !py-3">
-                            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-sm bg-muted/60">
-                              <MuscleMapThumb
-                                primary={ex.primary_muscles as MuscleSlug[]}
-                                secondary={ex.secondary_muscles as MuscleSlug[]}
-                                height={48}
-                              />
+                          {/* FLAT AND CHEAP, BY DESIGN. This row used to mount a complete
+                              anatomical body SVG (~90 nodes) as a 48px thumbnail — ×91 rows,
+                              that was the catalog's scroll lag in one line. The equipment glyph
+                              (a static ~6-node SVG, and the differentiator a lifter actually
+                              scans for) is the tile now; muscles live one tap away on the
+                              detail page, at a size where they mean something. */}
+                          <Card interactive flat className="ff-press flex items-center gap-3 border border-border !py-3">
+                            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-sm bg-muted/60 text-muted-foreground">
+                              {(() => {
+                                const slug = equipmentGlyphSlug(ex);
+                                return slug ? (
+                                  <EquipmentIllustration slug={slug} size={30} />
+                                ) : (
+                                  <BodyIcon size={20} />
+                                );
+                              })()}
                             </span>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold text-foreground">
                                 {ex.name}
                               </p>
-                              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                {(() => {
-                                  const slug = equipmentGlyphSlug(ex);
-                                  return slug ? (
-                                    <EquipmentIllustration slug={slug} size={18} />
-                                  ) : null;
-                                })()}
-                                <span className="truncate">{equipmentSummary(ex)}</span>
+                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                {equipmentSummary(ex)} · {patternName(ex.movement_pattern)}
                               </p>
-                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                <TagPill>{patternName(ex.movement_pattern)}</TagPill>
-                                <TagPill>{ex.mechanics}</TagPill>
-                              </div>
                             </div>
                             <span
                               className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -804,7 +810,7 @@ function TabButton({
       data-testid={testId}
       className={`inline-flex items-center justify-center gap-1.5 rounded-[calc(var(--radius-field)-2px)] px-3 py-2 text-sm font-semibold transition-colors ${
         active
-          ? 'bg-accent text-accent-foreground shadow-[var(--shadow-card)]'
+          ? 'bg-elevated text-foreground shadow-[var(--shadow-card)]'
           : 'text-muted-foreground hover:text-foreground'
       }`}
     >
@@ -850,13 +856,6 @@ function ActiveChip({ children, onClear }: { children: React.ReactNode; onClear:
   );
 }
 
-function TagPill({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
-      {children}
-    </span>
-  );
-}
 
 /** Multi-select sibling of `FilterRow` — "All" clears, every other chip toggles independently. */
 function MultiFilterRow({

@@ -25,7 +25,6 @@ const CSS = `
   background:
     radial-gradient(58% 42% at 50% 8%, rgba(228,184,77,0.18), transparent 68%),
     radial-gradient(40% 30% at 78% 70%, rgba(255,138,77,0.10), transparent 70%);
-  filter: blur(2px);
 }
 .ff-hero__figure { position: absolute; inset: 0; display: grid; place-items: center; }
 .ff-hero__figure svg { height: 92%; width: auto; opacity: 0.95; }
@@ -41,7 +40,6 @@ const CSS = `
   font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   color: var(--foreground);
   will-change: transform;
-  backdrop-filter: blur(2px);
 }
 .ff-hero__card--set { top: 6%; right: 0%; animation: ffFloatA 6s ease-in-out infinite; }
 .ff-hero__card--macro { top: 40%; left: -2%; animation: ffFloatB 7s ease-in-out infinite; }

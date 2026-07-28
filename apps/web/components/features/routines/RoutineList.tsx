@@ -71,14 +71,14 @@ export function RoutineList() {
   return (
     <div className="space-y-5">
       <header className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold tracking-tight">Workouts</h1>
+        <h1 className="font-display text-display font-bold">Workouts</h1>
         <Link href="/exercises" className="text-sm font-medium text-accent">
           Browse exercises
         </Link>
       </header>
 
-      <Card premium className="!p-0 overflow-hidden">
-        <div className="p-4">
+      <section>
+        <div className="pb-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -225,7 +225,7 @@ export function RoutineList() {
             </Button>
           </div>
         </div>
-      </Card>
+      </section>
 
       <Link href="/exercises" className="block">
         <Card interactive className="flex items-center gap-3 border-dashed">

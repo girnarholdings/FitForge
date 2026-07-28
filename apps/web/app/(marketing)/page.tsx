@@ -48,17 +48,18 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="screen mx-auto w-full max-w-[430px] sm:max-w-md">
-      <header className="safe-top flex flex-none items-center justify-between px-6 pb-1">
+    <main data-flow="desktop" className="screen mx-auto w-full max-w-[430px] sm:max-w-md lg:max-w-[1080px] lg:px-10">
+      <header className="safe-top flex flex-none items-center justify-between px-6 pb-1 lg:px-0 lg:py-5">
         <LogoLockup size={20} />
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-accent-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Local
         </span>
       </header>
 
-      <div className="scroll-region flex flex-col px-6">
+      <div className="scroll-region flex flex-col px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)] lg:items-center lg:gap-16 lg:px-0">
+        <div className="contents lg:block">
         <section className="flex-none pt-2">
-          <h1 className="font-display text-[clamp(1.6rem,7.4vw,2.5rem)] font-bold leading-[1.06] tracking-tight text-foreground">
+          <h1 className="font-display text-[clamp(2rem,9vw,2.75rem)] font-bold leading-[1.06] tracking-tight text-foreground lg:text-[3.5rem]">
             Your personal trainer.
             <br />
             <span className="text-gradient-gold">Forged around you.</span>
@@ -70,32 +71,38 @@ export default function LandingPage() {
               the app's own honest answer. Every figure here is checkable: 26 programs in
               seed/data/splits.json, 91 rows in seed/data/exercises.json, macros from
               @fitforge/shared → rules/macros.ts. */}
-          <p className="mt-2 text-[0.9375rem] leading-snug text-muted-foreground">
+          <p className="mt-3 max-w-[36ch] text-base leading-relaxed text-muted-foreground">
             26 real training programs, 91 coached exercises, macros that match. Free, no account.
           </p>
         </section>
 
-        {/* Elastic zone: the hero takes whatever height is left and no more. The
-            absolute inner box lets the art shrink without contributing height. */}
-        <div className="relative my-2 min-h-[96px] flex-1">
+        {/* Elastic zone: the hero takes whatever height is left and NO MORE THAN 46% of the
+            phone — decoration must never out-rank the headline again. On lg it moves to the
+            right-hand grid column. */}
+        <div className="relative my-2 max-h-[46vh] min-h-[96px] flex-1 lg:hidden">
           <div className="absolute inset-0 flex items-center justify-center">
             <LandingHero style={{ height: '100%', width: 'auto', maxWidth: '100%' }} />
           </div>
         </div>
 
-        <ul className="grid flex-none grid-cols-3 gap-2 pb-2">
-          {VALUE_ROWS.map(({ Icon, title }) => (
-            <li key={title} className="flex flex-col items-center gap-1.5 text-center">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-muted text-accent">
-                <Icon size={18} />
-              </span>
-              <p className="text-[11px] font-semibold leading-tight text-foreground">{title}</p>
+        {/* The value props, un-boxed: one quiet dot-separated line instead of three icon tiles
+            in tinted squares. Same three strings, verbatim — one is spec-asserted. */}
+        <ul className="flex flex-none flex-wrap items-center gap-x-2.5 gap-y-1 pb-2 text-[0.8125rem] font-medium text-muted-foreground">
+          {VALUE_ROWS.map(({ title }, i) => (
+            <li key={title} className="flex items-center gap-2.5">
+              {i > 0 && <span aria-hidden className="h-1 w-1 rounded-full bg-border-strong" />}
+              {title}
             </li>
           ))}
         </ul>
+        </div>
+
+        <div className="hidden lg:block">
+          <LandingHero style={{ height: '540px', width: 'auto', maxWidth: '100%' }} />
+        </div>
       </div>
 
-      <footer className="cta-dock px-6">
+      <footer className="cta-dock px-6 lg:mx-0 lg:max-w-[480px] lg:px-0">
         {/* Render CTAs only after hydration so the returning-user swap doesn't flash (§5.2). */}
         <div className={`flex flex-col gap-2 ${mounted ? '' : 'invisible'}`}>
           {returning ? (
@@ -116,10 +123,11 @@ export default function LandingPage() {
                   Start in Local Mode
                 </Button>
               </Link>
-              <Link href="/login" className="block">
-                <Button size="lg" variant="ghost" block>
-                  I have an account
-                </Button>
+              <Link
+                href="/login"
+                className="mx-auto flex h-11 items-center px-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                I have an account
               </Link>
             </>
           )}

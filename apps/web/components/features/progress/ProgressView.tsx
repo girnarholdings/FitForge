@@ -96,7 +96,7 @@ export function ProgressView() {
   const [tab, setTab] = React.useState<Tab>('trends');
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-2xl font-bold tracking-tight">Progress</h1>
+      <h1 className="font-display text-display font-bold">Progress</h1>
       <WeeklyGoalHeatmap />
       <div className="flex gap-2 overflow-x-auto pb-1" data-testid="progress-tabs">
         {TABS.map((t) => (

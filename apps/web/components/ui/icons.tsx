@@ -854,3 +854,21 @@ export const PlateChartSolidIcon = ({ size = 24, ...p }: IconProps) => (
     <rect x="15.3" y="4" width="4.4" height="14.7" rx="2.2" />
   </svg>
 );
+
+/**
+ * Filled star. LIVES HERE, not in SwipeDeck: Settings imported the entire 36 KB swipe-deck
+ * module (drag physics, confetti) to render this one 24px glyph on its heaviest screen.
+ */
+export const StarIcon = ({ size = 24, ...p }: React.SVGProps<SVGSVGElement> & { size?: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden
+    focusable="false"
+    {...p}
+  >
+    <path d="M12 2.6l2.76 5.6 6.18.9-4.47 4.36 1.05 6.15L12 16.7l-5.52 2.9 1.05-6.15L3.06 9.1l6.18-.9L12 2.6z" />
+  </svg>
+);

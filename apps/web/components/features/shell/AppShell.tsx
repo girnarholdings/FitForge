@@ -264,11 +264,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!checked) {
     // Blank canvas while we decide (redirecting fresh visits, confirming onboarded users).
-    return <div className="min-h-dvh bg-surface" aria-hidden />;
+    return <div className="min-h-screen min-h-[100svh] bg-surface" aria-hidden />;
   }
 
   return (
-    <div className="min-h-dvh md:flex">
+    <div className="min-h-screen min-h-[100svh] md:flex">
       {/* Sidebar (≥md) */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-surface md:flex md:flex-col">
         <div className="flex items-center justify-between px-5 py-5">
@@ -364,7 +364,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </div>
-        <main className="mx-auto w-full max-w-[720px] flex-1 px-4 pb-28 pt-4 md:px-8 md:pb-10 md:pt-8">
+        {/* Desktop width is opt-in per surface: only screens that lay out a real second column
+            get it. A 1040px single-column card stack is worse than the 720px one. */}
+        <main
+          className={cn(
+            'mx-auto w-full flex-1 px-4 pb-[var(--dock-clearance)] pt-4 md:px-8 md:pb-10 md:pt-8',
+            /^\/(today|exercises|progress|routines)(\/|$)/.test(pathname)
+              ? 'max-w-[720px] lg:max-w-[1040px]'
+              : 'max-w-[720px]',
+          )}
+        >
           {children}
         </main>
       </div>

@@ -47,6 +47,7 @@ import {
   ChevronDownIcon,
   DumbbellIcon,
 } from '@/components/ui/icons';
+import { haptic } from '@/components/ui/motion';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { slugForExercise } from '@/lib/equipment/slugForExercise';
 import { SubstituteSheet } from '@/components/features/shared/SubstituteSheet';
@@ -502,6 +503,10 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
     const nextDone = !s.done;
     updateSet(index, setIdx, { done: nextDone });
     if (nextDone) {
+      // The most repeated act in the app answers the finger. 'confirm', not 'tick' — a logged
+      // set is a commit, and the duller thud under the row's visual state-change is the payoff
+      // the audit found missing.
+      haptic('confirm');
       /* Rest timer auto-starts on set completion (§6 P0-5), sized by the ROW's own goal-aware
        * `rest_seconds` — a hypertrophy compound rests 90s, and running 150s for it made the
        * session card's "~45 min" promise and the session the athlete actually got disagree by
@@ -719,7 +724,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         <div
           className={
             'flex items-start justify-between gap-3 transition-opacity duration-300 ' +
-            (resting ? 'opacity-40' : 'opacity-100')
+            (resting ? 'opacity-70' : 'opacity-100')
           }
         >
           {/* THE OBJECT YOU ARE ABOUT TO PICK UP. This was a hardcoded generic dumbbell for every
@@ -1185,7 +1190,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         <p
           className={
             'text-xs text-muted-foreground transition-opacity duration-300 ' +
-            (resting ? 'opacity-40' : 'opacity-100')
+            (resting ? 'opacity-70' : 'opacity-100')
           }
         >
           {/* THE COPY HAS TO MATCH THE FIELDS. It used to promise "the load your scheme suggests"
@@ -1202,7 +1207,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         <p
           className={
             'text-xs leading-snug text-muted-foreground transition-opacity duration-300 ' +
-            (resting ? 'opacity-40' : 'opacity-100')
+            (resting ? 'opacity-70' : 'opacity-100')
           }
           data-testid="progression-next-session"
         >
@@ -1227,7 +1232,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             including where the number is coaching convention rather than a trial result. */}
         <div
           className={
-            'transition-opacity duration-300 ' + (resting ? 'opacity-40' : 'opacity-100')
+            'transition-opacity duration-300 ' + (resting ? 'opacity-70' : 'opacity-100')
           }
         >
           <ProgressionEvidenceNote testId="workout-progression-evidence" />
@@ -1237,7 +1242,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         <div
           className={
             'flex items-center gap-3 transition-opacity duration-300 ' +
-            (resting ? 'opacity-40' : 'opacity-100')
+            (resting ? 'opacity-70' : 'opacity-100')
           }
         >
           <Button
@@ -1335,7 +1340,7 @@ function WarmupList({
     <div
       className={
         'rounded-card border border-border bg-surface-2 transition-opacity duration-300 ' +
-        (dimmed ? 'opacity-40' : 'opacity-100')
+        (dimmed ? 'opacity-70' : 'opacity-100')
       }
       data-testid="warmup-block"
     >
@@ -1457,7 +1462,7 @@ function PrepBlock({
     <div
       className={
         'rounded-card border border-border bg-surface-2 transition-opacity duration-300 ' +
-        (dimmed ? 'opacity-40' : 'opacity-100')
+        (dimmed ? 'opacity-70' : 'opacity-100')
       }
       data-testid={testId}
     >
@@ -1823,7 +1828,7 @@ function Summary({
             </span>
           )}
         </div>
-        <h1 className="mt-3 font-display text-2xl font-bold tracking-tight">Workout complete</h1>
+        <h1 className="mt-3 font-display text-display font-bold">Workout complete</h1>
         <p className="mt-1 text-sm text-muted-foreground">{day.name}</p>
       </div>
 

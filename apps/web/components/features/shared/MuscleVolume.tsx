@@ -703,9 +703,9 @@ function GoalRowBody({ row }: { row: MuscleGoalRow }) {
       </span>
       <span className="relative mt-1.5 block h-2 w-full overflow-hidden rounded-full bg-muted">
         <span
-          className="block h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500"
+          className="block h-full w-full origin-left rounded-full motion-safe:transition-transform motion-safe:duration-500"
           style={{
-            width: `${Math.max(row.sets > 0 ? 4 : 0, width)}%`,
+            transform: `scaleX(${Math.max(row.sets > 0 ? 4 : 0, width) / 100})`,
             backgroundColor: row.sets > 0 ? row.color : 'transparent',
           }}
         />

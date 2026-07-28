@@ -103,19 +103,10 @@ const DEFAULT_VECTOR: Record<SwipeDirection, { x: number; y: number }> = {
 /* --------------------------------------------------------------------------------- icons */
 
 /** Gold-filled star — the "have it and love it" signal. Local to the deck (no emoji, §2.4). */
-export const StarIcon = ({ size = 24, ...p }: React.SVGProps<SVGSVGElement> & { size?: number }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden
-    focusable="false"
-    {...p}
-  >
-    <path d="M12 2.6l2.76 5.6 6.18.9-4.47 4.36 1.05 6.15L12 16.7l-5.52 2.9 1.05-6.15L3.06 9.1l6.18-.9L12 2.6z" />
-  </svg>
-);
+// StarIcon moved to icons.tsx (Settings was importing this whole module for it); imported for
+// this module's own two uses and re-exported so existing SwipeDeck consumers keep working.
+import { StarIcon } from './icons';
+export { StarIcon };
 
 /* ------------------------------------------------------------------------------- helpers */
 

@@ -281,9 +281,9 @@ export function SplitCard({
           <m.div
             key="detail"
             id={detailId}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
             transition={SPRING.panel}
             className="overflow-hidden"
           >

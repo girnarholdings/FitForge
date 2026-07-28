@@ -31,7 +31,7 @@ import {
   Sheet,
   type SelectableOption,
 } from '@/components/ui';
-import { StarIcon } from '@/components/ui/SwipeDeck';
+import { StarIcon } from '@/components/ui/icons';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { ProgressionEvidenceNote } from '@/components/features/shared/ProgressionEvidence';
 import {
@@ -537,7 +537,7 @@ export function SettingsView() {
 
   return (
     <div className="space-y-6 pb-4">
-      <h1 className="font-display text-2xl font-bold tracking-tight">Settings</h1>
+      <h1 className="font-display text-display font-bold">Settings</h1>
       <p className="-mt-4 text-xs text-muted-foreground" data-testid="settings-saved">
         <span role="status" aria-live="polite">
           {savedCount > 0 ? 'Saved to this browser.' : 'Every change saves to this browser as you make it.'}

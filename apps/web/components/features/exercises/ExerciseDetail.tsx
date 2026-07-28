@@ -127,7 +127,7 @@ export function ExerciseDetail({ slug }: { slug: string }) {
           <MuscleMap view="both" primary={primary} secondary={secondary} height={188} />
         </div>
         <div className="mt-3">
-          <h1 className="font-display text-2xl font-bold tracking-tight">{ex.name}</h1>
+          <h1 className="font-display text-display font-bold">{ex.name}</h1>
           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
             <Tag>{ex.category_name}</Tag>
             <Tag>{ex.movement_pattern.replace(/_/g, ' ')}</Tag>

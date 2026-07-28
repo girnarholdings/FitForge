@@ -12,7 +12,7 @@ test.describe('landing', () => {
     await expect(page.getByRole('heading', { name: /forged around you/i })).toBeVisible();
     await expect(page.getByText(/Macros, explained/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Start in Local Mode' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'I have an account' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'I have an account' })).toBeVisible();
 
     // NOTE: landing.png is captured by screenshots.spec.ts at the canonical 390x664 viewport.
   });
@@ -27,7 +27,7 @@ test.describe('landing', () => {
 
   test('"I have an account" navigates to the login entry', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'I have an account' }).click();
+    await page.getByRole('link', { name: 'I have an account' }).click();
     await page.waitForURL(/\/login/);
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
     await expect(page.getByTestId('enter-demo')).toBeVisible();

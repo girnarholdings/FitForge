@@ -96,7 +96,7 @@ export function TodayView() {
       <FirstRunTour />
       <header>
         <h1
-          className="font-display text-2xl font-bold tracking-tight"
+          className="font-display text-display font-bold"
           data-testid="today-heading"
         >
           {weekdayFull}
@@ -111,6 +111,7 @@ export function TodayView() {
       </header>
 
       <DateNav
+        compact
         value={date}
         onChange={setDate}
         hasContent={(iso) => (state.logsByDate[iso]?.length ?? 0) > 0}
@@ -130,12 +131,12 @@ export function TodayView() {
         // anchor a screen; making them read as machined metal rather than paper is enough to shift
         // the app's whole material feel without flattening the premium/standard hierarchy.
         <Card variant="steel" className="overflow-hidden !p-0 shadow-[var(--shadow-card)]">
-          <div className="bg-accent px-5 py-4 text-accent-foreground">
-            <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+          <div className="px-5 pt-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
               {onToday ? "Today's workout" : `${dayLabel(date)}'s workout`}
             </p>
-            <h2 className="mt-1 font-display text-lg font-bold text-accent-foreground">{day.name}</h2>
-            <p className="mt-0.5 text-sm opacity-80">
+            <h2 className="mt-1 font-display text-xl font-bold text-foreground">{day.name}</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
               {exerciseCountLabel(day.exercises.length)} · from {routine.name}
             </p>
           </div>
@@ -236,7 +237,7 @@ export function TodayView() {
             </div>
           </div>
         ) : (
-          <div className="mt-3 flex flex-col items-center gap-3 rounded-2xl bg-muted/60 px-4 py-6 text-center">
+          <div className="mt-3 flex flex-col items-center gap-3 px-2 py-4 text-center">
             <span className="grid h-12 w-12 place-items-center rounded-full bg-surface-2 text-accent shadow-[var(--shadow-card)]">
               {/* The Nutrition TAB this card links to is a protein shaker; this was a knife and
                   fork, so one destination had two icons. Restaurant cutlery is also the wrong
@@ -267,7 +268,7 @@ export function TodayView() {
             Progress
           </Link>
         </div>
-        <div className="mt-3 flex items-center gap-4 rounded-2xl bg-muted/60 px-4 py-5">
+        <div className="mt-3 flex items-center gap-4 px-1 py-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-2 text-accent shadow-[var(--shadow-card)]">
             <ScaleIcon size={22} />
           </span>

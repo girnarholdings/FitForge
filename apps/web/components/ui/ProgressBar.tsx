@@ -47,8 +47,8 @@ export function ProgressBar({ current, total, className, label, variant }: Progr
         className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
       >
         <div
-          className="h-full rounded-full bg-accent transition-[width] duration-300 ease-out"
-          style={{ width: `${pct}%` }}
+          className="h-full w-full origin-left rounded-full bg-accent transition-transform duration-300 ease-out"
+          style={{ transform: `scaleX(${pct / 100})` }}
         />
       </div>
     </div>

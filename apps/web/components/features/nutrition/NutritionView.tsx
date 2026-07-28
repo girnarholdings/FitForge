@@ -173,7 +173,7 @@ export function NutritionView() {
        last meal card would otherwise sit permanently under it with no way to scroll clear. */
     <div className="space-y-4 pb-20 md:pb-0">
       <header>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Nutrition</h1>
+        <h1 className="font-display text-display font-bold">Nutrition</h1>
       </header>
 
       {/* `hasContent` marks days that already have food on them, so scrubbing the strip shows at a
@@ -191,11 +191,11 @@ export function NutritionView() {
       <Composer onSubmit={parseAndReview} showExamples={logs.length === 0} />
 
       {logs.length === 0 && (
-        <Card className="border-2 border-dashed border-border bg-surface-2/60 text-center shadow-none">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-muted text-accent">
-            <SparkleIcon size={26} />
+        <section className="py-4 text-center">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent-muted text-accent">
+            <SparkleIcon size={24} />
           </span>
-          <CardTitle className="mt-3">Just tell it what you ate</CardTitle>
+          <h3 className="mt-3 text-base font-semibold text-foreground">Just tell it what you ate</h3>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
             Type a sentence like “2 eggs and a slice of toast with butter”. FitForge works out the
             portions and macros from {FOOD_COUNT} foods, shows you what it understood, and logs it
@@ -208,7 +208,7 @@ export function NutritionView() {
           >
             <SearchIcon size={18} /> Or search the food list
           </Button>
-        </Card>
+        </section>
       )}
 
       {(previousDayLogs.length > 0 || recents.length > 0) && (
@@ -240,7 +240,7 @@ export function NutritionView() {
         </Card>
       )}
 
-      {MEAL_SLOTS.map(({ slot, label }) => {
+      {MEAL_SLOTS.filter(({ slot }) => (bySlot.get(slot)?.rows.length ?? 0) > 0).map(({ slot, label }) => {
         const { rows: slotLogs, kcal: slotKcal } = bySlot.get(slot) ?? { rows: [], kcal: 0 };
         return (
           <Card
@@ -304,6 +304,16 @@ export function NutritionView() {
           </Card>
         );
       })}
+
+      {logs.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setPickerSlot(defaultMealSlot())}
+          className="flex w-full items-center justify-center gap-2 rounded-card border border-dashed border-border py-3 text-sm font-semibold text-muted-foreground transition-colors hover:border-accent hover:text-accent active:scale-[0.99]"
+        >
+          <PlusIcon size={16} /> Add food
+        </button>
+      )}
 
       {/* Confirm step */}
       <ReviewSheet

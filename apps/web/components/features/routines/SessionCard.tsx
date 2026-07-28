@@ -298,7 +298,7 @@ export function SessionCard({
         </m.button>
         <Link
           href={href}
-          className="grid shrink-0 place-items-center border-l border-border px-4 text-xs font-semibold text-accent transition-colors hover:bg-accent-muted"
+          className="ff-press my-1.5 mr-2 grid shrink-0 place-items-center self-center rounded-field bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover"
         >
           Start
         </Link>
@@ -311,9 +311,9 @@ export function SessionCard({
           <m.div
             key="detail"
             id={detailId}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
             transition={SPRING.panel}
             className="overflow-hidden border-t border-border bg-surface-2/50"
             data-testid={detailId}

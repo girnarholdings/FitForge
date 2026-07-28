@@ -127,9 +127,9 @@ export function PlanTargets({
                 short bar always means "short of goal", never "smaller than the biggest muscle". */}
             <span className="relative mt-1 block h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <span
-                className="block h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500"
+                className="block h-full w-full origin-left rounded-full motion-safe:transition-transform motion-safe:duration-500"
                 style={{
-                  width: `${Math.max(4, Math.min(100, (row.pct / 1.5) * 100))}%`,
+                  transform: `scaleX(${Math.max(4, Math.min(100, (row.pct / 1.5) * 100)) / 100})`,
                   backgroundColor: row.color,
                 }}
               />

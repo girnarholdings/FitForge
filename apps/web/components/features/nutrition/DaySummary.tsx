@@ -16,11 +16,7 @@ export function DaySummary({ totals, targets }: { totals: Macros; targets: Nutri
 
   return (
     <Card premium data-testid="day-summary">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-        Remaining = Goal − Food
-      </p>
-
-      <div className="mt-3 flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-4">
         <MacroRing
           value={totals.kcal}
           target={targets.kcal_target}
@@ -41,12 +37,6 @@ export function DaySummary({ totals, targets }: { totals: Macros; targets: Nutri
           sublabel="protein left"
           label="Protein"
         />
-      </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-2 rounded-field bg-surface/60 px-3 py-2.5 text-center">
-        <FormulaCell label="Goal" value={targets.kcal_target} />
-        <FormulaCell label="Food" value={Math.round(totals.kcal)} />
-        <FormulaCell label="Remaining" value={remainingKcal} emphasize over={remainingKcal < 0} />
       </div>
 
       <dl className="mt-4 space-y-2.5">
@@ -73,33 +63,6 @@ export function DaySummary({ totals, targets }: { totals: Macros; targets: Nutri
   );
 }
 
-function FormulaCell({
-  label,
-  value,
-  emphasize,
-  over,
-}: {
-  label: string;
-  value: number;
-  emphasize?: boolean;
-  over?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-        {label}
-      </p>
-      <p
-        className={cn(
-          'font-display tabular text-lg font-bold',
-          over ? 'text-energy' : emphasize ? 'text-accent' : 'text-foreground',
-        )}
-      >
-        {value.toLocaleString()}
-      </p>
-    </div>
-  );
-}
 
 function MacroRow({
   label,
@@ -128,8 +91,8 @@ function MacroRow({
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full transition-[width] duration-300"
-          style={{ width: `${pct}%`, backgroundColor: over ? 'var(--color-energy)' : color }}
+          className="h-full w-full origin-left rounded-full transition-transform duration-300"
+          style={{ transform: `scaleX(${pct / 100})`, backgroundColor: over ? 'var(--color-energy)' : color }}
         />
       </div>
     </div>

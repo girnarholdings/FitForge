@@ -41,7 +41,7 @@ export function Chip({
       aria-pressed={selected}
       className={cn(
         'relative inline-flex items-center gap-1.5 rounded-chip border px-3.5 py-2 text-sm font-medium',
-        'transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+        'ff-press transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
         'touch-manipulation',
         selected
           ? 'border-accent bg-accent-muted text-accent'

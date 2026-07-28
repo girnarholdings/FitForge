@@ -1118,8 +1118,8 @@ function OverlayScreen({
           aria-label="Equipment progress"
         >
           <div
-            className="relative h-full overflow-hidden rounded-full bg-accent transition-[width] duration-500 ease-out"
-            style={{ width: `${pct}%` }}
+            className="relative h-full w-full origin-left overflow-hidden rounded-full bg-accent transition-transform duration-500 ease-out"
+            style={{ transform: `scaleX(${(pct) / 100})` }}
           >
             {!reduced && pct > 0 && (
               <span

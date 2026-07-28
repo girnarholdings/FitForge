@@ -104,7 +104,7 @@ export function Composer({
               data-testid="composer-submit"
               aria-label="Review what you ate"
               disabled={text.trim().length === 0}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground transition-opacity disabled:opacity-40"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl transition-[background-color,color,transform] duration-150 active:scale-95 disabled:bg-muted disabled:text-muted-foreground bg-accent text-accent-foreground"
             >
               <SendIcon size={18} />
             </button>

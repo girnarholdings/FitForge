@@ -24,10 +24,25 @@
   --color-success: var(--success);
   --color-info: var(--info);
 
-  --radius-card: 1.25rem;   /* 20px — cards, sheets */
-  --radius-field: 0.875rem; /* 14px — buttons, inputs (NEW) */
-  --radius-sm: 0.625rem;    /* 10px — thumbnails, small tiles (NEW) */
+  /* ONE RADIUS FAMILY: 12 / 16 / 20 / 24. The audit counted nine radii in play, with the raw
+     Tailwind names outvoting the tokens 192:149 — so the raw names are ALIASED ONTO THE FAMILY
+     here, and every stray call site snaps into line without being chased. */
+  --radius-card: 1.5rem;    /* 24px — cards, sheets */
+  --radius-field: 1rem;     /* 16px — buttons, inputs */
+  --radius-sm: 0.75rem;     /* 12px — thumbnails, small tiles */
   --radius-chip: 9999px;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+
+  /* TYPE SCALE above the body tier. 94% of strings sat at ≤15px; nothing was a headline. */
+  --text-display: 1.75rem;
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.02em;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.2;
+  --text-title--letter-spacing: -0.012em;
 
   --shadow-card: var(--elev-card);
   --shadow-pop: var(--elev-pop);
@@ -41,12 +56,12 @@
   color-scheme: dark;
   /* ── dark (brand default) ─────────────────────────── */
   --surface: #0a0d14;
-  --surface-2: #121826;
-  --elevated: #1a2233;
+  --surface-2: #141b2b;   /* lifted: elevation is FILL separation now, not a hairline */
+  --elevated: #1e2839;
   --foreground: #f4f1e8;
   --muted: #1c2333;
   --muted-foreground: #9aa3b5;
-  --border: #242d40;
+  --border: #1f2839;      /* a whisper: borders outline, surfaces separate */
   --border-strong: #33405a;
   --accent: #e4b84d;
   --accent-hover: #f0c65f;
@@ -60,8 +75,10 @@
   --success: #3ecf8e;
   --info: #7cb4ff;
 
-  --elev-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 1px 2px rgba(0, 0, 0, 0.5),
-    0 10px 28px -14px rgba(0, 0, 0, 0.8);
+  /* The inset top-light is the layer that actually reads on a near-black page; the old 28px
+     blur produced a measured 2-RGB-point smudge — pure paint cost. */
+  --elev-card: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 2px 6px -2px rgba(0, 0, 0, 0.65),
+    0 12px 28px -16px rgba(0, 0, 0, 0.95);
   --elev-pop: 0 16px 48px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
   --glow-gold: 0 0 0 1px rgba(228, 184, 77, 0.28), 0 4px 24px -6px rgba(228, 184, 77, 0.35);
 
@@ -130,6 +147,30 @@
     linear-gradient(160deg, rgba(228, 184, 77, 0.55), rgba(228, 184, 77, 0.08) 70%) border-box;
 }
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* Touch feedback for plain elements: compositor-only, zero JS, safe on 91-row lists where a
+   motion component per row would cost real mount time. Hover never fires on a phone — every
+   tappable thing needs an :active answer, and this is the one-class way to give it. */
+.ff-press {
+  transition: transform 100ms ease;
+}
+.ff-press:active {
+  transform: scale(0.97);
+}
+/* The card-sized variant: a full card at 0.97 lurches; 0.985 reads as give. */
+.ff-press-soft {
+  transition: transform 120ms ease;
+}
+.ff-press-soft:active {
+  transform: scale(0.985);
+}
+
+/* The bottom clearance every scrolling app screen owes the floating chrome (tab pill ≈64px +
+   Coach badge ≈64px + breathing room). A token, so the bar and the padding can never drift
+   apart again — the Coach badge covering a CTA was a shipped bug twice. */
+:root {
+  --dock-clearance: calc(9rem + env(safe-area-inset-bottom));
+}
 
 /* ── the gym material layer ──────────────────────────────────────────────────
    Two static surface treatments. Neither animates, so neither has anything to
@@ -254,6 +295,24 @@ body {
 /* Notch / status-bar clearance for the top zone of a `.screen`. */
 .safe-top {
   padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+/* A `.screen` that has DESIGNED a desktop opts out of the phone clamp. Data-attribute, not a
+   utility, because these primitives are unlayered and beat Tailwind's classes. */
+@media (min-width: 900px) {
+  .screen[data-flow='desktop'] {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+  .screen[data-flow='desktop'] .scroll-region {
+    overflow: visible;
+  }
+  .screen[data-flow='desktop'] .cta-dock {
+    background: transparent;
+    box-shadow: none;
+    padding-bottom: 1.5rem;
+  }
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
