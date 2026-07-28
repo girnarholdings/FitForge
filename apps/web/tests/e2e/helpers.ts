@@ -68,6 +68,23 @@ export async function seedOnboarded(page: Page): Promise<void> {
 }
 
 /**
+ * Dismiss an open `Sheet` by tapping its scrim — the "tap outside the panel" gesture.
+ *
+ * THE POSITION IS THE WHOLE POINT. The scrim is `absolute inset-0`, so its box is the entire
+ * viewport and Playwright's default click lands dead centre — which is INSIDE the panel whenever
+ * the panel is tall enough to reach the middle of the screen. The click is then intercepted by the
+ * panel and the test times out on geometry, having found nothing whatever wrong with the product.
+ *
+ * That bit twice, in two unrelated specs, with the failure blaming a different thing each time. It
+ * lives here now so the third caller cannot get it wrong. The top-left corner is scrim a
+ * bottom-anchored sheet can never cover, and is also where a real thumb goes.
+ */
+export async function dismissViaScrim(page: Page): Promise<void> {
+  // `exact` matters: screens behind a sheet can carry their own "Close the collar"-style controls.
+  await page.getByRole('button', { name: 'Close', exact: true }).click({ position: { x: 8, y: 8 } });
+}
+
+/**
  * Clear all demo state (localStorage key `fitforge.demo.v1`) for test isolation. Must be called
  * while on a page served from the app origin.
  */

@@ -6,6 +6,7 @@ import {
   bareCompletedState,
   pageOverflow,
   DEMO_STORAGE_KEY,
+  dismissViaScrim,
 } from './helpers';
 
 /**
@@ -119,7 +120,7 @@ test.describe('first-run tour', () => {
       // most natural dismissal on a phone and the easiest one to forget to wire up.
       {
         label: 'scrim',
-        run: async (p) => p.getByRole('button', { name: 'Close', exact: true }).click(),
+        run: async (p) => dismissViaScrim(p),
       },
     ];
 

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readDemoState, pageOverflow, seedOnboarded } from './helpers';
+import { readDemoState, pageOverflow, seedOnboarded, dismissViaScrim } from './helpers';
 
 /**
  * THE SET-ENTRY FORM, and the glossary hanging off it.
@@ -170,18 +170,8 @@ test.describe('glossary', () => {
     // id. If this text ever stops matching faq.json, the two have forked.
     await expect(sheet).toContainText('What do RPE and RIR mean?');
     await expect(page.getByTestId('glossary-ask-rpe')).toBeVisible();
-    // `exact` matters: the sheet is closed by its scrim, which is a button named exactly "Close",
-    // and the screen behind it carries a "Close the collar" glossary trigger too.
-    //
-    // The POSITION matters just as much. The scrim is `absolute inset-0`, so its box is the whole
-    // viewport and Playwright's default click lands dead centre — which is inside the sheet panel
-    // whenever the panel is tall enough to reach the middle of the screen. The click is then
-    // intercepted and the test times out on geometry, having found nothing wrong with the product.
-    // Aiming at the top-left corner hits scrim a bottom-anchored sheet can never cover, and is also
-    // what a user tapping "somewhere off the sheet" actually does.
-    await page
-      .getByRole('button', { name: 'Close', exact: true })
-      .click({ position: { x: 8, y: 8 } });
+    // Closed by tapping its scrim — see dismissViaScrim for why the tap POSITION is load-bearing.
+    await dismissViaScrim(page);
     await expect(sheet).toHaveCount(0);
 
     // A dotted term in prose. The rep range carries a RULE, so it earns one.
