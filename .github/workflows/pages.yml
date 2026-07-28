@@ -38,11 +38,14 @@ jobs:
     name: Build static export
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          # Kept in step with ci.yml's NODE_VERSION (22). Node 20 is end-of-life as of April 2026,
+          # and this workflow is the one that actually ships the bundle users load — it must not
+          # build on an older runtime than the one CI proved the bundle on.
+          node-version: "22"
           cache: npm
 
       - name: Install
@@ -115,9 +118,17 @@ jobs:
         run: touch apps/web/out/.nojekyll
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: apps/web/out
+          # REQUIRED, and the site breaks silently without it. v4 added `include-hidden-files`
+          # defaulting to FALSE, which passes `--exclude=.[^/]*` to the tar that builds the
+          # artifact — so every dotfile is dropped, including the `.nojekyll` written by the step
+          # above. No `.nojekyll` means Pages runs the upload through Jekyll, and Jekyll skips
+          # directories beginning with an underscore: `_next/` disappears and every script and
+          # stylesheet 404s. The deploy still reports success, so the first symptom would be a
+          # blank site. v3 had no such exclusion; `true` keeps the behaviour this workflow had.
+          include-hidden-files: true
 
   deploy:
     name: Deploy to Pages
@@ -129,4 +140,4 @@ jobs:
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
