@@ -38,10 +38,11 @@
  * manifest logic are all covered without reaching the internet.
  */
 import { createWriteStream } from 'node:fs';
-import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdir, writeFile, rm } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { ARRAY_KEYS, streamArrayObjects } from './lib/stream-json.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(HERE, '..', 'apps', 'web', 'public', 'food');
@@ -250,17 +251,47 @@ async function fetchDataset(url, label) {
 
   const { readdir } = await import('node:fs/promises');
   const files = (await readdir(tmpDir)).filter((f) => f.endsWith('.json'));
-  const rows = [];
-  for (const f of files) {
-    const parsed = JSON.parse(await readFile(join(tmpDir, f), 'utf8'));
-    const arr =
-      parsed.FoundationFoods ?? parsed.SRLegacyFoods ?? parsed.BrandedFoods ?? parsed.foods ?? [];
-    rows.push(...arr);
+  return { zip: tmpZip, dir: tmpDir, files: files.map((f) => join(tmpDir, f)) };
+}
+
+
+/**
+ * Download a dataset and stream its rows, cleaning up the multi-GB scratch files afterwards.
+ *
+ * The cleanup sits in `finally` because the consumer is expected to STOP EARLY: `ingest` breaks
+ * out of its loop once the branded cap is reached, which finalises this generator. Without the
+ * `finally` an early break would leave a 3.3 GB unpacked tree inside apps/web/public/, which Next
+ * copies verbatim into the static export.
+ */
+async function* streamDataset(url, label, expectedKey) {
+  const { zip, dir, files } = await fetchDataset(url, label);
+  let rows = 0;
+  try {
+    for (const file of files) {
+      // The EXPECTED key first, and usually only. A miss costs a full pass over the file — the
+      // scanner slides to the end looking for a needle that is not there — so blindly probing all
+      // four keys against the 3.3 GB branded dump would read it three times to find the array on
+      // the third try. The remaining keys stay as a fallback in case FDC renames a property, which
+      // is cheap when it never happens and better than importing nothing when it does.
+      const keys = [expectedKey, ...ARRAY_KEYS.filter((k) => k !== expectedKey)];
+      for (const key of keys) {
+        let sawAny = false;
+        for await (const row of streamArrayObjects(file, key)) {
+          sawAny = true;
+          rows += 1;
+          yield row;
+        }
+        if (sawAny) break;
+        if (key === expectedKey) {
+          console.warn(`  ! ${label}: no "${expectedKey}" array; falling back to other FDC keys`);
+        }
+      }
+    }
+  } finally {
+    console.log(`${rows.toLocaleString()} rows`);
+    await rm(zip, { force: true });
+    await rm(dir, { recursive: true, force: true });
   }
-  await rm(tmpZip, { force: true });
-  await rm(tmpDir, { recursive: true, force: true });
-  console.log(`${rows.length.toLocaleString()} rows`);
-  return rows;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════ the run ══ */
@@ -269,10 +300,13 @@ async function main() {
   const foods = [];
   const seenNames = new Set();
 
-  const ingest = (rows, source, cap = Infinity) => {
+  // `for await` so this accepts both the plain arrays the fixture supplies and the async
+  // generators the network path supplies. Breaking out of the loop finalises a generator, which
+  // is what triggers streamDataset's cleanup of the unpacked scratch tree.
+  const ingest = async (rows, source, cap = Infinity) => {
     let kept = 0;
     let rejected = 0;
-    for (const row of rows) {
+    for await (const row of rows) {
       if (kept >= cap) break;
       const food = toFood(row, source);
       if (!food) {
@@ -291,18 +325,22 @@ async function main() {
 
   if (fixture) {
     console.log(`· fixture mode: ${fixture}`);
-    const parsed = JSON.parse(await readFile(fixture, 'utf8'));
     // Every array, not the first one that matches: the fixture deliberately carries BOTH dataset
     // shapes (nested `nutrient.id` and flat `nutrientId`) and short-circuiting would leave the
     // branded path — the one that supplies 50k of the 60k rows — completely unexercised.
-    ingest(parsed.FoundationFoods ?? [], 'foundation');
-    ingest(parsed.SRLegacyFoods ?? [], 'srLegacy');
-    ingest(parsed.BrandedFoods ?? [], 'branded');
-    ingest(parsed.foods ?? [], 'other');
+    //
+    // Read through the SAME streaming scanner the network path uses, rather than JSON.parse-ing
+    // the fixture. The scanner is the piece that was silently broken for the entire life of this
+    // importer; a fixture that bypasses it can only ever prove the mapping works, never that the
+    // thing which actually failed in CI works.
+    await ingest(streamArrayObjects(fixture, 'FoundationFoods'), 'foundation');
+    await ingest(streamArrayObjects(fixture, 'SRLegacyFoods'), 'srLegacy');
+    await ingest(streamArrayObjects(fixture, 'BrandedFoods'), 'branded');
+    await ingest(streamArrayObjects(fixture, 'foods'), 'other');
   } else {
-    ingest(await fetchDataset(SOURCES.foundation, 'foundation'), 'foundation');
-    ingest(await fetchDataset(SOURCES.srLegacy, 'srLegacy'), 'srLegacy');
-    ingest(await fetchDataset(SOURCES.branded, 'branded'), 'branded', limit);
+    await ingest(streamDataset(SOURCES.foundation, 'foundation', 'FoundationFoods'), 'foundation');
+    await ingest(streamDataset(SOURCES.srLegacy, 'srLegacy', 'SRLegacyFoods'), 'srLegacy');
+    await ingest(streamDataset(SOURCES.branded, 'branded', 'BrandedFoods'), 'branded', limit);
   }
 
   if (foods.length === 0) {
