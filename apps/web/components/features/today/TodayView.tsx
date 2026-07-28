@@ -14,9 +14,18 @@ import {
   useActiveRoutine,
   useNutritionTargets,
   useProfileName,
-  useTodayLogs,
+  useLogsForDate,
   useDemoState,
 } from '@/lib/demo/useDemo';
+import {
+  useSelectedDate,
+  dayLabel,
+  isToday,
+  isFuture,
+  isPast,
+  parseISO,
+} from '@/lib/demo/selectedDate';
+import { DateNav } from '@/components/features/shared/DateNav';
 import { exerciseCountLabel } from '@/lib/demo/generate';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
 import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
@@ -25,7 +34,13 @@ import { FirstRunTour } from './FirstRunTour';
 
 export function TodayView() {
   const routine = useActiveRoutine();
-  const day = todaysRoutineDay(routine);
+  // THE DAY ON SCREEN. `todaysRoutineDay` already took a Date, so every past and future day
+  // already had an answer under the weekly blueprint — nothing was scheduling-bound, the screen
+  // was simply hard-wired to `new Date()`.
+  const [date, setDate] = useSelectedDate();
+  const viewing = React.useMemo(() => parseISO(date), [date]);
+  const day = todaysRoutineDay(routine, viewing);
+  const onToday = isToday(date);
   const targets = useNutritionTargets();
   const displayName = useProfileName();
   const state = useDemoState();
@@ -35,7 +50,7 @@ export function TodayView() {
     () => weeklyStreak(sessions, targetDays),
     [sessions, targetDays],
   );
-  const { logs } = useTodayLogs();
+  const { logs } = useLogsForDate(date);
   const nutrition = logs.reduce(
     (a, l) => ({
       kcal: a.kcal + l.kcal,
@@ -47,10 +62,9 @@ export function TodayView() {
   );
   const hasLogged = logs.length > 0;
 
-  const wdLabel = WEEKDAY_LABELS[blueprintWeekday()];
+  const wdLabel = WEEKDAY_LABELS[blueprintWeekday(viewing)];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
   const macros = [
     { label: 'Protein', value: nutrition.protein_g, target: targets.protein_g_target, color: 'var(--color-accent)' },
@@ -65,18 +79,27 @@ export function TodayView() {
           explaining a screen they are not on. It renders nothing at all unless it is owed (see the
           component: it opens from an effect, never from a render-time store read). */}
       <FirstRunTour />
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            {greeting}
-            {displayName ? `, ${displayName}` : ''}
-          </p>
-          <h1 className="font-display text-2xl font-bold tracking-tight">{wdLabel}&rsquo;s plan</h1>
-        </div>
-        <div className="rounded-full bg-surface-2 px-3 py-1.5 text-sm font-semibold text-muted-foreground shadow-[var(--shadow-card)]">
-          {dateLabel}
-        </div>
+      <header>
+        {/* The greeting is only true NOW. On any other day it becomes a small lie, so it is
+            replaced by what the screen is actually showing. */}
+        <p className="text-sm text-muted-foreground">
+          {onToday ? (
+            <>
+              {greeting}
+              {displayName ? `, ${displayName}` : ''}
+            </>
+          ) : (
+            <>Viewing {dayLabel(date).toLowerCase()}</>
+          )}
+        </p>
+        <h1 className="font-display text-2xl font-bold tracking-tight">{wdLabel}&rsquo;s plan</h1>
       </header>
+
+      <DateNav
+        value={date}
+        onChange={setDate}
+        hasContent={(iso) => (state.logsByDate[iso]?.length ?? 0) > 0}
+      />
 
       {/* Weekly-target streak (§6 P1-11) */}
       <StreakCard
@@ -94,7 +117,7 @@ export function TodayView() {
         <Card variant="steel" className="overflow-hidden !p-0 shadow-[var(--shadow-card)]">
           <div className="bg-accent px-5 py-4 text-accent-foreground">
             <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-              Today&rsquo;s workout
+              {onToday ? "Today's workout" : `${dayLabel(date)}'s workout`}
             </p>
             <h2 className="mt-1 font-display text-lg font-bold text-accent-foreground">{day.name}</h2>
             <p className="mt-0.5 text-sm opacity-80">
@@ -115,20 +138,44 @@ export function TodayView() {
                 <li className="text-xs text-muted-foreground">+{day.exercises.length - 4} more</li>
               )}
             </ul>
-            <Link href={`/workout/${day.id}`} className="block">
-              <Button size="lg" block glow texture>
-                Start workout
-              </Button>
-            </Link>
+            {/* STARTING A SESSION IS A TODAY ACTION. The player writes into the live log as you
+                lift, so firing it from a Thursday you are merely previewing would record the sets
+                against now, not against Thursday. Past and future days are therefore readable but
+                not startable, and the copy says which it is rather than showing a dead button. */}
+            {onToday ? (
+              <Link href={`/workout/${day.id}`} className="block">
+                <Button size="lg" block glow texture>
+                  Start workout
+                </Button>
+              </Link>
+            ) : (
+              <p
+                className="rounded-field border border-border bg-surface-2 px-3 py-2.5 text-center text-sm text-muted-foreground"
+                data-testid="workout-not-today"
+              >
+                {isFuture(date)
+                  ? 'Planned for this day — start it when it comes around.'
+                  : 'This is what was scheduled. Sessions are logged on the day you train them.'}
+              </p>
+            )}
           </div>
         </Card>
       ) : (
-        <QuickWorkoutCard restDay />
+        onToday ? (
+          <QuickWorkoutCard restDay />
+        ) : (
+          <Card className="shadow-[var(--shadow-card)]" data-testid="rest-day-other">
+            <CardTitle>Rest day</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No session scheduled for {dayLabel(date).toLowerCase()}.
+            </p>
+          </Card>
+        )
       )}
 
       {/* Even on a training day, "not today's session" is a real need — pulling tomorrow forward
           is the whole reason this exists. Shown second so it never competes with the plan. */}
-      {day && <QuickWorkoutCard />}
+      {day && onToday && <QuickWorkoutCard />}
 
       {/* Ask your coach — the knowledge base is one tap from home (§KB). */}
       <CoachEntryCard />

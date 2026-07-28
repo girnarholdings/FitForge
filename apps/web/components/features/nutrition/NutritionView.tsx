@@ -15,11 +15,12 @@ import { Button, Card, CardTitle, Chip, Sheet } from '@/components/ui';
 import { PlusIcon, RepeatIcon, SearchIcon, SparkleIcon, XIcon } from '@/components/ui/icons';
 import {
   defaultMealSlot,
-  todayISO,
   type MealSlot,
   type NutritionLog,
 } from '@/components/features/_mock/data';
-import { useDemoState, useNutritionTargets, useTodayLogs } from '@/lib/demo/useDemo';
+import { useDemoState, useNutritionTargets, useLogsForDate } from '@/lib/demo/useDemo';
+import { useSelectedDate, addDays, dayLabel, isToday } from '@/lib/demo/selectedDate';
+import { DateNav } from '@/components/features/shared/DateNav';
 import { foodById, FOOD_COUNT } from '@/lib/food/index';
 import { computeMacros, formatMacros, sumMacros } from '@/lib/food/format';
 import { resolvePortion, unitOptions } from '@/lib/food/measures';
@@ -36,13 +37,13 @@ import { ReviewSheet } from './ReviewSheet';
 let logSeq = 1000;
 const genLogId = () => `nl-new-${logSeq++}`;
 
-function isoDaysAgo(n: number): string {
-  return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
-}
-
 export function NutritionView() {
   const targets = useNutritionTargets();
-  const { logs, setLogs } = useTodayLogs();
+  // THE DAY BEING EDITED, not necessarily today. Everything below — the summary, the meal cards,
+  // what a confirmed draft is stamped with — follows this one value, so backfilling last night's
+  // dinner is the same flow as logging lunch now.
+  const [date, setDate] = useSelectedDate();
+  const { logs, setLogs } = useLogsForDate(date);
   const state = useDemoState();
 
   const [draft, setDraft] = React.useState<{ input: string; items: ParsedItem[] } | null>(null);
@@ -88,8 +89,10 @@ export function NutritionView() {
     return fromHistory.length > 0 ? fromHistory.slice(0, 8) : popularFoods(6);
   }, [historyIds]);
 
-  const yesterday = isoDaysAgo(1);
-  const yesterdayLogs = state.logsByDate[yesterday] ?? [];
+  // "Yesterday" relative to the day on screen, not to the wall clock: while reviewing Tuesday,
+  // "copy yesterday" must mean Monday or the button is quietly lying about what it will do.
+  const previousDay = addDays(date, -1);
+  const previousDayLogs = state.logsByDate[previousDay] ?? [];
 
   /* --------------------------------------------------------------------------- actions */
 
@@ -137,7 +140,7 @@ export function NutritionView() {
       const macros = computeMacros(item.food, item.portion.grams);
       rows.push({
         id: genLogId(),
-        logged_on: todayISO(),
+        logged_on: date,
         meal_slot: draftSlot,
         food_id: item.food.id,
         custom_name: item.food.name,
@@ -149,13 +152,10 @@ export function NutritionView() {
     setDraft(null);
   }
 
-  function copyYesterday() {
-    const src = state.logsByDate[yesterday] ?? [];
+  function copyPreviousDay() {
+    const src = state.logsByDate[previousDay] ?? [];
     if (src.length === 0) return;
-    setLogs((prev) => [
-      ...prev,
-      ...src.map((l) => ({ ...l, id: genLogId(), logged_on: todayISO() })),
-    ]);
+    setLogs((prev) => [...prev, ...src.map((l) => ({ ...l, id: genLogId(), logged_on: date }))]);
   }
 
   function removeLog(id: string) {
@@ -172,10 +172,18 @@ export function NutritionView() {
     /* Extra bottom room on mobile only: the composer is fixed above the floating tab bar, so the
        last meal card would otherwise sit permanently under it with no way to scroll clear. */
     <div className="space-y-4 pb-20 md:pb-0">
-      <header className="flex items-center justify-between">
+      <header>
         <h1 className="font-display text-2xl font-bold tracking-tight">Nutrition</h1>
-        <span className="text-sm text-muted-foreground">Today</span>
       </header>
+
+      {/* `hasContent` marks days that already have food on them, so scrubbing the strip shows at a
+          glance which nights were missed — which is the whole reason someone comes here to
+          backfill. */}
+      <DateNav
+        value={date}
+        onChange={setDate}
+        hasContent={(iso) => (state.logsByDate[iso]?.length ?? 0) > 0}
+      />
 
       <DaySummary totals={totals} targets={targets} />
 
@@ -203,18 +211,18 @@ export function NutritionView() {
         </Card>
       )}
 
-      {(yesterdayLogs.length > 0 || recents.length > 0) && (
+      {(previousDayLogs.length > 0 || recents.length > 0) && (
         <Card className="!py-3">
           <div className="mb-2 flex items-center justify-between">
             <CardTitle className="text-sm">Quick log</CardTitle>
-            {yesterdayLogs.length > 0 && (
+            {previousDayLogs.length > 0 && (
               <button
                 type="button"
                 data-testid="copy-yesterday"
-                onClick={copyYesterday}
+                onClick={copyPreviousDay}
                 className="inline-flex items-center gap-1.5 rounded-field px-2.5 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent-muted"
               >
-                <RepeatIcon size={16} /> Copy yesterday
+                <RepeatIcon size={16} /> Copy {dayLabel(previousDay).toLowerCase()}
               </button>
             )}
           </div>

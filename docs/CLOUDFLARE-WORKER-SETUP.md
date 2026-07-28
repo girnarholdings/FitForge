@@ -44,6 +44,9 @@ npx tsc src/index.ts --target es2022 --module esnext --moduleResolution bundler 
 
 That writes `workers/coach/dist/index.js`. Open it and copy the whole file.
 
+> **If you would rather not build at all**, use the GitHub-import path below — Cloudflare
+> compiles the TypeScript for you and this whole step disappears.
+>
 > **If you cannot run that**, open `workers/coach/src/index.ts` and delete the type-only pieces by
 > hand: the `export interface Env { … }` block, the `interface ChatRequest { … }` block, and any
 > `: Type` annotation or `as Type` cast. Nothing else changes — there is no other TypeScript in the
@@ -173,21 +176,73 @@ protected by an origin allow-list rather than by a secret.
 
 ---
 
-## Optional · Deploy from GitHub instead of pasting
+## Deploy from GitHub instead of pasting
 
-If you would rather not re-paste on every change, Cloudflare can build from the repository and
-handle the TypeScript itself:
+Cloudflare can build from the repository and handle the TypeScript itself, so you never re-paste.
 
 1. **Workers & Pages** → **Create application** → **Import a repository**.
 2. Authorise GitHub and pick the FitForge repo.
 3. Set **Root directory** to `workers/coach`.
-4. Leave the build command empty — `wrangler.toml` already declares `main`, the AI binding and the
-   vars, so Cloudflare configures the worker from it.
+4. Leave the build command as the default (`npx wrangler deploy`). `wrangler.toml` already declares
+   `main`, the AI binding and the vars, so Cloudflare configures the worker from it.
 5. Deploy.
 
-With this path Steps 3–5 are unnecessary: `wrangler.toml` is the source of truth, and pushing to
-`main` redeploys. Edit `ALLOWED_ORIGINS` in that file rather than in the dashboard, or the next
-deploy will overwrite what you set by hand.
+With this path Steps 3–5 above are unnecessary: `wrangler.toml` is the source of truth and pushing
+to `main` redeploys. Edit `ALLOWED_ORIGINS` in that file rather than in the dashboard, or the next
+deploy overwrites what you set by hand.
+
+---
+
+## If the Cloudflare build is failing
+
+Work down this list — they are ordered by how often each one is the cause.
+
+### 1. `workers/coach` had no `package.json` (fixed in this repo)
+
+This is the most likely cause of a build that fails immediately, and it has now been fixed. The
+directory previously contained only `src/`, `wrangler.toml` and a README. Cloudflare's build runs an
+install in the **root directory** you configured, and with no `package.json` there it fails before
+it ever reaches wrangler — typically with `npm ERR! enoent ENOENT: no such file or directory, open
+'/opt/buildhome/repo/workers/coach/package.json'` or `Error: No package.json found`.
+
+`workers/coach/package.json` and its lockfile now exist, pinning wrangler and providing `deploy`,
+`dev` and `build` scripts. **Pull the latest `main` and retry the build** — if this was your failure,
+that alone fixes it.
+
+Note it is deliberately NOT a workspace of the root `package.json` (`workspaces` is
+`apps/web`, `packages/*`, `seed`). The worker deploys on its own from its own directory, and adding
+it to the workspace would make Cloudflare's install try to resolve the entire monorepo.
+
+### 2. Root directory set to the repo root
+
+If **Root directory** is blank or `/`, Cloudflare installs the whole monorepo and then cannot find
+`wrangler.toml`. Symptom: `Could not find wrangler.toml` or a very long install that ends in a
+Next.js build error — the giveaway that it is building the wrong thing entirely. Set it to
+`workers/coach`.
+
+### 3. Build command overridden with something Pages-shaped
+
+Workers Builds and Pages Builds are different products with similar screens. A worker configured
+with `npm run build` (there is no such script at the repo root that produces a worker) or with an
+output directory set will fail. For this worker the command is `npx wrangler deploy` and there is no
+output directory.
+
+### 4. Node version
+
+`wrangler` 4.x needs Node 20+. If the build log shows a syntax error inside wrangler itself, set the
+`NODE_VERSION` build variable to `22` to match what this repo builds with everywhere else.
+
+### 5. It is not the build — it is the binding
+
+A build that SUCCEEDS and a worker that then 500s on every request is Step 4, not a build problem.
+`wrangler.toml` declares the AI binding, so the GitHub path configures it for you; the dashboard
+paste path does not, and that is the step people miss.
+
+### Reading the actual error
+
+The build log is on the worker's **Deployments** tab — open the failed deployment and expand the
+build output. The first red line is the real error; everything after it is fallout. If none of the
+above matches, send me that line.
 
 ---
 

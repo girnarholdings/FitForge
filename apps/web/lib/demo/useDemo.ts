@@ -74,17 +74,40 @@ export function useTodayLogs(): {
   logs: NutritionLog[];
   setLogs: (updater: (prev: NutritionLog[]) => NutritionLog[]) => void;
 } {
+  return useLogsForDate(todayISO());
+}
+
+/**
+ * The same accessor for ANY day, so a meal can be logged onto the night you forgot to record it.
+ *
+ * `setLogs` re-reads from `getSnapshot()` rather than closing over the rendered `logs`: the updater
+ * must apply to what is in the store at the moment it runs, not to whatever the component last
+ * rendered. That mattered little when the date was always today, and matters a great deal now that
+ * the date can change underneath a pending update.
+ */
+export function useLogsForDate(date: string): {
+  logs: NutritionLog[];
+  setLogs: (updater: (prev: NutritionLog[]) => NutritionLog[]) => void;
+} {
   const state = useDemoState();
-  const today = todayISO();
-  const logs = state.logsByDate[today] ?? [];
+  const logs = state.logsByDate[date] ?? EMPTY_LOGS;
 
   const setLogs = React.useCallback(
     (updater: (prev: NutritionLog[]) => NutritionLog[]) => {
-      const prev = getSnapshot().logsByDate[today] ?? [];
-      setLogsFor(today, updater(prev));
+      const prev = getSnapshot().logsByDate[date] ?? [];
+      setLogsFor(date, updater(prev));
     },
-    [today],
+    [date],
   );
 
   return { logs, setLogs };
 }
+
+/**
+ * One shared empty array for every day with nothing logged.
+ *
+ * `?? []` allocates a NEW array on each render, so any `useMemo`/`useEffect` keyed on `logs` would
+ * re-run forever on an empty day — which is most days, most of the time, now that arbitrary dates
+ * are reachable.
+ */
+const EMPTY_LOGS: NutritionLog[] = [];

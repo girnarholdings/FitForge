@@ -1,0 +1,16 @@
+{
+  "name": "fitforge-coach-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Optional Workers AI endpoint for the FitForge Coach. The app is fully functional without it.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "wrangler": "^4.114.0"
+  }
+}

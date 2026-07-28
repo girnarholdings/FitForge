@@ -38,6 +38,9 @@ import {
 import { KB_ENTRIES, entryById, routeQuery, searchKb } from '@/lib/kb';
 import type { KbRoutePlus } from '@/lib/kb/route';
 import { askCoach, isCoachConfigured, snippetsFromHits } from '@/lib/kb/client';
+import { MealSuggestionCard, wantsMealSuggestion } from './MealSuggestionCard';
+import { useNutritionTargets, useLogsForDate } from '@/lib/demo/useDemo';
+import { useSelectedDate } from '@/lib/demo/selectedDate';
 import { profileFacts, useCoachProfile } from '@/lib/kb/profile';
 import type { CoachProfile, KbEntry, KbHit } from '@/lib/kb/types';
 import { AnswerCard } from './AnswerCard';
@@ -50,12 +53,14 @@ type AiState =
   | { kind: 'none' }
   | { kind: 'pending' }
   | { kind: 'answer'; text: string }
+  | { kind: 'meal' }
   | { kind: 'unavailable'; headline: string; detail: string };
 
 interface Turn {
   id: string;
   question: string;
-  route: KbRoutePlus;
+  /** `null` for turns the app answered itself (meal suggestions) — there is no KB route to record. */
+  route: KbRoutePlus | null;
   ai: AiState;
   facts: string[];
 }
@@ -216,6 +221,21 @@ export function CoachView() {
       const q = raw.trim();
       if (!q) return;
       setInput('');
+
+      // ANSWERED LOCALLY, BEFORE ROUTING. "What can I eat?" depends on today's remaining macros,
+      // which no curated entry can know and no model may guess — it would answer with invented
+      // grams. Intercepting here also means the question never reaches the worker even on a build
+      // that has one configured.
+      if (wantsMealSuggestion(q)) {
+        turnSeq += 1;
+        setTurns((prev) => [
+          ...prev,
+          { id: `turn-${turnSeq}`, question: q, route: null, ai: { kind: 'meal' }, facts: [] },
+        ]);
+        setMode('ask');
+        return;
+      }
+
       const route = routeQuery(q, searchKb(q, 8));
       // A red-flagged question NEVER travels to the model, configured or not: a small model given
       // "I have chest pain during exercise" will happily write training advice around it.
@@ -243,7 +263,7 @@ export function CoachView() {
   const personalize = React.useCallback(
     (turn: Turn) => {
       patchTurn(turn.id, { kind: 'pending' });
-      void runAi(turn.id, turn.question, turn.route, profile);
+      if (turn.route) void runAi(turn.id, turn.question, turn.route, profile);
     },
     [patchTurn, profile, runAi],
   );
@@ -480,6 +500,19 @@ function TurnBlock({
   onPersonalize?: (turn: Turn) => void;
 }) {
   const { route, ai } = turn;
+
+  // A turn the app answered itself. There is no KB route, no model call and nothing to badge, so
+  // it returns before any of the routing logic below — which is also what narrows `route` to
+  // non-null for the rest of this component.
+  if (ai.kind === 'meal' || !route) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-foreground">{turn.question}</p>
+        <MealSuggestionCard />
+      </div>
+    );
+  }
+
   const top = route.top;
   const safety = route.safety;
   const isAiPath = route.mode === 'ai';
