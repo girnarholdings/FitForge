@@ -348,7 +348,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Bottom tab bar (mobile) — a floating, OPAQUE pill. See FloatingTabBar for why it is
           neither blurred nor full-bleed, and for the long-press-to-scrub gesture. */}
-      <FloatingTabBar items={TAB_ITEMS} activeIndex={activeTabIndex} />
+      <FloatingTabBar
+        items={TAB_ITEMS}
+        activeIndex={activeTabIndex}
+        coach={{
+          href: COACH_ITEM.href,
+          label: COACH_ITEM.label,
+          Icon: COACH_ITEM.Icon,
+          active: isActive(pathname, COACH_ITEM),
+        }}
+      />
 
       <Sheet open={explain} onClose={() => setExplain(false)} title="Local Mode">
         <p className="text-sm text-muted-foreground">

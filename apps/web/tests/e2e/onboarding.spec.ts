@@ -55,7 +55,16 @@ test.describe('onboarding', () => {
     await completeOnboarding(page);
 
     // Landed on Today with the generated routine visible.
-    await expect(page.getByRole('heading', { name: /plan$/i })).toBeVisible();
+    // The heading is the WEEKDAY IN FULL and the line under it is the calendar date. Asserted
+    // against a locally-computed date rather than a fixed string, so this keeps working tomorrow —
+    // and it is stronger than the `/plan$/` it replaces, which passed for any heading ending in
+    // "plan" regardless of whether the date shown was the right one.
+    const today = new Date();
+    const weekday = today.toLocaleDateString(undefined, { weekday: 'long' });
+    await expect(page.getByTestId('today-heading')).toHaveText(weekday);
+    await expect(page.getByTestId('today-subheading')).toContainText(
+      String(today.getDate()),
+    );
     await expect(page.getByText(/Today.s workout|Rest day/)).toBeVisible();
 
     // Non-zero nutrition targets prove the shared macros rule ran.

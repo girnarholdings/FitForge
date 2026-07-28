@@ -13,7 +13,16 @@ test.describe('today', () => {
     await page.goto('/today');
 
     // Header greeting + today's plan heading.
-    await expect(page.getByRole('heading', { name: /plan$/i })).toBeVisible();
+    // The heading is the WEEKDAY IN FULL and the line under it is the calendar date. Asserted
+    // against a locally-computed date rather than a fixed string, so this keeps working tomorrow —
+    // and it is stronger than the `/plan$/` it replaces, which passed for any heading ending in
+    // "plan" regardless of whether the date shown was the right one.
+    const today = new Date();
+    const weekday = today.toLocaleDateString(undefined, { weekday: 'long' });
+    await expect(page.getByTestId('today-heading')).toHaveText(weekday);
+    await expect(page.getByTestId('today-subheading')).toContainText(
+      String(today.getDate()),
+    );
 
     // Fresh user: the nutrition card shows the first-run empty state with the REAL kcal target
     // (proving the macros rule ran) and a clear CTA — nothing is auto-logged.

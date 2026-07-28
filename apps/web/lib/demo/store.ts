@@ -1117,6 +1117,12 @@ export function importAllState(raw: string): { ok: true } | { ok: false; error: 
 /**
  * Erase EVERY Local Mode key: the demo state, the workout log and every other `fitforge.*` key
  * this app owns. This is what "Yes, erase everything" must actually do.
+ *
+ * INCLUDING WHAT IS NOT IN localStorage. The tier-2 food catalog is cached in the Cache API
+ * (`lib/food/tier2.ts`), which `localStorage.removeItem` cannot touch — so before this, "erase
+ * everything" left up to ~15 MB of cached catalog on the device. That data is public USDA
+ * reference material rather than anything personal, so nothing sensitive survived, but a control
+ * that says "everything" and means "the localStorage half" is simply wrong about what it did.
  */
 export function eraseAllLocalData(): void {
   const keys = localKeys();
@@ -1130,8 +1136,22 @@ export function eraseAllLocalData(): void {
         /* ignore */
       }
     }
+    // Fire-and-forget: this function is synchronous and its callers re-render immediately. A
+    // failure here (private mode, storage pressure) must not block wiping the rest.
+    void eraseCaches();
   }
   for (const l of listeners) l();
+}
+
+/** Delete the app's Cache API storage. Named by prefix so it can never reach another origin's. */
+async function eraseCaches(): Promise<void> {
+  try {
+    if (typeof caches === 'undefined') return;
+    const names = await caches.keys();
+    await Promise.all(names.filter((n) => n.startsWith('fitforge-')).map((n) => caches.delete(n)));
+  } catch {
+    /* nothing here is recoverable, and none of it should stop the erase */
+  }
 }
 
 /** @deprecated Use {@link exportAllState} — kept so existing callers get the full bundle too. */

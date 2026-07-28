@@ -42,9 +42,12 @@ function cn(...parts: Array<string | false | null | undefined>): string {
 export function FloatingTabBar({
   items,
   activeIndex,
+  coach,
 }: {
   items: TabItem[];
   activeIndex: number;
+  /** Optional Coach shortcut, floated above the bar's right end. */
+  coach?: { href: string; label: string; Icon: (p: IconProps) => React.ReactElement; active: boolean };
 }) {
   const router = useRouter();
   const barRef = React.useRef<HTMLUListElement>(null);
@@ -120,6 +123,37 @@ export function FloatingTabBar({
       data-testid="tab-bar"
     >
       <div className="mx-auto w-full max-w-[26rem] px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+        {/*
+          COACH, ABOVE THE BAR RATHER THAN IN IT.
+          The five tabs are the app's structure and Coach is not a sixth destination of the same
+          kind — it is a thing you reach for mid-task, from wherever you are. Putting it in the row
+          would mean either dropping a tab or shrinking all six below a comfortable target on a
+          390px screen. Floating it clear keeps the row at five and gives Coach a shape nothing
+          else in the bar has, which is what makes it findable without a label of its own.
+
+          Right-aligned above the last tab: the far corner is the easiest reach for a thumb already
+          resting on the bar, and it is the one spot that cannot be hit by accident while scrubbing
+          across the tabs.
+        */}
+        {coach && (
+          <div className="mb-2 flex justify-end pr-1">
+            <Link
+              href={coach.href}
+              aria-label={coach.label}
+              aria-current={coach.active ? 'page' : undefined}
+              data-testid="tab-coach"
+              className={cn(
+                'pointer-events-auto grid h-11 w-11 place-items-center rounded-full border',
+                'shadow-[var(--shadow-pop)] transition-colors',
+                coach.active
+                  ? 'border-transparent bg-accent text-accent-foreground'
+                  : 'border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-surface-2 text-accent',
+              )}
+            >
+              <coach.Icon size={20} />
+            </Link>
+          </div>
+        )}
         <ul
           ref={barRef}
           onPointerDown={onPointerDown}

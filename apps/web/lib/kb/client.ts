@@ -25,8 +25,42 @@ export const AI_TIMEOUT_MS = 10_000;
 const MAX_SNIPPETS = 3;
 
 /** True when a Coach service is configured for this build. */
+/**
+ * An `http://` endpoint on an `https://` page is DEAD, not merely inadvisable.
+ *
+ * The browser blocks mixed content before the request leaves, so the fetch rejects with a generic
+ * network error and the Coach falls back to the local guide — i.e. it looks exactly like a worker
+ * that was never configured, and the deployment appears simply broken with no clue why. This
+ * happened on the first real deployment: the endpoint variable was set to `http://…workers.dev`.
+ *
+ * Treated as UNCONFIGURED rather than silently upgraded to https. Rewriting someone's
+ * configuration behind their back is how you end up with a URL that works in the app and nowhere
+ * else; refusing it and saying so once in the console keeps the fix where it belongs.
+ */
+function isBlockedMixedContent(url: string): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.location.protocol === 'https:' && url.startsWith('http://');
+}
+
+let warned = false;
+
 export function isCoachConfigured(): boolean {
-  return AI_ENDPOINT.trim().length > 0;
+  const url = AI_ENDPOINT.trim();
+  if (url.length === 0) return false;
+  if (isBlockedMixedContent(url)) {
+    if (!warned) {
+      warned = true;
+      // Once, not per call: this is read on every render of the Coach screen.
+      console.warn(
+        `[FitForge] Coach endpoint ${url} uses http:// on an https:// page. The browser will ` +
+          'block it as mixed content, so it is being ignored and the local knowledge base will ' +
+          'answer instead. Set NEXT_PUBLIC_AI_ENDPOINT (or the AI_ENDPOINT repository variable) ' +
+          'to the https:// form.',
+      );
+    }
+    return false;
+  }
+  return true;
 }
 
 export function coachEndpoint(): string | null {

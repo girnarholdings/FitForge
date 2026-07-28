@@ -9,7 +9,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Card, CardTitle, Button, MacroRing } from '@/components/ui';
 import { PlusIcon, ScaleIcon, ShakerIcon, ArrowRightIcon, FlameSolidIcon } from '@/components/ui/icons';
-import { todaysRoutineDay, WEEKDAY_LABELS, blueprintWeekday } from '@/components/features/_mock/data';
+import { todaysRoutineDay } from '@/components/features/_mock/data';
 import {
   useActiveRoutine,
   useNutritionTargets,
@@ -62,9 +62,24 @@ export function TodayView() {
   );
   const hasLogged = logs.length > 0;
 
-  const wdLabel = WEEKDAY_LABELS[blueprintWeekday(viewing)];
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  /**
+   * THE HEADING IS THE DATE, not a greeting and not an abbreviation.
+   *
+   * It used to read "Good afternoon, Athlete" over "Tues's plan", which answers neither question a
+   * person actually has on this screen — WHICH DAY am I looking at, and is that today? Once the
+   * date can be changed, "Tues" is worse than useless: it is the same three letters whether you
+   * are on this Tuesday, last Tuesday or next Tuesday.
+   *
+   * So: the weekday in full and the calendar date, with the relative word ("Today", "Yesterday")
+   * as the supporting line rather than the other way round. The greeting is gone entirely — it was
+   * only ever true on today, and it was occupying the line that should have carried the date.
+   */
+  const weekdayFull = viewing.toLocaleDateString(undefined, { weekday: 'long' });
+  const fullDate = viewing.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 
   const macros = [
     { label: 'Protein', value: nutrition.protein_g, target: targets.protein_g_target, color: 'var(--color-accent)' },
@@ -80,19 +95,19 @@ export function TodayView() {
           component: it opens from an effect, never from a render-time store read). */}
       <FirstRunTour />
       <header>
-        {/* The greeting is only true NOW. On any other day it becomes a small lie, so it is
-            replaced by what the screen is actually showing. */}
-        <p className="text-sm text-muted-foreground">
-          {onToday ? (
-            <>
-              {greeting}
-              {displayName ? `, ${displayName}` : ''}
-            </>
-          ) : (
-            <>Viewing {dayLabel(date).toLowerCase()}</>
-          )}
+        <h1
+          className="font-display text-2xl font-bold tracking-tight"
+          data-testid="today-heading"
+        >
+          {weekdayFull}
+        </h1>
+        <p className="text-sm text-muted-foreground" data-testid="today-subheading">
+          {fullDate}
+          {/* The relative word only when it adds something. Printing "· Today" under today's date
+              is noise; printing it under a date three days back is the whole point. */}
+          {!onToday && <> · {dayLabel(date)}</>}
+          {onToday && displayName ? ` · Welcome back, ${displayName}` : ''}
         </p>
-        <h1 className="font-display text-2xl font-bold tracking-tight">{wdLabel}&rsquo;s plan</h1>
       </header>
 
       <DateNav
