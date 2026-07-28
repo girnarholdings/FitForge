@@ -137,8 +137,15 @@ async function askWorkersAI(
         ],
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
-      })) as { response?: string };
-      return { ok: true, answer: result?.response ?? '', model };
+      })) as { response?: unknown };
+      // THE LIVE BINDING'S TYPE LIE, learned in production: when a prompt demands pure JSON,
+      // some Workers AI models return `response` as an ALREADY-PARSED OBJECT, not a string —
+      // the stubbed tests never showed it, and the first macros request against the real edge
+      // died on `text.replace is not a function`. Normalize at the boundary where the foreign
+      // type enters: an object is re-serialized, and the macros parser parses it right back.
+      const raw = result?.response;
+      const answer = typeof raw === 'string' ? raw : raw == null ? '' : JSON.stringify(raw);
+      return { ok: true, answer, model };
     } catch (err) {
       tried.push(`${model}: ${String(err instanceof Error ? err.message : err).slice(0, 120)}`);
       // Anything that is not "this model is gone" would fail identically on the next candidate.
@@ -544,7 +551,10 @@ const MACRO_SYSTEM =
   'method) in "assumptions". If the input is not a food or drink, output exactly {"error":"not_food"}.';
 
 /** Extract the first balanced JSON object from model text, tolerating stray fences and prose. */
-function extractJson(text: string): unknown | null {
+function extractJson(text: unknown): unknown | null {
+  // Defense in depth for the same production lesson normalized in askWorkersAI: if a caller ever
+  // hands the parsed object through, it IS the extraction.
+  if (typeof text !== 'string') return text && typeof text === 'object' ? text : null;
   const cleaned = text.replace(/```[a-z]*/gi, '').replace(/```/g, '').trim();
   const start = cleaned.indexOf('{');
   if (start < 0) return null;

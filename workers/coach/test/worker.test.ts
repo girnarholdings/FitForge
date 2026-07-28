@@ -569,3 +569,24 @@ test('the health check advertises both tasks', async () => {
   const body = (await res.json()) as { tasks: string[] };
   assert.deepEqual(body.tasks, ['chat', 'macros']);
 });
+
+test('a binding that returns response as a PARSED OBJECT still estimates', async () => {
+  // The live Workers AI edge does this for JSON-shaped outputs on some models; the first real
+  // macros request died on `text.replace is not a function` while every stubbed test passed.
+  const obj = { per: '1 bowl', kcal: 500, protein_g: 30, carbs_g: 45, fat_g: 20, assumptions: [] };
+  const calls: unknown[] = [];
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    AI: {
+      run: async () => {
+        calls.push(1);
+        return { response: obj };
+      },
+    },
+  } as unknown as Env;
+  const res = await worker.fetch(post({ task: 'macros', food: 'chicken bowl' }), env);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { kcal: { value: number }; samples: number };
+  assert.equal(body.kcal.value, 500);
+  assert.equal(body.samples, 3);
+});
