@@ -26,11 +26,12 @@ import type {
   NutritionLog,
   NutritionTargets,
 } from '@/components/features/_mock/data';
-import type { OnboardingDraft } from '@/components/onboarding/types';
+import type { OnboardingDraft, NamedRef } from '@/components/onboarding/types';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
 import {
   recommendProgressionScheme,
   isRetiredProgressionScheme,
+  PREFERENCE_LIST_SIZE,
   type ProgressionScheme,
 } from '@fitforge/shared/rules';
 import {
@@ -92,6 +93,15 @@ export interface DemoState {
    * time the picker runs, and read by the player when the route is `/workout/quick`.
    */
   quickSession: RoutineDay | null;
+  /**
+   * When the first-run tour was last dismissed (ISO), or `null` if it is still owed.
+   *
+   * A TIMESTAMP RATHER THAN A BOOLEAN because "when did this user last get oriented" is the only
+   * question a future build can usefully ask of it — a boolean can never answer "they last saw the
+   * tour before the tab bar changed". `null` is the unseen state, which is also what an older
+   * backup (no such field) reads as, so a pre-tour file simply earns its owner the tour.
+   */
+  tourSeenAt: string | null;
 }
 
 export interface WeightEntry {
@@ -115,6 +125,7 @@ export function defaultState(): DemoState {
     volumeTargets: {},
     progressionScheme: null,
     quickSession: null,
+    tourSeenAt: null,
   };
 }
 
@@ -593,6 +604,64 @@ const DRAFT_OBJECT_ARRAYS = [
   'excluded_exercises',
 ] as const;
 
+/**
+ * The two RANKED exercise-preference lists. Order IS the answer here — index 0 is the athlete's
+ * favourite (or most-disliked) movement and carries five times the weight of index 4 — so unlike
+ * the bags above these get a reader of their own rather than "it must be an array of objects".
+ *
+ * Same shape of care `readVolumeTargets` takes with a hand-edited `{"quads": 1e9}`: a preference
+ * list is user-writable input, and a corrupted one must degrade to something harmless rather than
+ * white-screen the plan. Concretely, this reader
+ *   • drops entries that are not `{ id, slug, name }` (a chip with no slug can never be scored),
+ *   • de-duplicates by slug, keeping the FIRST occurrence, so a doubled entry cannot double-count
+ *     its rank weight,
+ *   • truncates to PREFERENCE_LIST_SIZE, because a 40-long "top 5" would let one list swamp every
+ *     other signal in split scoring.
+ * Every repair is reported, so Settings → Import still refuses a file it does not fully understand.
+ */
+const DRAFT_PREFERENCE_LISTS = ['liked_exercises', 'disliked_exercises'] as const;
+
+function readPreferenceList(v: unknown, path: string, issues: ShapeIssues): NamedRef[] {
+  const rows = readArray<NamedRef>(v, path, issues, (raw, p) => {
+    if (!isPlainObject(raw)) {
+      noteIssue(issues, p, 'expected an object');
+      return null;
+    }
+    const slug = nonEmptyString(raw.slug);
+    const name = nonEmptyString(raw.name);
+    const id = nonEmptyString(raw.id) ?? slug;
+    if (!slug || !name || !id) {
+      noteIssue(issues, p, 'expected { id, slug, name }');
+      return null;
+    }
+    return { id, slug, name };
+  });
+
+  const seen = new Set<string>();
+  const unique = rows.filter((row, i) => {
+    if (seen.has(row.slug)) {
+      noteIssue(issues, `${path}[${i}]`, 'duplicate exercise in a ranked list');
+      return false;
+    }
+    seen.add(row.slug);
+    return true;
+  });
+
+  if (unique.length > PREFERENCE_LIST_SIZE) {
+    noteIssue(issues, path, `expected at most ${PREFERENCE_LIST_SIZE} entries`);
+    return unique.slice(0, PREFERENCE_LIST_SIZE);
+  }
+  return unique;
+}
+
+/**
+ * Whether the preference lists are still FitForge's suggestion or the athlete's own answer.
+ * An unrecognised value reads as `'suggested'`, which is the SAFE direction: the worst case is a
+ * user seeing the pre-fill offered once more, never their real answer being overwritten silently —
+ * because the lists themselves are stored separately and survive regardless.
+ */
+const PREFS_SOURCE_VALUES: ReadonlySet<string> = new Set(['suggested', 'custom']);
+
 function readDraft(v: unknown, path: string, issues: ShapeIssues): Partial<OnboardingDraft> {
   if (v === undefined || v === null) return {};
   if (!isPlainObject(v)) {
@@ -620,6 +689,18 @@ function readDraft(v: unknown, path: string, issues: ShapeIssues): Partial<Onboa
         return null;
       });
     }
+  }
+  for (const k of DRAFT_PREFERENCE_LISTS) {
+    if (draft[k] !== undefined) draft[k] = readPreferenceList(draft[k], `${path}.${k}`, issues);
+  }
+  if (draft.exercise_prefs_source !== undefined) {
+    draft.exercise_prefs_source = readEnum(
+      draft.exercise_prefs_source,
+      `${path}.exercise_prefs_source`,
+      issues,
+      PREFS_SOURCE_VALUES,
+      'suggested',
+    );
   }
   return draft as Partial<OnboardingDraft>;
 }
@@ -662,6 +743,10 @@ export function normalizeDemoState(value: unknown, issues: ShapeIssues = []): De
     // for this athlete — safe by construction (see `resolveProgressionScheme`).
     progressionScheme: readProgressionScheme(value.progressionScheme, 'state.progressionScheme', issues),
     quickSession: readQuickSession(value.quickSession, 'state.quickSession', issues),
+    // ABSENT is silent (a backup taken before the tour existed still imports), PRESENT-BUT-WRONG is
+    // an issue, and either way the value degrades to "unseen" — the harmless direction: a returning
+    // user sees one skippable sheet, rather than the app throwing on a hand-edited number.
+    tourSeenAt: readStringOrNull(value.tourSeenAt, 'state.tourSeenAt', issues),
   };
 }
 
@@ -1101,6 +1186,56 @@ export function resetVolumeTargets(): void {
   update((s) => ({ ...s, volumeTargets: {} }));
 }
 
+/* ------------------------------------------------------------------ ranked exercise preferences */
+
+/**
+ * Persist the athlete's RANKED liked / disliked lists.
+ *
+ * Exactly `setVolumeTarget`'s shape of promise: what is stored is the CHOICE, and storing it flips
+ * `exercise_prefs_source` to `'custom'` FOREVER. That flag is the whole guarantee behind "a user's
+ * edit is respected permanently; the pre-fill never re-asserts" — the sex-leaning suggestion is
+ * seeded once, into an empty list, and after that the seeding code must not run again. Nothing here
+ * filters or validates by sex, because sex has no business in this function at all.
+ *
+ * Order is preserved verbatim: index 0 is rank 1 and carries five times the weight of index 4
+ * (`RANK_WEIGHTS` in `@fitforge/shared/rules`), so re-sorting the arrays here would silently
+ * rewrite the athlete's answer. Lists are capped at `PREFERENCE_LIST_SIZE` on the way in, matching
+ * what {@link normalizeDemoState} enforces on the way back out.
+ */
+export function setExercisePreferences(liked: NamedRef[], disliked: NamedRef[]): void {
+  const cap = (rows: NamedRef[]): NamedRef[] => {
+    const seen = new Set<string>();
+    const out: NamedRef[] = [];
+    for (const row of rows) {
+      if (seen.has(row.slug) || out.length >= PREFERENCE_LIST_SIZE) continue;
+      seen.add(row.slug);
+      out.push(row);
+    }
+    return out;
+  };
+  update((s) => ({
+    ...s,
+    draft: {
+      ...s.draft,
+      liked_exercises: cap(liked),
+      disliked_exercises: cap(disliked),
+      exercise_prefs_source: 'custom',
+    },
+  }));
+}
+
+/**
+ * Has the athlete answered the preference step in their own words yet?
+ *
+ * The pre-fill may only be seeded when this is `false`. It reads the FLAG rather than
+ * `liked_exercises.length === 0`, because "I cleared the list on purpose" and "I have not been
+ * asked yet" are different answers and only the flag can tell them apart — emptying the list must
+ * not be punished by having the suggestion reappear.
+ */
+export function hasCustomExercisePreferences(): boolean {
+  return getState().draft.exercise_prefs_source === 'custom';
+}
+
 /* ------------------------------------------------------------------------ progression scheme */
 
 /**
@@ -1134,4 +1269,31 @@ export function resolveProgressionScheme(state: DemoState): ProgressionScheme {
 /** Stash the session the quick-workout picker built; `/workout/quick` reads it. */
 export function setQuickSession(day: RoutineDay | null): void {
   update((s) => ({ ...s, quickSession: day }));
+}
+
+/* ------------------------------------------------------------------------- the first-run tour */
+
+/**
+ * Whether this user has already been oriented.
+ *
+ * Takes the STATE rather than reading the store, so the tour can subscribe through `useDemoState()`
+ * and react to {@link resetTour} while it is already mounted. A component calling `getState()` here
+ * would compile, render correctly once, and then never update when Settings replays the tour.
+ */
+export function hasSeenTour(state: DemoState): boolean {
+  return state.tourSeenAt != null;
+}
+
+/**
+ * Stamp the tour as seen. IDEMPOTENT, and deliberately so: every dismissal path (Skip, Escape, the
+ * scrim, "Start training") funnels here, and re-stamping on the second one would move the date for
+ * no reason.
+ */
+export function markTourSeen(): void {
+  update((s) => (s.tourSeenAt ? s : { ...s, tourSeenAt: new Date().toISOString() }));
+}
+
+/** Re-arm the tour — "show me the tour again" from Settings. */
+export function resetTour(): void {
+  update((s) => ({ ...s, tourSeenAt: null }));
 }

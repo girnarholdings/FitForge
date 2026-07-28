@@ -60,6 +60,11 @@ test.describe('regression · generation', () => {
     await page.getByRole('button', { name: '30 min', exact: true }).click();
     await cont(page);
 
+    // Exercise prefs — now BEFORE the split (the liked list feeds split scoring); the seeded
+    // tray keeps the step continue-able untouched.
+    await page.waitForURL(/\/onboarding\/exercise_prefs/);
+    await cont(page);
+
     await page.waitForURL(/\/onboarding\/split/);
     await cont(page);
 
@@ -102,9 +107,6 @@ test.describe('regression · generation', () => {
       await page.waitForTimeout(400);
     }
     await expect(page.getByTestId('equipment-review-screen')).toBeVisible();
-    await cont(page);
-
-    await page.waitForURL(/\/onboarding\/exercise_prefs/);
     await cont(page);
 
     // Exclusions — protect three areas at once.

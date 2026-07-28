@@ -88,10 +88,14 @@ test.describe('onboarding', () => {
     await page.getByTestId('onboarding-continue').click();
     await page.waitForURL(/schedule/);
     await page.getByTestId('onboarding-continue').click();
-    // NEW step (WS-5): the split library preselects the best-matching program on mount.
+    // Exercise prefs now precede the split (they feed its scoring); the neutral seed makes the
+    // step continue-able with zero interaction.
+    await page.waitForURL(/exercise_prefs/);
+    await page.getByTestId('onboarding-continue').click();
+    // WS-5: the split library preselects the best-matching program on mount.
     await page.waitForURL(/split/);
     await page.getByTestId('onboarding-continue').click();
-    // NEW step (WS-P): the progression scheme, likewise preselected with the recommendation.
+    // WS-P: the progression scheme, likewise preselected with the recommendation.
     await page.waitForURL(/progression/);
     await page.getByTestId('onboarding-continue').click();
     await page.waitForURL(/location/);
@@ -99,8 +103,6 @@ test.describe('onboarding', () => {
     await page.getByTestId('onboarding-continue').click();
     // Equipment is a swipe deck now; the intro phase still carries the shell CTA.
     await page.waitForURL(/equipment/);
-    await page.getByTestId('onboarding-continue').click();
-    await page.waitForURL(/exercise_prefs/);
     await page.getByTestId('onboarding-continue').click();
     await page.waitForURL(/exclusions/);
     await page.getByTestId('onboarding-continue').click();

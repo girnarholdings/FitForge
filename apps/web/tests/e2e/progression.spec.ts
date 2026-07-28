@@ -1,5 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
-import { resetDemo, enterDemo, completeOnboarding, readDemoState, WORKOUT_LOG_KEY } from './helpers';
+import {
+  resetDemo,
+  enterDemo,
+  completeOnboarding,
+  passExercisePrefs,
+  readDemoState,
+  WORKOUT_LOG_KEY,
+} from './helpers';
 
 /**
  * PROGRESSION SCHEMES — the shape of every set, not a label on a card.
@@ -29,6 +36,9 @@ async function walkToProgression(page: Page, experience: string): Promise<void> 
   await cont(page);
   await page.waitForURL(/\/onboarding\/schedule/);
   await cont(page);
+  // `exercise_prefs` now sits between schedule and split (it feeds split scoring), so the walk has
+  // to pass through it. The pre-filled tray makes it continue-able without an answer.
+  await passExercisePrefs(page);
   await page.waitForURL(/\/onboarding\/split/);
   await cont(page);
   await page.waitForURL(/\/onboarding\/progression/);

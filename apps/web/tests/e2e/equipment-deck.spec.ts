@@ -123,7 +123,8 @@ test.describe('equipment swipe deck', () => {
     const cta = page.getByTestId('onboarding-continue');
     await expect(cta).toBeVisible();
     await cta.click();
-    await page.waitForURL(/\/onboarding\/exercise_prefs/);
+    // Exercise prefs moved before split; equipment now hands off to exclusions.
+    await page.waitForURL(/\/onboarding\/exclusions/);
 
     // Committing the step persists BOTH lists: love implies have, and only the up-swiped item
     // is loved.
@@ -225,7 +226,7 @@ test.describe('equipment swipe deck', () => {
     expect(await page.locator('[data-testid^="equipment-chip-"]').count()).toBe(kit0 + 3);
 
     await page.getByTestId('onboarding-continue').click();
-    await page.waitForURL(/\/onboarding\/exercise_prefs/);
+    await page.waitForURL(/\/onboarding\/exclusions/);
     const draft = await draftEquipment(page);
     expect(draft.equipment_slugs).toHaveLength(kit0 + 3);
     expect(draft.loved_equipment_slugs).toHaveLength(1);

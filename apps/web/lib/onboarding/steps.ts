@@ -38,39 +38,42 @@ export const STEP_META: Record<OnboardingStep, StepMeta> = {
     subtitle: 'Days per week, which days, and how long each session runs.',
     wizard: true,
   },
+  // Moved BEFORE `split` (was screen 9): liked lifts feed split scoring on the next screen, so
+  // asking afterwards was backwards (docs/RESEARCH-PREFERENCES.md §1).
+  exercise_prefs: {
+    step: 'exercise_prefs',
+    screen: 5,
+    title: 'Which lifts do you actually enjoy?',
+    subtitle:
+      'Pick your top five, in order — they shape which split we suggest and what goes in it.',
+    wizard: true,
+  },
   split: {
     step: 'split',
-    screen: 5,
+    screen: 6,
     title: 'Pick your training split',
     subtitle: 'Real programs, matched to your days and level. One is picked already.',
     wizard: true,
   },
   progression: {
     step: 'progression',
-    screen: 6,
+    screen: 7,
     title: 'How should your sets progress?',
     subtitle: 'This decides the weight and reps of every single set. One is picked for you already.',
     wizard: true,
   },
   location: {
     step: 'location',
-    screen: 7,
+    screen: 8,
     title: 'Where will you train?',
     subtitle: "We'll preselect the equipment that fits.",
     wizard: true,
   },
   equipment: {
     step: 'equipment',
-    screen: 8,
+    screen: 9,
     title: 'What equipment do you have?',
     subtitle: 'Swipe right if you have it, up if you love it. Presets work too.',
-    wizard: true,
-  },
-  exercise_prefs: {
-    step: 'exercise_prefs',
-    screen: 9,
-    title: 'Any exercises you love?',
-    subtitle: "We'll prioritise these in your plan.",
     wizard: true,
   },
   exclusions: {

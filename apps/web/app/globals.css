@@ -400,6 +400,30 @@ body {
   animation: ff-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) var(--ff-delay, 0ms) 1 both;
 }
 
+/* Blocked-action headshake — a full list refusing a sixth pick. Gated in JS as well
+   (usePrefersReducedMotion), like every other ff-* class applied from a component. */
+@keyframes ff-shake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40% {
+    transform: translate3d(4px, 0, 0);
+  }
+  60% {
+    transform: translate3d(-3px, 0, 0);
+  }
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+}
+.ff-shake {
+  animation: ff-shake 360ms cubic-bezier(0.36, 0.07, 0.19, 0.97) 1 both;
+}
+
 /* Respect users who prefer reduced motion. */
 @media (prefers-reduced-motion: reduce) {
   *,

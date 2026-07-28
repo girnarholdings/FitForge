@@ -18,6 +18,12 @@ export interface PlateStepperProps {
   max?: number;
   placeholder?: string;
   className?: string;
+  /**
+   * DOM id for the inner `<input>`, so a caller's `<label htmlFor>` binds to the field itself
+   * rather than to the wrapper. Without it a visible label can only ever sit NEAR this control,
+   * which is precisely the drift the set-entry form was rebuilt to make impossible.
+   */
+  id?: string;
   /** REQUIRED and passed straight through to the input — the E2E suite matches on it. */
   'aria-label': string;
 }
@@ -56,6 +62,7 @@ export function PlateStepper({
   max = 999,
   placeholder,
   className,
+  id,
   ...aria
 }: PlateStepperProps) {
   // `onChange` and the bounds are read through a ref by the repeat timer, so a hold that outlives
@@ -113,6 +120,7 @@ export function PlateStepper({
         onStop={stopRepeat}
       />
       <input
+        id={id}
         type="number"
         inputMode="decimal"
         step={step}

@@ -57,6 +57,7 @@ import {
   eraseAllLocalData,
   setProgressionScheme,
   resolveProgressionScheme,
+  resetTour,
   type DemoState,
 } from '@/lib/demo/store';
 import { useDemoState } from '@/lib/demo/useDemo';
@@ -963,6 +964,28 @@ export function SettingsView() {
 
       {/* ---------------------------------------------------------------- Local Mode */}
       <GroupHeader>Local Mode</GroupHeader>
+
+      {/* THE TOUR, ON DEMAND. A first-run tour that can only ever be seen once is a tour you have
+          to get right on the first read; one you can replay is a reference. Re-arming CLEARS the
+          flag rather than opening a sheet from here, so the tour opens where it belongs — over
+          Today, the screen it is describing — and the "never twice" rule keeps working afterwards. */}
+      <Section
+        title="App tour"
+        hint="The three-screen tour of the tabs, starting a workout, and how Local Mode stores your data."
+      >
+        <Button
+          size="lg"
+          variant="secondary"
+          block
+          data-testid="settings-replay-tour"
+          onClick={() => {
+            resetTour();
+            router.push('/today');
+          }}
+        >
+          <RepeatIcon size={18} /> Replay the app tour
+        </Button>
+      </Section>
 
       <Section
         title="Local Mode"

@@ -14,6 +14,13 @@ interface OnboardingContextValue {
   userId: string;
   saving: boolean;
   error: string | null;
+  /**
+   * True once the localStorage draft (if any) has been merged in. A step that SEEDS the draft on
+   * arrival (exercise prefs) must wait for this: its mount effect and the rehydration effect run
+   * in the same commit, so seeding early gets silently overwritten by the stored draft — and if
+   * the seed's inputs happen to match the empty draft's, the effect never re-fires.
+   */
+  hydrated: boolean;
   /** commit the given step (write-through to localStorage) then advance to the next screen */
   commitAndNext: (step: OnboardingStep) => Promise<void>;
   /** go back one screen without losing draft state (§2.2 "back never loses data") */
@@ -47,6 +54,7 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
   }));
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [hydrated, setHydrated] = React.useState(false);
 
   // Rehydrate any prior draft from localStorage after mount (resume support).
   React.useEffect(() => {
@@ -55,6 +63,7 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
     if (stored && Object.keys(stored).length > 0) {
       setDraft((d) => ({ ...d, ...stored }));
     }
+    setHydrated(true);
   }, []);
 
   const patch = React.useCallback((partial: Partial<OnboardingDraft>) => {
@@ -110,12 +119,13 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
       userId: DEMO_USER_ID,
       saving,
       error,
+      hydrated,
       commitAndNext,
       goBack,
       goTo,
       finish,
     }),
-    [draft, patch, saving, error, commitAndNext, goBack, goTo, finish],
+    [draft, patch, saving, error, hydrated, commitAndNext, goBack, goTo, finish],
   );
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;

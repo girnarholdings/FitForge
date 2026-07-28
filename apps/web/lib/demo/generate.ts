@@ -28,9 +28,20 @@ import {
   restSeconds,
   slotCountForSession,
   splitNameForDays,
+  likedSelectionBonus,
+  dislikedSelectionPenalty,
+  substituteAllDisliked,
+  sexAdjustedPrescription,
   type RoleSlot,
+  type CatalogExercise,
+  type SubstitutionEdge,
+  type DislikeSubstitution,
+  type SexPrescriptionAdjustment,
+  type SplitRecommendationInput,
 } from '@fitforge/shared/rules';
-import type { GoalType, ExperienceLevel, MovementPattern } from '@fitforge/shared/types';
+import catalogFixtureJson from '@fitforge/shared/fixtures/catalog.json';
+import substitutionEdgesJson from '@fitforge/shared/fixtures/substitution-edges.json';
+import type { GoalType, ExperienceLevel, MovementPattern, SexType } from '@fitforge/shared/types';
 import {
   EXERCISES,
   mockExerciseById,
@@ -61,6 +72,14 @@ function ageFromBirthdate(birthdate: string | null | undefined): number | null {
 }
 
 const DIFFICULTY_RANK: Record<Difficulty, number> = { beginner: 0, intermediate: 1, advanced: 2 };
+
+/**
+ * The §7.4 substitution engine works on the raw fixture rows (`CatalogExercise`), not the enriched
+ * `ExerciseFull` the UI uses, so the disliked→easier swap reads the same JSON `EXERCISES` is built
+ * from. One source, two shapes — never two catalogs that could disagree about what exists.
+ */
+const SUB_CATALOG = catalogFixtureJson as unknown as CatalogExercise[];
+const SUB_EDGES = substitutionEdgesJson as unknown as SubstitutionEdge[];
 
 function feasible(ex: ExerciseFull, owned: Set<string>, gymDefault: boolean): boolean {
   if (ex.is_bodyweight_ok) return true;
@@ -98,14 +117,29 @@ export function targetsForDraft(draft: Partial<OnboardingDraft>): NutritionTarge
 
 /**
  * Ranking weights. Ordered so a *harder* signal always beats a softer one:
- * an explicitly liked exercise > the slot's note (e.g. rear delts) > its mechanics hint >
- * an exact pattern match > loved equipment > raw popularity (0–100).
+ * an explicitly liked exercise > the stand-in for a disliked one > the slot's note (e.g. rear
+ * delts) > its mechanics hint > an exact pattern match > loved equipment > raw popularity (0–100).
  */
 const W_FAVORITE = 4000;
+/**
+ * The easier same-pattern stand-in the shared rule picked for something the athlete dislikes.
+ * Below `W_FAVORITE` on purpose — a movement they actually said they LIKE still wins the slot.
+ */
+const W_DISLIKE_SUBSTITUTE = 3000;
 const W_SLOT_NOTE = 2000;
 const W_MECHANICS = 1000;
 const W_EXACT_PATTERN = 500;
 const W_LOVED_EQUIPMENT = 200;
+/**
+ * A DISLIKE is a down-rank, not a ban.
+ *
+ * Bigger than every positive weight above, so a disliked movement sinks below every alternative
+ * for its slot — and FAR smaller than `SOFT_PENALTY`, so it still outranks a pattern the athlete
+ * asked us to protect and can still be picked when it is the only feasible option. That last part
+ * is the difference between this and the exclusions step: disliking something must never leave a
+ * hole in the week.
+ */
+const DISLIKE_PENALTY = 8000;
 /**
  * A SOFT exclusion is a preference, not a ban (§7.2.2): it sinks a pattern below every
  * alternative but leaves it selectable, so "ease off my knees" can never delete squatting or
@@ -155,11 +189,38 @@ interface GenContext {
   excludedSlugs: Set<string>;
   excludedIds: Set<string>;
   favoriteSlugs: Set<string>;
+  /** ranked liked slugs (index 0 = favourite); drives selection weighting AND split scoring */
+  likedSlugs: string[];
+  /** ranked disliked slugs (index 0 = most disliked); a DOWN-RANK, never a ban */
+  dislikedSlugs: string[];
+  /** disliked slug → the easier same-pattern stand-in the shared rule chose (or `to: null`) */
+  dislikeSubs: Map<string, DislikeSubstitution>;
+  /** slugs that are somebody's stand-in — preferred for their slot so the swap actually happens */
+  dislikeSubSlugs: Set<string>;
   /** excluded exercise id → the substitute the user pinned in ExclusionsStep */
   pinned: Map<string, ExerciseFull>;
   ceiling: number;
   /** difficulty- and equipment-feasible catalog (still contains user-excluded rows so pins fire) */
   pool: ExerciseFull[];
+}
+
+/**
+ * The ranked preference lists for a draft.
+ *
+ * `liked_exercises` is the answer of record. `favorites` is the OLD open "any exercises you love?"
+ * multi-select and is only consulted when the new list is empty, so a draft written before this
+ * step existed keeps working exactly as it did — an old answer is still an answer.
+ */
+function preferencesForDraft(draft: Partial<OnboardingDraft>): {
+  liked: string[];
+  disliked: string[];
+} {
+  const liked = (draft.liked_exercises ?? []).map((f) => f.slug);
+  const legacy = (draft.favorites ?? []).map((f) => f.slug);
+  return {
+    liked: liked.length > 0 ? liked : legacy,
+    disliked: (draft.disliked_exercises ?? []).map((f) => f.slug),
+  };
 }
 
 function contextForDraft(draft: Partial<OnboardingDraft>, experience: ExperienceLevel): GenContext {
@@ -193,6 +254,28 @@ function contextForDraft(draft: Partial<OnboardingDraft>, experience: Experience
       (DIFFICULTY_RANK[ex.difficulty] ?? 0) <= ceiling + 1 && feasible(ex, owned, gymDefault),
   );
 
+  const { liked, disliked } = preferencesForDraft(draft);
+
+  // Resolve every disliked movement to an EASIER option that trains the same pattern and muscles.
+  // The disliked list is deliberately NOT fed to `excludedExercises` — that field is the real
+  // exclusion mechanism and it removes work. Here we only want a preferred stand-in.
+  const dislikeSubs = new Map<string, DislikeSubstitution>();
+  const dislikeSubSlugs = new Set<string>();
+  if (disliked.length > 0) {
+    const subs = substituteAllDisliked(disliked, SUB_CATALOG, SUB_EDGES, {
+      ownedEquipment: owned,
+      trainingLocation: draft.training_location ?? null,
+      experience: experience as Difficulty,
+      excludedExercises: excludedSlugs,
+      excludedPatterns: hardPatterns,
+      favorites: new Set(liked),
+    });
+    for (const sub of subs) {
+      dislikeSubs.set(sub.from, sub);
+      if (sub.to) dislikeSubSlugs.add(sub.to);
+    }
+  }
+
   return {
     owned,
     loved,
@@ -202,6 +285,10 @@ function contextForDraft(draft: Partial<OnboardingDraft>, experience: Experience
     excludedSlugs,
     excludedIds,
     favoriteSlugs: new Set<string>((draft.favorites ?? []).map((f) => f.slug)),
+    likedSlugs: liked,
+    dislikedSlugs: disliked,
+    dislikeSubs,
+    dislikeSubSlugs,
     pinned,
     ceiling,
     pool,
@@ -220,7 +307,12 @@ function isUserExcluded(ex: ExerciseFull, ctx: GenContext): boolean {
 
 function scoreOf(ex: ExerciseFull, ctx: GenContext, slot?: RoleSlot): number {
   let score = ex.popularity;
-  if (ctx.favoriteSlugs.has(ex.slug)) score += W_FAVORITE;
+  // RANK matters: the #1 liked exercise earns the full weight, the #5 a fifth of it — which is the
+  // only reason the step asks for a ranked list rather than a set.
+  score += likedSelectionBonus(ex.slug, ctx.likedSlugs, W_FAVORITE);
+  score -= dislikedSelectionPenalty(ex.slug, ctx.dislikedSlugs, DISLIKE_PENALTY);
+  if (ctx.dislikeSubSlugs.has(ex.slug)) score += W_DISLIKE_SUBSTITUTE;
+  if (ctx.favoriteSlugs.has(ex.slug) && !ctx.likedSlugs.includes(ex.slug)) score += W_FAVORITE;
   if (usesLovedEquipment(ex, ctx)) score += W_LOVED_EQUIPMENT;
   if (slot) {
     if (slot.note && noteMatches(ex, slot.note)) score += W_SLOT_NOTE;
@@ -267,6 +359,14 @@ function chooseForSlot(slot: RoleSlot, ctx: GenContext, used: Set<string>): Slot
       const sub = ctx.pinned.get(cand.id);
       if (sub && selectable(sub, ctx, used)) return { pick: sub, blocked: null };
       continue;
+    }
+    if (ctx.dislikedSlugs.includes(cand.slug)) {
+      // A disliked movement only gets this far once everything else for the slot is exhausted (the
+      // penalty sinks it). Hand over to the easier same-pattern stand-in if one is still available;
+      // otherwise KEEP IT — coverage beats comfort, and `keptDislikes` tells the user why.
+      const swap = ctx.dislikeSubs.get(cand.slug)?.to;
+      const alt = swap ? EXERCISES.find((ex) => ex.slug === swap) : undefined;
+      if (alt && selectable(alt, ctx, used)) return { pick: alt, blocked: null };
     }
     return { pick: cand, blocked: null };
   }
@@ -492,6 +592,19 @@ export interface PlanCoverage {
   backfilled: number;
   /** smallest day in the plan */
   thinnestDay: number;
+  /**
+   * Disliked movements the catalog had NO easier same-pattern replacement for, so the original
+   * stayed in the plan.
+   *
+   * Additive and separate from `limited` / `cause` on purpose: this is not the plan being cut
+   * short by equipment or protected areas, it is one lift the athlete would rather not do still
+   * being there — a much smaller thing, and it must not fire the "your plan is running lean"
+   * banner. Silently leaving the disliked lift in with no explanation is the failure mode this
+   * field exists to prevent.
+   */
+  keptDislikes: { slug: string; name: string; reason: string }[];
+  /** one honest line naming them, or '' when every dislike was successfully swapped */
+  keptDislikesNote: string;
 }
 
 const NO_COVERAGE_ISSUE: PlanCoverage = {
@@ -504,6 +617,8 @@ const NO_COVERAGE_ISSUE: PlanCoverage = {
   shortfall: 0,
   backfilled: 0,
   thinnestDay: 0,
+  keptDislikes: [],
+  keptDislikesNote: '',
 };
 
 function coverageCopy(
@@ -531,6 +646,25 @@ function coverageCopy(
     actionLabel: 'Add equipment',
     actionStep: 'equipment',
   };
+}
+
+/**
+ * The honest line for disliked movements we could not swap out.
+ *
+ * Names them, says WHY they stayed, and points at the step that would actually remove them — the
+ * exclusions step, which is a different question with a different consequence. Deleting the
+ * movement on a dislike alone would leave the pattern untrained, and pretending we had swapped it
+ * would be worse than either.
+ */
+function keptDislikesCopy(kept: readonly DislikeSubstitution[]): string {
+  if (kept.length === 0) return '';
+  const names = kept.map((k) => k.fromName);
+  const list =
+    names.length === 1
+      ? names[0]!
+      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]!}`;
+  const verb = names.length === 1 ? 'is' : 'are';
+  return `${list} ${verb} still in your plan: nothing in the catalogue trains the same thing more easily, and dropping ${names.length === 1 ? 'it' : 'them'} would leave a gap in your week. If ${names.length === 1 ? 'it is' : 'they are'} genuinely off-limits, add ${names.length === 1 ? 'it' : 'them'} under the areas you want protected instead.`;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════ generation */
@@ -582,6 +716,14 @@ function generatePlan(draft: Partial<OnboardingDraft>): GeneratedPlan {
 
     const exercises: RoutineExercise[] = built.picks.map((pick, i) => {
       const mechanics = pick.mechanics === 'compound' ? 'compound' : 'isolation';
+      // Physiology, not preference: the ONE sex difference the evidence supports is applied here,
+      // to rest and reps only. It never caps load, never removes a compound, never lowers a target.
+      const rx = sexAdjustedPrescription({
+        sex: draft.sex ?? null,
+        rest_seconds: restSeconds(goal, mechanics),
+        rep_min: defaults.rep_min,
+        rep_max: defaults.rep_max,
+      });
       return {
         id: `${demoDayId(dayIdx)}-ex-${i + 1}`,
         position: i + 1,
@@ -590,10 +732,10 @@ function generatePlan(draft: Partial<OnboardingDraft>): GeneratedPlan {
         exercise_name: pick.name,
         image_path: pick.image_path,
         sets: mechanics === 'compound' ? 4 : 3,
-        rep_min: defaults.rep_min,
-        rep_max: defaults.rep_max,
+        rep_min: rx.rep_min,
+        rep_max: rx.rep_max,
         target_rpe: 7,
-        rest_seconds: restSeconds(goal, mechanics),
+        rest_seconds: rx.rest_seconds,
         superset_group: null,
         notes: null,
       };
@@ -621,6 +763,21 @@ function generatePlan(draft: Partial<OnboardingDraft>): GeneratedPlan {
   const limited = (backfilled > 0 || thinDays > 0) && cause !== null;
   const thinnestDay = days.reduce((min, d) => Math.min(min, d.exercises.length), Infinity);
 
+  // Report only what the plan ACTUALLY contains. `ctx.keptDislikes` is what the shared rule could
+  // not find a swap for, which is a different question from what survived into the week — a slot
+  // may simply never have come up. Claiming "Bench Press is still in your plan" about a plan with
+  // no bench press in it is exactly the kind of derived-from-the-template copy the M1 work banned.
+  const plannedSlugs = new Set(days.flatMap((d) => d.exercises.map((e) => e.exercise_slug)));
+  const survived = ctx.dislikedSlugs
+    .map((slug) => ctx.dislikeSubs.get(slug))
+    .filter((k): k is DislikeSubstitution => !!k && plannedSlugs.has(k.from));
+  const keptDislikes = survived.map((k) => ({
+    slug: k.from,
+    name: k.fromName,
+    reason: k.reason,
+  }));
+  const keptDislikesNote = keptDislikesCopy(survived);
+
   const coverage: PlanCoverage = limited
     ? {
         limited: true,
@@ -629,8 +786,10 @@ function generatePlan(draft: Partial<OnboardingDraft>): GeneratedPlan {
         shortfall,
         backfilled,
         thinnestDay,
+        keptDislikes,
+        keptDislikesNote,
       }
-    : { ...NO_COVERAGE_ISSUE, thinnestDay };
+    : { ...NO_COVERAGE_ISSUE, thinnestDay, keptDislikes, keptDislikesNote };
 
   const routine: Routine = {
     id: DEMO_ROUTINE_ID,
@@ -662,6 +821,59 @@ export function routineForDraft(draft: Partial<OnboardingDraft>): Routine {
  */
 export function planCoverageForDraft(draft: Partial<OnboardingDraft>): PlanCoverage {
   return generatePlan(draft).coverage;
+}
+
+/**
+ * The sex-aware rest/rep adjustment applied to this draft's plan, WITH the reason for it.
+ *
+ * Exported rather than baked into every routine row's `notes` for two reasons: the sentence is the
+ * same for all of them (so repeating it 24 times is noise), and it belongs next to the CONTROL that
+ * changes the numbers, not next to the numbers themselves. `adjusted === false` means nothing was
+ * changed and there is nothing to label — which is the case for every sex except female, and for a
+ * draft that never answered the question.
+ *
+ * A caller that renders the adjusted rest or rep range MUST render `label` too. An unexplained
+ * personalisation is indistinguishable from a bug, and this one is about the athlete's body.
+ */
+export function prescriptionAdjustmentForDraft(
+  draft: Partial<OnboardingDraft>,
+): SexPrescriptionAdjustment {
+  const goal = (draft.primary_goal ?? 'general_health') as GoalType;
+  const experience = (draft.experience_level ?? 'beginner') as ExperienceLevel;
+  const defaults = suggestOnboardingDefaults(goal, experience);
+  return sexAdjustedPrescription({
+    sex: (draft.sex ?? null) as SexType | null,
+    // The compound rest interval is the one the plan leads with, so it is the honest number to show.
+    rest_seconds: restSeconds(goal, 'compound'),
+    rep_min: defaults.rep_min,
+    rep_max: defaults.rep_max,
+  });
+}
+
+/**
+ * Rank the split library for a draft, now that the preference step runs BEFORE the split step.
+ *
+ * The whole point of moving the question earlier: `liked_exercise_slugs` reaches `recommendSplits`,
+ * so the programs offered are shaped by what the athlete enjoys instead of being chosen blind. The
+ * bonus is capped well below days/week, experience and goal (see `preferences.ts`), so it reorders
+ * appropriate programs rather than promoting inappropriate ones.
+ */
+export function splitRecommendationInputForDraft(
+  draft: Partial<OnboardingDraft>,
+): SplitRecommendationInput {
+  const { liked } = preferencesForDraft(draft);
+  return {
+    days_per_week: draft.days_per_week ?? null,
+    experience_level: draft.experience_level ?? null,
+    goals: draft.goals ?? null,
+    primary_goal: draft.primary_goal ?? null,
+    secondary_goal: draft.secondary_goal ?? null,
+    equipment_slugs: draft.equipment_slugs ?? null,
+    training_location: draft.training_location ?? null,
+    session_minutes: draft.session_minutes ?? null,
+    liked_exercise_slugs: liked,
+    catalog: SUB_CATALOG,
+  };
 }
 
 function profileForDraft(draft: Partial<OnboardingDraft>): Profile {

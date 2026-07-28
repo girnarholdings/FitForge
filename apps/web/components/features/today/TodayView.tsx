@@ -21,6 +21,7 @@ import { exerciseCountLabel } from '@/lib/demo/generate';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
 import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
 import { QuickWorkoutCard } from './QuickWorkoutCard';
+import { FirstRunTour } from './FirstRunTour';
 
 export function TodayView() {
   const routine = useActiveRoutine();
@@ -59,6 +60,11 @@ export function TodayView() {
 
   return (
     <div className="space-y-5">
+      {/* THE FIRST-RUN TOUR. Mounted on Today because Today is where onboarding lands and where a
+          returning user starts — orienting someone on the five tabs anywhere else would mean
+          explaining a screen they are not on. It renders nothing at all unless it is owed (see the
+          component: it opens from an effect, never from a render-time store read). */}
+      <FirstRunTour />
       <header className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">

@@ -29,6 +29,11 @@ export const ONBOARDING_STEPS = [
   'goals',
   'experience',
   'schedule',
+  // Ranked top-5 liked / top-5 disliked picker. DELIBERATELY BEFORE `split`: the split is the
+  // single biggest determinant of what someone actually does, and it used to be chosen before
+  // the app knew one thing about what they enjoy (docs/RESEARCH-PREFERENCES.md §1). The liked
+  // list feeds `recommendSplits` on the very next screen.
+  'exercise_prefs',
   // WS-5: choose a named program from the split library (or let FitForge pick).
   'split',
   // How the sets inside that program are shaped, and what makes the weight go up
@@ -36,7 +41,6 @@ export const ONBOARDING_STEPS = [
   'progression',
   'location',
   'equipment',
-  'exercise_prefs',
   'exclusions',
   'body_metrics',
   'nutrition_prefs',

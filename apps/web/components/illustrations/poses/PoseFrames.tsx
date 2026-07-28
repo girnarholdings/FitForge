@@ -228,7 +228,13 @@ function MotionArrow({ from, to, bow = 8 }: { from: Pt; to: Pt; bow?: number }) 
 
 /* ----------------------------------------------------------------- one frame */
 
-function FrameArt({ rig, frame, kind }: { rig: Rig; frame: Frame; kind: ImplementKind }) {
+/**
+ * One authored frame, rendered standalone. Exported for `PoseThumb` (the picker-card glyph),
+ * which needs a single frame with none of the strip/loop chrome. This only SELECTS from the
+ * frozen rig art — the geometry itself stays untouched in `rigs.tsx` where the invariant suite
+ * checks it.
+ */
+export function FrameArt({ rig, frame, kind }: { rig: Rig; frame: Frame; kind: ImplementKind }) {
   const tethered = kind === 'cable' || kind === 'band';
   const span = frame.imp && frame.imp2 ? Math.abs(frame.imp2[0] - frame.imp[0]) : undefined;
   const barFront = kind === 'bar' && rig.view === 'front';

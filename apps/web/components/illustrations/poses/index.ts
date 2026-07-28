@@ -5,6 +5,8 @@
  * (owned elsewhere); import from `@/components/illustrations/poses`.
  */
 export { PoseFrames } from './PoseFrames';
+/** one static authored frame (the MID silhouette) — the preference-picker card glyph */
+export { PoseThumb } from './PoseThumb';
 /** the authored art (pure geometry — no catalog knowledge) */
 export { POSE_RIGS, PATTERN_DEFAULT_RIG } from './rigs';
 /** the seed-driven exercise → rig lookup */

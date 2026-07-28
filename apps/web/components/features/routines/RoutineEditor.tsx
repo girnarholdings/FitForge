@@ -50,6 +50,7 @@ import {
 import { SubstituteSheet } from '@/components/features/shared/SubstituteSheet';
 import { useActiveRoutine, useDemoState } from '@/lib/demo/useDemo';
 import { update, resolveProgressionScheme } from '@/lib/demo/store';
+import { prescriptionAdjustmentForDraft } from '@/lib/demo/generate';
 import type { ProgressionScheme } from '@fitforge/shared/rules';
 import { SessionSummary } from './SessionCard';
 import { PlanTargets } from './PlanTargets';
@@ -100,6 +101,15 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
   // reverse-pyramid compound moved a figure the athlete never performs.
   const scheme = React.useMemo(() => resolveProgressionScheme(state), [state]);
 
+  // The rep and rest defaults this plan was built with are sex-adjusted for a female draft. This
+  // screen owns the CONTROLS that change them, which is where `sexAdjustedPrescription` argues the
+  // reason belongs — an athlete asking "why is my rest 75s?" is standing on this screen. Empty
+  // string for every draft the rule did not adjust, which is all of them except female.
+  const prescriptionNote = React.useMemo(() => {
+    const adj = prescriptionAdjustmentForDraft(state.draft);
+    return adj.adjusted ? adj.label : '';
+  }, [state.draft]);
+
   if (!hydrated) {
     return (
       <div className="space-y-5 pb-4">
@@ -117,6 +127,7 @@ export function RoutineEditor({ routineId }: { routineId: string }) {
       routineId={routineId}
       source={source}
       scheme={scheme}
+      prescriptionNote={prescriptionNote}
       /** Only a routine that exists in the store can be written back to it. */
       canPersist={state.routine != null && state.routine.id === routineId}
     />
@@ -127,12 +138,15 @@ function RoutineEditorForm({
   routineId,
   source,
   scheme,
+  prescriptionNote,
   canPersist,
 }: {
   routineId: string;
   source: Routine;
   /** the progression scheme in force — see the read-outs below, which must match the player */
   scheme: ProgressionScheme;
+  /** why the rep/rest defaults differ from the goal defaults; '' when they do not */
+  prescriptionNote: string;
   canPersist: boolean;
 }) {
   const [name, setName] = React.useState(source.name);
@@ -274,6 +288,19 @@ function RoutineEditorForm({
           gutting every pulling exercise shows up here before it is saved rather than being
           discovered on the Workouts screen a week later. */}
       <PlanTargets routine={edited} scheme={scheme} />
+
+      {/* ONCE, directly above the rows whose rep/rest steppers it explains — not per exercise, or
+          the same sentence would repeat twenty-four times. It has to be here rather than only on
+          the plan preview: this is the screen where the numbers are actually changed, and a
+          personalisation about the athlete's body with no stated reason reads as a bug. */}
+      {prescriptionNote && (
+        <p
+          className="rounded-2xl border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
+          data-testid="routine-prescription-note"
+        >
+          {prescriptionNote}
+        </p>
+      )}
 
       {/* Active day exercises */}
       <div className="space-y-3">

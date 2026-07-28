@@ -77,7 +77,41 @@ export interface OnboardingDraft {
   loved_equipment_slugs: string[];
 
   // step 7 · exercises you enjoy
+  /**
+   * LEGACY open "any exercises you love?" multi-select. Kept because older drafts (and older
+   * backups) carry it and generation still reads it as a fallback — but `liked_exercises` is the
+   * answer of record now. See `preferencesForDraft` in `lib/demo/generate.ts` for the precedence.
+   */
   favorites: NamedRef[];
+
+  /**
+   * TOP 5 LIKED — RANKED, index 0 = favourite. Asked BEFORE the split step, because the split is
+   * the single biggest determinant of what someone actually does and it used to be chosen before
+   * the app knew one thing about what they enjoy.
+   *
+   * Drives BOTH split scoring (`recommendSplits`) and per-slot exercise selection.
+   */
+  liked_exercises: NamedRef[];
+
+  /**
+   * TOP 5 DISLIKED — RANKED, index 0 = most disliked. **NOT an exclusion list.**
+   *
+   * The app already has a real exclusion step ("anything we should protect?", `body_areas` /
+   * `excluded_exercises`) and that one REMOVES work. This one does not: a disliked movement is
+   * down-ranked and swapped for a LOWER-DIFFICULTY option that trains the same pattern and
+   * muscles, so the coverage survives and only the specific lift changes. Where nothing suitable
+   * exists the original stays and `PlanCoverage.keptDislikes` says so.
+   *
+   * Starts EMPTY for everyone, forever — see `dislikedDefaults()` in `@fitforge/shared/rules`.
+   */
+  disliked_exercises: NamedRef[];
+
+  /**
+   * Whether the two lists above are still FitForge's suggestion or the athlete's own answer.
+   * Mirrors `targets_source`. Once this reads `'custom'` the sex pre-fill must never re-assert
+   * itself — an edit is respected permanently, including on a later visit to the screen.
+   */
+  exercise_prefs_source: 'suggested' | 'custom';
 
   // step 8 · exclusions
   body_areas: BodyArea[];
@@ -120,6 +154,9 @@ export function emptyDraft(): OnboardingDraft {
     equipment_slugs: [],
     loved_equipment_slugs: [],
     favorites: [],
+    liked_exercises: [],
+    disliked_exercises: [],
+    exercise_prefs_source: 'suggested',
     body_areas: [],
     movement_exclusions: [],
     excluded_exercises: [],

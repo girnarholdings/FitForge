@@ -59,10 +59,21 @@ export const TrendingUpIcon = (p: IconProps) => (
   </Svg>
 );
 
+/**
+ * Settings — a real COG, with teeth.
+ *
+ * This was a circle with eight radiating spokes, which is the universal drawing of a sun or a
+ * spark, not a gear. It sat directly beside the theme toggle, which IS a sun, so the top bar
+ * carried two near-identical glyphs and neither said "settings". Reported as "it looks like a
+ * flash icon" — correctly.
+ *
+ * A gear reads as a gear because the teeth are closed shapes attached to the rim, not lines
+ * pointing away from it.
+ */
 export const SettingsIcon = (p: IconProps) => (
   <Svg {...p}>
-    <circle cx="12" cy="12" r="3" />
-    <path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8 6 18M18 6l1.8-1.8" />
+    <circle cx="12" cy="12" r="3.2" />
+    <path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a1.94 1.94 0 1 1-2.75 2.75l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-.97 1.47V21a1.94 1.94 0 0 1-3.88 0v-.1a1.6 1.6 0 0 0-1.05-1.47 1.6 1.6 0 0 0-1.77.32l-.06.06a1.94 1.94 0 1 1-2.75-2.75l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-.97H3a1.94 1.94 0 0 1 0-3.88h.1a1.6 1.6 0 0 0 1.47-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a1.94 1.94 0 1 1 2.75-2.75l.06.06a1.6 1.6 0 0 0 1.77.32H9a1.6 1.6 0 0 0 .97-1.47V3a1.94 1.94 0 0 1 3.88 0v.1a1.6 1.6 0 0 0 .97 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a1.94 1.94 0 1 1 2.75 2.75l-.06.06a1.6 1.6 0 0 0-.32 1.77V9a1.6 1.6 0 0 0 1.47.97H21a1.94 1.94 0 0 1 0 3.88h-.1a1.6 1.6 0 0 0-1.47.97Z" />
   </Svg>
 );
 

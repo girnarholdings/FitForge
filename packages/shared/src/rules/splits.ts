@@ -224,6 +224,8 @@ export function buildDayPlan(
  * ============================================================================================= */
 
 import type { GoalType, ExperienceLevel, TrainingLocation } from '../types/database.js';
+import type { CatalogExercise } from './substitution.js';
+import { likedSplitBonus } from './preferences.js';
 
 /* ---------------------------------------------------------------- extra named day templates */
 
@@ -1445,6 +1447,18 @@ export interface SplitRecommendationInput {
   equipment_slugs?: readonly string[] | null;
   training_location?: TrainingLocation | null;
   session_minutes?: number | null;
+  /**
+   * The athlete's RANKED liked exercises (index 0 = favourite). The exercise-preference step now
+   * runs BEFORE this one, which is the whole point of moving it: the split is the single biggest
+   * determinant of what someone actually does, and it used to be chosen before the app knew one
+   * thing about what they enjoy.
+   *
+   * Bounded by `LIKED_SPLIT_MAX_BONUS` so it breaks ties without ever outweighing days/week,
+   * experience or goal — see `preferences.ts`.
+   */
+  liked_exercise_slugs?: readonly string[] | null;
+  /** Catalog to resolve `liked_exercise_slugs` against. Without it the liked bonus is simply 0. */
+  catalog?: readonly CatalogExercise[] | null;
 }
 
 export interface SplitRecommendation {
@@ -1503,6 +1517,7 @@ function suitsContext(split: SplitDefinition, location: TrainingLocation | null 
  *   • context    : kit profile suits where they train (+10)
  *   • level      : match +18, adjacent +6
  *   • goal       : primary +15, secondary +6
+ *   • liked      : up to +12, scaled by how much of the split is the patterns they like
  *   • tie-break  : library order (stable)
  */
 export function recommendSplits(
@@ -1512,6 +1527,8 @@ export function recommendSplits(
   const days = input.days_per_week ?? 3;
   const level = input.experience_level ?? 'beginner';
   const goal = input.primary_goal ?? 'general_health';
+  const liked = input.liked_exercise_slugs ?? [];
+  const catalog = input.catalog ?? [];
   const levelRank: Record<ExperienceLevel, number> = {
     beginner: 0,
     intermediate: 1,
@@ -1572,6 +1589,18 @@ export function recommendSplits(
         reasons.push('Also fits your other goals');
       }
     });
+
+    // Liked exercises come LAST in the scoring order on purpose: capped at
+    // LIKED_SPLIT_MAX_BONUS (12), it is smaller than the goal match (15) and the level match (18),
+    // so it can reorder two programs that are already both appropriate but cannot promote one that
+    // is not.
+    if (liked.length > 0 && catalog.length > 0) {
+      const likedScore = likedSplitBonus(split, liked, catalog);
+      if (likedScore.bonus > 0) {
+        score += likedScore.bonus;
+        if (likedScore.reason) reasons.push(likedScore.reason);
+      }
+    }
 
     return { split, score, reasons, index };
   });

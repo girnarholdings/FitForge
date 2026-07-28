@@ -66,9 +66,23 @@ export async function answerEquipmentDeck(page: Page, count = 3): Promise<void> 
 }
 
 /**
- * Walk onboarding as far as the EQUIPMENT step (goals → experience → schedule → split →
- * progression → location), leaving the page on `/onboarding/equipment` with the "Home gym" preset
- * already seeded.
+ * The exercise-preference step (now BEFORE split — it feeds split scoring). On a first pass sex
+ * is unknown, so the tray arrives PRE-FILLED with the five-lift neutral seed; the step is always
+ * continue-able. Waits for the seed so a later assertion never races the seeding effect.
+ */
+export async function passExercisePrefs(page: Page): Promise<void> {
+  await page.waitForURL(/\/onboarding\/exercise_prefs/);
+  await expect(page.getByTestId('prefs-step')).toBeVisible();
+  // The neutral seed fills all five ranked slots and says where it came from.
+  await expect(page.locator('[data-testid^="prefs-tray-row-"]')).toHaveCount(5);
+  await expect(page.getByTestId('prefs-seed-banner')).toBeVisible();
+  await cont(page);
+}
+
+/**
+ * Walk onboarding as far as the EQUIPMENT step (goals → experience → schedule → exercise prefs →
+ * split → progression → location), leaving the page on `/onboarding/equipment` with the
+ * "Home gym" preset already seeded.
  */
 export async function advanceToEquipment(page: Page): Promise<void> {
   await enterDemo(page);
@@ -79,6 +93,8 @@ export async function advanceToEquipment(page: Page): Promise<void> {
   await cont(page);
   await page.waitForURL(/\/onboarding\/schedule/);
   await cont(page);
+  // Exercise prefs — moved BEFORE split; the pre-filled tray keeps it continue-able.
+  await passExercisePrefs(page);
   await page.waitForURL(/\/onboarding\/split/);
   await cont(page);
   // Progression — a scheme is already selected (the recommendation), so Continue alone advances.
@@ -91,6 +107,14 @@ export async function advanceToEquipment(page: Page): Promise<void> {
 }
 
 export interface OnboardingHooks {
+  /**
+   * Leave the FIRST-RUN TOUR armed on arrival at `/today`.
+   *
+   * By default `completeOnboarding` dismisses it, because it is a `role="dialog"` sheet that opens
+   * over Today a beat after onboarding lands there — i.e. over the screen most specs go on to
+   * interact with. Only `tour.spec.ts` wants it.
+   */
+  keepTour?: boolean;
   /** Runs on the split step, before Continue — e.g. to pick a specific program. */
   onSplit?: (page: Page) => Promise<void>;
   /** Runs on the progression step, before Continue — e.g. to pick a specific scheme. */
@@ -123,14 +147,19 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   await page.waitForURL(/\/onboarding\/schedule/);
   await cont(page);
 
-  // 5 · Split (NEW, WS-5) — the best-matching program is preselected on mount, so Continue alone
+  // 5 · Exercise prefs — MOVED BEFORE SPLIT so the liked list can steer split scoring. First
+  // pass = neutral pre-fill (sex is asked later, at body metrics); five ranked rows are already
+  // in the tray, so Continue alone advances.
+  await passExercisePrefs(page);
+
+  // 6 · Split (WS-5) — the best-matching program is preselected on mount, so Continue alone
   // advances. Assert something was actually chosen before moving on.
   await page.waitForURL(/\/onboarding\/split/);
   await expect(page.getByTestId('onboarding-continue')).toBeEnabled();
   if (hooks.onSplit) await hooks.onSplit(page);
   await cont(page);
 
-  // 6 · Progression (NEW, WS-P) — a scheme is always selected: the athlete's explicit choice, or
+  // 7 · Progression (WS-P) — a scheme is always selected: the athlete's explicit choice, or
   // the recommendation for their level and goal. Assert the step really did prescribe something
   // (the per-set preview) rather than just rendering a list of names.
   await page.waitForURL(/\/onboarding\/progression/);
@@ -138,25 +167,15 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   if (hooks.onProgression) await hooks.onProgression(page);
   await cont(page);
 
-  // 7 · Location — home gym.
+  // 8 · Location — home gym.
   await page.waitForURL(/\/onboarding\/location/);
   await page.getByText('Home gym').click();
   await cont(page);
 
-  // 8 · Equipment — now a SWIPE DECK (WS-1). Walk it via the accessible buttons, then continue
+  // 9 · Equipment — now a SWIPE DECK (WS-1). Walk it via the accessible buttons, then continue
   // from the review screen.
   await page.waitForURL(/\/onboarding\/equipment/);
   await answerEquipmentDeck(page);
-  await cont(page);
-
-  // 9 · Exercise prefs — add a favorite from the suggestion chips.
-  await page.waitForURL(/\/onboarding\/exercise_prefs/);
-  const popular = page
-    .locator('section')
-    .filter({ hasText: 'Popular with your equipment' });
-  if (await popular.count()) {
-    await popular.getByRole('button').first().click();
-  }
   await cont(page);
 
   // 10 · Exclusions — protect a body area + exclude an exercise and accept a substitution.
@@ -201,6 +220,25 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   await cont(page);
 
   await page.waitForURL(/\/today/);
+  if (!hooks.keepTour) await dismissFirstRunTour(page);
+}
+
+/**
+ * Stamp the first-run tour as seen and reload, so Today renders without a modal over it.
+ *
+ * WRITES THE FLAG rather than clicking Skip: the tour opens on a deliberate delay, so "click it if
+ * it happens to be there" is a race, and "wait for it" would hang for any state that was never
+ * owed one. Writing the field is deterministic in both cases.
+ */
+export async function dismissFirstRunTour(page: Page): Promise<void> {
+  await page.evaluate((key) => {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return;
+    const state = JSON.parse(raw) as Record<string, unknown>;
+    state.tourSeenAt = new Date().toISOString();
+    window.localStorage.setItem(key, JSON.stringify(state));
+  }, DEMO_STORAGE_KEY);
+  await page.reload();
 }
 
 /** Read the persisted demo state from localStorage. */
@@ -409,6 +447,10 @@ export function bareCompletedState(): Record<string, unknown> {
     targets: null,
     logsByDate: {},
     weights: [],
+    // A "completed user" fixture is not a first-timer, so the tour is already behind them. Specs
+    // that DO want it (tour.spec.ts) override this with `null` explicitly, which also documents at
+    // the call site that the tour is the thing under test.
+    tourSeenAt: '2026-07-01T10:05:00.000Z',
   };
 }
 
@@ -456,6 +498,9 @@ export const DEFAULT_DRAFT: Record<string, unknown> = {
   equipment_slugs: [],
   loved_equipment_slugs: [],
   favorites: [],
+  liked_exercises: [],
+  disliked_exercises: [],
+  exercise_prefs_source: 'suggested',
   body_areas: [],
   movement_exclusions: [],
   excluded_exercises: [],

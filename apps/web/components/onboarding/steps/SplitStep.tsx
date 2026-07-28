@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Screen 5 · Split (§2.2 + WS-5).
+ * Screen 6 · Split (§2.2 + WS-5) — now AFTER the exercise-preference step, whose ranked liked
+ * list feeds the recommendation scoring below.
  *
  * Shows the 4 best-matching programs from the 26-program SPLIT_LIBRARY for the answers given so
  * far (days/week × experience × goal × equipment), plus "Pick for me" and a sheet with the whole
@@ -12,10 +13,12 @@
  * dock, so nothing is ever covered at 390 × 664.
  */
 import * as React from 'react';
+import catalogFixtureJson from '@fitforge/shared/fixtures/catalog.json';
 import {
   recommendSplits,
   SPLIT_LIBRARY,
   AUTO_SPLIT_SLUG,
+  type CatalogExercise,
   type SplitRecommendationInput,
 } from '@fitforge/shared/rules';
 import type { GoalType, ExperienceLevel } from '@fitforge/shared/types';
@@ -26,6 +29,9 @@ import { useOnboarding } from '../OnboardingProvider';
 import { OnboardingFooter } from '../OnboardingFooter';
 
 const RECOMMENDED_COUNT = 4;
+
+/** Raw fixture rows — `recommendSplits` resolves liked slugs against `CatalogExercise`. */
+const RULE_CATALOG = catalogFixtureJson as unknown as CatalogExercise[];
 
 export function SplitStep() {
   const { draft, patch } = useOnboarding();
@@ -45,6 +51,11 @@ export function SplitStep() {
       secondary_goal: draft.secondary_goal as GoalType | null,
       equipment_slugs: draft.equipment_slugs,
       training_location: draft.training_location,
+      // The preference step now runs BEFORE this one precisely so the ranked liked list can
+      // steer these recommendations (docs/RESEARCH-PREFERENCES.md §1). Capped at +12 inside
+      // `recommendSplits` — it breaks ties, it never out-votes days/week or level.
+      liked_exercise_slugs: draft.liked_exercises.map((r) => r.slug),
+      catalog: RULE_CATALOG,
     }),
     [
       draft.days_per_week,
@@ -55,6 +66,7 @@ export function SplitStep() {
       draft.secondary_goal,
       draft.equipment_slugs,
       draft.training_location,
+      draft.liked_exercises,
     ],
   );
 

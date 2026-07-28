@@ -50,6 +50,10 @@ import {
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { slugForExercise } from '@/lib/equipment/slugForExercise';
 import { SubstituteSheet } from '@/components/features/shared/SubstituteSheet';
+import { GlossaryTerm } from '@/components/features/shared/GlossaryTerm';
+import { SetField, SetFieldCell } from './SetField';
+import { FirstSetExplainer, FIRST_SET_EXPLAINER_ID } from './FirstSetExplainer';
+import { dismissExplainer } from '@/components/features/shared/explainers';
 import {
   mockPreviousSets,
   mockExerciseById,
@@ -603,6 +607,10 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
     // Compute PRs against everything logged *before* this session, then persist.
     const beaten = prsInSession(session, getSessions());
     logSession(session);
+    // The first-workout explainer has done its job the moment a workout is finished, whether or not
+    // the athlete ever tapped its X. Without this, someone who simply ignored the card would meet
+    // it again on session two — and a "read this once" card that shows twice is worse than none.
+    dismissExplainer(FIRST_SET_EXPLAINER_ID);
     setFinishedSession(session);
     setPrs(beaten);
     setFinished(true);
@@ -734,10 +742,23 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             </h1>
             {/* The rest figure here is the ROW's, which is the same number the session card's
                 minute estimate is built from and the same number the timer counts down. Three
-                surfaces, one source. */}
+                surfaces, one source.
+
+                It is also THE FIRST LINE OF GYM VOCABULARY ON THE SCREEN, so it is the first line
+                that gets the dotted underline: a rep range carries a RULE ("get the top of it on
+                every set, THEN go heavier"), which is unguessable from two numbers and a dash. */}
             <p className="mt-0.5 text-sm text-muted-foreground" data-testid="workout-target-line">
-              Target {plan.sets.length} × {re.rep_min}–{re.rep_max}
-              {re.target_rpe ? ` · RPE ${re.target_rpe}` : ''} · rest {baseRest}s
+              Target {plan.sets.length} ×{' '}
+              <GlossaryTerm id="rep-range" label={`${re.rep_min}–${re.rep_max}`} />
+              {re.target_rpe ? (
+                <>
+                  {' · '}
+                  <GlossaryTerm id="rpe" label="RPE" /> {re.target_rpe}
+                </>
+              ) : (
+                ''
+              )}{' '}
+              · rest {baseRest}s
             </p>
             {/* THE SCHEME CHIP IS NOW THE DISCLOSURE. The chip already names the scheme; the
                 two-line explainer and the three-line trim notice underneath it were rendered on
@@ -908,7 +929,15 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             wants to read as the machined faceplate they are bolted to. Handing the gold hairline
             back also makes it scarce again — it stays for the genuinely premium moments (plan
             preview, PR card, streak) instead of being the default for "important". The
-            glow-while-resting treatment is unaffected; it rides on the className. */}
+            glow-while-resting treatment is unaffected; it rides on the className.
+
+            THERE IS NO COLUMN HEADER ANY MORE, and that is the fix rather than an omission. A fixed
+            `Weight (kg) | Reps | RPE | Done` strip sat over a grid template that every row
+            re-declared for itself, so the active row — which lifts its weight input onto its own
+            line as a plate stepper — put the "Plate math" trigger under the word "Weight". Two
+            independent declarations of one contract. Every control now emits its own label from the
+            same props (see `SetField`), so a label describing a control it does not contain is not
+            a thing this file can express. */}
         <Card
           variant="steel"
           className={
@@ -916,15 +945,6 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             (resting ? 'shadow-[var(--shadow-glow)]' : '')
           }
         >
-          <div className="grid grid-cols-[1fr_1fr_2.5rem_2.75rem] items-center gap-2 border-b border-border px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {/* On a chin-up the weight column is not "the weight" — it is whatever you HUNG on a
-                belt, usually nothing. Naming it honestly is the difference between an empty field
-                that makes sense and one that looks broken. */}
-            <span>{plan.isBodyweight ? 'Added kg' : 'Weight (kg)'}</span>
-            <span>Reps</span>
-            <span>RPE</span>
-            <span className="text-right">Done</span>
-          </div>
           <ul>
             {current.sets.map((s, i) => {
               const ghost = mockPreviousSets(re.exercise_slug, current.sets.length)[i];
@@ -949,10 +969,74 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
                 : suggested != null
                   ? String(suggested)
                   : '';
+              const setNo = i + 1;
+              /* The three fields, built ONCE and placed by the row shape rather than re-declared
+                 per shape. Each one carries its own label — that is the invariant this card is
+                 built around, and building them here is what stops a future shape re-inventing
+                 them slightly differently. */
+              const repsField = (
+                <SetField
+                  id={`set-${setNo}-reps`}
+                  label="Reps"
+                  name={`Set ${setNo} reps`}
+                  inputMode="numeric"
+                  value={s.reps || null}
+                  /* GHOST FIRST in the placeholder, because the target is now in the VALUE. The
+                     hint under this card promises the greyed numbers are last session's sets, so
+                     the greyed number has to be last session's set. */
+                  placeholder={String(ghost?.reps ?? target?.reps ?? re.rep_max)}
+                  onChange={(v) => updateSet(index, i, { reps: v ?? 0 })}
+                />
+              );
+              const rpeField = (
+                <SetField
+                  id={`set-${setNo}-rpe`}
+                  label="RPE"
+                  name={`Set ${setNo} RPE`}
+                  /* The one word on this card a beginner cannot guess, and the app asks for it in a
+                     box. It gets the `?` on every row, not only the first. */
+                  glossary="rpe"
+                  align="center"
+                  value={s.rpe}
+                  placeholder={ghost?.rpe != null ? String(ghost.rpe) : '—'}
+                  onChange={(v) => updateSet(index, i, { rpe: v })}
+                />
+              );
+              const doneCell = (
+                <SetFieldCell label="Done" align="center">
+                  {/* Was a to-do-list checkbox. Now a spring collar that closes — the gesture a
+                      lifter already performs to lock a bar. aria-label and aria-pressed are
+                      byte-for-byte what they were; the workout spec matches /Mark set 1/. */}
+                  <CollarLatch
+                    className="mx-auto"
+                    done={s.done}
+                    onClick={() => completeSet(i)}
+                    aria-label={`Mark set ${setNo} ${s.done ? 'not done' : 'done'}`}
+                    data-testid={`set-latch-${i}`}
+                  />
+                </SetFieldCell>
+              );
+              const plateMathButton = plan.isBodyweight ? null : (
+                <button
+                  type="button"
+                  aria-label={`Plate math for set ${setNo}`}
+                  onClick={() => setPlateForSet(i)}
+                  /* 44 × 44 on every row. A bathroom-scale glyph on the button that opens a BARBELL
+                     PLATE diagram was a straight semantic mismatch; ScaleIcon keeps its job on the
+                     weigh-in card. A movement with no bar has no plate math, so it is simply
+                     absent. */
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-field border border-border bg-surface-2 text-muted-foreground transition-colors hover:text-accent"
+                >
+                  <PlateIcon size={16} />
+                </button>
+              );
               return (
                 <li
                   key={i}
-                  data-testid={`set-row-${i + 1}`}
+                  data-testid={`set-row-${setNo}`}
+                  /* The row's shape, said out loud, so a spec can assert on the state rather than
+                     on the pixels that express it. */
+                  data-state={s.done ? 'logged' : isActive ? 'current' : 'upcoming'}
                   className={
                     'border-b border-border px-4 py-2 last:border-b-0 transition-colors ' +
                     (s.done ? 'bg-accent-muted/40 ' : '') +
@@ -994,9 +1078,18 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
                   {target && target.role !== 'work' && (
                     <p
                       className="mt-0.5 text-[11px] leading-snug text-muted-foreground"
-                      data-testid={`set-cue-${i + 1}`}
+                      data-testid={`set-cue-${setNo}`}
                     >
-                      {target.cue}
+                      {/* THE SCHEME NAMES THE CONCEPT IT JUST USED. "Top set" and "back-off" are
+                          the two words this app prints most and defined least — and they are
+                          printed by a scheme the athlete may have picked five screens ago. The
+                          word itself is the button. */}
+                      <GlossaryTerm
+                        id={target.role === 'top' ? 'top-set' : 'backoff-set'}
+                        label={target.role === 'top' ? 'Top set' : 'Back-off set'}
+                        className="font-semibold text-foreground"
+                      />{' '}
+                      — {target.cue}
                     </p>
                   )}
                   {/* The gate, stated. A dimmed row with no explanation is a bug; a dimmed row that
@@ -1017,96 +1110,52 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
                       </button>
                     </div>
                   )}
-                  {/* THE ACTIVE SET gets the loaded bar: two plates you spin on a sleeve either
-                      side of the weight, on their own line so the control has room to be a real
-                      44 px target. The centre stays a genuine <input type="number"> — the numeric
-                      keypad, arrow keys and the `Set N weight` spinbutton name all depend on it.
-                      A bodyweight movement has no plates to spin, so it does not get one. */}
-                  {isActive && !plan.isBodyweight && (
-                    <PlateStepper
-                      className="mt-1.5"
-                      aria-label={`Set ${i + 1} weight`}
-                      value={s.weight_kg}
-                      onChange={(v) => updateSet(index, i, { weight_kg: v })}
-                      placeholder={placeholder}
-                    />
-                  )}
-                  <div className="mt-1.5 grid grid-cols-[1fr_1fr_2.5rem_2.75rem] items-center gap-2">
+                  {/* THE FIELDS. Two shapes, no shared header — see the card's comment.
+                      THE ACTIVE SET gets the loaded bar: two plates you spin on a sleeve either
+                      side of the weight, on its own line so the control has room to be a real 44 px
+                      target. The centre stays a genuine <input type="number"> — the numeric keypad,
+                      the arrow keys and the `Set N weight` spinbutton name all depend on it. A
+                      bodyweight movement has no plates to spin, so it does not get one. */}
+                  <div className="mt-1.5" data-testid={`set-fields-${setNo}`}>
                     {isActive && !plan.isBodyweight ? (
-                      // The weight column is already spent above, so it carries the plate-math
-                      // trigger instead — keeping reps, RPE and Done aligned under their headers.
-                      <button
-                        type="button"
-                        aria-label={`Plate math for set ${i + 1}`}
-                        onClick={() => setPlateForSet(i)}
-                        className="inline-flex h-11 min-w-[44px] items-center gap-1.5 justify-self-start rounded-field border border-border bg-surface-2 px-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-accent"
-                      >
-                        <PlateIcon size={15} /> Plates
-                      </button>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          aria-label={`Set ${i + 1} weight`}
-                          value={s.weight_kg || ''}
+                      <>
+                        <SetField
+                          id={`set-${setNo}-weight`}
+                          label="Weight"
+                          name={`Set ${setNo} weight`}
+                          unit="kg"
+                          variant="stepper"
+                          value={s.weight_kg || null}
                           placeholder={placeholder}
-                          onChange={(e) => updateSet(index, i, { weight_kg: Number(e.target.value) })}
-                          className="h-9 w-full rounded-field border border-border bg-surface px-2 text-sm tabular-nums outline-none focus:border-accent"
+                          onChange={(v) => updateSet(index, i, { weight_kg: v ?? 0 })}
+                          trailing={plateMathButton}
                         />
-                        {/* A bathroom-scale glyph on the button that opens a BARBELL PLATE diagram
-                            was a straight semantic mismatch. ScaleIcon keeps its job on the
-                            weigh-in card, where a scale is the correct object. A movement with no
-                            bar has no plate math either, so the trigger is simply absent. */}
-                        {!plan.isBodyweight && (
-                          <button
-                            type="button"
-                            aria-label={`Plate math for set ${i + 1}`}
-                            onClick={() => setPlateForSet(i)}
-                            /* 44 × 44, matching sets 2-4 to set 1 and to every other latch on this
-                               screen. These measured 36 × 36 while set 1's read 76 × 36, so the
-                               plate affordance both missed the minimum AND changed shape between
-                               rows of the same list. */
-                            className="grid h-11 w-11 shrink-0 place-items-center rounded-field border border-border bg-surface-2 text-muted-foreground transition-colors hover:text-accent"
-                          >
-                            <PlateIcon size={16} />
-                          </button>
-                        )}
+                        <div className="mt-1.5 grid grid-cols-[1fr_1fr_2.75rem] items-end gap-2">
+                          {repsField}
+                          {rpeField}
+                          {doneCell}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="grid grid-cols-[1fr_1fr_2.5rem_2.75rem] items-end gap-2">
+                        <SetField
+                          id={`set-${setNo}-weight`}
+                          label="Weight"
+                          name={`Set ${setNo} weight`}
+                          /* On a chin-up the weight is not "the weight" — it is whatever you HUNG
+                             on a belt, usually nothing. The unit says so, outside the <label>, so
+                             the visible label stays a subset of the accessible name. */
+                          unit={plan.isBodyweight ? 'added kg' : 'kg'}
+                          value={s.weight_kg || null}
+                          placeholder={placeholder}
+                          onChange={(v) => updateSet(index, i, { weight_kg: v ?? 0 })}
+                          trailing={plateMathButton}
+                        />
+                        {repsField}
+                        {rpeField}
+                        {doneCell}
                       </div>
                     )}
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      aria-label={`Set ${i + 1} reps`}
-                      value={s.reps || ''}
-                      /* GHOST FIRST in the placeholder, because the target is now in the VALUE.
-                         The hint under this card promises the greyed numbers are last session's
-                         sets, so the greyed number has to be last session's set. */
-                      placeholder={String(ghost?.reps ?? target?.reps ?? re.rep_max)}
-                      onChange={(e) => updateSet(index, i, { reps: Number(e.target.value) })}
-                      className="h-9 w-full rounded-field border border-border bg-surface px-2 text-sm tabular-nums outline-none focus:border-accent"
-                    />
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      aria-label={`Set ${i + 1} RPE`}
-                      value={s.rpe ?? ''}
-                      placeholder={ghost?.rpe != null ? String(ghost.rpe) : '—'}
-                      onChange={(e) =>
-                        updateSet(index, i, { rpe: e.target.value ? Number(e.target.value) : null })
-                      }
-                      className="h-9 w-full rounded-field border border-border bg-surface px-1 text-center text-sm tabular-nums outline-none focus:border-accent"
-                    />
-                    {/* Was a to-do-list checkbox. Now a spring collar that closes — the gesture a
-                        lifter already performs to lock a bar. aria-label and aria-pressed are
-                        byte-for-byte what they were; the workout spec matches /Mark set 1/. */}
-                    <CollarLatch
-                      className="ml-auto"
-                      done={s.done}
-                      onClick={() => completeSet(i)}
-                      aria-label={`Mark set ${i + 1} ${s.done ? 'not done' : 'done'}`}
-                      data-testid={`set-latch-${i}`}
-                    />
                   </div>
                 </li>
               );
@@ -1118,6 +1167,19 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
             </button>
           </div>
         </Card>
+
+        {/* THE FOUR SENTENCES SOMEONE NEEDS BEFORE THEIR FIRST EVER LOGGED SET — first session
+            only, dismissible, and it teaches the dotted-underline affordance the rest of this
+            screen depends on.
+
+            DIRECTLY UNDER THE SET LIST, NOT ABOVE IT, and that placement is measured rather than
+            chosen. The card is 326 px tall; on a 390 × 664 phone the first working set already sits
+            at ~633 px (mobility block, warm-up ramp and the no-history anchor prompt are all above
+            it), so putting an explainer in front of the fields pushes the primary action of the
+            screen to ~961 px — off-screen, for the exact user least equipped to go looking for it.
+            An explanation you scroll INTO on your way down beats one that buries what it explains.
+            `prescription-fidelity.spec.ts` holds that line. */}
+        <FirstSetExplainer />
 
         {/* Ghost hint */}
         <p
@@ -1131,8 +1193,9 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
               to suggest. Now the fields carry the PRESCRIPTION and the greyed numbers behind them
               carry last session, which is exactly what this sentence says. */}
           Boxes are pre-filled with what your scheme prescribes today. Greyed numbers behind them
-          are last session&rsquo;s sets. Tap ✓ to log what you actually did — edit first if it
-          differs.
+          are last session&rsquo;s sets.{' '}
+          <GlossaryTerm id="log-the-set" label="Close the collar" /> to log what you actually did —
+          edit first if it differs.
         </p>
 
         {/* What makes the weight go up. Without this a scheme is decoration. */}
@@ -1309,7 +1372,11 @@ function WarmupList({
           {allDone
             ? `Warm-up · ${steps.length} ${steps.length === 1 ? 'set' : 'sets'} done.`
             : `${steps.length} ${steps.length === 1 ? 'step' : 'steps'} in the movement you are about to train${alreadyWarm ? ' — tapered, because an earlier lift already warmed this pattern' : ''}. Tap to open.`}{' '}
-          These do not count towards your working sets.
+          {/* The two words that decide whether this block makes sense at all. "Warm-up set" and
+              "working set" are the app's own distinction — it is what the whole set counter is
+              denominated in — and it was stated nowhere. */}
+          These are <GlossaryTerm id="warmup-set" label="warm-up sets" />, so they do not count
+          towards your <GlossaryTerm id="working-set" label="working sets" />.
         </p>
       ) : (
         <>
@@ -1346,9 +1413,10 @@ function WarmupList({
               naming a prerequisite it did not provide. It provides one now (the block above the
               ramp on exercise 1), so the sentence points at it instead of at nothing. */}
           <p className="border-t border-border px-4 py-2 text-[11px] leading-snug text-muted-foreground">
-            These don&rsquo;t count towards your working sets. Mobility work warms your body; this
-            warms the lift &mdash; under a heavy-first scheme you need both, and the mobility block
-            for this session is at the top of exercise 1.
+            These don&rsquo;t count towards your{' '}
+            <GlossaryTerm id="working-set" label="working sets" />. Mobility work warms your body;
+            this warms the lift &mdash; under a heavy-first scheme you need both, and the mobility
+            block for this session is at the top of exercise 1.
           </p>
         </>
       )}

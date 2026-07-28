@@ -16,6 +16,7 @@ import { MuscleMapThumb } from '@/components/illustrations';
 import {
   finalizeOnboarding,
   planCoverageForDraft,
+  prescriptionAdjustmentForDraft,
   describeDay,
   exerciseCountLabel,
 } from '@/lib/demo/generate';
@@ -131,6 +132,11 @@ export function PlanPreviewStep() {
   // quietly shipping a skeleton week. Derived from the same generation pass that built `routine`.
   const coverage = React.useMemo(() => planCoverageForDraft(draft), [draft]);
 
+  // The rest/rep numbers in the day detail below are sex-adjusted for a female draft, and an
+  // unexplained personalisation about the athlete's body is indistinguishable from a bug. This is
+  // the label `sexAdjustedPrescription` returns precisely so the numbers can never ship bare.
+  const prescription = React.useMemo(() => prescriptionAdjustmentForDraft(draft), [draft]);
+
   return (
     <div className="space-y-4">
       {!routine && <p className="text-sm text-muted-foreground">Building your plan…</p>}
@@ -219,6 +225,31 @@ export function PlanPreviewStep() {
                 </div>
               </div>
             </Card>
+          )}
+
+          {/* A disliked lift the catalogue had no easier same-pattern replacement for, so it
+              stayed. Rendered on its OWN condition, never `coverage.limited`: this is not the plan
+              being cut short, it is one lift still being there, and it must not fire the "running
+              lean" banner. Deliberately quieter than that card for the same reason. Leaving it
+              unexplained is the exact silent hole `keptDislikesNote` was written to close. */}
+          {coverage.keptDislikes.length > 0 && (
+            <p
+              className="rounded-card border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
+              data-testid="plan-kept-dislikes"
+            >
+              {coverage.keptDislikesNote}
+            </p>
+          )}
+
+          {/* Sits with the plan, not inside one day, because the adjustment applies to every row's
+              rest and rep figures below. `adjusted` is false for every draft it did not change. */}
+          {prescription.adjusted && (
+            <p
+              className="rounded-card border border-border bg-surface-2 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
+              data-testid="plan-prescription-note"
+            >
+              {prescription.label}
+            </p>
           )}
 
           <p className="text-sm text-muted-foreground">
