@@ -62,10 +62,26 @@ jobs:
       # continue-on-error is deliberate: if USDA is down or moves a dated filename, the deploy
       # should still ship with the curated 509-food tier-1 core rather than failing outright. The
       # app already treats a missing tier 2 as a normal state and says so in the UI.
+      #
+      # The importer's own diagnostics go to stdout/stderr, i.e. into the job log — which is served
+      # from *.blob.core.windows.net and can be unreachable under a restricted egress policy. That
+      # is how this step failed on every deploy since the catalog was added without anyone learning
+      # WHY: the only visible trace was "Process completed with exit code 1". Echoing the tail of
+      # the output as an ::error:: puts the actual reason (the failing URL and HTTP status) into a
+      # check-run annotation, which is readable from api.github.com.
       - name: Build tier-2 food catalog (USDA FoodData Central)
         id: food
         continue-on-error: true
-        run: node seed/import-usda.mjs
+        run: |
+          set -o pipefail
+          if node seed/import-usda.mjs 2>&1 | tee /tmp/usda.log; then
+            exit 0
+          fi
+          # Collapse to one line: annotations do not preserve newlines, and the useful part is the
+          # last thing the importer said before it gave up.
+          reason=$(tail -8 /tmp/usda.log | tr '\n' ' ' | sed 's/  */ /g' | cut -c1-500)
+          echo "::error::Tier-2 USDA import failed — ${reason}"
+          exit 1
 
       # MUST run whatever the importer did. The importer stages its downloads INSIDE the output
       # directory (apps/web/public/food/.branded.zip and the unzipped .branded/ tree — see
