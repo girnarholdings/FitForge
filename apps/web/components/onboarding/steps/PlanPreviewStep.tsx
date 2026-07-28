@@ -58,7 +58,7 @@ interface SubHit {
  * up quoting different figures for one plan.
  */
 export function PlanPreviewStep() {
-  const { draft, goTo } = useOnboarding();
+  const { draft, goTo, hydrated } = useOnboarding();
   const router = useRouter();
   const [routine, setRoutine] = React.useState<Routine | null>(null);
   const [openDay, setOpenDay] = React.useState<string | null>(null);
@@ -66,15 +66,27 @@ export function PlanPreviewStep() {
   const [subs, setSubs] = React.useState<SubHit[]>([]);
   const ranRef = React.useRef(false);
 
-  // Generate + persist once on mount (§7.5).
+  /**
+   * Generate + persist once (§7.5) — but ONLY ONCE THE DRAFT IS REAL.
+   *
+   * `finalizeOnboarding` WRITES the draft it is handed straight into the store. React runs child
+   * effects before parent effects, so the []-dep version of this ran against `emptyDraft()` and
+   * persisted it over the athlete's answers — reproducible by cold-loading
+   * /onboarding/plan_preview, which is a reachable resume URL. Sex, split and every equipment
+   * answer came back as defaults.
+   *
+   * Gating on `hydrated` is the whole fix: it flips inside the provider's own mount effect, i.e.
+   * strictly after localStorage has been read, so the first plan generated here is the plan the
+   * athlete actually configured. `ranRef` still guards against a second run once it flips.
+   */
   React.useEffect(() => {
-    if (ranRef.current) return;
+    if (!hydrated || ranRef.current) return;
     ranRef.current = true;
     const r = finalizeOnboarding(draft);
     setRoutine(r);
     setOpenDay(r.days[0]?.id ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hydrated]);
 
   const openSwap = (dayId: string, row: RoutineExercise) => {
     setSwap({ dayId, rowId: row.id, exerciseId: row.exercise_id });
@@ -140,6 +152,10 @@ export function PlanPreviewStep() {
   return (
     <div className="space-y-4">
       {!routine && <p className="text-sm text-muted-foreground">Building your plan…</p>}
+      {/* Marks "the plan finished generating", which is the only point at which the store is
+          settled. The hydration regression spec waits on this rather than on a timeout — a
+          timeout would pass just as happily against the bug it exists to catch. */}
+      {routine && <span hidden data-testid="plan-preview" />}
 
       {routine && week && (
         <>

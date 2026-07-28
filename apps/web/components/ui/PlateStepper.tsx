@@ -127,6 +127,10 @@ export function PlateStepper({
         value={value || ''}
         placeholder={placeholder}
         onChange={(e) => onChange(Number(e.target.value))}
+        // h-10, NOT h-11. Matching the 44px plates either side is tempting and was tried; it
+        // grows every set row by 4px and eats the `mb-1` breathing room the label line above uses
+        // for its own hit area. 40px is already well past the WCAG 2.5.8 minimum for a field that
+        // is usually driven by the plates rather than typed into.
         className="relative z-10 h-10 min-w-0 flex-1 rounded-field border border-border bg-surface px-1 text-center text-base font-semibold tabular-nums outline-none focus:border-accent"
         {...aria}
       />

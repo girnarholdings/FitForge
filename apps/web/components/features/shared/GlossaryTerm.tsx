@@ -81,10 +81,23 @@ export function GlossaryTerm({ id, label, className }: GlossaryTermProps) {
 }
 
 /**
- * Icon-only trigger, 24px. Deliberately NOT a 44px target: it sits inside a 10px label line above
- * a 44px input, and blowing that line up to touch-target height would push every set row ~20px
- * taller for a control nobody taps twice. The word it explains is right beside it, the sheet it
- * opens is reachable from the Coach, and the input below it is the thing that must be big.
+ * Icon-only trigger: 20px OF INK, 28px OF TARGET.
+ *
+ * The house rule elsewhere in the app is 44px, and this control CANNOT have it. It renders on the
+ * SetField label line — a 10px strip with `mb-1` between two 44px `PlateStepper` rows — so a
+ * centred 44px pad would reach 12px in both directions into inputs that are themselves primary
+ * 44px targets. Two 44px targets whose centres are ~21px apart is not a thing geometry allows;
+ * one of them wins, and it must not be the field the athlete is trying to type a weight into.
+ * Growing the glyph instead is worse still: it would push every set row ~20px taller on the
+ * busiest screen in the app.
+ *
+ * So the target is enlarged as far as the space genuinely permits and no further. `-inset-1` is
+ * 4px a side — 20 + 4 + 4 = 28 — which clears the WCAG 2.5.8 AA minimum of 24x24 and consumes
+ * only the 4px gap the label line already owns, taking nothing from either stepper. A transparent
+ * `::before` does the work so this costs zero layout.
+ *
+ * The 44px affordance for this term still exists, just not here: the visible label beside it is a
+ * real `<label for>` covering the whole word, and the same explainers are reachable from Coach.
  */
 export function GlossaryInfoButton({ id, className }: { id: GlossaryTermId; className?: string }) {
   const entry = glossaryEntry(id);
@@ -98,7 +111,8 @@ export function GlossaryInfoButton({ id, className }: { id: GlossaryTermId; clas
         aria-label={`What does ${entry.term} mean?`}
         aria-haspopup="dialog"
         className={cn(
-          'grid h-5 w-5 shrink-0 place-items-center rounded-full text-muted-foreground/70',
+          'relative grid h-5 w-5 shrink-0 place-items-center rounded-full text-muted-foreground/70',
+          'touch-manipulation before:absolute before:-inset-1 before:content-[""]',
           'transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
           className,
         )}

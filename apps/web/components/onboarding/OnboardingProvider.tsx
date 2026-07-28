@@ -19,6 +19,13 @@ interface OnboardingContextValue {
    * arrival (exercise prefs) must wait for this: its mount effect and the rehydration effect run
    * in the same commit, so seeding early gets silently overwritten by the stored draft — and if
    * the seed's inputs happen to match the empty draft's, the effect never re-fires.
+   *
+   * The same ordering makes any step that WRITES draft-derived state on mount actively
+   * destructive, because React runs child effects BEFORE parent effects: the child sees
+   * `emptyDraft()`, not the athlete's answers. `PlanPreviewStep` called `finalizeOnboarding(draft)`
+   * from a []-dep effect and so persisted a default-draft plan over a completed profile on any
+   * cold load of /onboarding/plan_preview — which is a reachable resume URL, not a corner case.
+   * Any step doing draft-derived work on mount MUST gate on this.
    */
   hydrated: boolean;
   /** commit the given step (write-through to localStorage) then advance to the next screen */
@@ -63,6 +70,9 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
     if (stored && Object.keys(stored).length > 0) {
       setDraft((d) => ({ ...d, ...stored }));
     }
+    // Set LAST, and unconditionally: this means "hydration was attempted and is finished", NOT
+    // "we found something". A genuinely new user has no stored draft, and gating steps on a flag
+    // that never flips for them would hang the flow at the first step that waits on it.
     setHydrated(true);
   }, []);
 

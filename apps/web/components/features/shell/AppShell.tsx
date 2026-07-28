@@ -295,6 +295,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               data-testid="mobile-coach"
               aria-current={isActive(pathname, COACH_ITEM) ? 'page' : undefined}
               className={cn(
+                // 36px PILL, 44px TARGET. The visible circles are sized to sit beside the Local
+                // Mode chip without crowding it off a 390px bar, so they cannot simply be grown.
+                // A transparent ::before adds 4px a side instead (36 + 4 + 4 = 44) at zero layout
+                // cost — WCAG 2.5.8 governs the TARGET, not the ink. The `gap-2` between the two
+                // is 8px, so the pads meet exactly and never overlap into each other.
+                // These are the only way to reach Coach and Settings on mobile.
+                'relative touch-manipulation before:absolute before:-inset-1 before:content-[""]',
                 'grid h-9 w-9 place-items-center rounded-full border transition-colors',
                 isActive(pathname, COACH_ITEM)
                   ? 'border-transparent bg-accent-muted text-accent'
@@ -309,6 +316,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               data-testid="mobile-settings"
               aria-current={isActive(pathname, SETTINGS_ITEM) ? 'page' : undefined}
               className={cn(
+                // Same 36px-pill / 44px-target treatment as Coach above.
+                'relative touch-manipulation before:absolute before:-inset-1 before:content-[""]',
                 'grid h-9 w-9 place-items-center rounded-full border border-border transition-colors',
                 isActive(pathname, SETTINGS_ITEM)
                   ? 'border-transparent bg-accent-muted text-accent'
