@@ -36,12 +36,17 @@ export function Composer({
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 md:static md:z-auto">
+    <div className="fixed inset-x-0 bottom-0 z-30 md:static md:z-auto">
+      {/* Fades the list out under the composer instead of cutting it with a hard rule. A gradient
+          is one painted quad — unlike the blur this replaces, it costs nothing per scroll frame. */}
       <div
         aria-hidden
-        className="h-6 bg-gradient-to-t from-surface to-transparent md:hidden"
+        className="h-8 bg-gradient-to-t from-surface to-transparent md:hidden"
       />
-      <div className="border-t border-border bg-surface/95 px-4 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pt-0 md:backdrop-blur-none">
+      {/* OPAQUE and un-blurred. This sat directly above the tab bar, so the nutrition screen was
+          paying for THREE stacked backdrop-filter layers on every scroll frame — top bar, tab bar
+          and this — which is the scroll stutter. `pb` clears the floating pill below. */}
+      <div className="bg-surface px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] pt-1 md:bg-transparent md:px-0 md:pb-0 md:pt-0">
         <div className="mx-auto w-full max-w-[720px]">
           {showExamples && (
             <div className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5">
@@ -67,8 +72,13 @@ export function Composer({
               submit(text);
             }}
             className={cn(
-              'flex items-center gap-2 rounded-2xl border border-border bg-surface-2 p-1.5',
-              'shadow-[var(--shadow-card)] focus-within:border-accent',
+              // THE PRIMARY ACTION ON THIS SCREEN, styled like one. It was a `bg-surface-2` field
+              // inside a `bg-surface/95` strip — two greys a few percent apart on the dark theme,
+              // divided by a hairline — which reads as a disabled bar rather than "type here". A
+              // strong border and a lifted shadow give it an edge you can find without hunting.
+              'flex items-center gap-2 rounded-2xl border-2 p-1.5',
+              'border-border-strong bg-surface-2 shadow-[var(--shadow-pop)]',
+              'transition-colors focus-within:border-accent',
             )}
           >
             <span aria-hidden className="pl-2 text-accent">
@@ -84,7 +94,10 @@ export function Composer({
               placeholder="What did you eat?"
               autoComplete="off"
               enterKeyHint="send"
-              className="h-11 min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+              // `placeholder:text-foreground/55` rather than `text-muted-foreground`: the
+              // placeholder IS the instruction on this screen, and at muted contrast over
+              // surface-2 it was the faintest text in the app.
+              className="h-11 min-w-0 flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-foreground/55"
             />
             <button
               type="submit"

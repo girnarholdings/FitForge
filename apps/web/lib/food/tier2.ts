@@ -129,12 +129,86 @@ function hydrateFood(row: SlimFood): Food {
   };
 }
 
+/* ──────────────────────────────────────────────────────────────────── persistent shard cache ── */
+
+const CACHE_PREFIX = 'fitforge-food-';
+
+/**
+ * Cache API rather than localStorage, versioned by the catalog build.
+ *
+ * A shard is up to ~190 kB of JSON and a session touches several, so re-downloading them on every
+ * visit is the largest avoidable cost in food search. localStorage is the wrong home: it is
+ * SYNCHRONOUS, so every read and write blocks the main thread — precisely the stutter being
+ * removed here — and its ~5 MB budget is already shared with the app's own state. The Cache API is
+ * async, off-thread, and sized for response bodies.
+ *
+ * VERSIONING MATTERS MORE THAN THE CACHING. Shard URLs are stable across builds (`be.json` is
+ * always `be.json`) while their CONTENTS change every time the catalog is rebuilt, so a plain URL
+ * cache would happily serve last month's food data forever. Keying the cache NAME on
+ * `manifest.version` means a new build writes into a new cache and the previous one is dropped.
+ */
+async function shardCacheName(): Promise<string | null> {
+  const manifest = await loadManifest();
+  return manifest ? `${CACHE_PREFIX}${manifest.version}` : null;
+}
+
+/** Drop caches from earlier catalog builds. Fire-and-forget; failing is never fatal. */
+async function evictStaleCaches(current: string): Promise<void> {
+  try {
+    const names = await caches.keys();
+    await Promise.all(
+      names.filter((n) => n.startsWith(CACHE_PREFIX) && n !== current).map((n) => caches.delete(n)),
+    );
+  } catch {
+    /* Storage pressure or a private-mode restriction. The in-memory cache still works. */
+  }
+}
+
+let evicted = false;
+
+async function readShard(url: string): Promise<SlimFood[]> {
+  const res = await fetch(url).catch(() => null);
+  if (!res?.ok) return [];
+  return ((await res.json()) as { foods?: SlimFood[] }).foods ?? [];
+}
+
+async function fetchShard(key: string): Promise<SlimFood[]> {
+  const url = withBase(`/food/${key}.json`);
+
+  // Everything below is an optimisation and never a requirement: an older browser, a private mode
+  // or a non-secure origin simply goes to the network.
+  if (typeof caches === 'undefined') return readShard(url);
+
+  const name = await shardCacheName();
+  if (!name) return [];
+
+  try {
+    const cache = await caches.open(name);
+    if (!evicted) {
+      evicted = true;
+      void evictStaleCaches(name);
+    }
+    const hit = await cache.match(url);
+    if (hit) return ((await hit.json()) as { foods?: SlimFood[] }).foods ?? [];
+
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    // Clone BEFORE reading. A Response body can be consumed once, so storing the original after
+    // `.json()` would cache an already-drained response that reads back as empty.
+    void cache.put(url, res.clone()).catch(() => {});
+    return ((await res.json()) as { foods?: SlimFood[] }).foods ?? [];
+  } catch {
+    return readShard(url);
+  }
+}
+
 function loadShard(key: string): Promise<Food[]> {
+  // In-memory first: within a session the same shard is consulted on nearly every keystroke, and
+  // this skips even the async cache round-trip.
   const cached = shardCache.get(key);
   if (cached) return cached;
-  const p = fetch(withBase(`/food/${key}.json`))
-    .then((res) => (res.ok ? res.json() : { foods: [] }))
-    .then((data: { foods?: SlimFood[] }) => (data.foods ?? []).map(hydrateFood))
+  const p = fetchShard(key)
+    .then((rows) => rows.map(hydrateFood))
     .catch(() => [] as Food[]);
   shardCache.set(key, p);
   return p;

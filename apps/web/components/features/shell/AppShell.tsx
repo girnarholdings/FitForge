@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/icons';
 import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import { Sheet } from '@/components/ui';
+import { FloatingTabBar, type TabItem } from './FloatingTabBar';
 import { LogoLockup } from '@/components/illustrations';
 import { useProfileName } from '@/lib/demo/useDemo';
 import { isOnboarded } from '@/lib/demo/store';
@@ -144,6 +145,10 @@ const NAV: NavItem[] = [
   { href: '/settings', label: 'Settings', Icon: SettingsIcon, match: ['/settings'], primary: false },
 ];
 
+/** The mobile bar's items, in order. Derived from NAV so the bar and the sidebar cannot drift. */
+const PRIMARY_NAV = NAV.filter((i) => i.primary);
+const TAB_ITEMS: TabItem[] = PRIMARY_NAV.map(({ href, label, Icon }) => ({ href, label, Icon }));
+
 const SETTINGS_ITEM = NAV.find((i) => i.href === '/settings')!;
 const COACH_ITEM = NAV.find((i) => i.href === '/coach')!;
 
@@ -224,6 +229,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [checked, setChecked] = React.useState(false);
   const [explain, setExplain] = React.useState(false);
 
+  // -1 when the route is not one of the five tabs (Coach, Settings). That simply means no tab is
+  // highlighted; the bar still renders and still navigates.
+  const activeTabIndex = PRIMARY_NAV.findIndex((i) => isActive(pathname, i));
+
   // Fresh-visit gate (§5.3). Direct store read avoids the hydration double-render trap.
   React.useEffect(() => {
     if (isOnboarded()) setChecked(true);
@@ -285,7 +294,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar carries the brand + Local chip + Settings (which is off the tab bar). */}
-        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
+        {/* OPAQUE, not `bg-surface/95 backdrop-blur`. A translucent, blurred sticky header makes the
+            compositor re-sample the page behind it on every scroll frame — full width, for the
+            whole scroll, on every screen. Solid costs nothing and looks identical over a solid
+            page. */}
+        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 md:hidden">
           <LogoLockup size={18} />
           <div className="flex items-center gap-2">
             <LocalChip onClick={() => setExplain(true)} />
@@ -333,39 +346,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Bottom tab bar (mobile) */}
-      <nav
-        aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface-2/90 backdrop-blur-lg md:hidden"
-      >
-        <ul className="mx-auto flex max-w-[520px] items-stretch justify-around pb-[env(safe-area-inset-bottom)]">
-          {NAV.filter((i) => i.primary).map((item) => {
-            const active = isActive(pathname, item);
-            return (
-              <li key={item.href} className="min-w-0 flex-1">
-                <Link
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'flex flex-col items-center gap-1 px-0.5 py-2.5 text-[10px] font-semibold leading-none transition-colors',
-                    active ? 'text-accent' : 'text-muted-foreground',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'grid h-8 w-12 place-items-center rounded-full transition-colors',
-                      active ? 'bg-accent-muted' : 'bg-transparent',
-                    )}
-                  >
-                    <NavIcon item={item} active={active} size={22} />
-                  </span>
-                  <span className="max-w-full truncate">{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      {/* Bottom tab bar (mobile) — a floating, OPAQUE pill. See FloatingTabBar for why it is
+          neither blurred nor full-bleed, and for the long-press-to-scrub gesture. */}
+      <FloatingTabBar items={TAB_ITEMS} activeIndex={activeTabIndex} />
 
       <Sheet open={explain} onClose={() => setExplain(false)} title="Local Mode">
         <p className="text-sm text-muted-foreground">

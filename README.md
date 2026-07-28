@@ -258,7 +258,7 @@ fitforge/
 | [`apps/web`](./apps/web) | The app: 5 tab-bar destinations (Today · Workouts · Exercises · Nutrition · Progress) with Coach and Settings reachable from the shell chrome, a 16-screen onboarding, a design system, an SVG illustration system (poses, muscle map, equipment) and the motion layer |
 | [`packages/shared`](./packages/shared) | The single TypeScript contract: pure-TS rules, zod validation, DB types — 116 unit tests |
 | [`seed`](./seed) | 91 exercises · 31 equipment · 20 muscles · 12 categories · 26 splits · 132 substitution edges (SQL-seed copy), plus the USDA tier-2 importer |
-| [`workers/coach`](./workers/coach) | Optional Workers-AI endpoint; the app is fully functional without it |
+| [`workers/coach`](./workers/coach) | Optional Workers-AI endpoint; the app is fully functional without it. Dashboard-only setup: [docs/CLOUDFLARE-WORKER-SETUP.md](./docs/CLOUDFLARE-WORKER-SETUP.md) |
 | [`supabase`](./supabase) | Schema, RLS, RPCs and pgTAP tests from the original backend design |
 
 ---

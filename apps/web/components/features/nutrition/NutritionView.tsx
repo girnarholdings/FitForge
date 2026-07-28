@@ -50,7 +50,26 @@ export function NutritionView() {
   const [pickerSlot, setPickerSlot] = React.useState<MealSlot | null>(null);
   const [editing, setEditing] = React.useState<NutritionLog | null>(null);
 
-  const totals = sumMacros(logs);
+  const totals = React.useMemo(() => sumMacros(logs), [logs]);
+
+  /**
+   * Group once, not once per meal.
+   *
+   * Each meal card ran its own `logs.filter` plus a `reduce` in the middle of the render, so every
+   * keystroke in the composer walked the whole day's log five times over. Small in absolute terms,
+   * but it is work repeated on a component that re-renders on every input change.
+   */
+  const bySlot = React.useMemo(() => {
+    const map = new Map<MealSlot, { rows: NutritionLog[]; kcal: number }>();
+    for (const { slot } of MEAL_SLOTS) map.set(slot, { rows: [], kcal: 0 });
+    for (const l of logs) {
+      const bucket = map.get(l.meal_slot);
+      if (!bucket) continue;
+      bucket.rows.push(l);
+      bucket.kcal += l.kcal;
+    }
+    return map;
+  }, [logs]);
 
   /* ------------------------------------------------------------------ history + recents */
 
@@ -150,7 +169,9 @@ export function NutritionView() {
   }
 
   return (
-    <div className="space-y-4 pb-8 md:pb-0">
+    /* Extra bottom room on mobile only: the composer is fixed above the floating tab bar, so the
+       last meal card would otherwise sit permanently under it with no way to scroll clear. */
+    <div className="space-y-4 pb-20 md:pb-0">
       <header className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold tracking-tight">Nutrition</h1>
         <span className="text-sm text-muted-foreground">Today</span>
@@ -212,10 +233,17 @@ export function NutritionView() {
       )}
 
       {MEAL_SLOTS.map(({ slot, label }) => {
-        const slotLogs = logs.filter((l) => l.meal_slot === slot);
-        const slotKcal = slotLogs.reduce((a, l) => a + l.kcal, 0);
+        const { rows: slotLogs, kcal: slotKcal } = bySlot.get(slot) ?? { rows: [], kcal: 0 };
         return (
-          <Card key={slot} className="!p-0 shadow-[var(--shadow-card)]">
+          <Card
+            key={slot}
+            className="!p-0 shadow-[var(--shadow-card)]"
+            // Meal cards are a stack below the fold. `content-visibility: auto` lets the browser
+            // skip layout, style and paint for the off-screen ones; `contain-intrinsic-size` gives
+            // a placeholder height so skipping them does not make the scrollbar jump. The estimate
+            // only has to be close — the real height replaces it once the card scrolls in.
+            style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 120px' }}
+          >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <CardTitle className="text-base">{label}</CardTitle>
               <span className="tabular text-sm text-muted-foreground">
