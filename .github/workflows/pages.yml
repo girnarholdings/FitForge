@@ -130,6 +130,25 @@ jobs:
           # blank site. v3 had no such exclusion; `true` keeps the behaviour this workflow had.
           include-hidden-files: true
 
+      # PROOF, not assumption. Everything above is one action input away from serving a blank site,
+      # and that failure is INVISIBLE: the tar is built without .nojekyll, the upload succeeds, the
+      # deploy reports success, and only a browser hitting a 404 on every _next/ asset reveals it.
+      # No job status catches that, so assert it directly against the artifact that was just built.
+      #
+      # upload-pages-artifact tars into $RUNNER_TEMP/artifact.tar with `--directory <path> ... .`,
+      # so entries are './'-prefixed. Both spellings are accepted in case that ever changes.
+      # Verified both ways locally: the same tar built with `--exclude=.[^/]*` (what this action
+      # does when include-hidden-files is false) drops .nojekyll and trips this check.
+      - name: Verify .nojekyll survived into the artifact
+        run: |
+          if ! tar -tf "$RUNNER_TEMP/artifact.tar" | grep -qE '^\./\.nojekyll$|^\.nojekyll$'; then
+            echo "::error::.nojekyll is missing from the Pages artifact — Jekyll will strip _next/ and every asset will 404"
+            echo "Artifact contains:"
+            tar -tf "$RUNNER_TEMP/artifact.tar" | head -30
+            exit 1
+          fi
+          echo "::notice::.nojekyll present in the Pages artifact — _next/ will be served"
+
   deploy:
     name: Deploy to Pages
     needs: build
