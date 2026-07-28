@@ -100,6 +100,28 @@ jobs:
             exit 1
           fi
 
+      # The macros task: three model samples, sanity-gated, median + range. The assertion is the
+      # CONTRACT (parses, has a kcal median inside its own range), not the food's true calories —
+      # a probe cannot know what a model should think a burrito weighs.
+      - name: POST a macros estimate
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          body=$(curl -sS -m 60 -w '\n%{http_code}' -X POST "$ENDPOINT" \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://girnarholdings.github.io' \
+            -d '{"task":"macros","food":"chicken burrito bowl with rice and beans"}' || echo "CURL_FAILED")
+          code=$(printf '%s' "$body" | tail -1)
+          payload=$(printf '%s' "$body" | sed '$d')
+          echo "::notice::macros ${code} — $(printf '%s' "$payload" | tr '\n' ' ' | cut -c1-500)"
+          [ "$code" = "200" ] || { echo "::error::macros task failed with ${code}"; exit 1; }
+          printf '%s' "$payload" | jq -e '
+            (.kcal.value >= .kcal.low) and (.kcal.value <= .kcal.high)
+            and (.kcal.value > 100) and (.kcal.value < 2500)
+            and (.samples >= 2)
+            and (.confidence | IN("high","medium","low"))
+          ' > /dev/null || { echo "::error::macros response failed the contract check"; exit 1; }
+
       # Only reached when the above passed, so a green run means the whole chain works.
       - name: Report success
         run: echo "::notice::Coach worker is answering end to end"

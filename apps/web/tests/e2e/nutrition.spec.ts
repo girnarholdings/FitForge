@@ -77,6 +77,9 @@ test.describe('nutrition', () => {
     await expect(review).toBeVisible();
     await expect(review.getByText(/No match in the food database/i)).toBeVisible();
     await expect(review.getByTestId('unmatched-search')).toBeVisible();
+    // The AI-estimate path exists ONLY on builds with a Coach endpoint. This build has none, so
+    // the button must be absent — "nothing was guessed" includes "no model was asked".
+    await expect(review.getByTestId('unmatched-ai')).toHaveCount(0);
 
     // Only the item it actually recognised is logged.
     await page.getByTestId('review-confirm').click();

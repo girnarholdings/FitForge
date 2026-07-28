@@ -14,7 +14,8 @@
  */
 import * as React from 'react';
 import { Card } from '@/components/ui';
-import { BookIcon, ClipboardIcon } from '@/components/ui/icons';
+import { BookIcon, SparkleIcon } from '@/components/ui/icons';
+import { CoachMarkdown } from '@/lib/coach/CoachMarkdown';
 import type { KbEntry } from '@/lib/kb/types';
 import { SourceChips } from './SourceChips';
 
@@ -41,19 +42,30 @@ export interface AnswerCardProps {
 
 function Badge({ source, label }: { source: AnswerSource; label: string }) {
   const kb = source === 'kb';
+  if (kb)
+    return (
+      <span
+        data-testid="coach-badge-kb"
+        className="inline-flex items-center gap-1.5 rounded-chip bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+      >
+        <span aria-hidden>
+          <BookIcon size={13} />
+        </span>
+        {label}
+      </span>
+    );
+  // The AI badge WEARS the AI: gold gradient, sparkle, glow. The owner's complaint was that
+  // nothing in the app says "AI-powered" — this is the artifact that is literally AI-made, so
+  // it is the one place the emphasis belongs at full volume.
   return (
     <span
-      data-testid={kb ? 'coach-badge-kb' : 'coach-badge-ai'}
-      className={
-        'inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ' +
-        (kb ? 'bg-muted text-muted-foreground' : 'bg-accent-muted text-accent')
-      }
+      data-testid="coach-badge-ai"
+      className="inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[color:var(--accent-foreground)] shadow-[var(--shadow-glow)]"
+      style={{ background: 'var(--gradient-gold)' }}
     >
-      {/* A book for the curated guide, a coach's CLIPBOARD for the generated answer. The AI badge
-          used to be the generic product sparkle, which said "a language model wrote this" — true,
-          and the wrong emphasis: what the reader is being handed is coaching, and the provenance
-          is already spelled out in the badge's own words. */}
-      <span aria-hidden>{kb ? <BookIcon size={13} /> : <ClipboardIcon size={13} />}</span>
+      <span aria-hidden>
+        <SparkleIcon size={13} />
+      </span>
       {label}
     </span>
   );
@@ -73,7 +85,7 @@ export function AnswerCard({
   footer,
 }: AnswerCardProps) {
   const isAi = source === 'ai';
-  const label = badgeLabel ?? (isAi ? 'AI answer' : 'From the FitForge guide');
+  const label = badgeLabel ?? (isAi ? 'AI coach' : 'From the FitForge guide');
 
   return (
     <Card
@@ -94,9 +106,17 @@ export function AnswerCard({
         </p>
       )}
 
-      <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-foreground">
-        {answer}
-      </p>
+      {isAi ? (
+        // AI answers arrive in the worker's markdown contract (bold + bullets); curated guide
+        // entries are plain prose and stay that way.
+        <div className="mt-2">
+          <CoachMarkdown text={answer} />
+        </div>
+      ) : (
+        <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-foreground">
+          {answer}
+        </p>
+      )}
 
       {isAi && facts.length > 0 && (
         <div className="mt-3" data-testid="coach-profile-facts">

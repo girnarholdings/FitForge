@@ -140,20 +140,35 @@ export function FloatingTabBar({
             thumb aiming for Progress. */}
         {coach && (
           <div className="mb-4 flex justify-end pr-1">
+            {/* THE AI COACH WEARS A REAL BADGE, not a themed circle. A conic gold ring (an actual
+                border, not a border-color), a gold glow, and a sparkle dot — the one control in
+                the frame that is allowed to be loud, because it is the one that answers back.
+                The ring is a 2px padding layer, so the 44px inner target grows to 48px total. */}
             <Link
               href={coach.href}
               aria-label={coach.label}
               aria-current={coach.active ? 'page' : undefined}
               data-testid="tab-coach"
-              className={cn(
-                'pointer-events-auto grid h-11 w-11 place-items-center rounded-full border',
-                'shadow-[var(--shadow-pop)] transition-colors',
-                coach.active
-                  ? 'border-transparent bg-accent text-accent-foreground'
-                  : 'border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-surface-2 text-accent',
-              )}
+              className="pointer-events-auto group relative rounded-full p-[2px] shadow-[0_10px_28px_-8px_color-mix(in_srgb,var(--accent)_60%,transparent)] transition-transform duration-150 active:scale-95"
+              style={{
+                background:
+                  'conic-gradient(from 210deg, #f6d883, #e4b84d 35%, #b8862c 60%, #f6d883 85%, #e4b84d)',
+              }}
             >
-              <coach.Icon size={20} />
+              <span
+                className={cn(
+                  'grid h-11 w-11 place-items-center rounded-full transition-colors',
+                  coach.active ? 'bg-accent text-accent-foreground' : 'bg-surface-2 text-accent',
+                )}
+              >
+                <coach.Icon size={21} />
+              </span>
+              <span
+                aria-hidden
+                className="absolute -right-0.5 -top-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-accent text-[8px] font-bold text-accent-foreground shadow-[0_0_0_2px_var(--surface)]"
+              >
+                ✦
+              </span>
             </Link>
           </div>
         )}

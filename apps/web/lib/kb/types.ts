@@ -116,6 +116,11 @@ export interface CoachRequest {
   question: string;
   snippets: CoachSnippet[];
   profile: CoachProfile;
+  /**
+   * Client-declared intent hint. The worker trusts only 'personalize' and 'meal' — the states the
+   * client genuinely knows (which button was pressed) — and classifies everything else itself.
+   */
+  intent?: 'personalize' | 'meal';
 }
 
 /** Never throws to the caller — every failure mode is a value. */

@@ -12,8 +12,10 @@
  */
 import * as React from 'react';
 import { Button, Card, Chip, Sheet } from '@/components/ui';
-import { CheckIcon, PlusIcon, SearchIcon, XIcon } from '@/components/ui/icons';
+import { CheckIcon, PlusIcon, SearchIcon, SparkleIcon, XIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
+import { askMacroEstimate, type MacroEstimate } from '@/lib/food/aiEstimate';
+import { isCoachConfigured } from '@/lib/kb/client';
 import { computeMacros, confidenceHint, confidenceLevel, formatMacros, sumMacros } from '@/lib/food/format';
 import { formatQuantity, unitOptions } from '@/lib/food/measures';
 import { reprice } from '@/lib/food/parse';
@@ -74,6 +76,33 @@ export function ReviewSheet({
     patch(id, reprice(item, { food }));
   }
 
+  /**
+   * Accept an AI estimate. Identical plumbing to a hand-typed custom entry — one serving stored
+   * per-100g — with two deliberate differences: the name carries "(AI estimate)" so the
+   * provenance survives into the day log, and the serving label is the model's own "per" string,
+   * so what the user logs is what the estimate was actually FOR.
+   */
+  function acceptAiEstimate(id: string, est: MacroEstimate) {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    const food: Food = {
+      id: `ai-${Date.now().toString(36)}`,
+      name: `${item.sourceText} (AI estimate)`,
+      aliases: [],
+      category: 'dish',
+      per_100g: {
+        kcal: est.kcal.value,
+        protein_g: est.protein_g.value,
+        carbs_g: est.carbs_g.value,
+        fat_g: est.fat_g.value,
+      },
+      serving_name: est.per,
+      serving_grams: 100,
+      household_measures: [{ name: 'serving', grams: 100 }],
+    };
+    patch(id, reprice(item, { food, quantity: 1, unit: null }));
+  }
+
   /** Nothing in the catalog fits — let the user type the numbers off the packet. */
   function addCustom(id: string, entry: CustomEntry) {
     const item = items.find((i) => i.id === id);
@@ -126,6 +155,7 @@ export function ReviewSheet({
                   onSearch={() => setPickerFor(item.id)}
                   onCustom={() => setCustomFor(item.id)}
                   onRemove={() => remove(item.id)}
+                  onAiAccept={(est) => acceptAiEstimate(item.id, est)}
                 />
               ),
             )}
@@ -350,17 +380,39 @@ function MatchedRow({
 
 /* ---------------------------------------------------------------------- unmatched row */
 
+type AiPhase =
+  | { phase: 'idle' }
+  | { phase: 'pending' }
+  | { phase: 'done'; est: MacroEstimate }
+  | { phase: 'failed'; why: string };
+
 function UnmatchedRow({
   item,
   onSearch,
   onCustom,
   onRemove,
+  onAiAccept,
 }: {
   item: ParsedItem;
   onSearch: () => void;
   onCustom: () => void;
   onRemove: () => void;
+  onAiAccept: (est: MacroEstimate) => void;
 }) {
+  const configured = isCoachConfigured();
+  const [ai, setAi] = React.useState<AiPhase>({ phase: 'idle' });
+
+  async function estimate() {
+    setAi({ phase: 'pending' });
+    const r = await askMacroEstimate(item.sourceText);
+    if (r.status === 'ok') setAi({ phase: 'done', est: r.estimate });
+    else if (r.status === 'not-food')
+      setAi({ phase: 'failed', why: 'The AI does not think this is a food.' });
+    else if (r.status === 'timeout')
+      setAi({ phase: 'failed', why: 'The AI took too long — try again.' });
+    else setAi({ phase: 'failed', why: 'The AI service could not be reached.' });
+  }
+
   return (
     <Card
       data-testid="review-row"
@@ -383,15 +435,95 @@ function UnmatchedRow({
           <XIcon size={14} />
         </button>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" data-testid="unmatched-search" onClick={onSearch}>
-          <SearchIcon size={15} /> Search for it
+
+      {ai.phase === 'done' ? (
+        <AiEstimatePanel
+          est={ai.est}
+          onAccept={() => onAiAccept(ai.est)}
+          onDiscard={() => setAi({ phase: 'idle' })}
+        />
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {configured && (
+            <button
+              type="button"
+              data-testid="unmatched-ai"
+              disabled={ai.phase === 'pending'}
+              onClick={() => void estimate()}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-chip px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-foreground)] shadow-[var(--shadow-glow)] transition-transform active:scale-95 disabled:opacity-60"
+              style={{ background: 'var(--gradient-gold)' }}
+            >
+              <SparkleIcon size={14} />
+              {ai.phase === 'pending' ? 'Asking 3 AI samples…' : 'Estimate with AI'}
+            </button>
+          )}
+          <Button size="sm" variant="secondary" data-testid="unmatched-search" onClick={onSearch}>
+            <SearchIcon size={15} /> Search for it
+          </Button>
+          <Button size="sm" variant="ghost" data-testid="unmatched-custom" onClick={onCustom}>
+            <PlusIcon size={15} /> Enter macros
+          </Button>
+        </div>
+      )}
+
+      {ai.phase === 'failed' && (
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          {ai.why}{' '}
+          <button type="button" onClick={() => void estimate()} className="font-semibold text-accent">
+            Retry
+          </button>
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * The estimate, shown as what it is: a median across independent AI samples, with the honest
+ * min–max range beside every number. Nothing logs until "Use estimate" — the AI proposes, the
+ * user disposes.
+ */
+function AiEstimatePanel({
+  est,
+  onAccept,
+  onDiscard,
+}: {
+  est: MacroEstimate;
+  onAccept: () => void;
+  onDiscard: () => void;
+}) {
+  const styles = LEVEL_STYLES[est.confidence];
+  return (
+    <div data-testid="unmatched-ai-result" className="mt-2 rounded-field border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-surface p-2.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+        <SparkleIcon size={12} /> AI estimate · {est.samples} samples
+        <span aria-hidden className={cn('ml-auto h-2 w-2 rounded-full', styles.dot)} />
+        <span className={cn('text-[10px] normal-case', styles.text)}>{est.confidence} confidence</span>
+      </div>
+      <p className="tabular mt-1.5 text-sm font-semibold text-foreground">
+        ≈ {Math.round(est.kcal.value)} kcal{' '}
+        <span className="font-normal text-muted-foreground">
+          ({Math.round(est.kcal.low)}–{Math.round(est.kcal.high)})
+        </span>
+      </p>
+      <p className="tabular text-xs text-muted-foreground">
+        P {Math.round(est.protein_g.value)}g · C {Math.round(est.carbs_g.value)}g · F{' '}
+        {Math.round(est.fat_g.value)}g · per {est.per}
+      </p>
+      {est.assumptions.length > 0 && (
+        <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+          Assumes: {est.assumptions.join('; ')}
+        </p>
+      )}
+      <div className="mt-2 flex gap-2">
+        <Button size="sm" data-testid="unmatched-ai-accept" onClick={onAccept}>
+          <CheckIcon size={14} /> Use estimate
         </Button>
-        <Button size="sm" variant="ghost" data-testid="unmatched-custom" onClick={onCustom}>
-          <PlusIcon size={15} /> Enter macros
+        <Button size="sm" variant="ghost" onClick={onDiscard}>
+          Discard
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 

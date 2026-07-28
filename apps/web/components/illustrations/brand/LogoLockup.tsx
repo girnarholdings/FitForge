@@ -19,6 +19,13 @@ export interface LogoLockupProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   size?: number;
   stacked?: boolean;
   mono?: boolean;
+  /**
+   * Render the mark on its APP-ICON PLATE — dark rounded square, gold gradient figure, hairline
+   * gold ring — instead of as a bare glyph. On by default because the bare glyph was the bug:
+   * the browser tab showed the plated icon while the page header showed a flat gold shape, and
+   * they read as two different products. The favicon is the identity; headers now wear it.
+   */
+  badge?: boolean;
   title?: string;
 }
 
@@ -29,6 +36,7 @@ export function LogoLockup({
   size = 24,
   stacked = false,
   mono = false,
+  badge = true,
   title = 'FitForge',
   style,
   ...props
@@ -72,8 +80,37 @@ export function LogoLockup({
       }}
       {...props}
     >
-      <LogoMark size={markSize} mono={mono} aria-hidden />
+      {badge && !mono ? <BrandBadge size={markSize} /> : <LogoMark size={markSize} mono={mono} aria-hidden />}
       {wordmark}
+    </span>
+  );
+}
+
+/**
+ * The mark on its plate — the exact composition the favicon renders (dark #0A0D14 rounded square,
+ * gold-gradient figure), so every surface that shows the mark shows the SAME object as the
+ * browser tab. The hairline gold ring is what keeps it legible on same-tone dark headers.
+ */
+export function BrandBadge({ size = 28 }: { size?: number }) {
+  const radius = Math.max(5, Math.round(size * 0.24));
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: 'grid',
+        placeItems: 'center',
+        width: size,
+        height: size,
+        borderRadius: radius,
+        background: '#0a0d14',
+        boxShadow:
+          '0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 4px 14px -4px rgba(228, 184, 77, 0.4)',
+      }}
+    >
+      {/* The mark carries its own gold gradient; the plate only frames it. */}
+      <span style={{ display: 'grid' }}>
+        <LogoMark size={size * 0.72} aria-hidden />
+      </span>
     </span>
   );
 }

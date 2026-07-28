@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/icons';
 import { KB_ENTRIES, entryById, routeQuery, searchKb } from '@/lib/kb';
 import type { KbRoutePlus } from '@/lib/kb/route';
-import { askCoach, isCoachConfigured, snippetsFromHits } from '@/lib/kb/client';
+import { askCoach, fetchCoachStatus, isCoachConfigured, snippetsFromHits, type CoachStatus } from '@/lib/kb/client';
 import { MealSuggestionCard, wantsMealSuggestion } from './MealSuggestionCard';
 import { useNutritionTargets, useLogsForDate } from '@/lib/demo/useDemo';
 import { useSelectedDate } from '@/lib/demo/selectedDate';
@@ -143,6 +143,8 @@ function directRoute(entry: KbEntry): KbRoutePlus {
   };
 }
 
+const AUTO_KEY = 'fitforge.coachAuto.v1';
+
 export function CoachView() {
   const [mode, setMode] = React.useState<Mode>('ask');
   const [turns, setTurns] = React.useState<Turn[]>([]);
@@ -153,6 +155,36 @@ export function CoachView() {
   const bottomRef = React.useRef<HTMLDivElement>(null);
   const abortRef = React.useRef<AbortController | null>(null);
 
+  /**
+   * AUTO-PERSONALIZE, ON BY DEFAULT. A confident guide answer is still generic; when the AI
+   * service is configured the coach follows it up with a profile-personalized rewrite without
+   * being asked. Off is a choice (persisted), not the default — the owner's call: an AI coach
+   * that only acts when begged reads as absent.
+   */
+  const [autoPersonalize, setAutoPersonalize] = React.useState(true);
+  const [status, setStatus] = React.useState<CoachStatus | null>(null);
+
+  React.useEffect(() => {
+    try {
+      setAutoPersonalize(window.localStorage.getItem(AUTO_KEY) !== '0');
+    } catch {
+      /* private mode — default on */
+    }
+    if (configured) void fetchCoachStatus().then(setStatus);
+  }, [configured]);
+
+  const toggleAuto = React.useCallback(() => {
+    setAutoPersonalize((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(AUTO_KEY, next ? '1' : '0');
+      } catch {
+        /* private mode */
+      }
+      return next;
+    });
+  }, []);
+
   React.useEffect(() => () => abortRef.current?.abort(), []);
 
   const patchTurn = React.useCallback((id: string, ai: AiState) => {
@@ -160,11 +192,17 @@ export function CoachView() {
   }, []);
 
   const runAi = React.useCallback(
-    async (turnId: string, question: string, route: KbRoutePlus, p: CoachProfile) => {
+    async (
+      turnId: string,
+      question: string,
+      route: KbRoutePlus,
+      p: CoachProfile,
+      intent?: 'personalize' | 'meal',
+    ) => {
       const controller = new AbortController();
       abortRef.current = controller;
       const result = await askCoach(
-        { question, snippets: snippetsFromHits(route.hits), profile: p },
+        { question, snippets: snippetsFromHits(route.hits), profile: p, intent },
         controller.signal,
       );
       if (controller.signal.aborted) return;
@@ -194,7 +232,7 @@ export function CoachView() {
   );
 
   const pushTurn = React.useCallback(
-    (question: string, route: KbRoutePlus, wantsAi: boolean) => {
+    (question: string, route: KbRoutePlus, wantsAi: boolean): string => {
       turnSeq += 1;
       const id = `turn-${turnSeq}`;
       const facts = profileFacts(profile);
@@ -212,6 +250,7 @@ export function CoachView() {
       setTurns((prev) => [...prev, { id, question, route, ai, facts }]);
       setMode('ask');
       if (wantsAi && configured) void runAi(id, question, route, profile);
+      return id;
     },
     [configured, profile, runAi],
   );
@@ -246,9 +285,17 @@ export function CoachView() {
       // service" card, which asserts the question was personal when nothing established that.
       const noTrustworthyMatch = route.guard !== null || route.top === null;
       const wantsAi = route.mode === 'ai' && !route.safety && (configured || !noTrustworthyMatch);
-      pushTurn(q, route, wantsAi);
+      const id = pushTurn(q, route, wantsAi);
+
+      // The default-on follow-up: a confident guide answer gets an AI personalization pass
+      // automatically. Never on safety turns, never when the AI path is already running, and
+      // never on an unconfigured build — those keep today's exact behaviour.
+      if (!wantsAi && configured && autoPersonalize && route.mode === 'answer' && !route.safety) {
+        patchTurn(id, { kind: 'pending' });
+        void runAi(id, q, route, profile, 'personalize');
+      }
     },
-    [configured, pushTurn],
+    [autoPersonalize, configured, patchTurn, profile, pushTurn, runAi],
   );
 
   /** Open a specific entry (disambiguation button, followup chip, source chip). No AI, no cost. */
@@ -263,7 +310,7 @@ export function CoachView() {
   const personalize = React.useCallback(
     (turn: Turn) => {
       patchTurn(turn.id, { kind: 'pending' });
-      if (turn.route) void runAi(turn.id, turn.question, turn.route, profile);
+      if (turn.route) void runAi(turn.id, turn.question, turn.route, profile, 'personalize');
     },
     [patchTurn, profile, runAi],
   );
@@ -285,13 +332,19 @@ export function CoachView() {
         </div>
         <span
           aria-hidden
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent-muted text-accent shadow-[var(--shadow-card)]"
+          className="grid shrink-0 place-items-center rounded-full p-[2px] shadow-[0_8px_22px_-8px_color-mix(in_srgb,var(--accent)_60%,transparent)]"
+          style={{
+            background:
+              'conic-gradient(from 210deg, #f6d883, #e4b84d 35%, #b8862c 60%, #f6d883 85%, #e4b84d)',
+          }}
         >
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-surface-2 text-accent">
           {/* The Coach TAB is a whistle. This header badge was a speech bubble, so the entry
               point and the destination were two different objects for one place — and a speech
               bubble frames the coach as a chatbot rather than as someone who tells you what to
               do, which is the opposite of what this screen is. */}
-          <CoachIcon size={22} />
+            <CoachIcon size={22} />
+          </span>
         </span>
       </header>
 
@@ -330,6 +383,56 @@ export function CoachView() {
           label="Browse"
         />
       </div>
+
+      {configured && (
+        <div className="flex items-center justify-between gap-2" data-testid="coach-ai-bar">
+          <span
+            data-testid="coach-ai-status"
+            className="inline-flex items-center gap-1.5 rounded-chip border border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-accent-muted px-2.5 py-1 text-[11px] font-semibold text-accent"
+          >
+            <span aria-hidden className="relative flex h-1.5 w-1.5">
+              {status?.online && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60 motion-reduce:hidden" />
+              )}
+              <span
+                className={
+                  'relative inline-flex h-1.5 w-1.5 rounded-full ' +
+                  (status == null ? 'bg-muted-foreground' : status.online ? 'bg-success' : 'bg-danger')
+                }
+              />
+            </span>
+            {status == null
+              ? 'AI coach'
+              : status.online
+                ? `AI coach online · ${(status.model ?? '').split('/').pop() || 'ready'}`
+                : 'AI unreachable — guide still answers'}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoPersonalize}
+            data-testid="coach-auto-toggle"
+            onClick={toggleAuto}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-chip px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Auto-personalize
+            <span
+              aria-hidden
+              className={
+                'relative h-4 w-7 rounded-full transition-colors ' +
+                (autoPersonalize ? 'bg-accent' : 'bg-muted')
+              }
+            >
+              <span
+                className={
+                  'absolute top-0.5 h-3 w-3 rounded-full bg-surface transition-transform ' +
+                  (autoPersonalize ? 'translate-x-3.5' : 'translate-x-0.5')
+                }
+              />
+            </span>
+          </button>
+        </div>
+      )}
 
       {mode === 'browse' ? (
         <BrowseKb expandedId={expandedId} onExpand={setExpandedId} />
@@ -380,7 +483,7 @@ export function CoachView() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask your coach anything…"
+                placeholder={configured ? 'Ask your AI coach anything…' : 'Ask your coach anything…'}
                 aria-label="Ask your coach a question"
                 data-testid="coach-input"
                 enterKeyHint="send"
@@ -606,15 +709,16 @@ function TurnBlock({
           followups={ai.kind === 'pending' ? [] : followupEntries(top.entry)}
           onFollowup={onOpenEntry}
           footer={
-            onPersonalize && ai.kind === 'none' && top.entry.personalize ? (
-              <Button
-                variant="secondary"
-                size="sm"
+            onPersonalize && ai.kind === 'none' ? (
+              <button
+                type="button"
                 onClick={() => onPersonalize(turn)}
                 data-testid="coach-personalize"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-chip px-3.5 py-2 text-sm font-semibold text-[color:var(--accent-foreground)] shadow-[var(--shadow-glow)] transition-transform active:scale-95"
+                style={{ background: 'var(--gradient-gold)' }}
               >
-                <ClipboardIcon size={16} /> Personalize this for me
-              </Button>
+                <SparkleIcon size={15} /> Personalize with AI
+              </button>
             ) : undefined
           }
         />

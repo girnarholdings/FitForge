@@ -11,7 +11,9 @@ match. If anything below goes wrong, the app degrades to exactly what it does to
 break.
 
 **Cost:** Workers AI has a free daily allowance and the paid rate beyond it is per-neuron, not per
-seat. The worker caps generation at 200 tokens precisely so a runaway loop cannot become a bill.
+seat. The worker caps generation at 320 tokens for chat and 220 per macro sample precisely so a
+runaway loop cannot become a bill. A macro estimate costs three samples (deliberately — the answer
+is the median of three independent draws, which is what makes it trustworthy).
 Check the current allowance on Cloudflare's pricing page before pointing production at it.
 
 ---
@@ -312,3 +314,22 @@ above matches, send me that line.
   deterministic rules.
 - **It is not a dependency.** Every call has a short timeout and a local fallback. A worker that is
   down, rate-limited, or never deployed at all leaves the app working exactly as it does now.
+
+
+---
+
+## What the worker actually does (v2)
+
+Two tasks through one endpoint:
+
+**Chat** (`POST {question, snippets, profile, intent?}`) — the system prompt is assembled from an
+intent-routed template library (volume, technique, nutrition, progression, recovery, motivation,
+personalize, meal ideas, general). Each template carries a strict markdown OUTPUT SHAPE — bold
+numbers, dash bullets, a closing `**Next:**` action line — because free instruct models follow
+skeletons far better than prose rules. The client renders exactly that subset and nothing else.
+
+**Macros** (`POST {task:"macros", food, quantity?}`) — three parallel samples at three
+temperatures, each sanity-gated (kcal must agree with 4·P + 4·C + 9·F, else it is recomputed from
+the macros), answered as the per-field median with the min–max carried as an honest range and a
+spread-based confidence. Fewer than two sane samples refuses (`estimate_unreliable`) rather than
+guessing; a majority of `not_food` verdicts is a 422.

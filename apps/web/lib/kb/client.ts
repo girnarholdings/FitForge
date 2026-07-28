@@ -85,8 +85,8 @@ interface CacheShape {
   items: { k: string; answer: string; at: number }[];
 }
 
-function fingerprint(question: string, profile: CoachProfile): string {
-  const q = question.trim().toLowerCase().replace(/\s+/g, ' ');
+function fingerprint(question: string, profile: CoachProfile, intent?: string): string {
+  const q = `${intent ?? 'chat'}::` + question.trim().toLowerCase().replace(/\s+/g, ' ');
   // Stable, order-independent profile digest — the same user asking twice must hit the cache.
   const p = JSON.stringify(
     Object.keys(profile)
@@ -117,13 +117,13 @@ function writeCache(next: CacheShape): void {
   }
 }
 
-export function cachedAnswer(question: string, profile: CoachProfile): string | null {
-  const k = fingerprint(question, profile);
+export function cachedAnswer(question: string, profile: CoachProfile, intent?: string): string | null {
+  const k = fingerprint(question, profile, intent);
   return readCache().items.find((i) => i.k === k)?.answer ?? null;
 }
 
-function cacheAnswer(question: string, profile: CoachProfile, answer: string): void {
-  const k = fingerprint(question, profile);
+function cacheAnswer(question: string, profile: CoachProfile, answer: string, intent?: string): void {
+  const k = fingerprint(question, profile, intent);
   const cache = readCache();
   const items = [{ k, answer, at: Date.now() }, ...cache.items.filter((i) => i.k !== k)];
   writeCache({ version: 1, items: items.slice(0, CACHE_MAX) });
@@ -143,7 +143,7 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
   const question = req.question.trim();
   if (!question) return { status: 'error', detail: 'empty question' };
 
-  const hit = cachedAnswer(question, req.profile);
+  const hit = cachedAnswer(question, req.profile, req.intent);
   if (hit) return { status: 'ok', answer: hit };
 
   const controller = new AbortController();
@@ -163,6 +163,7 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
         question,
         snippets: req.snippets.slice(0, MAX_SNIPPETS),
         profile: req.profile,
+        ...(req.intent ? { intent: req.intent } : {}),
       }),
       signal: controller.signal,
     });
@@ -183,7 +184,7 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
     const answer = (body?.answer ?? '').trim();
     if (!answer) return { status: 'error', detail: 'empty_response' };
 
-    cacheAnswer(question, req.profile, answer);
+    cacheAnswer(question, req.profile, answer, req.intent);
     return { status: 'ok', answer };
   } catch (err) {
     if (timedOut) return { status: 'timeout' };
@@ -192,5 +193,59 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
   } finally {
     clearTimeout(timer);
     external?.removeEventListener('abort', onExternalAbort);
+  }
+}
+
+/* ------------------------------------------------------------------------------ live status */
+
+export interface CoachStatus {
+  online: boolean;
+  provider?: string;
+  model?: string;
+}
+
+const STATUS_KEY = 'fitforge.coachStatus.v1';
+const STATUS_TTL_MS = 60 * 60 * 1000;
+
+/**
+ * Probe the worker's health check (GET — costs no inference) so the Coach screen can show a live
+ * "AI online" presence instead of asserting configuration equals availability. Cached in
+ * sessionStorage for an hour: the status chip is ambience, not telemetry.
+ */
+export async function fetchCoachStatus(): Promise<CoachStatus | null> {
+  const endpoint = coachEndpoint();
+  if (!endpoint) return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(STATUS_KEY);
+    if (raw) {
+      const cached = JSON.parse(raw) as { at: number; status: CoachStatus };
+      if (Date.now() - cached.at < STATUS_TTL_MS) return cached.status;
+    }
+  } catch {
+    /* corrupt cache — fall through to the network */
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(endpoint, { method: 'GET', signal: controller.signal });
+    clearTimeout(timer);
+    const body = (await res.json().catch(() => null)) as {
+      ok?: boolean;
+      provider?: string;
+      model?: string;
+    } | null;
+    const status: CoachStatus = body?.ok
+      ? { online: true, provider: body.provider, model: body.model }
+      : { online: false };
+    try {
+      window.sessionStorage.setItem(STATUS_KEY, JSON.stringify({ at: Date.now(), status }));
+    } catch {
+      /* quota */
+    }
+    return status;
+  } catch {
+    return { online: false };
   }
 }
