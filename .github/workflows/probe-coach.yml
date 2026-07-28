@@ -1,0 +1,81 @@
+name: Probe the Coach worker
+
+# Calls the DEPLOYED worker and reports exactly what it says.
+#
+# WHY THIS EXISTS AS A WORKFLOW. The development sandbox cannot reach *.workers.dev — its egress
+# policy refuses the CONNECT — so "is the worker actually answering?" was unanswerable from the
+# machine doing the work. A GitHub runner has open network and its annotations are readable from
+# api.github.com, which makes it the one available probe.
+#
+# Run it from the Actions tab (Run workflow), or on any push that touches the worker.
+
+on:
+  workflow_dispatch:
+    inputs:
+      question:
+        description: 'Question to send'
+        required: false
+        default: 'How many sets per muscle per week?'
+  push:
+    branches: [main]
+    paths:
+      - 'workers/coach/**'
+      - '.github/workflows/probe-coach.yml'
+
+jobs:
+  probe:
+    name: Probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the endpoint is configured
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          if [ -z "$ENDPOINT" ]; then
+            echo "::error::AI_ENDPOINT repository variable is not set — nothing to probe"
+            exit 1
+          fi
+          echo "::notice::Probing ${ENDPOINT}"
+
+      # GET is the health check: it needs no Origin and no body, so it separates "the worker is
+      # deployed and running" from "the AI binding works". If this fails, nothing downstream matters.
+      - name: GET health check
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          body=$(curl -sS -m 30 -w '\n%{http_code}' "$ENDPOINT" || echo "CURL_FAILED")
+          code=$(printf '%s' "$body" | tail -1)
+          payload=$(printf '%s' "$body" | sed '$d' | tr '\n' ' ' | cut -c1-400)
+          echo "::notice::GET ${code} — ${payload}"
+          if [ "$code" != "200" ]; then
+            echo "::error::Health check failed with ${code}. The worker is not serving."
+            exit 1
+          fi
+
+      # POST is the real path the browser takes, Origin header included. Its failure modes are
+      # distinct and each points at a different fix, so the status code is reported verbatim rather
+      # than collapsed into "it didn't work".
+      - name: POST a real question
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+          QUESTION: ${{ inputs.question || 'How many sets per muscle per week?' }}
+        run: |
+          body=$(curl -sS -m 45 -w '\n%{http_code}' -X POST "$ENDPOINT" \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://girnarholdings.github.io' \
+            -d "$(jq -nc --arg q "$QUESTION" '{question:$q,snippets:[]}')" || echo "CURL_FAILED")
+          code=$(printf '%s' "$body" | tail -1)
+          payload=$(printf '%s' "$body" | sed '$d' | tr '\n' ' ' | cut -c1-700)
+
+          case "$code" in
+            200) echo "::notice::POST 200 — ${payload}" ;;
+            403) echo "::error::POST 403 — the Origin is not in ALLOWED_ORIGINS. Body: ${payload}" ;;
+            500) echo "::error::POST 500 — usually the AI binding is missing or misnamed (must be exactly AI). Body: ${payload}" ;;
+            503) echo "::error::POST 503 — the worker reached Workers AI and it failed. This is the model name, the account's Workers AI access, or quota. Body: ${payload}" ;;
+            *)   echo "::error::POST ${code} — ${payload}" ;;
+          esac
+          [ "$code" = "200" ] || exit 1
+
+      # Only reached when the above passed, so a green run means the whole chain works.
+      - name: Report success
+        run: echo "::notice::Coach worker is answering end to end"
