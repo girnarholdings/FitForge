@@ -32,7 +32,7 @@ import {
   ShakerIcon,
   ShakerSolidIcon,
   SettingsIcon,
-  WhistleIcon,
+  CoachIcon,
   type IconProps,
 } from '@/components/ui/icons';
 import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
@@ -137,7 +137,7 @@ const NAV: NavItem[] = [
   {
     href: '/coach',
     label: 'Coach',
-    Icon: WhistleIcon,
+    Icon: CoachIcon,
     match: ['/coach'],
     primary: false,
     accent: true,
@@ -321,7 +321,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   : 'border-[color-mix(in_srgb,var(--accent)_45%,transparent)] text-accent-soft hover:bg-accent-muted hover:text-accent',
               )}
             >
-              <WhistleIcon size={18} />
+              <CoachIcon size={18} />
             </Link>
             <Link
               href="/settings"

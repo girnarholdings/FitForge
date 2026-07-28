@@ -159,7 +159,7 @@ export const SparkleIcon = (p: IconProps) => (
 /**
  * NO CALL SITES as of the gym-vocabulary pass, and kept for the same reason as
  * {@link UtensilsIcon}. Both of its users — the Coach header and Today's coach entry card — now
- * wear the {@link WhistleIcon} the Coach tab wears: an entry point and its destination cannot be
+ * wear the {@link CoachIcon} the Coach tab wears: an entry point and its destination cannot be
  * two different objects, and a speech bubble framed the coach as a chatbot rather than as someone
  * who tells you what to do. A genuine MESSAGE (a note left on a set, a comment) is a different
  * subject and would want this. If nothing claims it by the next pass, delete it.
@@ -625,14 +625,31 @@ export const CollarIcon = ({ open = false, ...p }: IconProps & { open?: boolean 
 );
 
 /** Coach's whistle — the Coach tab. A person who tells you what to do, not a speech bubble. */
-export const WhistleIcon = (p: IconProps) => (
+/**
+ * THE COACH — the brand mark's figure, redrawn as a 24-unit stroke icon.
+ *
+ * Not the LogoMark scaled down. That mark is six FILLED shapes tuned for 64 units; at 20px in the
+ * nav its delts and arm merge into one gold lozenge. This is the same idea — built figure, raised
+ * sledgehammer — rebuilt in the stroke vocabulary every other icon here uses, with the detail
+ * count cut to what a 20px glyph can actually carry: shoulders, head, hammer. No waist taper, no
+ * separate arm mass; the shoulder line does the work of saying "built".
+ */
+export const CoachIcon = (p: IconProps) => (
   <Svg {...p}>
-    <circle cx="10" cy="14.6" r="5.6" />
-    <path d="M15.4 12.6h4.8a1.5 1.5 0 0 1 0 3h-4.8" />
-    <circle cx="10" cy="14.6" r="1.7" />
-    <path d="M13 9.8 15.6 6" />
+    {/* head */}
+    <circle cx="9" cy="6.2" r="2.9" />
+    {/* shoulders — the widest line in the glyph, which is what reads as strong */}
+    <path d="M3.4 17.5c0-3.6 2.5-6.1 5.6-6.1s5.6 2.5 5.6 6.1" />
+    {/* torso */}
+    <path d="M9 11.4v9.4" />
+    {/* raised arm to the hammer */}
+    <path d="M13.2 13.2 16.8 9.9" />
+    {/* sledgehammer: long handle, wide head */}
+    <path d="m15.9 11.2 4.6-4.9" />
+    <path d="m17.4 3.3 3.9 3.6" />
   </Svg>
 );
+
 
 /** Protein shaker — the Nutrition tab. The one gym object that is genuinely about food. */
 export const ShakerIcon = (p: IconProps) => (

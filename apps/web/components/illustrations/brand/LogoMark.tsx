@@ -1,15 +1,26 @@
 import * as React from 'react';
 
 /**
- * FitForge "Anvil Bar" logo mark (§3.1).
+ * FitForge "Forge Coach" logo mark.
  *
- * A barbell resting across an anvil — training (bar) + forging (anvil) in one
- * silhouette, topped by a 4-point spark. viewBox 0 0 64 64, authored in ~10
- * shapes so it reads down to 16px.
+ * A built figure with a sledgehammer raised — the coach who forges you, rather than the tools on
+ * their own. It replaces the anvil-and-barbell mark, which packed a bar, an anvil, two plates and a
+ * spark into 64px and at tab-bar size resolved into an unreadable cluster of gold.
  *
- * - Default: single gold gradient (`--gradient-gold` stops) with the spark in
- *   flat bright gold (`#F6D883`) on top.
- * - `mono`: everything `currentColor` (icon/print contexts, footers).
+ * DRAWN FOR THE SMALLEST SIZE FIRST. Every choice here is about what survives at 16-24px, and each
+ * was made by rendering it rather than reasoning about it:
+ *   · The DELTS are the widest point, not the chest. Shoulder width alone is what reads as strong;
+ *     abdominal detail is invisible below 48px and only muddies the silhouette.
+ *   · The raised arm STARTS INSIDE the right delt. An earlier draft left a clean gap between them,
+ *     which at small sizes read as a separate floating shape rather than an arm.
+ *   · The hammer is a LONG thin handle with a WIDE flat head. A shorter handle and a squarer head
+ *     read as a gavel; the proportion is the whole difference.
+ *
+ * Six shapes, no background — callers place it on their own surface, and public/favicon.svg adds
+ * the dark rounded tile for the browser chrome.
+ *
+ * - Default: the gold gradient (`--gradient-gold` stops).
+ * - `mono`: everything inherits `currentColor` (icon/print contexts, footers).
  */
 export interface LogoMarkProps extends Omit<React.SVGProps<SVGSVGElement>, 'fill'> {
   size?: number | string;
@@ -23,7 +34,6 @@ export function LogoMark({ size = 32, mono = false, title, ...props }: LogoMarkP
   const rid = React.useId();
   const gradId = `ffgold-${rid}`;
   const fill = mono ? 'currentColor' : `url(#${gradId})`;
-  const sparkFill = mono ? 'currentColor' : '#F6D883';
   const labelled = Boolean(title);
 
   return (
@@ -47,26 +57,26 @@ export function LogoMark({ size = 32, mono = false, title, ...props }: LogoMarkP
         </defs>
       )}
 
-      {/* Anvil top face + left forge horn */}
-      <path d="M17 28 C11 28 8 30 6 34 L17 35 Z" fill={fill} />
-      <rect x="17" y="28" width="30" height="7" rx="2" fill={fill} />
-      {/* Anvil waist */}
-      <path d="M25 35 L39 35 L36 44 L28 44 Z" fill={fill} />
-      {/* Anvil base */}
-      <rect x="23" y="44" width="18" height="6" rx="2" fill={fill} />
+      <g fill={fill}>
+        {/* Sledgehammer — long thin handle, wide flat head. */}
+        <g transform="rotate(30 45 20)">
+          <rect x="43" y="10" width="4" height="30" rx="2" />
+          <rect x="34" y="4" width="22" height="9" rx="2.5" />
+        </g>
 
-      {/* Bar (full width) */}
-      <rect x="4" y="17" width="56" height="6" rx="3" fill={fill} />
-      {/* Plate pair straddling the bar, with an ink gap-stroke so the plate
-          reads as a separate mass even when the mark is printed flat. */}
-      <rect x="10" y="10" width="6" height="20" rx="2" fill={fill} stroke="#0A0D14" strokeWidth="1.5" />
-      <rect x="48" y="10" width="6" height="20" rx="2" fill={fill} stroke="#0A0D14" strokeWidth="1.5" />
+        {/* Head. */}
+        <circle cx="20" cy="14" r="6.5" />
 
-      {/* Spark — the strike, brightest gold on top */}
-      <path
-        d="M50 3 L51.8 6.2 L55 8 L51.8 9.8 L50 13 L48.2 9.8 L45 8 L48.2 6.2 Z"
-        fill={sparkFill}
-      />
+        {/* Traps and delts: the widest point, and the whole reason the figure reads as built. */}
+        <path d="M20 22.5 C11.5 22.5 5.5 26.5 5 33.5 C4.8 36.5 7 38.5 10 38 C12.5 37.6 13.5 35 13.7 32.5 C14 29 16.5 27.5 20 27.5 C23.5 27.5 26 29 26.3 32.5 C26.5 35 27.5 37.6 30 38 C33 38.5 35.2 36.5 35 33.5 C34.5 26.5 28.5 22.5 20 22.5 Z" />
+
+        {/* Chest tapering to a narrow waist. */}
+        <path d="M12.5 32 C12.5 30 15 28.5 20 28.5 C25 28.5 27.5 30 27.5 32 L25.5 48 C25.5 50.5 23.5 52 20 52 C16.5 52 14.5 50.5 14.5 48 Z" />
+
+        {/* Raised arm. Overlaps the delt deliberately — see the header note. */}
+        <path d="M27 33 C29.5 34.5 32.5 34 35.5 31.5 C38.5 29 41 25.5 42.8 22.5 C44.2 20.2 47.4 21.8 46.2 24.3 C44 29 40.5 33.2 36.5 36 C33 38.4 29.5 38.6 27.5 37 Z" />
+      </g>
+
     </svg>
   );
 }

@@ -33,7 +33,7 @@ import {
   SearchIcon,
   SendIcon,
   SparkleIcon,
-  WhistleIcon,
+  CoachIcon,
 } from '@/components/ui/icons';
 import { KB_ENTRIES, entryById, routeQuery, searchKb } from '@/lib/kb';
 import type { KbRoutePlus } from '@/lib/kb/route';
@@ -291,7 +291,7 @@ export function CoachView() {
               point and the destination were two different objects for one place — and a speech
               bubble frames the coach as a chatbot rather than as someone who tells you what to
               do, which is the opposite of what this screen is. */}
-          <WhistleIcon size={22} />
+          <CoachIcon size={22} />
         </span>
       </header>
 

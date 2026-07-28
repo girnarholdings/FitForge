@@ -135,8 +135,11 @@ export function FloatingTabBar({
           resting on the bar, and it is the one spot that cannot be hit by accident while scrubbing
           across the tabs.
         */}
+        {/* mb-4, not mb-2: at two units of gap the button read as part of the pill rather than a
+            separate control, and its 44px target sat close enough to the tab row to be caught by a
+            thumb aiming for Progress. */}
         {coach && (
-          <div className="mb-2 flex justify-end pr-1">
+          <div className="mb-4 flex justify-end pr-1">
             <Link
               href={coach.href}
               aria-label={coach.label}
