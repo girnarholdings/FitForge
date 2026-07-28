@@ -48,7 +48,13 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: 'line',
+  // The `github` reporter emits ::error:: workflow commands, which GitHub turns into CHECK-RUN
+  // ANNOTATIONS. That matters more than it sounds: a failed run's raw logs and its
+  // playwright-output artifact are both served from *.blob.core.windows.net, which a restricted
+  // egress policy can refuse — leaving "Process completed with exit code 1" as the only available
+  // evidence. Annotations come back from api.github.com, so the failing spec, line and assertion
+  // stay reachable when the logs are not. `line` is kept alongside it for a readable transcript.
+  reporter: process.env.CI ? [['github'], ['line']] : 'line',
   use: {
     baseURL: BASE_URL,
     screenshot: 'only-on-failure',
