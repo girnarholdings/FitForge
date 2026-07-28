@@ -506,6 +506,46 @@ function QuestionBubble({ text }: { text: string }) {
   );
 }
 
+/**
+ * The coach composing a reply.
+ *
+ * This was a spinner and a line of grey text, which is the visual language of a page still loading
+ * — the same thing the app shows when it is fetching a shard. The wait here is a different event:
+ * someone is answering you. Three dots in a bubble on the coach's side of the thread says that in a
+ * way a spinner cannot, and it lands where the answer will land, so the eye is already in the right
+ * place when it arrives.
+ *
+ * The dots are CSS, not `motion` — this mounts and unmounts on every AI turn, and a JS animation
+ * for three circles would cost more than it renders. `motion-reduce` turns them off entirely; the
+ * sentence still carries the meaning.
+ */
+function CoachTyping() {
+  return (
+    <div className="flex items-end gap-2" data-testid="coach-ai-pending">
+      <span
+        aria-hidden
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-accent-muted text-accent"
+      >
+        <CoachIcon size={17} />
+      </span>
+      <div className="rounded-card rounded-bl-md border border-border bg-surface-2 px-4 py-3">
+        <span className="flex items-center gap-1.5" aria-hidden>
+          {[0, 150, 300].map((delay) => (
+            <span
+              key={delay}
+              style={{ animationDelay: `${delay}ms` }}
+              className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent motion-reduce:animate-none"
+            />
+          ))}
+        </span>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Working out a personalized answer…
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function TurnBlock({
   turn,
   onOpenEntry,
@@ -607,18 +647,7 @@ function TurnBlock({
       {/* ── conf < 0.30 or first-person specifics — the AI path ──────────────────────────── */}
       {ai.kind !== 'none' && (
         <>
-          {ai.kind === 'pending' && (
-            <div
-              data-testid="coach-ai-pending"
-              className="flex items-center gap-2.5 rounded-card border border-border bg-surface-2 px-4 py-3 text-sm text-muted-foreground"
-            >
-              <span
-                aria-hidden
-                className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent"
-              />
-              Asking your coach for a personalized answer…
-            </div>
-          )}
+          {ai.kind === 'pending' && <CoachTyping />}
 
           {ai.kind === 'answer' && (
             <AnswerCard

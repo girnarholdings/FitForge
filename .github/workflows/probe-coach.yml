@@ -55,6 +55,13 @@ jobs:
       # POST is the real path the browser takes, Origin header included. Its failure modes are
       # distinct and each points at a different fix, so the status code is reported verbatim rather
       # than collapsed into "it didn't work".
+      #
+      # A REFERENCE SNIPPET IS ATTACHED ON PURPOSE. The app always sends the retrieved knowledge-base
+      # entries with the question — grounding is the whole design, since a small model answering from
+      # memory invents numbers. This probe originally sent `snippets: []` and the worker duly came
+      # back with "3-4 sets per muscle per week", which is badly wrong (the landmark is 10-20 hard
+      # sets) and passed the probe anyway. A green run has to mean the path the app takes works, so
+      # the probe now sends what the app sends, and asserts the model actually used it.
       - name: POST a real question
         env:
           ENDPOINT: ${{ vars.AI_ENDPOINT }}
@@ -63,7 +70,13 @@ jobs:
           body=$(curl -sS -m 45 -w '\n%{http_code}' -X POST "$ENDPOINT" \
             -H 'Content-Type: application/json' \
             -H 'Origin: https://girnarholdings.github.io' \
-            -d "$(jq -nc --arg q "$QUESTION" '{question:$q,snippets:[]}')" || echo "CURL_FAILED")
+            -d "$(jq -nc --arg q "$QUESTION" '{
+                  question: $q,
+                  snippets: [{
+                    question: "How much weekly volume per muscle?",
+                    answer: "10-20 hard sets per muscle per week is the productive range for most lifters."
+                  }]
+                }')" || echo "CURL_FAILED")
           code=$(printf '%s' "$body" | tail -1)
           payload=$(printf '%s' "$body" | sed '$d' | tr '\n' ' ' | cut -c1-700)
 
@@ -75,6 +88,17 @@ jobs:
             *)   echo "::error::POST ${code} — ${payload}" ;;
           esac
           [ "$code" = "200" ] || exit 1
+
+          # Grounding is not decoration. If the reference notes reach the model and are ignored, the
+          # worker returns 200 with a confidently wrong number — which is worse than a 503, because
+          # a 503 falls back to the curated guide and this does not.
+          answer=$(printf '%s' "$body" | sed '$d' | jq -r '.answer // ""')
+          if printf '%s' "$answer" | grep -qiE '\b(10|12|15|20)[ -]*(to|-|–)?[ -]*(20|sets)|10-20'; then
+            echo "::notice::The answer used the supplied reference notes"
+          else
+            echo "::error::POST 200 but the answer IGNORED the reference notes. The supplied note said 10-20 hard sets per muscle per week; the model replied: ${answer}"
+            exit 1
+          fi
 
       # Only reached when the above passed, so a green run means the whole chain works.
       - name: Report success
