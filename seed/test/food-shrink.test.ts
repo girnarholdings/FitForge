@@ -6,6 +6,7 @@ import {
   duplicateSignature,
   rankForShard,
   slimFood,
+  planShards,
 } from '../lib/food-shrink.mjs';
 
 /**
@@ -138,4 +139,87 @@ test('slimming round-trips through the app-side hydration contract', () => {
   assert.deepEqual(hydrated, { ...original, aliases: [] });
   assert.ok(Array.isArray(hydrated.household_measures));
   assert.ok(Array.isArray(hydrated.aliases));
+});
+
+/* ── shard planning ───────────────────────────────────────────────────────────────────────── */
+
+const fold = (s: string) =>
+  String(s).normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+
+const entries = (names: string[], source = 'branded') =>
+  names.map((name, i) => ({ food: food({ id: `fdc-${i}`, name }), source }));
+
+type Entry = { food: { name: string } };
+
+/**
+ * Every food must live in a shard the CLIENT would actually fetch for it — i.e. under one of the
+ * prefixes of its own folded name. This is the invariant the whole scheme rests on: a food filed
+ * under a key nobody derives is deleted as surely as one that was dropped, just less visibly.
+ */
+function assertReachable(shards: Map<string, Entry[]>, all: Entry[], maxDepth = 4) {
+  for (const e of all) {
+    const f = fold(e.food.name).replace(/[^a-z0-9]/g, '');
+    let found = false;
+    for (let d = maxDepth; d >= 2 && !found; d -= 1) {
+      const key = f.length >= d ? f.slice(0, d) : '_';
+      found = (shards.get(key) ?? []).some((r) => r.food.name === e.food.name);
+    }
+    assert.ok(found, `"${e.food.name}" is in no shard the client would fetch`);
+  }
+}
+
+/** Names sharing a two-letter prefix but diverging at the third, so splitting terminates. */
+const BE_WORDS = ['Beef', 'Beans', 'Beer', 'Belgian waffle', 'Berry mix', 'Bento box'];
+const spread = (n: number) =>
+  Array.from({ length: n }, (_, i) => `${BE_WORDS[i % BE_WORDS.length]} item ${i}`);
+
+test('a bucket under the cap is emitted as one shard at the minimum depth', () => {
+  const all = entries(['Beef stew', 'Beans, black', 'Beverage, cola']);
+  const { shards, dropped } = planShards(all, { maxRows: 600, foldName: fold });
+  assert.equal(dropped, 0);
+  assert.deepEqual([...shards.keys()], ['be']);
+  assert.equal(shards.get('be')!.length, 3);
+});
+
+test('an over-full bucket splits deeper instead of dropping rows', () => {
+  const all = entries(spread(120));
+  const { shards, dropped } = planShards(all, { maxRows: 30, headRows: 10, foldName: fold });
+  assert.equal(dropped, 0, 'splitting must not lose anything');
+  assert.ok(shards.has('bee'), 'expected a depth-3 shard');
+  assert.ok(shards.has('ber'), 'expected sibling depth-3 shards');
+  assertReachable(shards, all);
+});
+
+test('a split bucket keeps a head shard so short queries still answer', () => {
+  const all = entries(spread(120));
+  const { shards } = planShards(all, { maxRows: 30, headRows: 10, foldName: fold });
+  assert.ok(shards.has('be'), 'a two-letter query must still find a shard');
+  assert.equal(shards.get('be')!.length, 10, 'head shard is a ranked sample, not the whole bucket');
+  assert.ok(shards.get('be')!.length < all.length);
+});
+
+test('no shard anywhere exceeds the cap', () => {
+  const all = entries([...spread(240), ...Array.from({ length: 90 }, (_, i) => `Chocolate bar ${i}`)]);
+  const { shards } = planShards(all, { maxRows: 40, headRows: 15, foldName: fold });
+  for (const [key, rows] of shards) {
+    assert.ok(rows.length <= 40, `shard ${key} has ${rows.length} rows, over the 40 cap`);
+  }
+});
+
+test('names too short to key deeper stay reachable in the head shard', () => {
+  // "Be" has no third character, so depth 3 can never hold it — it must remain in `be` or it is
+  // silently gone. This is the case that made an earlier draft lose rows into a colliding `_`.
+  const all = entries(['Be', ...spread(120)]);
+  const { shards } = planShards(all, { maxRows: 30, headRows: 10, foldName: fold });
+  assert.ok(shards.get('be')!.some((r) => r.food.name === 'Be'), '"Be" fell out of every shard');
+});
+
+test('rows are dropped only once no finer key exists', () => {
+  // 200 names identical well past the depth limit: there is nothing left to split on, so this is
+  // the one place the cap still bites.
+  const all = entries(Array.from({ length: 200 }, (_, i) => `Beefsteak ${i}`));
+  const { shards, dropped } = planShards(all, { maxRows: 50, headRows: 10, maxDepth: 4, foldName: fold });
+  assert.ok(dropped > 0, 'expected the depth limit to force drops');
+  for (const [, rows] of shards) assert.ok(rows.length <= 50);
 });

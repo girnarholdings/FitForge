@@ -42,6 +42,12 @@ export interface Tier2Manifest {
   license: string;
   source: string;
   shard_key_length: number;
+  /**
+   * Deepest key length the build emitted. Absent on a manifest written before buckets could be
+   * split, which is why `bestShardKey` falls back to `shard_key_length` — an older manifest then
+   * behaves exactly as it did before, with every key the same length.
+   */
+  max_shard_depth?: number;
 }
 
 /** Resolved once per session. `null` = checked and genuinely not deployed. */
@@ -74,6 +80,29 @@ export async function available(): Promise<boolean> {
 export function shardKeyFor(folded: string, keyLength = 2): string {
   const key = folded.replace(/[^a-z0-9]/g, '').slice(0, keyLength);
   return key.length === keyLength ? key : '_';
+}
+
+/**
+ * The most specific shard that can answer this query, or null if none exists.
+ *
+ * Shard keys are NOT all the same length. The importer splits over-subscribed buckets deeper —
+ * `be` holds beef, beans and beverages, far more than one shard should carry — so the catalog
+ * contains `be` alongside `bee`, `beef` and so on. Taking the longest key the manifest actually
+ * has means a specific query fetches a small, specific shard, while a two-letter query still
+ * lands on the bucket's head shard.
+ *
+ * Longest-first, because the deeper shard holds the FULL contents of its prefix while the head
+ * shard holds only the highest-ranked sample of it; searching the head when a deeper shard exists
+ * would quietly miss most of the matches.
+ */
+export function bestShardKey(folded: string, manifest: Tier2Manifest): string | null {
+  const minDepth = manifest.shard_key_length ?? 2;
+  const maxDepth = manifest.max_shard_depth ?? minDepth;
+  for (let depth = maxDepth; depth >= minDepth; depth -= 1) {
+    const key = shardKeyFor(folded, depth);
+    if (key in manifest.shards) return key;
+  }
+  return null;
 }
 
 /** A shard row as it travels: fields that are empty or recomputable are omitted by the importer. */
@@ -126,8 +155,8 @@ export async function searchTier2(query: string, limit = 20): Promise<Food[]> {
   const folded = fold(query);
   if (folded.length < 2) return [];
 
-  const key = shardKeyFor(folded, manifest.shard_key_length);
-  if (!(key in manifest.shards)) return [];
+  const key = bestShardKey(folded, manifest);
+  if (!key) return [];
 
   const rows = await loadShard(key);
   const hits: { food: Food; score: number }[] = [];

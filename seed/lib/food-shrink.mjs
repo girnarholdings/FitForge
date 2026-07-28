@@ -110,6 +110,98 @@ export function rankForShard(food, source) {
  * `Food` type declares `aliases` and `household_measures` as required arrays and `measures.ts`
  * calls `.find` on them without guarding, so a row that reached the app slimmed would throw.
  */
+/**
+ * Shard key for a folded name at a given depth. `_` for names with too few characters to key.
+ *
+ * Mirrored by `shardKeyFor` in apps/web/lib/food/tier2.ts — the client derives the key it fetches
+ * from the query, so the two must agree exactly or every lookup misses.
+ */
+export function shardKeyFor(foldedName, depth) {
+  const key = foldedName.replace(/[^a-z0-9]/g, '').slice(0, depth);
+  return key.length === depth ? key : '_';
+}
+
+/**
+ * Decide which shard every food goes in, splitting over-full buckets DEEPER rather than truncating.
+ *
+ * The first real build made the case for this: a flat 600-row cap at two characters discarded
+ * 11,156 foods — 19% of the catalog, and nearly three times what duplicate collapsing removed.
+ * Those were not repetitive rows. Buckets like `be` hold beef, beans and beverages, so the cap was
+ * deleting specific real products from the busiest prefixes precisely because they were busy.
+ *
+ * Splitting `be` into `bea`/`bee`/`bev`… keeps every food AND keeps each fetch small, because the
+ * client asks for the longest prefix of its query that the manifest actually has. The cap only
+ * still applies at `maxDepth`, where there is no finer key left to split on.
+ *
+ * A split bucket also keeps a HEAD shard at its own key, holding the top `headRows` by rank. A
+ * two-character query has no third character to key on, so without it "be" would find nothing at
+ * all; with it, a vague query gets the generic, highest-ranked foods, which is the right answer to
+ * a vague query anyway. It costs `headRows` duplicated rows per split bucket.
+ *
+ * Returns `{ shards, dropped }` — `dropped` is only ever non-zero at `maxDepth`.
+ */
+export function planShards(entries, opts = {}) {
+  const {
+    maxRows = 600,
+    minDepth = 2,
+    maxDepth = 4,
+    headRows = 150,
+    // How a food's name becomes the string the key is taken from. Supplied by the importer so it
+    // is the SAME folding the client applies to the query — the two derive the key independently
+    // and every lookup misses if they disagree.
+    foldName = normaliseName,
+  } = opts;
+  const shards = new Map();
+  let dropped = 0;
+
+  const byRank = (a, b) => rankForShard(b.food, b.source) - rankForShard(a.food, a.source);
+  const keyable = (entry) => foldName(entry.food.name).replace(/[^a-z0-9]/g, '').length;
+
+  const place = (group, depth) => {
+    const buckets = new Map();
+    for (const entry of group) {
+      const key = shardKeyFor(foldName(entry.food.name), depth);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(entry);
+    }
+
+    for (const [key, rows] of buckets) {
+      if (rows.length <= maxRows) {
+        shards.set(key, rows);
+        continue;
+      }
+
+      rows.sort(byRank);
+
+      // Rows with no character left to key on cannot be split further, however deep we go — `_`
+      // collects exactly those. Capping here rather than recursing is what stops the descent from
+      // running forever on them.
+      const splittable = key !== '_' && depth < maxDepth ? rows.filter((r) => keyable(r) > depth) : [];
+      if (splittable.length === 0) {
+        dropped += rows.length - maxRows;
+        shards.set(key, rows.slice(0, maxRows));
+        continue;
+      }
+
+      // The head shard answers queries too short to reach the deeper keys. It must contain every
+      // row that CANNOT be split — those have no deeper shard to live in, and omitting them would
+      // silently delete them — plus the highest-ranked splittable rows to fill it out.
+      const unsplittable = rows.filter((r) => keyable(r) <= depth);
+      const head = [...unsplittable, ...splittable.slice(0, headRows)].slice(0, maxRows);
+      dropped += Math.max(0, unsplittable.length - maxRows);
+      shards.set(key, head);
+
+      // Recurse on the splittable rows ONLY. Feeding the whole group down would re-file the
+      // unsplittable ones under `_` at the next depth, where they would collide with — and
+      // overwrite — the global `_` bucket built at minDepth.
+      place(splittable, depth + 1);
+    }
+  };
+
+  place(entries, minDepth);
+  return { shards, dropped };
+}
+
 export function slimFood(food) {
   const out = {
     id: food.id,

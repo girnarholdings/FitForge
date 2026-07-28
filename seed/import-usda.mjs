@@ -45,6 +45,7 @@ import { gzipSync } from 'node:zlib';
 import { ARRAY_KEYS, streamArrayObjects } from './lib/stream-json.mjs';
 import {
   duplicateSignature,
+  planShards,
   rankForShard,
   slimFood,
 } from './lib/food-shrink.mjs';
@@ -93,6 +94,30 @@ const SHARD_KEY_LENGTH = 2;
  */
 const MAX_SHARD_ROWS = Number(process.env.FITFORGE_MAX_SHARD_ROWS ?? 600);
 
+/**
+ * How many characters a shard key may grow to before rows are dropped instead of split.
+ *
+ * Six, not four. Four sounds generous until you count how many food names share a long head:
+ * "chocolate" is nine characters before it distinguishes anything, and a bucket with no finer key
+ * to split on is a bucket that gets truncated instead. Extra depth costs only more and smaller
+ * files — Pages serves them as static assets and the client still fetches exactly one — so this is
+ * a termination guarantee rather than a budget.
+ *
+ * It cannot drive drops to zero: names identical past the limit have nothing left to divide on,
+ * and that residue is exactly what `dropped.over_cap` in the manifest reports.
+ */
+const MAX_SHARD_DEPTH = Number(process.env.FITFORGE_MAX_SHARD_DEPTH ?? 6);
+
+/**
+ * Rows kept in a SPLIT bucket's own shard, for queries too short to reach the deeper keys.
+ *
+ * Typing "be" gives the client no third character to key on, so without this the busiest prefixes
+ * would answer a two-letter query with nothing at all. 150 highest-ranked rows — generic foods,
+ * short names — is the right answer to a deliberately vague query, and costs one small duplicated
+ * shard per split bucket rather than a second copy of the whole bucket.
+ */
+const HEAD_SHARD_ROWS = Number(process.env.FITFORGE_HEAD_SHARD_ROWS ?? 150);
+
 /** FDC nutrient ids we care about. Anything else in the row is ignored. */
 const NUTRIENT = {
   ENERGY_KCAL: 1008,
@@ -121,12 +146,6 @@ function fold(s) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-}
-
-/** Shard a folded name into a bucket. Short names go to `_`, so every food lands somewhere. */
-function shardKeyFor(foldedName) {
-  const key = foldedName.replace(/[^a-z0-9]/g, '').slice(0, SHARD_KEY_LENGTH);
-  return key.length === SHARD_KEY_LENGTH ? key : '_';
 }
 
 /**
@@ -385,35 +404,28 @@ async function main() {
   }
 
   // ── shard ──────────────────────────────────────────────────────────────────────────────────
-  const shards = new Map();
-  for (const entry of foods) {
-    const key = shardKeyFor(fold(entry.food.name));
-    if (!shards.has(key)) shards.set(key, []);
-    shards.get(key).push(entry);
-  }
+  // Over-full buckets are split DEEPER, not truncated. Food names are nowhere near uniformly
+  // distributed over their first two letters — `be` alone draws beef, beans and beverages — and a
+  // flat cap at two characters threw away 11,156 real foods on the first build against live data.
+  // See planShards.
+  const { shards, dropped: capped } = planShards(foods, {
+    maxRows: MAX_SHARD_ROWS,
+    minDepth: SHARD_KEY_LENGTH,
+    maxDepth: MAX_SHARD_DEPTH,
+    headRows: HEAD_SHARD_ROWS,
+    foldName: fold,
+  });
 
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
 
   let bytes = 0;
   let shipped = 0;
-  let capped = 0;
   let largest = { key: null, rows: 0, bytes: 0 };
   const shardCounts = {};
 
   for (const [key, entries] of [...shards].sort(([a], [b]) => (a < b ? -1 : 1))) {
-    // CAP THE BUCKET, BY QUALITY. Food names are nowhere near uniformly distributed over their
-    // first two letters — "ch" and "or" ("Organic …") draw thousands of branded rows while "xy"
-    // draws none — and a shard is fetched and parsed whole, so the worst bucket alone sets how
-    // slow search feels. Sorting by usefulness first means an over-subscribed bucket loses its
-    // least useful brand rows rather than whatever happened to sort last alphabetically.
-    if (entries.length > MAX_SHARD_ROWS) {
-      entries.sort((a, b) => rankForShard(b.food, b.source) - rankForShard(a.food, a.source));
-      capped += entries.length - MAX_SHARD_ROWS;
-      entries.length = MAX_SHARD_ROWS;
-    }
-
-    // Alphabetical on the wire regardless of how the cap ordered things: the client scans the
+    // Alphabetical on the wire regardless of how ranking ordered things: the client scans the
     // array in order and shows the first matches, so this is the order the user sees.
     entries.sort((a, b) => a.food.name.localeCompare(b.food.name));
 
@@ -449,6 +461,7 @@ async function main() {
         license: 'Public domain (CC0) — USDA FoodData Central',
         source: 'https://fdc.nal.usda.gov/',
         shard_key_length: SHARD_KEY_LENGTH,
+        max_shard_depth: MAX_SHARD_DEPTH,
       },
       null,
       2,
