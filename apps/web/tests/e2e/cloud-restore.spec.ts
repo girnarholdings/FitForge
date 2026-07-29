@@ -239,11 +239,18 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
     );
 
     await page.goto('/settings');
+    // SERIALIZE ON THE RESTORED SESSION before touching the erase flow: the sheet's cloud clause
+    // (and the cloud-delete path itself) exist only for a signed-in user, and the localStorage
+    // session restore is async. The mode chip flipping to `google` IS the app saying the user
+    // landed — waiting on it here is what makes the rest of the test deterministic on a slow
+    // runner. (CI caught this: the sheet opened before restoration finished and showed the
+    // local-only copy.)
+    await expect(page.getByTestId('mode-chip')).toHaveAttribute('data-mode', 'google', {
+      timeout: 30000,
+    });
     await page.getByTestId('erase-local-data').click();
-    // The confirm sheet names the cloud consequence for a signed-in user. Generous timeout: the
-    // copy appears once the RESTORED auth state lands (a local read, but async), and the sheet
-    // re-renders reactively when it does.
-    await expect(page.getByText(/deletes your cloud copy/i)).toBeVisible({ timeout: 20000 });
+    // The confirm sheet names the cloud consequence for a signed-in user.
+    await expect(page.getByText(/deletes your cloud copy/i)).toBeVisible();
     const hitsBeforeConfirm = firestoreHits;
     await page.getByRole('button', { name: /yes, erase everything/i }).click();
 
