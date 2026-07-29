@@ -85,6 +85,13 @@ test.describe('regression · coach safety routing', () => {
       });
       expect(firstCard, 'the safety card is not the primary response').toBe('coach-safety-card');
 
+      // NOT NARROWED TO THE COACH ENDPOINT, on purpose. Any off-origin request at all during a
+      // red-flag turn is worth failing on, and this caught something real: adding Firebase Auth
+      // made every page load fetch `apis.google.com/js/api.js`, because `getAuth()` registers a
+      // popup resolver that boots Google's iframe machinery eagerly. That was a third-party
+      // script on an app that promises your data stays in your browser, and no narrower assertion
+      // would have noticed. See lib/auth/firebase.ts — the resolver is now passed only to the
+      // sign-in call that genuinely needs it.
       expect(offOrigin, 'a red-flag query hit the network').toEqual([]);
     });
   }

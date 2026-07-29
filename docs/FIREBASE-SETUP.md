@@ -10,6 +10,21 @@ Adding Firebase turns on two things:
 
 Everything below fits inside the **Spark (free) plan**. No card, no Blaze upgrade.
 
+> ## Status for this repository
+>
+> The project **`fitforge-007`** is already wired in: its web config is committed as the default
+> in `.github/workflows/pages.yml`, and `workers/coach/wrangler.toml` carries
+> `FIREBASE_PROJECT_ID = "fitforge-007"`. **Steps 1, 2, 6 and 7 are done.**
+>
+> What still has to happen in the Firebase console, because no API can do it for you:
+>
+> - **Step 3** — enable the Google sign-in provider
+> - **Step 4** — add `goforge.fit`, `girnarholdings.github.io` and `localhost` to authorised domains
+> - **Step 5** — create Firestore and publish the security rules
+>
+> Until those three are done, the Sign in button appears and the popup fails. And run
+> `cd workers/coach && npx wrangler deploy` once to arm the members-only model gate.
+
 ---
 
 ## Step 1 · Create the project
@@ -122,15 +137,30 @@ users sit comfortably inside the free tier.
 
 ## Step 6 · Give the values to the build
 
-Repository → **Settings → Secrets and variables → Actions → Variables** → add the six from
-step 2. The Pages workflow reads them and inlines them at build time:
+`fitforge-007`'s config is **committed as the default** in `.github/workflows/pages.yml`, so the
+build already has it and nothing needs setting for this repository.
+
+To point a build at a *different* project, add repository variables under
+**Settings → Secrets and variables → Actions → Variables** — they take precedence over the
+committed defaults:
 
 ```
 FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID,
 FIREBASE_STORAGE_BUCKET, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID
 ```
 
-Leave them unset and the app builds exactly as it does today: no sign-in UI, Local Mode only.
+Clear the defaults in the workflow and set no variables, and the app builds exactly as it did
+before accounts existed: no sign-in UI, Local Mode only.
+
+### Why committing this config is not a leak
+
+Every value in a Firebase **web** config is inlined into the JavaScript bundle that each visitor
+downloads — there is no way to ship browser-side Firebase without publishing them, and Google
+documents them as safe to expose. They identify the project; they authorise nothing. Access is
+decided by the security rules in step 5 and the authorised-domain list in step 4.
+
+The contrast worth holding onto: `MISTRAL_API_KEY` **is** a real credential, which is exactly why
+it lives only as a Cloudflare secret on the worker and never in this repository or the bundle.
 
 ## Step 7 · Tell the worker which project to trust
 

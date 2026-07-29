@@ -226,11 +226,23 @@ jobs:
 
       # The suite serves apps/web/out — it does not build it. Base path MUST be empty here: the
       # test server mounts out/ at the root, so a /FitForge prefix would 404 every asset.
+      #
+      # THE FIREBASE CONFIG IS INCLUDED so the E2E suite exercises the build that actually ships.
+      # Without it CI would only ever see the Local-Mode-only variant, and the account card, the
+      # sign-in buttons and the members-only model filter — all real UI on the live site — would be
+      # covered by nobody. No network is involved for a signed-out visitor: the SDK resolves "no
+      # user" from local persistence, which is the state every spec runs in.
       - name: Build static export
         run: npm run build -w @fitforge/web
         env:
           NEXT_PUBLIC_BASE_PATH: ""
           NEXT_PUBLIC_DEMO: "1"
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || 'AIzaSyCnTHrW2_sHXkkpzKASKD9ud-vxXsSrNLE' }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN || 'fitforge-007.firebaseapp.com' }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || 'fitforge-007' }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || 'fitforge-007.firebasestorage.app' }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || '8172039135' }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID || '1:8172039135:web:27cb97aa54b0cde59e326a' }}
 
       # Worker count lives in playwright.config.ts, not here, so a local run and a CI run are the
       # same run. It used to be pinned to 1 from this line on the belief that the specs raced; they

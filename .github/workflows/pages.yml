@@ -179,17 +179,30 @@ jobs:
           # `isCoachConfigured()` reads that as "no worker", and Coach answers from the local
           # knowledge base exactly as it does today. Nothing needs to change to keep it off.
           NEXT_PUBLIC_AI_ENDPOINT: ${{ vars.AI_ENDPOINT }}
-          # FIREBASE — Google sign-in and cloud sync. All six unset is a SUPPORTED build: the app
-          # ships with no sign-in UI and Local Mode only, exactly as it did before accounts existed.
-          # These are public by design (a web config identifies a project, it authorises nothing);
-          # what protects the data is the Firestore rules and the authorised-domain list. See
-          # docs/FIREBASE-SETUP.md.
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+          # FIREBASE — Google sign-in and cloud sync (project `fitforge-007`).
+          #
+          # COMMITTED ON PURPOSE, and it is not a leak. A Firebase WEB config is public by design:
+          # every value below is inlined into the JavaScript bundle that every visitor downloads,
+          # and Google documents these keys as safe to expose. They IDENTIFY a project; they
+          # authorise nothing. What actually protects the data is the Firestore security rules
+          # (`request.auth.uid == uid`, shape-checked, size-capped) plus the authorised-domain
+          # list — both in the Firebase console, both documented in docs/FIREBASE-SETUP.md.
+          #
+          # Contrast MISTRAL_API_KEY, which is a real credential and therefore lives only as a
+          # Cloudflare secret on the worker and never touches this file or the bundle.
+          #
+          # Repository variables still WIN when set, so a fork points at its own project without
+          # editing the workflow, and clearing them here would fall back to a Local-Mode-only build.
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || 'AIzaSyCnTHrW2_sHXkkpzKASKD9ud-vxXsSrNLE' }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN || 'fitforge-007.firebaseapp.com' }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || 'fitforge-007' }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || 'fitforge-007.firebasestorage.app' }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || '8172039135' }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID || '1:8172039135:web:27cb97aa54b0cde59e326a' }}
+          # Carried so Analytics can be switched on later without hunting for it. NOT initialised —
+          # see the note in lib/auth/firebase.ts: this app tells people their data stays in their
+          # browser, and quietly shipping Google Analytics would make that sentence untrue.
+          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID || 'G-9VY0515P1C' }}
 
       # Says, on every deploy, whether the Coach worker is actually wired into the bundle.
       #

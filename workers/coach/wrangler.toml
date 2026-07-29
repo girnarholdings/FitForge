@@ -50,7 +50,11 @@ ALLOWED_ORIGINS = "https://goforge.fit,http://goforge.fit,https://girnarholdings
 # Leave it unset and no token can ever be verified, so every request is served by the free Workers
 # AI tier. That is the safe direction to fail, and it is the correct setting for a fork that has
 # no Firebase project.
-# FIREBASE_PROJECT_ID = "your-firebase-project-id"
+#
+# SETTING THIS ARMS THE MEMBERS-ONLY GATE on the next `wrangler deploy`: signed-in users are
+# served by FitForge's Mistral key, everyone else by the free Workers AI tier, so anonymous
+# traffic exhausting the free tier cannot degrade signed-in users.
+FIREBASE_PROJECT_ID = "fitforge-007"
 
 # MISTRAL_API_KEY is a SECRET and must never be written here — this file is committed.
 #   npx wrangler secret put MISTRAL_API_KEY
