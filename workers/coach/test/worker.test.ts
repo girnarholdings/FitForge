@@ -1145,3 +1145,41 @@ test('adapt refuses a context with no exercises — nothing to edit means nothin
   );
   assert.equal(res.status, 400);
 });
+
+test('adapt passes through clamped holistic advice, and the unwell override supplies its own', async () => {
+  // Advice comes back when the model provides it…
+  let env = adaptEnv({
+    action: 'reduce',
+    reason: 'Rough night — go light.',
+    confidence: 0.7,
+    advice: {
+      nutrition: 'Hungover: carbs + water with electrolytes, skip spicy and greasy. ' + 'x'.repeat(300),
+      recovery: 'Early night tonight.',
+    },
+  });
+  let res = await worker.fetch(
+    post({ task: 'adapt', feeling: 'hungover, rough night', context: ADAPT_CTX }),
+    env,
+  );
+  let body = (await res.json()) as { advice?: { nutrition?: string; recovery?: string } };
+  assert.ok(body.advice?.nutrition?.includes('electrolytes'));
+  assert.ok(body.advice!.nutrition!.length <= 180, 'advice prose is clamped');
+  assert.equal(body.advice?.recovery, 'Early night tonight.');
+
+  // …and when the illness gate overrules a model that offered none, rest still carries advice.
+  env = adaptEnv({ action: 'proceed', reason: 'you got this', confidence: 0.9 });
+  res = await worker.fetch(
+    post({
+      task: 'adapt',
+      feeling: 'feverish but keen',
+      context: {
+        ...ADAPT_CTX,
+        readiness: { sleepHours: 7, soreness: 2, energy: 3, stress: 2, unwell: true },
+      },
+    }),
+    env,
+  );
+  body = (await res.json()) as { action?: string; advice?: { nutrition?: string } };
+  assert.equal((body as { action: string }).action, 'rest');
+  assert.ok(body.advice?.nutrition?.includes('electrolytes'));
+});

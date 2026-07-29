@@ -12,7 +12,9 @@
  * export, and it is covered by erase-everything like every other `fitforge.*` key.
  */
 import * as React from 'react';
+import type { RoutineDay } from '@/components/features/_mock/data';
 import type { CheckIn, ReadinessVerdict, AdaptAction } from './engine';
+import type { AdviceLine } from './advice';
 
 export const READINESS_KEY = 'fitforge.readiness.v1';
 const MAX_ENTRIES = 120;
@@ -26,6 +28,14 @@ export interface ReadinessEntry {
   /** 'rules' = the morning check-in engine; 'ai' = the coach adapt task */
   source: 'rules' | 'ai';
   decision: 'accepted' | 'rejected' | null;
+  /**
+   * The FULL adapted day that was accepted (swaps applied, sets edited), so Today can keep
+   * showing it and re-stage it in one tap — exiting the player must never cost a re-done
+   * questionnaire. Absent for rest days, rejections and plain proceeds.
+   */
+  adaptedDay?: RoutineDay | null;
+  /** the day's holistic advice (nutrition/sleep/recovery), persisted so the recap can show it */
+  advice?: AdviceLine[];
 }
 
 interface ReadinessState {
@@ -85,7 +95,12 @@ export function saveEntry(entry: ReadinessEntry): void {
 }
 
 export function recordDecision(date: string, decision: 'accepted' | 'rejected'): void {
-  const entries = load().entries.map((e) => (e.date === date ? { ...e, decision } : e));
+  patchEntry(date, { decision });
+}
+
+/** Merge fields into an existing entry (decision, the accepted adaptedDay, advice…). */
+export function patchEntry(date: string, patch: Partial<ReadinessEntry>): void {
+  const entries = load().entries.map((e) => (e.date === date ? { ...e, ...patch } : e));
   save({ version: 1, entries });
 }
 

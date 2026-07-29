@@ -33,8 +33,9 @@ import {
 } from '@/lib/readiness/engine';
 import { buildAdaptedDay, type AdaptSwap } from '@/lib/readiness/dayEdits';
 import { buildAdaptContext, resolveSwaps } from '@/lib/readiness/context';
+import { adviceFor, type AdviceLine } from '@/lib/readiness/advice';
 import {
-  entryForDate,
+  patchEntry,
   recordDecision,
   saveEntry,
   todayISO,
@@ -93,6 +94,7 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
     action: AdaptAction;
     reason: string;
     swaps: AdaptSwap[];
+    advice: AdviceLine[];
   } | null>(null);
 
   const checkIn = (): CheckIn => ({
@@ -117,20 +119,32 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
       offered: v.action,
       source: 'rules',
       decision: v.action === 'proceed' ? 'accepted' : null,
+      advice: adviceFor(c, v),
     });
     haptic();
   }
 
-  /** ONE CLICK from recommendation to a startable session — the whole point of the feature. */
+  /**
+   * ONE CLICK from recommendation to a startable session — and the accepted day is PERSISTED on
+   * the entry, so exiting the player never costs a re-done questionnaire: Today keeps showing
+   * the adapted session with its own re-enter button until the day ends.
+   */
   function accept(action: AdaptAction, swaps: AdaptSwap[] = []) {
-    recordDecision(today, 'accepted');
     const adapted = buildAdaptedDay(day, action, swaps);
+    patchEntry(today, { decision: 'accepted', adaptedDay: adapted });
     haptic('confirm');
     setOpen(false);
     if (adapted) {
       setQuickSession(adapted);
       router.push('/workout/quick');
     }
+  }
+
+  /** Re-stage the persisted adapted day — the "I exited, let me back in" path. */
+  function reenter(adapted: RoutineDay) {
+    setQuickSession(adapted);
+    haptic('confirm');
+    router.push('/workout/quick');
   }
 
   function reject() {
@@ -154,7 +168,13 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
       return;
     }
     const swaps = resolveSwaps(ctx, r.result.swaps);
-    setAiOffer({ action: r.result.action, reason: r.result.reason, swaps });
+    // The AI's advice wins (it can read "hungover" in free text); the rules advice is the floor.
+    const fallback = adviceFor(c, assessReadiness(c));
+    const advice: AdviceLine[] = [];
+    if (r.result.advice?.nutrition) advice.push({ kind: 'nutrition', text: r.result.advice.nutrition });
+    if (r.result.advice?.recovery) advice.push({ kind: 'recovery', text: r.result.advice.recovery });
+    const finalAdvice = advice.length > 0 ? advice : fallback;
+    setAiOffer({ action: r.result.action, reason: r.result.reason, swaps, advice: finalAdvice });
     setVerdict(null);
     saveEntry({
       date: today,
@@ -163,12 +183,108 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
       offered: r.result.action,
       source: 'ai',
       decision: null,
+      advice: finalAdvice,
     });
   }
 
   /* ─── the card on Today ─── */
 
+  const redoButton = (
+    <button
+      type="button"
+      onClick={() => {
+        setVerdict(null);
+        setAiOffer(null);
+        setOpen(true);
+      }}
+      data-testid="checkin-redo"
+      className="shrink-0 text-xs font-semibold text-accent"
+    >
+      Redo
+    </button>
+  );
+
   if (entry && !open) {
+    /**
+     * AN ACCEPTED ADAPTED SESSION STAYS ON TODAY, in full. Exiting the player must never cost a
+     * re-done questionnaire — the card shows the whole adapted split (every exercise, its sets)
+     * and re-stages it in one tap, for as long as the day lasts. The standard workout card below
+     * remains untouched, so "actually, give me the normal session" is always one scroll away.
+     */
+    if (entry.decision === 'accepted' && entry.adaptedDay) {
+      const adapted = entry.adaptedDay;
+      return (
+        <Card className="shadow-[var(--shadow-card)]" data-testid="morning-checkin">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                aria-hidden
+                className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: BAND_COLOR[entry.verdict.band] }}
+              />
+              <div className="min-w-0">
+                <CardTitle data-testid="adapted-session-title">{adapted.name}</CardTitle>
+                <p className="mt-0.5 text-xs text-muted-foreground" data-testid="checkin-summary">
+                  Readiness {entry.verdict.score} · your adapted session for today
+                </p>
+              </div>
+            </div>
+            {redoButton}
+          </div>
+          <ul className="mt-3 space-y-1" data-testid="adapted-session-exercises">
+            {adapted.exercises.map((e) => (
+              <li
+                key={e.id}
+                className="flex items-baseline justify-between gap-2 text-sm"
+              >
+                <span className="min-w-0 truncate font-medium text-foreground">
+                  {e.exercise_name}
+                </span>
+                <span className="tabular shrink-0 text-xs text-muted-foreground">
+                  {e.sets} × {e.rep_min}–{e.rep_max}
+                  {e.target_rpe != null && ` · RPE ${e.target_rpe}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {entry.advice && entry.advice.length > 0 && <AdviceList lines={entry.advice} compact />}
+          <Button
+            block
+            className="mt-3"
+            data-testid="adapted-session-enter"
+            onClick={() => reenter(adapted)}
+          >
+            <BoltIcon size={18} /> Enter this session
+          </Button>
+        </Card>
+      );
+    }
+
+    /** An accepted REST day also keeps its card — the advice is the day's plan. */
+    if (entry.decision === 'accepted' && entry.offered === 'rest') {
+      return (
+        <Card className="shadow-[var(--shadow-card)]" data-testid="morning-checkin">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                aria-hidden
+                className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: BAND_COLOR[entry.verdict.band] }}
+              />
+              <div className="min-w-0">
+                <CardTitle>Rest day, on purpose</CardTitle>
+                <p className="mt-0.5 text-xs text-muted-foreground" data-testid="checkin-summary">
+                  Readiness {entry.verdict.score} · recovery is the session today
+                </p>
+              </div>
+            </div>
+            {redoButton}
+          </div>
+          {entry.advice && entry.advice.length > 0 && <AdviceList lines={entry.advice} compact />}
+        </Card>
+      );
+    }
+
     const acted = entry.decision === 'accepted' && entry.offered !== 'proceed';
     return (
       <Card className="!py-3 shadow-[var(--shadow-card)]" data-testid="morning-checkin">
@@ -187,18 +303,7 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
               {acted && ' — accepted'}
             </span>
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setVerdict(null);
-              setAiOffer(null);
-              setOpen(true);
-            }}
-            data-testid="checkin-redo"
-            className="shrink-0 text-xs font-semibold text-accent"
-          >
-            Redo
-          </button>
+          {redoButton}
         </div>
       </Card>
     );
@@ -308,6 +413,7 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
                 action={verdict.action}
                 reason={verdict.reason}
                 safety={verdict.safety}
+                advice={adviceFor(checkIn(), verdict)}
                 onAccept={() => accept(verdict.action)}
                 onReject={reject}
               />
@@ -328,6 +434,7 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
                 reason={aiOffer.reason}
                 safety={aiOffer.action === 'rest' && unwell}
                 swaps={aiOffer.swaps}
+                advice={aiOffer.advice}
                 onAccept={() => accept(aiOffer.action, aiOffer.swaps)}
                 onReject={reject}
               />
@@ -396,6 +503,38 @@ function ScaleRow({
   );
 }
 
+const ADVICE_LABEL: Record<AdviceLine['kind'], string> = {
+  nutrition: 'Fuel',
+  hydration: 'Drink',
+  sleep: 'Sleep',
+  recovery: 'Recover',
+};
+
+/**
+ * The holistic half of the recommendation: what to eat, drink and do with the REST of the day.
+ * Renders under every verdict and again on the persisted Today card, because "half the sets"
+ * without "front-load carbs and get to bed early" is half a coach.
+ */
+function AdviceList({ lines, compact = false }: { lines: AdviceLine[]; compact?: boolean }) {
+  return (
+    <div className={compact ? 'mt-3 border-t border-border pt-3' : 'mt-1'} data-testid="day-advice">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        For the rest of your day
+      </p>
+      <ul className="space-y-1.5">
+        {lines.map((l, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm">
+            <span className="mt-0.5 shrink-0 rounded-chip bg-accent-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+              {ADVICE_LABEL[l.kind] ?? 'Tip'}
+            </span>
+            <span className="min-w-0 text-muted-foreground">{l.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** One recommendation, one why, two buttons. Shared by the rules verdict and the AI offer. */
 function OfferPanel({
   headline,
@@ -404,6 +543,7 @@ function OfferPanel({
   reason,
   safety,
   swaps = [],
+  advice = [],
   onAccept,
   onReject,
 }: {
@@ -413,6 +553,7 @@ function OfferPanel({
   reason: string;
   safety: boolean;
   swaps?: AdaptSwap[];
+  advice?: AdviceLine[];
   onAccept: () => void;
   onReject: () => void;
 }) {
@@ -447,6 +588,7 @@ function OfferPanel({
             in with a doctor.
           </p>
         )}
+        {advice.length > 0 && <AdviceList lines={advice} />}
       </div>
       {proceed ? (
         <Button block data-testid="adapt-accept" onClick={onAccept}>

@@ -266,6 +266,8 @@ export interface AdaptResponse {
   swaps: { from: string; to: string }[];
   reason: string;
   confidence: number;
+  /** holistic day advice from the worker (already clamped there); absent → client rules advice */
+  advice?: { nutrition?: string; recovery?: string };
   provider?: string;
   model?: string;
 }
@@ -327,6 +329,7 @@ export async function askAdapt(
         swaps: Array.isArray(body.swaps) ? body.swaps : [],
         reason: String(body.reason ?? ''),
         confidence: Number(body.confidence ?? 0.5),
+        advice: body.advice && typeof body.advice === 'object' ? body.advice : undefined,
         provider: body.provider,
         model: body.model,
       },

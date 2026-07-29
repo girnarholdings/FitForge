@@ -1110,7 +1110,8 @@ const ADAPT_SYSTEM =
   'an exercise, never use a slug outside the lists.\n' +
   'Output ONLY one minified JSON object — no prose, no markdown, no fence. Schema: ' +
   '{"action":"proceed"|"reduce"|"technique"|"rest","swaps":[{"from":"<today slug>","to":"<candidate slug>"}],' +
-  '"reason":"<plain language, under 140 chars, reflect their own words>","confidence":<0..1>}\n' +
+  '"reason":"<plain language, under 140 chars, reflect their own words>","confidence":<0..1>,' +
+  '"advice":{"nutrition":"<one concrete line for TODAY, under 140 chars>","recovery":"<one sleep/stress/recovery line, under 140 chars>"}}\n' +
   'Rules:\n' +
   '- "reduce" = same session at half the sets (tired but able). "technique" = light practice day ' +
   '(very sore, achy joints). "rest" = do not train today.\n' +
@@ -1118,7 +1119,13 @@ const ADAPT_SYSTEM =
   'doctor if it persists. Never advise training through illness or pain.\n' +
   '- Swaps ONLY when the complaint is about a specific movement (it hurts, equipment busy, hated) ' +
   "and only from that exercise's candidates. Omit swaps otherwise.\n" +
-  '- Ordinary tiredness or a fine morning -> "proceed" with one encouraging line. Do not invent problems.';
+  '- Ordinary tiredness or a fine morning -> "proceed" with one encouraging line. Do not invent problems.\n' +
+  '- ADVICE coaches the WHOLE day, matched to their words: hungover -> carbs + water with ' +
+  'electrolytes, easy bland food, no spicy/greasy, no more alcohol; very sore -> protein at every ' +
+  'meal + an easy walk; short sleep -> no caffeine after mid-afternoon, earlier night, lead meals ' +
+  'with protein; low energy -> front-load carbs and hydrate; stressed -> a walk outside and a real ' +
+  'lunch. Be concrete (name foods). No supplements beyond electrolytes/caffeine timing, no ' +
+  'medical claims, no calorie numbers.';
 
 interface AdaptContextWire {
   split: string;
@@ -1196,6 +1203,8 @@ export interface AdaptResult {
   swaps: { from: string; to: string }[];
   reason: string;
   confidence: number;
+  /** holistic day advice — optional, prose clamped; the client falls back to its rules advice */
+  advice?: { nutrition?: string; recovery?: string };
 }
 
 /** Whitelist the action, keep only swaps we ourselves offered, clamp the prose. */
@@ -1220,7 +1229,23 @@ function validateAdapt(parsed: unknown, ctx: AdaptContextWire): AdaptResult | nu
       ? Math.max(0, Math.min(1, p.confidence))
       : 0.5;
   if (!reason) return null;
-  return { action: action as AdaptAction, swaps, reason, confidence };
+
+  let advice: AdaptResult['advice'];
+  const rawAdvice = p.advice as Record<string, unknown> | undefined;
+  if (rawAdvice && typeof rawAdvice === 'object') {
+    const nutrition =
+      typeof rawAdvice.nutrition === 'string' ? rawAdvice.nutrition.trim().slice(0, 180) : '';
+    const recovery =
+      typeof rawAdvice.recovery === 'string' ? rawAdvice.recovery.trim().slice(0, 180) : '';
+    if (nutrition || recovery) {
+      advice = {
+        ...(nutrition ? { nutrition } : {}),
+        ...(recovery ? { recovery } : {}),
+      };
+    }
+  }
+
+  return { action: action as AdaptAction, swaps, reason, confidence, ...(advice ? { advice } : {}) };
 }
 
 export default {
@@ -1337,6 +1362,10 @@ export default {
           validated.swaps = [];
           validated.reason =
             'You said you feel unwell — rest today, and check in with a doctor if it lasts.';
+          validated.advice = validated.advice ?? {
+            nutrition: 'Fluids and easy food — water with electrolytes, broth, rice, bananas.',
+            recovery: 'Sleep is the treatment. Clear the evening and take it.',
+          };
         }
         return json({ ...validated, provider: r.provider, model: r.model }, 200, cors);
       } catch (err) {

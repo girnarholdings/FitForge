@@ -53,6 +53,8 @@ test.describe('morning check-in', () => {
     await expect(verdict).toBeVisible();
     await expect(verdict).toContainText(/Readiness \d+/);
     await expect(page.getByTestId('offer-action')).toHaveText('Train as planned');
+    // Even a green day gets the holistic layer — one keep-it-boring line, never an empty section.
+    await expect(page.getByTestId('day-advice')).toContainText(/protein|sleep/i);
     await page.getByTestId('adapt-accept').click();
 
     // The card collapses to a summary; nothing about the plan changed.
@@ -77,6 +79,8 @@ test.describe('morning check-in', () => {
 
     await expect(page.getByTestId('offer-action')).toHaveText('Half the sets today');
     await expect(page.getByTestId('offer-reason')).toContainText(/sleep|energy/i);
+    // The recommendation is holistic: the same inputs also drive nutrition/recovery lines.
+    await expect(page.getByTestId('day-advice')).toContainText(/caffeine|carbs|protein/i);
     await page.getByTestId('adapt-accept').click();
 
     // ONE CLICK LATER: we are in the quick-session player, on an edited but REAL day.
@@ -98,6 +102,23 @@ test.describe('morning check-in', () => {
     expect(log.entries[0]!.offered).toBe('reduce');
     expect(log.entries[0]!.decision).toBe('accepted');
     expect(log.entries[0]!.source).toBe('rules');
+
+    /* EXITING THE PLAYER MUST NOT COST A RE-DONE QUESTIONNAIRE. Back on Today, the accepted
+       session is shown IN FULL — every exercise with its prescription — plus the day's advice,
+       and one tap re-stages it. The standard workout card stays available below it. */
+    await page.goto('/today');
+    const card = page.getByTestId('morning-checkin');
+    await expect(page.getByTestId('adapted-session-title')).toContainText(/· reduced$/);
+    const rows = page.getByTestId('adapted-session-exercises').locator('li');
+    expect(await rows.count()).toBe(reducedSets.length);
+    await expect(rows.first()).toContainText(/\d+ × \d+/);
+    await expect(card.getByTestId('day-advice')).toBeVisible();
+    await card.screenshot({ path: 'tests/screenshots/readiness-adapted-card.png' });
+
+    await page.getByTestId('adapted-session-enter').click();
+    await page.waitForURL(/\/workout\/quick/);
+    const restaged = (await readDemoState(page)) as { quickSession: { name: string } | null };
+    expect(restaged.quickSession!.name).toMatch(/· reduced$/);
   });
 
   test('"under the weather" can only produce REST + the doctor line, and a rejection is recorded', async ({
@@ -110,6 +131,9 @@ test.describe('morning check-in', () => {
 
     await expect(page.getByTestId('offer-action')).toHaveText('Take a rest day');
     await expect(page.getByTestId('offer-safety')).toContainText(/doctor/i);
+    // Illness advice is the full-day plan: fluids + electrolytes, bland food, sleep.
+    await expect(page.getByTestId('day-advice')).toContainText(/electrolytes/i);
+    await expect(page.getByTestId('day-advice')).toContainText(/spicy/i);
 
     await page.getByTestId('adapt-reject').click();
     await expect(page.getByTestId('checkin-summary')).toContainText(/kept the plan/i);
