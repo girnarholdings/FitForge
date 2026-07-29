@@ -34,6 +34,8 @@ import {
   ShakerSolidIcon,
   SettingsIcon,
   CoachIcon,
+  RepeatIcon,
+  CheckIcon,
   type IconProps,
   type SolidIconProps,
 } from '@/components/ui/icons';
@@ -42,6 +44,8 @@ import { Sheet } from '@/components/ui';
 import { FloatingTabBar, type TabItem } from './FloatingTabBar';
 import { LogoLockup } from '@/components/illustrations';
 import { CloudSyncDriver } from '@/components/auth/GoogleAuth';
+import { useAuth } from '@/lib/auth/useUser';
+import { getSyncStatus, subscribeSync, syncOnSignIn } from '@/lib/auth/sync';
 import { useProfileName } from '@/lib/demo/useDemo';
 import { isOnboarded } from '@/lib/demo/store';
 
@@ -240,17 +244,108 @@ function NavIcon({
   );
 }
 
-/** Gold-outline "Local" chip → taps open the Local Mode explainer (§5.1). */
-function LocalChip({ onClick }: { onClick: () => void }) {
+/**
+ * WHICH MODE YOU ARE ACTUALLY IN — gold "Local" chip, or "Google" once signed in.
+ *
+ * This said "Local" unconditionally, including to someone who had just signed in with Google,
+ * which is the one place the app states where your data lives and was therefore stating it wrongly.
+ * The label now follows `useAuth`, and `loading` deliberately reads as Local: that is the honest
+ * answer while the session is still being restored, and it flips to Google the moment it resolves
+ * rather than promising cloud backup to someone who turns out to be signed out.
+ */
+function ModeChip({
+  signedIn,
+  onClick,
+  testId = 'mode-chip',
+}: {
+  signedIn: boolean;
+  onClick: () => void;
+  // The sidebar and the mobile bar both render one. Distinct ids so a spec can say which surface
+  // it means — the same reason `nav-coach-desktop` and `mobile-coach` are separate.
+  testId?: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="About Local Mode"
+      aria-label={signedIn ? 'About your Google account' : 'About Local Mode'}
+      data-testid={testId}
+      data-mode={signedIn ? 'google' : 'local'}
       className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-accent-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent transition-colors hover:bg-elevated"
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Local
+      <span className="h-1.5 w-1.5 rounded-full bg-accent" /> {signedIn ? 'Google' : 'Local'}
     </button>
+  );
+}
+
+/**
+ * Sync now. Shown only when signed in, because there is nothing to sync to otherwise.
+ *
+ * Syncing is already automatic — on sign-in, and debounced after every change — so this button is
+ * not how the feature works, it is how you find out that it did. It runs the same reconcile as
+ * sign-in (`syncOnSignIn`, same conflict rule), which also makes it the way to PULL a change made
+ * on another device without reloading.
+ *
+ * The icon carries the state: it spins while working, then shows a tick or turns red, because a
+ * control that looks identical before and after you press it reads as broken.
+ *
+ * IT REPORTS THE OUTCOME, NOT THE ATTEMPT. `syncOnSignIn` resolves either way and records what
+ * happened in the sync store, so the result is read back from there rather than assumed. The first
+ * cut of this showed a green tick the instant the call returned, which meant a sync that had
+ * failed outright — no network, rules rejected the write — looked exactly like one that worked.
+ * That is worse than having no button. The reason itself is one tap away in the mode sheet beside
+ * it, and in Settings.
+ */
+function SyncButton({ uid, testId = 'sync-now' }: { uid: string; testId?: string }) {
+  const [state, setState] = React.useState<'idle' | 'busy' | 'done' | 'error'>('idle');
+
+  React.useEffect(() => {
+    if (state !== 'done' && state !== 'error') return;
+    // A failure lingers longer: it is the one you might miss while looking away.
+    const t = setTimeout(() => setState('idle'), state === 'error' ? 5000 : 2000);
+    return () => clearTimeout(t);
+  }, [state]);
+
+  const run = async () => {
+    if (state === 'busy') return;
+    setState('busy');
+    await syncOnSignIn(uid);
+    setState(getSyncStatus().state === 'error' ? 'error' : 'done');
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void run()}
+      aria-label={state === 'error' ? 'Sync failed — tap to try again' : 'Sync now'}
+      title={state === 'error' ? 'Sync failed — tap to try again' : 'Sync now'}
+      data-testid={testId}
+      data-state={state}
+      className={cn(
+        // Same 36px-pill / 44px-target treatment as the Coach and Settings circles beside it.
+        'relative touch-manipulation before:absolute before:-inset-1 before:content-[""]',
+        'grid h-9 w-9 place-items-center rounded-full border transition-colors',
+        state === 'done' && 'border-transparent bg-accent-muted text-success',
+        state === 'error' && 'border-danger text-danger',
+        (state === 'idle' || state === 'busy') &&
+          'border-[color-mix(in_srgb,var(--accent)_45%,transparent)] text-accent-soft hover:bg-accent-muted hover:text-accent',
+      )}
+    >
+      {state === 'done' ? (
+        <CheckIcon size={17} />
+      ) : (
+        <RepeatIcon size={17} className={state === 'busy' ? 'animate-spin' : undefined} />
+      )}
+    </button>
+  );
+}
+
+/** The sync store as a snapshot, so the mode sheet can explain a failure the button only hints at. */
+function useSyncStatus() {
+  return React.useSyncExternalStore(
+    subscribeSync,
+    getSyncStatus,
+    () => ({ state: 'idle' }) as ReturnType<typeof getSyncStatus>,
   );
 }
 
@@ -258,6 +353,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? '/today';
   const router = useRouter();
   const name = useProfileName();
+  const { status: authStatus, user } = useAuth();
+  const sync = useSyncStatus();
+  const signedIn = authStatus === 'signed-in' && !!user;
   const [checked, setChecked] = React.useState(false);
   const [explain, setExplain] = React.useState(false);
 
@@ -286,8 +384,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar (≥md) */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-surface md:flex md:flex-col">
         <div className="flex items-center justify-between px-5 py-5">
-          <LogoLockup size={20} />
-          <LocalChip onClick={() => setExplain(true)} />
+          {/* The wordmark goes home. It was inert on every screen, and a logo that does nothing is
+              a dead end in the one place every user reflexively taps to get back. */}
+          <Link href="/today" aria-label="FitForge home" data-testid="logo-home">
+            <LogoLockup size={20} />
+          </Link>
+          <div className="flex items-center gap-2">
+            {signedIn && <SyncButton uid={user.uid} testId="sync-now-desktop" />}
+            <ModeChip
+              signedIn={signedIn}
+              onClick={() => setExplain(true)}
+              testId="mode-chip-desktop"
+            />
+          </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1 px-3">
           {NAV.map((item) => {
@@ -322,7 +431,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="truncate text-sm font-semibold text-foreground">
                 {name || 'Your profile'}
               </p>
-              <p className="text-xs text-muted-foreground">Local Mode</p>
+              {/* The account, when there is one — the email is the unambiguous answer to "which
+                  Google account am I actually signed into on this device". */}
+              <p className="truncate text-xs text-muted-foreground" data-testid="sidebar-mode">
+                {signedIn ? (user.email ?? 'Signed in with Google') : 'Local Mode'}
+              </p>
             </div>
           </div>
         </div>
@@ -336,9 +449,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             whole scroll, on every screen. Solid costs nothing and looks identical over a solid
             page. */}
         <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 md:hidden">
-          <LogoLockup size={18} />
+          <Link href="/today" aria-label="FitForge home" data-testid="logo-home-mobile">
+            <LogoLockup size={18} />
+          </Link>
+          {/* gap-2 IS LOAD-BEARING, not spacing taste. Each circle is a 36px pill with a
+              transparent 4px-a-side ::before that grows the TARGET to 44px; an 8px gap is exactly
+              what lets those pads meet without overlapping. Tightening it to 6px to make room for
+              the sync button made adjacent pads overlap by 2px, and touch-targets.spec caught it
+              immediately — a tap near the edge of Coach landed on Settings. */}
           <div className="flex items-center gap-2">
-            <LocalChip onClick={() => setExplain(true)} />
+            <ModeChip signedIn={signedIn} onClick={() => setExplain(true)} />
+            {signedIn && <SyncButton uid={user.uid} />}
             <Link
               href="/coach"
               aria-label="Coach"
@@ -409,15 +530,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
       />
 
-      <Sheet open={explain} onClose={() => setExplain(false)} title="Local Mode">
-        <p className="text-sm text-muted-foreground">
-          Local Mode keeps everything — your plan, logs, and meals — in this browser&apos;s storage.
-          Nothing is uploaded. Export a backup anytime from{' '}
-          <Link href="/settings" className="font-semibold text-accent hover:underline">
-            Settings
-          </Link>
-          .
-        </p>
+      <Sheet
+        open={explain}
+        onClose={() => setExplain(false)}
+        title={signedIn ? 'Signed in with Google' : 'Local Mode'}
+      >
+        {signedIn ? (
+          <p className="text-sm text-muted-foreground" data-testid="mode-sheet-google">
+            Your plan, logs and meals are saved in this browser and backed up to{' '}
+            <span className="text-foreground">{user.email ?? 'your Google account'}</span>, so you
+            can pick them up on another device. Backing up happens on its own — the sync button
+            beside this chip is there when you want to push or pull right now. Manage the account in{' '}
+            <Link href="/settings" className="font-semibold text-accent hover:underline">
+              Settings
+            </Link>
+            .
+            {sync.state === 'error' && (
+              // The sync button can only afford to turn red; the reason belongs somewhere it fits.
+              <span className="mt-2 block text-danger" data-testid="mode-sheet-sync-error">
+                Last sync failed: {sync.detail}
+              </span>
+            )}
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Local Mode keeps everything — your plan, logs, and meals — in this browser&apos;s
+            storage. Nothing is uploaded. Export a backup anytime from{' '}
+            <Link href="/settings" className="font-semibold text-accent hover:underline">
+              Settings
+            </Link>
+            .
+          </p>
+        )}
       </Sheet>
     </div>
   );
