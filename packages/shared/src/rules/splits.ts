@@ -993,6 +993,235 @@ export const GLUTE_UPPER: DayTemplate = {
   ],
 };
 
+/* ------------------------------------------- 2025–26 additions (docs/RESEARCH-SPLITS-2026.md)
+ *
+ * Five programs the research pass found genuinely trending that the library could not serve:
+ * hybrid lift+run (the defining 2025–26 trend), Hyrox race prep, the Mentzer HIT revival,
+ * 5/3/1 for Beginners (the r/Fitness wiki flagship, distinct from BBB/nSuns), and
+ * high-frequency full body (the science-based answer to PPL). Same slot vocabulary as
+ * everything above — cardio/conditioning/carry patterns already exist in the catalog.
+ */
+
+export const HYBRID_LOWER: DayTemplate = {
+  key: 'hybrid_lower',
+  label: 'Lower strength · squat anchor',
+  focus: 'Lower',
+  slots: [
+    { pattern: 'squat', mechanics: 'compound' },
+    { pattern: 'hinge' },
+    { pattern: 'lunge' },
+    { pattern: 'calf_raise' },
+    { pattern: 'core_stability' },
+  ],
+};
+
+export const HYBRID_UPPER: DayTemplate = {
+  key: 'hybrid_upper',
+  label: 'Upper strength · push + pull',
+  focus: 'Upper',
+  slots: [
+    { pattern: 'horizontal_push' },
+    { pattern: 'horizontal_pull' },
+    { pattern: 'vertical_push' },
+    { pattern: 'vertical_pull' },
+    { pattern: 'elbow_flexion', alt: ['elbow_extension'] },
+  ],
+};
+
+export const EASY_RUN_DAY: DayTemplate = {
+  key: 'easy_run_day',
+  label: 'Zone 2 · easy pace',
+  focus: 'Endurance',
+  slots: [{ pattern: 'cardio' }, { pattern: 'mobility', alt: ['static_stretch'] }],
+};
+
+export const INTERVAL_RUN_DAY: DayTemplate = {
+  key: 'interval_run_day',
+  label: 'Intervals · tempo work',
+  focus: 'Endurance',
+  slots: [{ pattern: 'cardio' }, { pattern: 'core_flexion', alt: ['core_stability'] }],
+};
+
+export const HYBRID_POWER_FULL: DayTemplate = {
+  key: 'hybrid_power_full',
+  label: 'Full-body power + engine',
+  focus: 'Power',
+  slots: [
+    { pattern: 'hinge', mechanics: 'compound' },
+    { pattern: 'horizontal_push' },
+    { pattern: 'horizontal_pull' },
+    { pattern: 'carry', alt: ['core_stability'] },
+    { pattern: 'conditioning', alt: ['cardio'] },
+  ],
+};
+
+export const HYROX_STATIONS: DayTemplate = {
+  key: 'hyrox_stations',
+  label: 'Station strength · lunges + carries',
+  focus: 'Stations',
+  slots: [
+    { pattern: 'squat', mechanics: 'compound' },
+    { pattern: 'lunge', note: 'walking' },
+    { pattern: 'hinge' },
+    { pattern: 'carry' },
+    { pattern: 'core_stability' },
+  ],
+};
+
+export const HYROX_ENGINE: DayTemplate = {
+  key: 'hyrox_engine',
+  label: 'Engine · erg + wall-ball patterns',
+  focus: 'Conditioning',
+  slots: [
+    { pattern: 'conditioning' },
+    { pattern: 'squat', alt: ['lunge'], note: 'wall-ball pattern' },
+    { pattern: 'horizontal_pull' },
+    { pattern: 'cardio' },
+  ],
+};
+
+export const HYROX_BRICK: DayTemplate = {
+  key: 'hyrox_brick',
+  label: 'Brick · compromised running',
+  focus: 'Race prep',
+  slots: [
+    { pattern: 'conditioning' },
+    { pattern: 'cardio' },
+    { pattern: 'carry' },
+    { pattern: 'lunge' },
+  ],
+};
+
+export const HIT_CHEST_BACK: DayTemplate = {
+  key: 'hit_chest_back',
+  label: 'Chest & Back · one hard set each',
+  focus: 'Chest & Back',
+  slots: [
+    { pattern: 'horizontal_push', mechanics: 'isolation', note: 'pre-exhaust flye' },
+    { pattern: 'horizontal_push', mechanics: 'compound' },
+    { pattern: 'vertical_pull' },
+    { pattern: 'horizontal_pull' },
+  ],
+};
+
+export const HIT_LEGS: DayTemplate = {
+  key: 'hit_legs',
+  label: 'Legs · pre-exhaust then squat',
+  focus: 'Legs',
+  slots: [
+    { pattern: 'knee_extension_iso', note: 'pre-exhaust' },
+    { pattern: 'squat', mechanics: 'compound' },
+    { pattern: 'knee_flexion_iso' },
+    { pattern: 'calf_raise' },
+    { pattern: 'core_flexion' },
+  ],
+};
+
+export const HIT_SHOULDERS_ARMS: DayTemplate = {
+  key: 'hit_shoulders_arms',
+  label: 'Shoulders & Arms · one hard set each',
+  focus: 'Shoulders & Arms',
+  slots: [
+    { pattern: 'shoulder_isolation' },
+    { pattern: 'vertical_push' },
+    { pattern: 'shoulder_isolation', note: 'rear' },
+    { pattern: 'elbow_flexion' },
+    { pattern: 'elbow_extension' },
+  ],
+};
+
+export const FSL_DAY_A: DayTemplate = {
+  key: 'fsl_day_a',
+  label: 'Squat 5/3/1 + Bench 5/3/1',
+  focus: 'Squat & Bench',
+  slots: [
+    { pattern: 'squat', mechanics: 'compound' },
+    { pattern: 'horizontal_push', mechanics: 'compound' },
+    { pattern: 'vertical_pull' },
+    { pattern: 'elbow_extension' },
+    { pattern: 'core_stability' },
+  ],
+};
+
+export const FSL_DAY_B: DayTemplate = {
+  key: 'fsl_day_b',
+  label: 'Deadlift 5/3/1 + Press 5/3/1',
+  focus: 'Deadlift & Press',
+  slots: [
+    { pattern: 'hinge', mechanics: 'compound' },
+    { pattern: 'vertical_push', mechanics: 'compound' },
+    { pattern: 'horizontal_pull' },
+    { pattern: 'elbow_flexion' },
+    { pattern: 'lunge', alt: ['core_flexion'] },
+  ],
+};
+
+export const HFFB_SQUAT: DayTemplate = {
+  key: 'hffb_squat',
+  label: 'Full body · squat emphasis',
+  focus: 'Full Body',
+  slots: [
+    { pattern: 'squat', mechanics: 'compound' },
+    { pattern: 'horizontal_push' },
+    { pattern: 'horizontal_pull' },
+    { pattern: 'knee_flexion_iso' },
+    { pattern: 'shoulder_isolation' },
+  ],
+};
+
+export const HFFB_PUSH: DayTemplate = {
+  key: 'hffb_push',
+  label: 'Full body · push emphasis',
+  focus: 'Full Body',
+  slots: [
+    { pattern: 'horizontal_push', mechanics: 'compound' },
+    { pattern: 'lunge' },
+    { pattern: 'vertical_pull' },
+    { pattern: 'elbow_extension' },
+    { pattern: 'calf_raise' },
+  ],
+};
+
+export const HFFB_HINGE: DayTemplate = {
+  key: 'hffb_hinge',
+  label: 'Full body · hinge emphasis',
+  focus: 'Full Body',
+  slots: [
+    { pattern: 'hinge', mechanics: 'compound' },
+    { pattern: 'vertical_push' },
+    { pattern: 'horizontal_pull' },
+    { pattern: 'elbow_flexion' },
+    { pattern: 'core_stability' },
+  ],
+};
+
+export const HFFB_PULL: DayTemplate = {
+  key: 'hffb_pull',
+  label: 'Full body · pull emphasis',
+  focus: 'Full Body',
+  slots: [
+    { pattern: 'vertical_pull', mechanics: 'compound' },
+    { pattern: 'squat', note: 'front or goblet' },
+    { pattern: 'horizontal_push', note: 'incline' },
+    { pattern: 'hip_extension_iso' },
+    { pattern: 'shoulder_isolation' },
+  ],
+};
+
+export const HFFB_PUMP: DayTemplate = {
+  key: 'hffb_pump',
+  label: 'Full body · pump + weak points',
+  focus: 'Full Body',
+  slots: [
+    { pattern: 'lunge' },
+    { pattern: 'horizontal_push', mechanics: 'isolation' },
+    { pattern: 'horizontal_pull' },
+    { pattern: 'elbow_flexion' },
+    { pattern: 'elbow_extension' },
+    { pattern: 'core_flexion' },
+  ],
+};
+
 /* ---------------------------------------------------------------- split library types */
 
 /** Broad equipment demand of a program — drives the "will this work where I train?" filter. */
@@ -1411,6 +1640,77 @@ export const SPLIT_LIBRARY: readonly SplitDefinition[] = [
     progression: 'Thrust and hinge lead the session; add load there before anything else.',
     tags: ['glutes', 'strong curves', 'lower body', 'womens programming'],
     days: [GLUTE_FULL_A, GLUTE_UPPER, GLUTE_FULL_B, GLUTE_FULL_C],
+  },
+  /* ---- 2025–26 trending additions (docs/RESEARCH-SPLITS-2026.md) ---- */
+  {
+    slug: 'hybrid-lift-run-5',
+    name: 'Hybrid Athlete · Lift + Run',
+    description: 'Two strength days, two runs and a power day — muscle kept, engine built.',
+    days_per_week: 5,
+    days_options: [4, 5, 6],
+    levels: ['intermediate', 'advanced'],
+    goals: ['endurance', 'strength', 'fat_loss'],
+    equipment_profile: 'full_gym',
+    required_equipment: [],
+    progression: 'Lift days move load; run days move easy volume first, pace second.',
+    tags: ['hybrid', 'running', 'lift and run', 'trending', 'engine'],
+    days: [HYBRID_LOWER, EASY_RUN_DAY, HYBRID_UPPER, INTERVAL_RUN_DAY, HYBRID_POWER_FULL],
+  },
+  {
+    slug: 'hyrox-prep-4',
+    name: 'Hyrox Race Prep',
+    description: 'Station strength, erg engine, easy runs and a brick day — built for the race format.',
+    days_per_week: 4,
+    days_options: [4, 5],
+    levels: ['intermediate', 'advanced'],
+    goals: ['endurance', 'fat_loss', 'strength'],
+    equipment_profile: 'full_gym',
+    required_equipment: [],
+    progression: 'Compress station rest and hold run pace as fatigue climbs — race fitness is pace under fatigue.',
+    tags: ['hyrox', 'race', 'conditioning', 'hybrid', 'trending'],
+    days: [HYROX_STATIONS, INTERVAL_RUN_DAY, HYROX_ENGINE, HYROX_BRICK],
+  },
+  {
+    slug: 'hit-heavy-duty-3',
+    name: 'HIT · Heavy Duty (Mentzer style)',
+    description: 'Three short sessions, one all-out working set per exercise, days of recovery between.',
+    days_per_week: 3,
+    days_options: [2, 3],
+    levels: ['intermediate'],
+    goals: ['hypertrophy', 'strength'],
+    equipment_profile: 'full_gym',
+    required_equipment: [],
+    progression: 'One hard set to clean failure per movement; add load only when the top of the rep range is owned.',
+    tags: ['hit', 'heavy duty', 'mentzer', 'low volume', 'time-poor', 'trending'],
+    days: [HIT_CHEST_BACK, HIT_LEGS, HIT_SHOULDERS_ARMS],
+  },
+  {
+    slug: 'five-three-one-beginners-3',
+    name: '5/3/1 for Beginners',
+    description: 'Two main lifts per day on 5/3/1 waves plus balanced assistance — the r/Fitness wiki flagship.',
+    days_per_week: 3,
+    days_options: [3],
+    levels: ['beginner', 'intermediate'],
+    goals: ['strength', 'general_health'],
+    equipment_profile: 'barbell',
+    required_equipment: ['barbell', 'weight-plates', 'squat-rack', 'flat-bench'],
+    progression: '5/3/1 percentage waves + First Set Last 5×5; small TM bumps each 3-week cycle.',
+    tags: ['531', 'wendler', 'barbell', 'beginner', 'wiki'],
+    days: [FSL_DAY_A, FSL_DAY_B, FSL_DAY_A],
+  },
+  {
+    slug: 'high-frequency-full-body-5',
+    name: 'High-Frequency Full Body',
+    description: 'Five full-body days, each with a different emphasis — the science-based answer to PPL.',
+    days_per_week: 5,
+    days_options: [4, 5],
+    levels: ['intermediate', 'advanced'],
+    goals: ['hypertrophy', 'strength'],
+    equipment_profile: 'full_gym',
+    required_equipment: [],
+    progression: 'Rotate emphasis so no lift repeats on consecutive days; add reps then load per slot.',
+    tags: ['full body', 'high frequency', 'science-based', 'hypertrophy', 'trending'],
+    days: [HFFB_SQUAT, HFFB_PUSH, HFFB_HINGE, HFFB_PULL, HFFB_PUMP],
   },
 ];
 

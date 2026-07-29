@@ -62,3 +62,23 @@ FIREBASE_PROJECT_ID = "fitforge-007"
 # When it is set, Mistral becomes the primary backend and Workers AI becomes the fallback.
 # Optional, and safe to commit since it is not a credential:
 # MISTRAL_MODEL = "mistral-small-latest"
+
+# ── Pro tier (DeepSeek) ─────────────────────────────────────────────────────────────────────
+# The Mistral/Workers-AI config above is UNTOUCHED by this tier: guests keep Workers AI,
+# signed-in users keep Mistral, and Pro users additionally unlock a DeepSeek-served entry in
+# the model picker (which falls back to the normal chain if DeepSeek has an incident).
+#
+# DEEPSEEK_API_KEY — the worker reads it from either a var here or a secret; THIS REPO IS
+# PUBLIC, so a literal key on the next line would be a published key within minutes of a push.
+# Put it in as a secret instead, which lands on `env` identically:
+#   npx wrangler secret put DEEPSEEK_API_KEY
+# (On a private fork a plain var also works: DEEPSEEK_API_KEY = "sk-...".)
+#
+# PRO_USERS — comma-separated Firebase uids with a Pro subscription. This allowlist IS the
+# subscription record until a billing system exists. Find a uid in Firebase console → Auth.
+# PRO_USERS = "uid1, uid2"
+#
+# DEEPSEEK_MODEL — optional override; safe to commit. Current IDs (the old deepseek-chat /
+# deepseek-reasoner aliases were RETIRED on 2026-07-24 and now return errors):
+# DEEPSEEK_MODEL = "deepseek-v4-flash"   # default: fast + cheap, 1M context
+# DEEPSEEK_MODEL = "deepseek-v4-pro"     # stronger, ~3x the price

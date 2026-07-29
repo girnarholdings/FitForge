@@ -46,6 +46,28 @@ export interface Env {
   FIREBASE_PROJECT_ID?: string;
   /** Overrides the default Mistral model. Ignored unless MISTRAL_API_KEY is set. */
   MISTRAL_MODEL?: string;
+  /**
+   * DeepSeek API key — the PRO tier. Readable from either a Cloudflare secret or a wrangler.toml
+   * var (both surface identically on `env`); prefer `wrangler secret put DEEPSEEK_API_KEY` —
+   * this repo is public, so a literal value committed in wrangler.toml is a published key.
+   * The Mistral/Workers-AI configuration is untouched by this tier existing.
+   */
+  DEEPSEEK_API_KEY?: string;
+  /** Overrides the default DeepSeek model. Ignored unless DEEPSEEK_API_KEY is set. */
+  DEEPSEEK_MODEL?: string;
+  /**
+   * Comma-separated Firebase uids with a Pro subscription, e.g. "abc123, def456". The DeepSeek
+   * entry unlocks ONLY for these verified uids — sign-in alone is not enough. There is no billing
+   * system yet, so this allowlist IS the subscription record; swap it for a claims check when one
+   * exists.
+   */
+  PRO_USERS?: string;
+}
+
+/** Is this verified uid on the Pro allowlist? Whitespace-tolerant, case-sensitive (uids are). */
+function isProUser(env: Env, uid: string | null): boolean {
+  if (!uid || !env.PRO_USERS) return false;
+  return env.PRO_USERS.split(',').some((u) => u.trim() === uid);
 }
 
 /* ══════════════════════════════════════════════════════════════════ generation caps ══ */
@@ -112,13 +134,19 @@ function workersAiModels(env: Env): string[] {
 export interface ModelChoice {
   id: string;
   label: string;
-  provider: 'mistral' | 'workers-ai';
+  provider: 'mistral' | 'workers-ai' | 'deepseek';
   /**
    * This entry costs the COMPANY's Mistral allowance, so it is offered to signed-in users only.
    * The client hides it when signed out; {@link resolvePreferred} refuses it without a verified
    * Firebase token, which is the half that actually holds.
    */
   requiresAuth?: boolean;
+  /**
+   * Pro-subscription entry (the DeepSeek key). Stricter than `requiresAuth`: the verified uid
+   * must also be on {@link Env.PRO_USERS}. Enforced in {@link resolvePreferred} — the client
+   * label is decoration, this check is the gate.
+   */
+  requiresPro?: boolean;
 }
 
 const WORKERS_AI_LABELS: Record<string, string> = {
@@ -137,6 +165,18 @@ const WORKERS_AI_LABELS: Record<string, string> = {
  */
 function modelCatalog(env: Env): ModelChoice[] {
   const out: ModelChoice[] = [];
+  // The Pro tier: DeepSeek, unlocked per-uid. Listed only when the key exists AND sign-ins can be
+  // verified — a pro gate with no way to verify anyone would be an entry nobody can ever use.
+  if (env.DEEPSEEK_API_KEY && env.DEEPSEEK_API_KEY.trim().length > 0 && env.FIREBASE_PROJECT_ID) {
+    const id = env.DEEPSEEK_MODEL ?? DEFAULT_DEEPSEEK_MODEL;
+    out.push({
+      id,
+      label: id === DEFAULT_DEEPSEEK_MODEL ? 'DeepSeek V4 · Pro' : `${id} · Pro`,
+      provider: 'deepseek',
+      requiresAuth: true,
+      requiresPro: true,
+    });
+  }
   if (env.MISTRAL_API_KEY && env.MISTRAL_API_KEY.trim().length > 0) {
     const id = env.MISTRAL_MODEL ?? DEFAULT_MISTRAL_MODEL;
     out.push({
@@ -179,9 +219,12 @@ function gateActive(env: Env): boolean {
   return !!env.AI && !!env.FIREBASE_PROJECT_ID;
 }
 
-/** The catalog as a given caller may use it: gated entries drop out when nobody is signed in. */
-function catalogFor(env: Env, signedIn: boolean): ModelChoice[] {
-  return modelCatalog(env).filter((m) => signedIn || !m.requiresAuth);
+/** The catalog as a given caller may use it: gated entries drop out when nobody is signed in,
+ *  and pro entries additionally drop out for signed-in users who are not on the allowlist. */
+function catalogFor(env: Env, signedIn: boolean, pro = false): ModelChoice[] {
+  return modelCatalog(env).filter(
+    (m) => (signedIn || !m.requiresAuth) && (pro || !m.requiresPro),
+  );
 }
 
 /**
@@ -190,13 +233,19 @@ function catalogFor(env: Env, signedIn: boolean): ModelChoice[] {
  * worker at arbitrary (billable) model ids or at backends it is not configured for. An unknown id
  * quietly resolves to "no preference" — the stale-client case, not an error.
  */
-function resolvePreferred(env: Env, raw: unknown, signedIn: boolean): ModelChoice | undefined {
+function resolvePreferred(
+  env: Env,
+  raw: unknown,
+  signedIn: boolean,
+  pro = false,
+): ModelChoice | undefined {
   if (typeof raw !== 'string') return undefined;
   const id = raw.trim();
   if (!id) return undefined;
-  // catalogFor, not modelCatalog: a signed-out caller asking for the gated model gets `undefined`
-  // and therefore the default policy, exactly as if they had asked for a model that never existed.
-  return catalogFor(env, signedIn).find((m) => m.id === id);
+  // catalogFor, not modelCatalog: a signed-out caller asking for the gated model — or a non-pro
+  // caller asking for the DeepSeek entry — gets `undefined` and therefore the default policy,
+  // exactly as if they had asked for a model that never existed.
+  return catalogFor(env, signedIn, pro).find((m) => m.id === id);
 }
 
 /**
@@ -315,6 +364,68 @@ async function askWorkersAI(
 const DEFAULT_MISTRAL_MODEL = 'mistral-small-latest';
 const MISTRAL_URL = 'https://api.mistral.ai/v1/chat/completions';
 
+/* ═══════════════════════════════════════════════════════════════════════ DeepSeek ══ */
+
+/**
+ * The PRO tier. DeepSeek's chat API is OpenAI-shaped — same messages array, same response
+ * envelope, same bearer auth — so this is `askMistral` with a different URL and key.
+ *
+ * `deepseek-v4-flash`, NOT `deepseek-chat`: the legacy aliases (`deepseek-chat`,
+ * `deepseek-reasoner`) were fully retired on 2026-07-24 and now return errors. Current IDs are
+ * `deepseek-v4-flash` (default — fast, cheap, 1M context) and `deepseek-v4-pro` (set via
+ * DEEPSEEK_MODEL when the bill is acceptable). DeepSeek publishes no fixed rate limits; it
+ * throttles dynamically with 429s and slow first tokens, which the 20s abort already covers.
+ */
+const DEFAULT_DEEPSEEK_MODEL = 'deepseek-v4-flash';
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+
+async function askDeepSeek(
+  env: Env,
+  model: string,
+  system: string,
+  user: string,
+  opts: GenOpts,
+  history: HistoryMessage[] = [],
+): Promise<{ ok: true; answer: string } | { ok: false; status: number; detail: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const res = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: messagesFor(system, user, history),
+        max_tokens: opts.maxTokens,
+        temperature: opts.temperature,
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      const detail =
+        res.status === 401
+          ? 'DeepSeek rejected the API key (401). Check DEEPSEEK_API_KEY on this worker.'
+          : `DeepSeek returned ${res.status}: ${body.slice(0, 160)}`;
+      return { ok: false, status: res.status === 401 ? 500 : 503, detail };
+    }
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return { ok: true, answer: data.choices?.[0]?.message?.content ?? '' };
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError';
+    return {
+      ok: false,
+      status: 503,
+      detail: aborted ? 'DeepSeek did not respond within 20s' : String(err).slice(0, 160),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Which backend a given environment resolves to. Mistral wins when its key is present. */
 function providerFor(env: Env): 'mistral' | 'workers-ai' | 'none' {
   if (env.MISTRAL_API_KEY && env.MISTRAL_API_KEY.trim().length > 0) return 'mistral';
@@ -410,9 +521,21 @@ async function generateOnce(
   /** The conversation so far, already sanitised, so a follow-up can refer to what was said. */
   history: HistoryMessage[] = [],
 ): Promise<
-  | { ok: true; answer: string; provider: 'mistral' | 'workers-ai'; model: string }
+  | { ok: true; answer: string; provider: 'mistral' | 'workers-ai' | 'deepseek'; model: string }
   | { ok: false; status: number; detail: string }
 > {
+  /**
+   * THE PRO PICK, FIRST. `preferred` only ever carries a deepseek entry after `resolvePreferred`
+   * confirmed the verified uid is on the allowlist — an unverified or non-pro caller cannot reach
+   * this branch by construction. On a DeepSeek failure the request degrades into the exact same
+   * Mistral/Workers-AI policy every other request gets: a pro user's question is never worth less
+   * than a guest's because the premium backend had an incident.
+   */
+  if (preferred?.provider === 'deepseek') {
+    const r = await askDeepSeek(env, preferred.id, system, user, opts, history);
+    if (r.ok) return { ok: true, answer: r.answer, provider: 'deepseek', model: preferred.id };
+  }
+
   const provider = providerFor(env);
   if (provider === 'none') {
     return {
@@ -959,6 +1082,147 @@ function json(body: unknown, status: number, headers: Record<string, string>): R
   });
 }
 
+/* ═══════════════════════════════════════════════════════════ the adapt task (dynamic split) ══ */
+
+/**
+ * ADAPT — "here's how I feel; should today's session change?" as a JSON-ONLY task, cloned from
+ * the macros pattern rather than the chat one, because the answer is a machine-applied plan edit
+ * and prose cannot be one-click applied.
+ *
+ * The STRUCTURED UNDERSTANDING lives in the request: the client sends a compact digest of its own
+ * entities (the split, today's exercises, and — per exercise — the only swap candidates the app's
+ * substitution engine would itself offer). The model is instructed to choose from those and
+ * nothing else, and `validateAdapt` then enforces it: every action is whitelisted, every swap is
+ * checked against the candidates that were actually sent. What survives is applyable by
+ * construction — the model proposes, the app's own vocabulary disposes.
+ */
+const ADAPT_MAX_TOKENS = 260;
+const ADAPT_TEMPERATURE = 0.2;
+const MAX_FEELING_CHARS = 400;
+const ADAPT_ACTIONS = ['proceed', 'reduce', 'technique', 'rest'] as const;
+type AdaptAction = (typeof ADAPT_ACTIONS)[number];
+
+const ADAPT_SYSTEM =
+  "You are FitForge Coach — the user's long-term personal trainer — deciding whether TODAY'S " +
+  'planned session should change based on how they say they feel.\n' +
+  "PLAN CONTEXT (json) lists the user's split, today's exercises (slug, sets, muscles) and, per " +
+  'exercise, the ONLY allowed swap candidates. These are the app\'s real entities: never invent ' +
+  'an exercise, never use a slug outside the lists.\n' +
+  'Output ONLY one minified JSON object — no prose, no markdown, no fence. Schema: ' +
+  '{"action":"proceed"|"reduce"|"technique"|"rest","swaps":[{"from":"<today slug>","to":"<candidate slug>"}],' +
+  '"reason":"<plain language, under 140 chars, reflect their own words>","confidence":<0..1>}\n' +
+  'Rules:\n' +
+  '- "reduce" = same session at half the sets (tired but able). "technique" = light practice day ' +
+  '(very sore, achy joints). "rest" = do not train today.\n' +
+  '- Unwell, feverish, dizzy, chest pain or injured -> "rest", and the reason must say to see a ' +
+  'doctor if it persists. Never advise training through illness or pain.\n' +
+  '- Swaps ONLY when the complaint is about a specific movement (it hurts, equipment busy, hated) ' +
+  "and only from that exercise's candidates. Omit swaps otherwise.\n" +
+  '- Ordinary tiredness or a fine morning -> "proceed" with one encouraging line. Do not invent problems.';
+
+interface AdaptContextWire {
+  split: string;
+  day: { name: string; focus: string | null; exercises: { slug: string; name: string; sets: number; muscles: string[] }[] };
+  swap_candidates: Record<string, { slug: string; name: string }[]>;
+  readiness?: { sleepHours: number | null; soreness: number; energy: number; stress: number; unwell: boolean };
+}
+
+/**
+ * Rebuild the context from attacker-controlled input into a TRUSTED, clamped wire object.
+ * Anything malformed is dropped field-by-field; a context with no exercises is rejected.
+ */
+function parseAdaptContext(raw: unknown): AdaptContextWire | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  const day = (r.day ?? {}) as Record<string, unknown>;
+  const exercisesRaw = Array.isArray(day.exercises) ? day.exercises.slice(0, 10) : [];
+  const exercises = exercisesRaw
+    .map((e) => {
+      const x = e as Record<string, unknown>;
+      if (typeof x.slug !== 'string' || typeof x.name !== 'string') return null;
+      return {
+        slug: x.slug.slice(0, 60),
+        name: x.name.slice(0, 60),
+        sets: typeof x.sets === 'number' && Number.isFinite(x.sets) ? Math.max(1, Math.min(10, Math.round(x.sets))) : 3,
+        muscles: Array.isArray(x.muscles) ? x.muscles.filter((m) => typeof m === 'string').slice(0, 3).map((m) => (m as string).slice(0, 24)) : [],
+      };
+    })
+    .filter((e): e is NonNullable<typeof e> => e !== null);
+  if (exercises.length === 0) return null;
+
+  const candidatesRaw = (r.swap_candidates ?? {}) as Record<string, unknown>;
+  const swap_candidates: AdaptContextWire['swap_candidates'] = {};
+  for (const ex of exercises) {
+    const list = candidatesRaw[ex.slug];
+    if (!Array.isArray(list)) continue;
+    const cleaned = list
+      .slice(0, 3)
+      .map((c) => {
+        const x = c as Record<string, unknown>;
+        return typeof x.slug === 'string' && typeof x.name === 'string'
+          ? { slug: x.slug.slice(0, 60), name: x.name.slice(0, 60) }
+          : null;
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null);
+    if (cleaned.length > 0) swap_candidates[ex.slug] = cleaned;
+  }
+
+  const readinessRaw = r.readiness as Record<string, unknown> | undefined;
+  const readiness =
+    readinessRaw && typeof readinessRaw === 'object'
+      ? {
+          sleepHours: typeof readinessRaw.sleepHours === 'number' ? readinessRaw.sleepHours : null,
+          soreness: Number(readinessRaw.soreness) || 3,
+          energy: Number(readinessRaw.energy) || 3,
+          stress: Number(readinessRaw.stress) || 3,
+          unwell: readinessRaw.unwell === true,
+        }
+      : undefined;
+
+  return {
+    split: typeof r.split === 'string' ? r.split.slice(0, 60) : 'your plan',
+    day: {
+      name: typeof day.name === 'string' ? day.name.slice(0, 60) : 'Today',
+      focus: typeof day.focus === 'string' ? day.focus.slice(0, 40) : null,
+      exercises,
+    },
+    swap_candidates,
+    readiness,
+  };
+}
+
+export interface AdaptResult {
+  action: AdaptAction;
+  swaps: { from: string; to: string }[];
+  reason: string;
+  confidence: number;
+}
+
+/** Whitelist the action, keep only swaps we ourselves offered, clamp the prose. */
+function validateAdapt(parsed: unknown, ctx: AdaptContextWire): AdaptResult | null {
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const p = parsed as Record<string, unknown>;
+  const action = p.action;
+  if (typeof action !== 'string' || !(ADAPT_ACTIONS as readonly string[]).includes(action)) return null;
+
+  const swaps: { from: string; to: string }[] = [];
+  if (Array.isArray(p.swaps)) {
+    for (const s of p.swaps.slice(0, 4)) {
+      const x = s as Record<string, unknown>;
+      if (typeof x.from !== 'string' || typeof x.to !== 'string') continue;
+      if (ctx.swap_candidates[x.from]?.some((c) => c.slug === x.to)) swaps.push({ from: x.from, to: x.to });
+    }
+  }
+
+  const reason = typeof p.reason === 'string' ? p.reason.trim().slice(0, 200) : '';
+  const confidence =
+    typeof p.confidence === 'number' && Number.isFinite(p.confidence)
+      ? Math.max(0, Math.min(1, p.confidence))
+      : 0.5;
+  if (!reason) return null;
+  return { action: action as AdaptAction, swaps, reason, confidence };
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const origin = request.headers.get('Origin');
@@ -983,7 +1247,7 @@ export default {
           models: modelCatalog(env),
           /** Whether this worker can verify sign-ins at all (an unset project id gates nothing open). */
           auth: env.FIREBASE_PROJECT_ID ? 'firebase' : 'none',
-          tasks: ['chat', 'macros'],
+          tasks: ['chat', 'macros', 'adapt'],
         },
         200,
         cors,
@@ -1020,9 +1284,11 @@ export default {
       env.FIREBASE_PROJECT_ID,
     );
     const signedIn = user != null;
+    const pro = isProUser(env, user?.uid ?? null);
     // The user's model pick, if any — validated against the catalog THIS caller may use, so a
-    // signed-out request naming the gated model falls through to the default policy.
-    const preferred = resolvePreferred(env, (body as { model?: unknown }).model, signedIn);
+    // signed-out request naming the gated model — or a non-pro request naming the DeepSeek
+    // entry — falls through to the default policy.
+    const preferred = resolvePreferred(env, (body as { model?: unknown }).model, signedIn, pro);
 
     /* ── task: macros ──────────────────────────────────────────────────────────────── */
     if (body.task === 'macros') {
@@ -1037,6 +1303,42 @@ export default {
           signedIn,
         );
         return json(r.body, r.status, cors);
+      } catch (err) {
+        return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);
+      }
+    }
+
+    /* ── task: adapt (dynamic split) ───────────────────────────────────────────────── */
+    if ((body as { task?: unknown }).task === 'adapt') {
+      const feeling = String((body as { feeling?: unknown }).feeling ?? '')
+        .trim()
+        .slice(0, MAX_FEELING_CHARS);
+      if (!feeling) return json({ error: 'missing_feeling' }, 400, cors);
+      const ctx = parseAdaptContext((body as { context?: unknown }).context);
+      if (!ctx) return json({ error: 'invalid_context' }, 400, cors);
+
+      const userMsg = `HOW THEY FEEL: "${feeling}"\n\nPLAN CONTEXT (json):\n${JSON.stringify(ctx)}`;
+      try {
+        const r = await generateOnce(
+          env,
+          ADAPT_SYSTEM,
+          userMsg,
+          { temperature: ADAPT_TEMPERATURE, maxTokens: ADAPT_MAX_TOKENS },
+          preferred,
+          signedIn,
+        );
+        if (!r.ok) return json({ error: 'ai_unavailable', detail: r.detail }, r.status, cors);
+        const validated = validateAdapt(extractJson(r.answer), ctx);
+        if (!validated) return json({ error: 'unusable_answer' }, 502, cors);
+        // THE SAFETY GATE, IN CODE: a check-in that says "unwell" can only ever produce REST,
+        // whatever the model replied. Same rule as the client engine, enforced independently.
+        if (ctx.readiness?.unwell && validated.action !== 'rest') {
+          validated.action = 'rest';
+          validated.swaps = [];
+          validated.reason =
+            'You said you feel unwell — rest today, and check in with a doctor if it lasts.';
+        }
+        return json({ ...validated, provider: r.provider, model: r.model }, 200, cors);
       } catch (err) {
         return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);
       }

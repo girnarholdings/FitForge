@@ -983,6 +983,27 @@ const FIRST_CLASS_KEYS: readonly string[] = [DEMO_STORAGE_KEY, WORKOUT_LOG_KEY];
 const MAX_EXTRA_KEYS = 32;
 const MAX_EXTRA_BYTES = 512 * 1024;
 
+/**
+ * Key prefixes that must NEVER ride the automatic cloud sweep (PREWALK-IOS-HEALTH, phase 1).
+ *
+ * The extras sweep is deliberately promiscuous — any future `fitforge.*` key syncs with zero code
+ * changes — which is exactly wrong for health-adjacent data: HealthKit aggregates, cycle data and
+ * morning readiness check-ins are special-category material that may only reach the cloud through
+ * an EXPLICIT consent gate, never because a sweep happened to find the key. Excluded from the
+ * SYNC bundle only: a user-initiated file export (Settings → Export data) still includes them —
+ * that action is itself consent, and a backup that silently dropped health days would be lying
+ * about being a backup.
+ */
+const SYNC_DENYLIST_PREFIXES: readonly string[] = [
+  'fitforge.health.',
+  'fitforge.cycle.',
+  'fitforge.readiness.',
+];
+
+function isSyncDenied(key: string): boolean {
+  return SYNC_DENYLIST_PREFIXES.some((p) => key.startsWith(p));
+}
+
 export interface LocalBackup {
   format: typeof BACKUP_FORMAT;
   version: typeof BACKUP_VERSION;
@@ -1012,11 +1033,12 @@ function localKeys(): string[] {
   return keys;
 }
 
-function readExtras(): Record<string, string> {
+function readExtras(forSync = false): Record<string, string> {
   const extras: Record<string, string> = {};
   if (!isBrowser()) return extras;
   for (const key of localKeys()) {
     if (FIRST_CLASS_KEYS.includes(key)) continue;
+    if (forSync && isSyncDenied(key)) continue;
     if (Object.keys(extras).length >= MAX_EXTRA_KEYS) break;
     try {
       const value = window.localStorage.getItem(key);
@@ -1033,14 +1055,15 @@ function readExtras(): Record<string, string> {
  * (Settings → Export data): the demo state, the full workout log, and any ancillary
  * `fitforge.*` caches.
  */
-export function exportAllState(): string {
+export function exportAllState(opts: { forSync?: boolean } = {}): string {
   const bundle: LocalBackup = {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     demo: load(),
     workoutLog: readWorkoutLog(),
-    extras: readExtras(),
+    // `forSync` applies the health/cycle/readiness denylist — see SYNC_DENYLIST_PREFIXES.
+    extras: readExtras(opts.forSync === true),
   };
   return JSON.stringify(bundle, null, 2);
 }

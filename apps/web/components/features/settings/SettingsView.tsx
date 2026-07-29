@@ -33,7 +33,9 @@ import {
 } from '@/components/ui';
 import { StarIcon } from '@/components/ui/icons';
 import { AccountCard } from '@/components/auth/GoogleAuth';
-import { isAuthConfigured } from '@/lib/auth/firebase';
+import { isAuthConfigured, signOutUser } from '@/lib/auth/firebase';
+import { eraseCloudCopy } from '@/lib/auth/sync';
+import { useAuth } from '@/lib/auth/useUser';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { ProgressionEvidenceNote } from '@/components/features/shared/ProgressionEvidence';
 import {
@@ -348,6 +350,9 @@ export function SettingsView() {
   const [planStatus, setPlanStatus] = React.useState<string | null>(null);
   const [regenPrompt, setRegenPrompt] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const { user } = useAuth();
+  const [eraseBusy, setEraseBusy] = React.useState(false);
+  const [eraseError, setEraseError] = React.useState<string | null>(null);
   /**
    * The "re-generate?" sheet is an OFFER, not a nag: it interrupts once per round of edits.
    * Equipment cycles through have → favourite → off, so re-opening a modal on every tap would
@@ -416,7 +421,28 @@ export function SettingsView() {
     }
   }
 
-  function eraseAndLeave() {
+  /**
+   * Erase EVERYTHING — and for a signed-in user, "everything" includes the account's Firestore
+   * document. Ordering is load-bearing: the cloud delete runs first (Firestore rules only allow a
+   * user to delete their OWN doc, so it must happen while still signed in, and `eraseCloudCopy`
+   * latches all further uploads so the mirror can't resurrect the doc), then sign-out, then the
+   * local wipe. If the cloud delete cannot be confirmed, NOTHING is erased and the sheet says so
+   * — "your data is gone" is the one claim this screen must never get wrong.
+   */
+  async function eraseAndLeave() {
+    if (user) {
+      setEraseBusy(true);
+      setEraseError(null);
+      const ok = await eraseCloudCopy(user.uid);
+      if (!ok) {
+        setEraseError(
+          'Your cloud copy could not be deleted — check your connection and try again. Nothing was erased.',
+        );
+        setEraseBusy(false);
+        return;
+      }
+      await signOutUser().catch(() => {});
+    }
     eraseAllLocalData();
     router.push('/');
   }
@@ -1085,15 +1111,30 @@ export function SettingsView() {
         </div>
       </Sheet>
 
-      {/* Erase Local Mode confirm */}
-      <Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Erase Local Mode data?">
+      {/* Erase confirm — for a signed-in user this ALSO deletes the account's cloud copy. */}
+      <Sheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Erase all your data?">
         <p className="text-sm text-muted-foreground">
           This clears your profile, generated routine, food logs and training history stored in this
-          browser. This cannot be undone. Export a backup first if you want to keep it.
+          browser
+          {user ? (
+            <>
+              {' '}
+              <span className="font-semibold text-foreground">
+                and deletes your cloud copy from your Google account
+              </span>
+              , then signs you out
+            </>
+          ) : null}
+          . This cannot be undone. Export a backup first if you want to keep it.
         </p>
+        {eraseError && (
+          <p className="mt-3 text-sm font-medium text-danger" data-testid="erase-cloud-error">
+            {eraseError}
+          </p>
+        )}
         <div className="mt-4 flex flex-col gap-2">
-          <Button variant="danger" block onClick={eraseAndLeave}>
-            Yes, erase everything
+          <Button variant="danger" block disabled={eraseBusy} onClick={() => void eraseAndLeave()}>
+            {eraseBusy ? 'Erasing…' : 'Yes, erase everything'}
           </Button>
           <Button variant="ghost" block onClick={() => setDeleteOpen(false)}>
             Cancel

@@ -37,6 +37,7 @@ import { DateNav } from '@/components/features/shared/DateNav';
 import { exerciseCountLabel } from '@/lib/demo/generate';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
 import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
+import { MorningCheckIn } from './MorningCheckIn';
 import { QuickWorkoutCard } from './QuickWorkoutCard';
 import { FirstRunTour } from './FirstRunTour';
 
@@ -133,6 +134,10 @@ export function TodayView() {
         metThisWeek={streak.metThisWeek}
         strikes={sessions.length}
       />
+
+      {/* Morning check-in — only for TODAY's training day: its offers edit today's session, and
+          editing a past or future day from here would be a lie about what the buttons do. */}
+      {day && onToday && <MorningCheckIn routine={routine} day={day} />}
 
       {/* Today's workout */}
       {day ? (

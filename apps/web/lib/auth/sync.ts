@@ -123,9 +123,11 @@ function markPushed(at: number) {
   }
 }
 
-/** The bundle, compacted. `exportAllState` pretty-prints for humans; the wire does not need it. */
+/** The bundle, compacted. `exportAllState` pretty-prints for humans; the wire does not need it.
+ *  `forSync` applies the health/cycle/readiness denylist — those keys only leave the device via a
+ *  deliberate file export, never the automatic sweep. */
 function bundleForCloud(): string {
-  return JSON.stringify(JSON.parse(exportAllState()));
+  return JSON.stringify(JSON.parse(exportAllState({ forSync: true })));
 }
 
 async function docRefFor(uid: string) {
@@ -135,9 +137,17 @@ async function docRefFor(uid: string) {
   return doc(db, 'users', uid);
 }
 
+/**
+ * Latch set by {@link eraseCloudCopy}: after a deliberate erasure, NO code path may write the
+ * account document again this session — most importantly the debounced mirror, whose pending
+ * 4-second timer would otherwise quietly re-create the doc the user just asked us to destroy.
+ * Cleared on the next {@link syncOnSignIn}, i.e. the next deliberate sign-in.
+ */
+let cloudWritesDisabled = false;
+
 /** Upload this device's state. Resolves false when it could not be written. */
 export async function pushToCloud(uid: string): Promise<boolean> {
-  if (!isAuthConfigured()) return false;
+  if (!isAuthConfigured() || cloudWritesDisabled) return false;
   try {
     const ref = await docRefFor(uid);
     if (!ref) return false;
@@ -193,10 +203,44 @@ export async function pullFromCloud(uid: string): Promise<boolean> {
 }
 
 /**
+ * DELETE the account's cloud document — the erasure half of GDPR Art. 17, and the gap the
+ * iOS/HealthKit prewalk flagged: "Erase all data" cleared localStorage while `users/{uid}`
+ * survived forever. Must run while still signed in (the Firestore rules only let a user delete
+ * their own doc), so Settings calls this BEFORE signing out and before wiping local state.
+ *
+ * Resolves false when the delete could not be confirmed — callers must NOT pretend the erase
+ * succeeded, because "your data is gone" is the one claim this app can never afford to get wrong.
+ */
+export async function eraseCloudCopy(uid: string): Promise<boolean> {
+  if (!isAuthConfigured()) return true; // no cloud configured → nothing exists to erase
+  try {
+    const ref = await docRefFor(uid);
+    if (!ref) return false;
+    // Latch BEFORE the delete: a mirror push racing the delete would otherwise resurrect the doc.
+    cloudWritesDisabled = true;
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(ref);
+    try {
+      window.localStorage.removeItem(LAST_PUSH_KEY);
+    } catch {
+      /* private mode */
+    }
+    setStatus({ state: 'idle' });
+    return true;
+  } catch (err) {
+    // Leave the latch set: after a failed erase attempt, silently resuming uploads is the last
+    // thing the user asked for. The next sign-in re-arms sync deliberately.
+    setStatus({ state: 'error', detail: describe(err) });
+    return false;
+  }
+}
+
+/**
  * Reconcile once, at sign-in. See the conflict rule in the file header.
  */
 export async function syncOnSignIn(uid: string): Promise<void> {
   if (!isAuthConfigured()) return;
+  cloudWritesDisabled = false; // a fresh, deliberate sign-in re-arms cloud writes
   setStatus({ state: 'syncing' });
   patchRestore({ phase: 'restoring' });
   try {

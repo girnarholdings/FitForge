@@ -258,6 +258,89 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
   }
 }
 
+/* ------------------------------------------------------------------------- the adapt task */
+
+/** The worker's validated adapt reply — action whitelisted, swaps filtered, reason clamped. */
+export interface AdaptResponse {
+  action: 'proceed' | 'reduce' | 'technique' | 'rest';
+  swaps: { from: string; to: string }[];
+  reason: string;
+  confidence: number;
+  provider?: string;
+  model?: string;
+}
+
+export type AdaptResult =
+  | { status: 'ok'; result: AdaptResponse }
+  | { status: 'not-configured' }
+  | { status: 'timeout' }
+  | { status: 'error'; detail: string };
+
+/**
+ * "Here's how I feel — should today change?" Sends the feeling plus the structured plan context
+ * (built by `lib/readiness/context`), returns the worker-validated recommendation. Never cached:
+ * the whole point is that the answer depends on this morning.
+ */
+export async function askAdapt(
+  feeling: string,
+  context: unknown,
+  external?: AbortSignal,
+): Promise<AdaptResult> {
+  const endpoint = coachEndpoint();
+  if (!endpoint) return { status: 'not-configured' };
+  const text = feeling.trim();
+  if (!text) return { status: 'error', detail: 'empty feeling' };
+
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, AI_TIMEOUT_MS);
+  const onExternalAbort = () => controller.abort();
+  external?.addEventListener('abort', onExternalAbort);
+  try {
+    const idToken = await currentIdToken();
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task: 'adapt',
+        feeling: text,
+        context,
+        ...(getPreferredModel() ? { model: getPreferredModel() } : {}),
+        ...(idToken ? { idToken } : {}),
+      }),
+      signal: controller.signal,
+    });
+    const body = (await res.json().catch(() => null)) as (AdaptResponse & { error?: string }) | null;
+    if (!res.ok || !body || body.error) {
+      return { status: 'error', detail: body?.error ?? `HTTP ${res.status}` };
+    }
+    if (!['proceed', 'reduce', 'technique', 'rest'].includes(body.action)) {
+      return { status: 'error', detail: 'unusable_answer' };
+    }
+    return {
+      status: 'ok',
+      result: {
+        action: body.action,
+        swaps: Array.isArray(body.swaps) ? body.swaps : [],
+        reason: String(body.reason ?? ''),
+        confidence: Number(body.confidence ?? 0.5),
+        provider: body.provider,
+        model: body.model,
+      },
+    };
+  } catch (err) {
+    if (timedOut) return { status: 'timeout' };
+    if (external?.aborted) return { status: 'error', detail: 'cancelled' };
+    return { status: 'error', detail: String(err).slice(0, 160) };
+  } finally {
+    clearTimeout(timer);
+    external?.removeEventListener('abort', onExternalAbort);
+  }
+}
+
 /* ------------------------------------------------------------------------------ live status */
 
 export interface CoachStatus {

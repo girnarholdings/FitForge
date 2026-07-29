@@ -1,0 +1,105 @@
+'use client';
+
+/**
+ * READINESS LOG — `fitforge.readiness.v1`.
+ *
+ * One entry per day: the check-in, the verdict, what was offered, and what the user DID with the
+ * offer. The decisions are the point: a pile of rejections is the signal to recalibrate (or shut
+ * up), and none of that is knowable without recording them.
+ *
+ * PRIVACY: this key is on the sync denylist (`SYNC_DENYLIST_PREFIXES` in lib/demo/store) — it is
+ * subjective health data, so it stays on this device. It still rides the user-initiated file
+ * export, and it is covered by erase-everything like every other `fitforge.*` key.
+ */
+import * as React from 'react';
+import type { CheckIn, ReadinessVerdict, AdaptAction } from './engine';
+
+export const READINESS_KEY = 'fitforge.readiness.v1';
+const MAX_ENTRIES = 120;
+
+export interface ReadinessEntry {
+  date: string;
+  checkIn: CheckIn;
+  verdict: ReadinessVerdict;
+  /** what was offered (rules verdict, or the AI's validated action) */
+  offered: AdaptAction;
+  /** 'rules' = the morning check-in engine; 'ai' = the coach adapt task */
+  source: 'rules' | 'ai';
+  decision: 'accepted' | 'rejected' | null;
+}
+
+interface ReadinessState {
+  version: 1;
+  entries: ReadinessEntry[];
+}
+
+const listeners = new Set<() => void>();
+let cache: ReadinessState | null = null;
+
+function isBrowser(): boolean {
+  return typeof window !== 'undefined';
+}
+
+function load(): ReadinessState {
+  if (cache) return cache;
+  const empty: ReadinessState = { version: 1, entries: [] };
+  if (!isBrowser()) return empty;
+  try {
+    const raw = window.localStorage.getItem(READINESS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as ReadinessState) : null;
+    cache = parsed && Array.isArray(parsed.entries) ? { version: 1, entries: parsed.entries } : empty;
+  } catch {
+    cache = empty;
+  }
+  return cache;
+}
+
+function save(next: ReadinessState): void {
+  cache = next;
+  if (isBrowser()) {
+    try {
+      window.localStorage.setItem(READINESS_KEY, JSON.stringify(next));
+    } catch {
+      /* private mode — the in-memory copy still serves this session */
+    }
+  }
+  for (const l of listeners) l();
+}
+
+export function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function readinessEntries(): ReadinessEntry[] {
+  return load().entries;
+}
+
+export function entryForDate(date: string): ReadinessEntry | undefined {
+  return load().entries.find((e) => e.date === date);
+}
+
+/** Upsert by date — a re-taken check-in replaces the morning's earlier one. */
+export function saveEntry(entry: ReadinessEntry): void {
+  const rest = load().entries.filter((e) => e.date !== entry.date);
+  save({ version: 1, entries: [entry, ...rest].slice(0, MAX_ENTRIES) });
+}
+
+export function recordDecision(date: string, decision: 'accepted' | 'rejected'): void {
+  const entries = load().entries.map((e) => (e.date === date ? { ...e, decision } : e));
+  save({ version: 1, entries });
+}
+
+export function subscribeReadiness(l: () => void): () => void {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+
+const SERVER_SNAPSHOT: ReadinessEntry[] = [];
+
+export function useReadinessEntries(): ReadinessEntry[] {
+  return React.useSyncExternalStore(
+    subscribeReadiness,
+    () => load().entries,
+    () => SERVER_SNAPSHOT,
+  );
+}

@@ -939,11 +939,11 @@ test('an empty food is rejected without spending an inference', async () => {
   assert.equal(calls.length, 0);
 });
 
-test('the health check advertises both tasks', async () => {
+test('the health check advertises all three tasks', async () => {
   const env = stubEnv();
   const res = await worker.fetch(new Request('https://worker.test/', { method: 'GET' }), env);
   const body = (await res.json()) as { tasks: string[] };
-  assert.deepEqual(body.tasks, ['chat', 'macros']);
+  assert.deepEqual(body.tasks, ['chat', 'macros', 'adapt']);
 });
 
 test('a binding that returns response as a PARSED OBJECT still estimates', async () => {
@@ -965,4 +965,183 @@ test('a binding that returns response as a PARSED OBJECT still estimates', async
   const body = (await res.json()) as { kcal: { value: number }; samples: number };
   assert.equal(body.kcal.value, 500);
   assert.equal(body.samples, 3);
+});
+
+/* ── Pro tier (DeepSeek) ──────────────────────────────────────────────────────────────────────
+ *
+ * The gate has three layers and each gets its own test: the catalog only ADVERTISES the entry
+ * when the worker could actually honour it; a merely signed-in user naming the model is quietly
+ * given the default policy (same treatment as any unknown id); a verified uid on PRO_USERS is
+ * served by DeepSeek, with the request going to DeepSeek's endpoint and key.
+ */
+
+test('the DeepSeek entry is advertised only when the key AND a verifiable project exist', async () => {
+  const withBoth = {
+    ...stubEnv(),
+    DEEPSEEK_API_KEY: 'ds-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+  } as Env;
+  let res = await worker.fetch(
+    new Request('https://worker.test/', { method: 'GET', headers: { Origin: ORIGIN } }),
+    withBoth,
+  );
+  let models = ((await res.json()) as { models: { provider: string; requiresPro?: boolean; requiresAuth?: boolean }[] }).models;
+  const entry = models.find((m) => m.provider === 'deepseek');
+  assert.ok(entry, 'key + project id → the pro entry exists');
+  assert.equal(entry!.requiresPro, true);
+  assert.equal(entry!.requiresAuth, true);
+
+  // No project id → no way to verify a pro uid → the entry must not be advertised at all.
+  const keyOnly = { ...stubEnv(), DEEPSEEK_API_KEY: 'ds-test' } as Env;
+  res = await worker.fetch(
+    new Request('https://worker.test/', { method: 'GET', headers: { Origin: ORIGIN } }),
+    keyOnly,
+  );
+  models = ((await res.json()) as { models: { provider: string }[] }).models;
+  assert.ok(!models.some((m) => m.provider === 'deepseek'), 'unverifiable gate → entry hidden');
+});
+
+test('a signed-in NON-pro user naming the DeepSeek model gets the default policy, not DeepSeek', async () => {
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    DEEPSEEK_API_KEY: 'ds-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    PRO_USERS: 'somebody-else',
+    AI: { run: async () => ({ response: 'from workers ai' }) },
+  } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('**Sets:** ten to twenty.'), async () =>
+    worker.fetch(
+      post({ question: 'how many sets?', model: 'deepseek-v4-flash', idToken: await idToken() }),
+      env,
+    ),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { provider: string };
+  assert.equal(body.provider, 'mistral', 'non-pro pick degrades to the signed-in default');
+  assert.match(sent!.url, /api\.mistral\.ai/, 'the request must never reach DeepSeek');
+});
+
+test('a PRO uid naming the DeepSeek model is served by DeepSeek, with the DeepSeek key', async () => {
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    DEEPSEEK_API_KEY: 'ds-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    PRO_USERS: ' uid-123 , somebody-else',
+    AI: { run: async () => ({ response: 'from workers ai' }) },
+  } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('**Pro answer.**'), async () =>
+    worker.fetch(
+      post({ question: 'plan my week', model: 'deepseek-v4-flash', idToken: await idToken() }),
+      env,
+    ),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { provider: string; model: string };
+  assert.equal(body.provider, 'deepseek');
+  assert.equal(body.model, 'deepseek-v4-flash');
+  assert.match(sent!.url, /api\.deepseek\.com\/chat\/completions/);
+  assert.equal(sent!.auth, 'Bearer ds-test', 'DeepSeek must be called with ITS key, not Mistral’s');
+});
+
+/* ── the adapt task (dynamic split) ───────────────────────────────────────────────────────────
+ *
+ * The contract that makes an AI reply one-click applyable: the action comes off a whitelist,
+ * every swap must be one the CLIENT itself proposed, and the illness gate is enforced in code
+ * after the model answers — a model that says "train through it" is overruled, not trusted.
+ */
+
+const ADAPT_CTX = {
+  split: 'Push Pull Legs',
+  day: {
+    name: 'Push',
+    focus: 'Push',
+    exercises: [
+      { slug: 'barbell-bench-press', name: 'Barbell Bench Press', sets: 4, muscles: ['pecs'] },
+      { slug: 'overhead-press', name: 'Overhead Press', sets: 3, muscles: ['front-delts'] },
+    ],
+  },
+  swap_candidates: {
+    'barbell-bench-press': [{ slug: 'dumbbell-bench-press', name: 'Dumbbell Bench Press', id: 'ex-db' }],
+  },
+};
+
+function adaptEnv(reply: unknown) {
+  return {
+    ...stubEnv(typeof reply === 'string' ? reply : JSON.stringify(reply)),
+  } as Env & { calls: { model: string; input: Record<string, unknown> }[] };
+}
+
+test('adapt returns a validated action and echoes only swaps the client proposed', async () => {
+  const env = adaptEnv({
+    action: 'reduce',
+    swaps: [
+      { from: 'barbell-bench-press', to: 'dumbbell-bench-press' }, // legal — offered above
+      { from: 'overhead-press', to: 'machine-press' },            // ILLEGAL — never offered
+      { from: 'barbell-bench-press', to: 'invented-exercise' },   // ILLEGAL — not a candidate
+    ],
+    reason: 'Rough night — half the sets keeps the week alive.',
+    confidence: 0.8,
+  });
+  const res = await worker.fetch(
+    post({ task: 'adapt', feeling: 'exhausted, barely slept', context: ADAPT_CTX }),
+    env,
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { action: string; swaps: { from: string; to: string }[]; reason: string };
+  assert.equal(body.action, 'reduce');
+  assert.deepEqual(body.swaps, [{ from: 'barbell-bench-press', to: 'dumbbell-bench-press' }]);
+  assert.match(body.reason, /half the sets/i);
+  // The prompt carried the structured plan context — the model was choosing from OUR entities.
+  const sys = (env.calls[0]!.input.messages as { role: string; content: string }[])[0]!.content;
+  assert.match(sys, /never invent an exercise/i);
+  const user = (env.calls[0]!.input.messages as { role: string; content: string }[]).at(-1)!.content;
+  assert.match(user, /barbell-bench-press/);
+  assert.match(user, /PLAN CONTEXT/);
+});
+
+test('adapt rejects an off-whitelist action as unusable rather than passing it through', async () => {
+  const env = adaptEnv({ action: 'deload-week', reason: 'sounds fancy', confidence: 0.9 });
+  const res = await worker.fetch(
+    post({ task: 'adapt', feeling: 'tired', context: ADAPT_CTX }),
+    env,
+  );
+  assert.equal(res.status, 502);
+  const body = (await res.json()) as { error: string };
+  assert.equal(body.error, 'unusable_answer');
+});
+
+test('the illness gate overrules the model IN CODE: unwell can only ever yield rest', async () => {
+  const env = adaptEnv({
+    action: 'reduce',
+    swaps: [{ from: 'barbell-bench-press', to: 'dumbbell-bench-press' }],
+    reason: 'push through it, champ',
+    confidence: 0.95,
+  });
+  const res = await worker.fetch(
+    post({
+      task: 'adapt',
+      feeling: 'feverish but I want to train',
+      context: {
+        ...ADAPT_CTX,
+        readiness: { sleepHours: 7, soreness: 2, energy: 3, stress: 2, unwell: true },
+      },
+    }),
+    env,
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { action: string; swaps: unknown[]; reason: string };
+  assert.equal(body.action, 'rest');
+  assert.deepEqual(body.swaps, []);
+  assert.match(body.reason, /doctor/i);
+});
+
+test('adapt refuses a context with no exercises — nothing to edit means nothing to answer about', async () => {
+  const env = adaptEnv({ action: 'proceed', reason: 'ok', confidence: 1 });
+  const res = await worker.fetch(
+    post({ task: 'adapt', feeling: 'fine', context: { split: 'X', day: { name: 'Y', exercises: [] } } }),
+    env,
+  );
+  assert.equal(res.status, 400);
 });

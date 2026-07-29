@@ -193,6 +193,105 @@ test.describe('cloud mirror · a finished workout reaches the account', () => {
   });
 });
 
+test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => {
+  test('erase attempts the Firestore delete first, and refuses to lie when it fails', async ({
+    page,
+  }) => {
+    /**
+     * The prewalk's repo-verified gap: "Erase all data" cleared localStorage while users/{uid}
+     * survived forever. The fix orders the flow cloud-delete → sign-out → local wipe, and — the
+     * part this spec pins — when the delete cannot be confirmed, NOTHING is erased and the sheet
+     * says so. Firestore is blocked here, so the assertions are (a) a delete mutation actually
+     * went to the wire, (b) the failure was surfaced, (c) local data survived untouched.
+     */
+    await seedOnboarded(page);
+    const apiKey = await apiKeyFromBundle(page);
+    expect(apiKey, 'this build has a Firebase project').toBeTruthy();
+    await page.context().route(GOOGLE_AUTH, (r) => r.abort());
+
+    const bodies: string[] = [];
+    await page.context().route(FIRESTORE, (route) => {
+      bodies.push(route.request().postData() ?? '');
+      return route.abort();
+    });
+
+    await page.evaluate(
+      ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
+      { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: session(apiKey!) },
+    );
+
+    await page.goto('/settings');
+    await page.getByTestId('erase-local-data').click();
+    // The confirm sheet names the cloud consequence for a signed-in user.
+    await expect(page.getByText(/deletes your cloud copy/i)).toBeVisible();
+    await page.getByRole('button', { name: /yes, erase everything/i }).click();
+
+    // (b) the failure is surfaced, not swallowed…
+    await expect(page.getByTestId('erase-cloud-error')).toBeVisible({ timeout: 20000 });
+    // (a) …and a delete mutation for THIS uid was genuinely attempted first.
+    expect(
+      bodies.some((b) => decodeURIComponent(b).includes('restore-uid-1') && /delete/i.test(b)),
+      'a Firestore delete mutation reached the wire',
+    ).toBe(true);
+    // (c) nothing was erased: still on /settings, store still onboarded.
+    await expect(page).toHaveURL(/\/settings/);
+    const state = (await readDemoState(page)) as { completedAt?: string | null };
+    expect(state.completedAt, 'local data untouched after a failed cloud delete').toBeTruthy();
+  });
+
+  test('health/readiness keys stay OFF the sync wire but stay IN the file backup', async ({
+    page,
+  }) => {
+    await seedOnboarded(page);
+    const apiKey = await apiKeyFromBundle(page);
+    expect(apiKey, 'this build has a Firebase project').toBeTruthy();
+
+    // Seed one key from each class: denylisted (health, readiness) and ordinary extra.
+    await page.evaluate(() => {
+      window.localStorage.setItem('fitforge.health.v1', JSON.stringify({ days: { d1: 1 } }));
+      window.localStorage.setItem('fitforge.readiness.v1', JSON.stringify({ entries: [] }));
+      window.localStorage.setItem('fitforge.spectest.v1', JSON.stringify({ ok: true }));
+    });
+
+    await page.context().route(GOOGLE_AUTH, (r) => r.abort());
+    const bodies: string[] = [];
+    await page.context().route(FIRESTORE, (route) => {
+      bodies.push(route.request().postData() ?? '');
+      return route.abort();
+    });
+    await page.evaluate(
+      ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
+      { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: session(apiKey!) },
+    );
+
+    // Provoke a mirror push with a real store edit (a Settings weekday toggle).
+    await page.goto('/settings');
+    await page.getByRole('button', { name: 'Mon', exact: true }).first().click();
+
+    await expect
+      .poll(
+        () => bodies.some((b) => decodeURIComponent(b).includes('fitforge.spectest.v1')),
+        { timeout: 25000, message: 'a bundle push carrying ordinary extras reached the wire' },
+      )
+      .toBe(true);
+    const wire = bodies.map((b) => decodeURIComponent(b)).join('\n');
+    expect(wire.includes('fitforge.health.v1'), 'health slice must never ride the sweep').toBe(false);
+    expect(wire.includes('fitforge.readiness.v1'), 'readiness log must never ride the sweep').toBe(
+      false,
+    );
+
+    // The deliberate file export still carries everything — that action IS the consent.
+    const downloadP = page.waitForEvent('download');
+    await page.getByTestId('settings-export').click();
+    const download = await downloadP;
+    const fs = await import('node:fs/promises');
+    const raw = await fs.readFile((await download.path())!, 'utf8');
+    const backup = JSON.parse(raw) as { extras: Record<string, string> };
+    expect(backup.extras['fitforge.health.v1'], 'file backup keeps health days').toBeTruthy();
+    expect(backup.extras['fitforge.readiness.v1'], 'file backup keeps readiness log').toBeTruthy();
+  });
+});
+
 test.describe('cloud restore · everyone else is unaffected', () => {
   test('a signed-out empty browser still goes straight to onboarding', async ({ page }) => {
     await resetDemo(page);
