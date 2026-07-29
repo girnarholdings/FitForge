@@ -15,6 +15,12 @@
 #      introduced). The default marker is a token every build since the forge-identity pass
 #      carries, so the standing check also catches a rollback to something ancient.
 #
+#      MARKERS ARE PER-PAGE. A route only pulls the chunks it needs, so a string that lives in the
+#      onboarding welcome screen is genuinely absent from /today/'s bundle — checking for it there
+#      reports a missing marker on a perfectly good deploy, which is exactly what happened the
+#      first time this was used to verify a landing-page change. Pass `path` to point the whole
+#      check at the page that should contain them.
+#
 # The HTML fetch is cache-busted per run; the hashed assets are immutable by name and need none.
 name: Verify the deployed Pages site
 
@@ -25,6 +31,10 @@ on:
         description: 'Space-separated strings the served JS+CSS must contain'
         required: false
         default: 'ff-tab-spark'
+      path:
+        description: 'Page to fetch, e.g. / or /onboarding/welcome/ (default /today/). Markers are matched against THAT page and its chunks.'
+        required: false
+        default: '/today/'
   workflow_run:
     workflows: ['Deploy web demo to GitHub Pages']
     types: [completed]
@@ -42,7 +52,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch /today/ and every asset it references
+      - name: Fetch the page under test and every asset it references
         env:
           # The CUSTOM DOMAIN, not github.io. The first real run of this workflow is why: the
           # site had grown a custom domain (repo Settings → Pages), github.io answered every URL
@@ -50,6 +60,7 @@ jobs:
           # bodies. The host under test must be the host users load.
           BASE: ${{ vars.PAGES_SITE_URL || 'https://goforge.fit' }}
           MARKERS: ${{ inputs.markers || 'ff-tab-spark' }}
+          PAGE: ${{ inputs.path || '/today/' }}
         run: |
           set -u
           # The CDN can take a couple of minutes to propagate a fresh deploy; retry the whole
@@ -62,9 +73,9 @@ jobs:
             # wrong-domain/wrong-base-path failure this workflow exists to catch.
             if ! curl -sSL --max-time 20 -D /tmp/site/headers.txt \
                  -w '%{http_code} %{url_effective}\n' \
-                 "$BASE/today/?v=${GITHUB_RUN_ID}-${attempt}" -o /tmp/site/today.html \
+                 "${BASE}${PAGE}?v=${GITHUB_RUN_ID}-${attempt}" -o /tmp/site/today.html \
                  > /tmp/site/status.txt 2>/tmp/site/curlerr.txt; then
-              echo "attempt ${attempt}: /today/ did not fetch — $(cat /tmp/site/curlerr.txt)"
+              echo "attempt ${attempt}: ${PAGE} did not fetch — $(cat /tmp/site/curlerr.txt)"
               ok=0
             elif ! grep -q '^2' /tmp/site/status.txt; then
               echo "attempt ${attempt}: non-2xx: $(cat /tmp/site/status.txt)"
@@ -104,7 +115,7 @@ jobs:
                 grep -qF "$m" /tmp/site/bundle.txt /tmp/site/today.html || missing="$missing $m"
               done
               if [ -z "$missing" ]; then
-                echo "::notice::Pages site verified at ${BASE}: $(wc -l < /tmp/site/assets.txt) assets all 200, markers present:${MARKERS:+ }$MARKERS"
+                echo "::notice::Pages site verified at ${BASE}${PAGE}: $(wc -l < /tmp/site/assets.txt) assets all 200, markers present:${MARKERS:+ }$MARKERS"
                 exit 0
               fi
               echo "attempt ${attempt}: markers not yet in the served bundle:${missing}"
@@ -113,5 +124,5 @@ jobs:
             fi
             sleep 15
           done
-          echo "::error::The deployed site never verified at ${BASE}: assets missing or markers absent after 12 attempts (~3 min). See the per-attempt lines above for the served status, URL and body."
+          echo "::error::The deployed site never verified at ${BASE}${PAGE}: assets missing or markers absent after 12 attempts (~3 min). See the per-attempt lines above for the served status, URL and body."
           exit 1
