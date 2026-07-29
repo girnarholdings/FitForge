@@ -66,6 +66,76 @@ test.describe('nutrition', () => {
     await expect(page.getByText(/Egg, whole/i).first()).toBeVisible();
   });
 
+  test('a logged day gets the analytics layer: energy split, gap-to-goal and one-tap fixes', async ({
+    page,
+  }) => {
+    await seedOnboarded(page);
+    await page.goto('/nutrition');
+
+    // An empty day shows NO analytics — no walls of zeroes.
+    await expect(page.getByTestId('day-analytics')).toHaveCount(0);
+
+    // Log breakfast: two eggs, pinned to the Breakfast slot.
+    await page.getByTestId('nutrition-composer').fill('2 eggs');
+    await page.getByTestId('composer-submit').click();
+    const review = page.getByTestId('review-sheet');
+    await expect(review).toBeVisible();
+    await review.getByRole('button', { name: 'Breakfast', exact: true }).click();
+    await page.getByTestId('review-confirm').click();
+    await expect(review).toBeHidden();
+
+    /* 1 · the analytics card appears, with the energy split in three labelled percentages
+       against the target split. */
+    const analytics = page.getByTestId('day-analytics');
+    await expect(analytics).toBeVisible();
+    const splitLegend = page.getByTestId('energy-split');
+    for (const label of ['Protein', 'Carbs', 'Fat']) {
+      await expect(splitLegend).toContainText(label);
+    }
+    await expect(splitLegend).toContainText(/% goal/);
+
+    /* 2 · the gap to the protein goal, in grams, with real-portion suggestions. */
+    const gap = page.getByTestId('close-gap');
+    await expect(gap).toContainText(/\d+ g protein/);
+    const gapBefore = parseInt((await gap.innerText()).match(/(\d+) g protein/)?.[1] ?? '0', 10);
+    expect(gapBefore).toBeGreaterThan(0);
+    const suggestion = page.getByTestId('gap-suggestion').first();
+    await expect(suggestion).toBeVisible();
+    await expect(suggestion).toContainText(/\+\d+ g protein · \d+ kcal/);
+
+    /* 3 · every logged row carries a face and its macro line. */
+    const eggRow = page.getByText(/Egg, whole/i).first();
+    await expect(eggRow).toBeVisible();
+    await expect(page.getByText('🥚').first()).toBeVisible();
+    // The meal header is a stat line: kcal, share of the day, protein.
+    await expect(page.getByText(/% of day/).first()).toBeVisible();
+
+    /* 4 · tapping a suggestion opens the normal confirm flow pre-filled to the suggested
+       portion; confirming shrinks the gap. Pin it to Dinner so the day has TWO meals. */
+    await suggestion.click();
+    await expect(review).toBeVisible();
+    await review.getByRole('button', { name: 'Dinner', exact: true }).click();
+    await page.getByTestId('review-confirm').click();
+    await expect(review).toBeHidden();
+
+    await expect
+      .poll(async () => {
+        const text = await gap.innerText();
+        const m = text.match(/(\d+) g protein/);
+        return m ? parseInt(m[1]!, 10) : 0;
+      })
+      .toBeLessThan(gapBefore);
+
+    /* 5 · with two meals on the day, the by-meal distribution renders with shares. */
+    const dist = page.getByTestId('meal-distribution');
+    await expect(dist).toBeVisible();
+    await expect(dist).toContainText('Breakfast');
+    await expect(dist).toContainText('Dinner');
+    await expect(dist).toContainText(/%/);
+
+    await page.screenshot({ path: 'tests/screenshots/nutrition-analytics.png', fullPage: true });
+  });
+
   test('a phrase the parser cannot match is surfaced honestly, never guessed', async ({ page }) => {
     await seedOnboarded(page);
     await page.goto('/nutrition');

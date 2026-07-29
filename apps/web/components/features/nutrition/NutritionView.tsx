@@ -28,8 +28,10 @@ import { parseFoodText } from '@/lib/food/parse';
 import { learnedFoodIds } from '@/lib/food/learning';
 import { popularFoods } from '@/lib/food/search';
 import type { Food, ParsedItem } from '@/lib/food/types';
+import { emojiForFood } from '@/lib/food/emoji';
 import { MEAL_SLOTS } from './mealSlots';
 import { Composer } from './Composer';
+import { DayAnalytics } from './DayAnalytics';
 import { DaySummary } from './DaySummary';
 import { FoodPickerSheet } from './FoodPickerSheet';
 import { ReviewSheet } from './ReviewSheet';
@@ -61,13 +63,14 @@ export function NutritionView() {
    * but it is work repeated on a component that re-renders on every input change.
    */
   const bySlot = React.useMemo(() => {
-    const map = new Map<MealSlot, { rows: NutritionLog[]; kcal: number }>();
-    for (const { slot } of MEAL_SLOTS) map.set(slot, { rows: [], kcal: 0 });
+    const map = new Map<MealSlot, { rows: NutritionLog[]; kcal: number; protein_g: number }>();
+    for (const { slot } of MEAL_SLOTS) map.set(slot, { rows: [], kcal: 0, protein_g: 0 });
     for (const l of logs) {
       const bucket = map.get(l.meal_slot);
       if (!bucket) continue;
       bucket.rows.push(l);
       bucket.kcal += l.kcal;
+      bucket.protein_g += l.protein_g;
     }
     return map;
   }, [logs]);
@@ -106,9 +109,12 @@ export function NutritionView() {
     [historyIds],
   );
 
-  /** A one-tap recent/search pick still goes through the confirm step, pre-filled. */
-  function reviewSingleFood(food: Food, slot: MealSlot) {
-    const portion = resolvePortion(food, 1, null, {});
+  /** A one-tap recent/search pick still goes through the confirm step, pre-filled. Passing
+   *  `grams` (the analytics card's gap suggestions) pre-fills that exact portion instead of the
+   *  default serving — the suggestion IS the portion, so the sheet must open already saying it. */
+  function reviewSingleFood(food: Food, slot: MealSlot, grams?: number) {
+    const portion =
+      grams != null ? resolvePortion(food, grams, 'g', {}) : resolvePortion(food, 1, null, {});
     setDraftSlot(slot);
     setDraft({
       input: food.name,
@@ -116,9 +122,9 @@ export function NutritionView() {
         {
           id: `pi-manual-${logSeq++}`,
           sourceText: food.name,
-          quantity: 1,
-          quantitySource: 'implicit',
-          unit: null,
+          quantity: grams ?? 1,
+          quantitySource: grams != null ? 'numeric' : 'implicit',
+          unit: grams != null ? 'g' : null,
           size: null,
           query: food.name.toLowerCase(),
           food,
@@ -187,6 +193,19 @@ export function NutritionView() {
 
       <DaySummary totals={totals} targets={targets} />
 
+      {/* The analytical layer: energy split vs target, the shortest path to the protein goal
+          (one-tap addable), and when the calories landed. Only once there is food to analyse —
+          an empty day gets the empty-state coaching below instead of a wall of zeroes. */}
+      {logs.length > 0 && (
+        <DayAnalytics
+          logs={logs}
+          totals={totals}
+          targets={targets}
+          recents={recents}
+          onAddFood={(food, grams) => reviewSingleFood(food, defaultMealSlot(), grams)}
+        />
+      )}
+
       {/* The headline input. Fixed to the thumb zone on phones, in-flow on desktop. */}
       <Composer onSubmit={parseAndReview} showExamples={logs.length === 0} />
 
@@ -241,7 +260,12 @@ export function NutritionView() {
       )}
 
       {MEAL_SLOTS.filter(({ slot }) => (bySlot.get(slot)?.rows.length ?? 0) > 0).map(({ slot, label }) => {
-        const { rows: slotLogs, kcal: slotKcal } = bySlot.get(slot) ?? { rows: [], kcal: 0 };
+        const {
+          rows: slotLogs,
+          kcal: slotKcal,
+          protein_g: slotProtein,
+        } = bySlot.get(slot) ?? { rows: [], kcal: 0, protein_g: 0 };
+        const slotShare = totals.kcal > 0 ? Math.round((slotKcal / totals.kcal) * 100) : 0;
         return (
           <Card
             key={slot}
@@ -252,28 +276,45 @@ export function NutritionView() {
             // only has to be close — the real height replaces it once the card scrolls in.
             style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 120px' }}
           >
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="flex items-baseline justify-between border-b border-border px-4 py-3">
               <CardTitle className="text-base">{label}</CardTitle>
-              <span className="tabular text-sm text-muted-foreground">
-                {Math.round(slotKcal)} kcal
+              {/* The header is a stat line, not a lone number: kcal, share of the day, and the
+                  meal's protein — the three numbers a goal-chaser actually audits per meal. */}
+              <span className="tabular text-xs text-muted-foreground">
+                <span className="text-sm font-semibold text-foreground">
+                  {Math.round(slotKcal)}
+                </span>{' '}
+                kcal · {slotShare}% of day ·{' '}
+                <span className="font-semibold text-accent">{Math.round(slotProtein)}P</span>
               </span>
             </div>
             {slotLogs.length > 0 && (
               <ul className="divide-y divide-border">
-                {slotLogs.map((l) => (
+                {slotLogs.map((l) => {
+                  const food = foodById(l.food_id);
+                  return (
                   <li key={l.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                     <button
                       type="button"
                       onClick={() => setEditing(l)}
-                      className="min-w-0 flex-1 text-left"
+                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                     >
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {l.custom_name ?? 'Food'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {l.quantity_g != null ? `${Math.round(l.quantity_g)} g · ` : ''}
-                        {formatMacros(l)}
-                      </p>
+                      {/* Every row gets a face (emoji, same system as search/review) and a macro
+                          composition strip — protein/carb/fat share of THIS item's calories — so
+                          a glance down the list shows which entries carry the protein. */}
+                      <span aria-hidden className="w-6 shrink-0 text-center text-lg leading-none">
+                        {emojiForFood(food ?? { name: l.custom_name ?? '', category: 'dish' })}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {l.custom_name ?? 'Food'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {l.quantity_g != null ? `${Math.round(l.quantity_g)} g · ` : ''}
+                          {formatMacros(l)}
+                        </p>
+                        <MacroStrip m={l} />
+                      </span>
                     </button>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="tabular text-sm text-muted-foreground">
@@ -289,7 +330,8 @@ export function NutritionView() {
                       </button>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
             <div className="px-3 py-2">
@@ -351,6 +393,26 @@ export function NutritionView() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * A 44 px composition strip: this item's calories split into protein / carbs / fat (4·4·9),
+ * in the same three colours the day summary and analytics card use. Purely decorative for a
+ * screen reader (the macro text above it says the same thing in words).
+ */
+function MacroStrip({ m }: { m: { protein_g: number; carbs_g: number; fat_g: number } }) {
+  const p = m.protein_g * 4;
+  const c = m.carbs_g * 4;
+  const f = m.fat_g * 9;
+  const total = p + c + f;
+  if (total <= 0) return null;
+  return (
+    <span aria-hidden className="mt-1 flex h-1 w-11 overflow-hidden rounded-full bg-muted">
+      <span style={{ width: `${(p / total) * 100}%`, backgroundColor: 'var(--color-accent)' }} />
+      <span style={{ width: `${(c / total) * 100}%`, backgroundColor: 'var(--color-success)' }} />
+      <span style={{ width: `${(f / total) * 100}%`, backgroundColor: 'var(--color-energy)' }} />
+    </span>
   );
 }
 
