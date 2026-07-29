@@ -55,22 +55,22 @@
 :root {
   color-scheme: dark;
   /* ── dark (brand default) ─────────────────────────── */
-  --surface: #0a0d14;
-  --surface-2: #141b2b;   /* lifted: elevation is FILL separation now, not a hairline */
-  --elevated: #1e2839;
-  --foreground: #f4f1e8;
-  --muted: #1c2333;
-  --muted-foreground: #9aa3b5;
-  --border: #1f2839;      /* a whisper: borders outline, surfaces separate */
-  --border-strong: #33405a;
-  --accent: #e4b84d;
-  --accent-hover: #f0c65f;
-  --accent-press: #c99b2e;
-  --accent-foreground: #171207;
-  --accent-muted: #2a2210;
-  --accent-soft: #efcf7e;
-  --energy: #ff8a4d;
-  --energy-muted: #2a1a10;
+  --surface: #0b121a;
+  --surface-2: #151d28;   /* lifted: elevation is FILL separation now, not a hairline */
+  --elevated: #202a36;
+  --foreground: #f3ede5;
+  --muted: #1b232e;
+  --muted-foreground: #9ba3ae;
+  --border: #232c38;      /* a whisper: borders outline, surfaces separate */
+  --border-strong: #3e4a58;
+  --accent: #c98963;
+  --accent-hover: #d99b76;
+  --accent-press: #b0714c;
+  --accent-foreground: #1c0f08;
+  --accent-muted: #2b1d14;
+  --accent-soft: #dba888;
+  --energy: #e2703a;
+  --energy-muted: #2a170e;
   --danger: #ff6b70;
   --success: #3ecf8e;
   --info: #7cb4ff;
@@ -80,14 +80,14 @@
   --elev-card: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 2px 6px -2px rgba(0, 0, 0, 0.65),
     0 12px 28px -16px rgba(0, 0, 0, 0.95);
   --elev-pop: 0 16px 48px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --glow-gold: 0 0 0 1px rgba(228, 184, 77, 0.28), 0 4px 24px -6px rgba(228, 184, 77, 0.35);
+  --glow-gold: 0 0 0 1px rgba(201, 137, 99, 0.30), 0 4px 24px -6px rgba(226, 112, 58, 0.32);
 
-  --gradient-gold: linear-gradient(135deg, #f6d883 0%, #e4b84d 45%, #b8862c 100%);
-  --gradient-gold-text: linear-gradient(100deg, #f6d883 10%, #e4b84d 55%, #d3a238 90%);
-  --gradient-ember-bg: radial-gradient(60% 45% at 18% 0%, rgba(228, 184, 77, 0.14), transparent 70%);
-  --muscle-base: #1b2231;   /* unhighlighted muscle fill (muscle map) */
-  --muscle-line: #2c3549;   /* muscle separation strokes */
-  --body-outline: #3a4356;  /* silhouette outline */
+  --gradient-gold: linear-gradient(135deg, #ecc0a4 0%, #c98963 45%, #8a5432 100%);
+  --gradient-gold-text: linear-gradient(100deg, #ecc0a4 10%, #c98963 55%, #b0714c 90%);
+  --gradient-ember-bg: radial-gradient(60% 45% at 18% 0%, rgba(226, 112, 58, 0.13), transparent 70%);
+  --muscle-base: #1a222e;   /* unhighlighted muscle fill (muscle map) */
+  --muscle-line: #2c3543;   /* muscle separation strokes */
+  --body-outline: #3d4652;  /* silhouette outline */
 
   /* Knurling — the cross-hatch grip cut into the part of a bar you actually hold. Used ONLY on
      the middle band of a hero CTA (see `.ff-knurl`). Dark theme: the gold accent carries
@@ -96,23 +96,23 @@
   --knurl: rgba(0, 0, 0, 0.07);
 }
 
-/* Dark "Forged Gold" is THE default brand (above). Light Ivory is opt-in only
+/* Dark "Forged Copper" is THE default brand (above). Light Ivory is opt-in only
    via <html data-theme="light"> — we never auto-switch on OS preference. */
 :root[data-theme='light'] {
-    --surface: #f6f4ee;
+    --surface: #f7f2ed;
     --surface-2: #ffffff;
     --elevated: #ffffff;
     --foreground: #14171f;
-    --muted: #ece9df;
+    --muted: #ede7e0;
     --muted-foreground: #5b6372;
-    --border: #e3dfd2;
-    --border-strong: #c9c3b0;
-    --accent: #8a6710;        /* bronze — AA on light */
-    --accent-hover: #a37c15;
-    --accent-press: #6f530c;
+    --border: #e6ddd3;
+    --border-strong: #cec0b2;
+    --accent: #8f5432;        /* bronze — AA on light */
+    --accent-hover: #a5643e;
+    --accent-press: #74421f;
     --accent-foreground: #ffffff;
-    --accent-muted: #f3e8c8;
-    --accent-soft: #b8862c;
+    --accent-muted: #f4e3d6;
+    --accent-soft: #b0714c;
     --energy: #d85f1e;
     --energy-muted: #fdeadd;
     --danger: #d92d33;
@@ -120,13 +120,13 @@
     --info: #2668c5;
     --elev-card: 0 1px 2px rgba(20, 23, 31, 0.05), 0 8px 24px -10px rgba(20, 23, 31, 0.12);
     --elev-pop: 0 16px 48px -12px rgba(20, 23, 31, 0.25);
-    --glow-gold: 0 0 0 1px rgba(138, 103, 16, 0.25), 0 4px 20px -6px rgba(138, 103, 16, 0.3);
-    --gradient-gold: linear-gradient(135deg, #d3a238 0%, #a37c15 60%, #8a6710 100%);
-    --gradient-gold-text: linear-gradient(100deg, #a37c15, #8a6710);
-    --gradient-ember-bg: radial-gradient(60% 45% at 18% 0%, rgba(184, 134, 44, 0.1), transparent 70%);
-    --muscle-base: #e6e2d5;
-    --muscle-line: #cfc9b8;
-    --body-outline: #a49d87;
+    --glow-gold: 0 0 0 1px rgba(143, 84, 50, 0.25), 0 4px 20px -6px rgba(143, 84, 50, 0.3);
+    --gradient-gold: linear-gradient(135deg, #b0714c 0%, #a5643e 60%, #8f5432 100%);
+    --gradient-gold-text: linear-gradient(100deg, #a5643e, #8f5432);
+    --gradient-ember-bg: radial-gradient(60% 45% at 18% 0%, rgba(226, 112, 58, 0.10), transparent 70%);
+    --muscle-base: #e8e0d6;
+    --muscle-line: #d2c6b8;
+    --body-outline: #a8998a;
     /* INVERTED on light, and that is the whole reason this is a token rather than a literal: the
        light accent is bronze #8a6710 carrying WHITE text, so a dark knurl would cut into the
        label's contrast. A light knurl lifts the bronze instead. */
@@ -144,7 +144,7 @@
   border: 1px solid transparent;
   background:
     linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
-    linear-gradient(160deg, rgba(228, 184, 77, 0.55), rgba(228, 184, 77, 0.08) 70%) border-box;
+    linear-gradient(160deg, rgba(201, 137, 99, 0.55), rgba(201, 137, 99, 0.08) 70%) border-box;
 }
 .tabular { font-variant-numeric: tabular-nums; }
 

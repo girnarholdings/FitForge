@@ -154,7 +154,7 @@ export function FloatingTabBar({
               className="pointer-events-auto group relative rounded-full p-[2px] shadow-[0_10px_28px_-8px_color-mix(in_srgb,var(--accent)_60%,transparent)] transition-transform duration-150 active:scale-95"
               style={{
                 background:
-                  'conic-gradient(from 210deg, #f6d883, #e4b84d 35%, #b8862c 60%, #f6d883 85%, #e4b84d)',
+                  'conic-gradient(from 210deg, #ecc0a4, #c98963 35%, #8a5432 60%, #ecc0a4 85%, #c98963)',
               }}
             >
               <span

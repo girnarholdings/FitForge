@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { LogoMark } from './LogoMark';
+import { withBase } from '@/lib/utils';
 
 /**
  * FitForge wordmark lockups (§3.1 / §3.2).
@@ -87,9 +88,16 @@ export function LogoLockup({
 }
 
 /**
- * The mark on its plate — the exact composition the favicon renders (dark #0A0D14 rounded square,
- * gold-gradient figure), so every surface that shows the mark shows the SAME object as the
- * browser tab. The hairline gold ring is what keeps it legible on same-tone dark headers.
+ * The mark on its plate — now the SHIELD EMBLEM itself, cropped from the brand artwork and
+ * compacted (public/brand-emblem.png, generated from the master logo; the icon set is cut from
+ * the same crop, so the browser tab, the home-screen icon and every header show the same object).
+ *
+ * A raster where everything else is vector, on purpose: the emblem is illustrated metalwork —
+ * two figures at an anvil with a lit forge — and a traced SVG of it would either weigh more than
+ * the PNG or flatten exactly the material quality that made it worth adopting. At the 24–44px
+ * this renders, a 192px source is 4x+ oversampled and stays crisp on any screen. The plate keeps
+ * the hairline copper ring so it stays legible on same-tone dark headers, and the whole thing is
+ * sized identically to the old badge — the nav bar does not grow a pixel.
  */
 export function BrandBadge({ size = 28 }: { size?: number }) {
   const radius = Math.max(5, Math.round(size * 0.24));
@@ -104,15 +112,19 @@ export function BrandBadge({ size = 28 }: { size?: number }) {
         width: size,
         height: size,
         borderRadius: radius,
-        background: '#0a0d14',
+        background: '#0b121a',
         boxShadow:
-          '0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 4px 14px -4px rgba(228, 184, 77, 0.4)',
+          '0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 4px 14px -4px rgba(226, 112, 58, 0.4)',
       }}
     >
-      {/* The mark carries its own gold gradient; the plate only frames it. */}
-      <span style={{ display: 'grid' }}>
-        <LogoMark size={size * 0.72} aria-hidden />
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element -- static export: no image optimizer */}
+      <img
+        src={withBase('/brand-emblem.png')}
+        alt=""
+        width={size}
+        height={size}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
       {/* One glint across the plate on mount — freshly-struck metal, once, then still. The
           ff-shimmer keyframe ends at opacity 0 and fill-mode holds it there, so this costs one
           paint on app open and nothing after (and nothing at all under reduced motion). */}
@@ -126,7 +138,7 @@ export function BrandBadge({ size = 28 }: { size?: number }) {
           width: '55%',
           pointerEvents: 'none',
           background:
-            'linear-gradient(105deg, transparent 0%, rgba(246, 216, 131, 0.35) 50%, transparent 100%)',
+            'linear-gradient(105deg, transparent 0%, rgba(236, 192, 164, 0.35) 50%, transparent 100%)',
         }}
       />
     </span>

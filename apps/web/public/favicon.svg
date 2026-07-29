@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="FitForge">
   <defs>
     <linearGradient id="ffgold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F6D883"/>
-      <stop offset="0.45" stop-color="#E4B84D"/>
-      <stop offset="1" stop-color="#B8862C"/>
+      <stop offset="0" stop-color="#ECC0A4"/>
+      <stop offset="0.45" stop-color="#C98963"/>
+      <stop offset="1" stop-color="#8A5432"/>
     </linearGradient>
   </defs>
-  <rect x="0" y="0" width="64" height="64" rx="14" fill="#0A0D14"/>
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="#0B121A"/>
   <g fill="url(#ffgold)">
     <g transform="rotate(30 45 20)">
       <rect x="43" y="10" width="4" height="30" rx="2"/>

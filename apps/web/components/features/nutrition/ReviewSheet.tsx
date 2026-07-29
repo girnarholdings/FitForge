@@ -25,6 +25,8 @@ import type { Food, ParsedItem } from '@/lib/food/types';
 import type { MealSlot } from '@/components/features/_mock/data';
 import { MEAL_SLOTS } from './mealSlots';
 import { FoodPickerSheet } from './FoodPickerSheet';
+import { CustomFoodSheet, type CustomFoodResult } from './CustomFoodSheet';
+import { emojiForFood } from '@/lib/food/emoji';
 
 const LEVEL_STYLES = {
   high: { dot: 'bg-success', text: 'text-success' },
@@ -55,6 +57,7 @@ export function ReviewSheet({
 }) {
   const [pickerFor, setPickerFor] = React.useState<string | null>(null);
   const [customFor, setCustomFor] = React.useState<string | null>(null);
+  const [editFor, setEditFor] = React.useState<string | null>(null);
 
   const matched = items.filter((i) => i.food && i.portion);
   const totals = sumMacros(
@@ -105,26 +108,25 @@ export function ReviewSheet({
   }
 
   /** Nothing in the catalog fits — let the user type the numbers off the packet. */
-  function addCustom(id: string, entry: CustomEntry) {
+  function addCustom(id: string, result: CustomFoodResult) {
     const item = items.find((i) => i.id === id);
     setCustomFor(null);
     if (!item) return;
-    const food: Food = {
-      id: `custom-${Date.now().toString(36)}`,
-      name: entry.name,
-      aliases: [],
-      category: 'dish',
-      per_100g: {
-        kcal: entry.kcal,
-        protein_g: entry.protein_g,
-        carbs_g: entry.carbs_g,
-        fat_g: entry.fat_g,
-      },
-      serving_name: '1 serving',
-      serving_grams: 100,
-      household_measures: [{ name: 'serving', grams: 100 }],
-    };
-    patch(id, reprice(item, { food, quantity: 1, unit: null }));
+    patch(id, reprice(item, { food: result.food, quantity: 1, unit: null }));
+  }
+
+  /**
+   * EDIT THE MACROS of a matched item. The picked entry's numbers are a database's opinion of an
+   * average serving; the plate in front of you is not average. The editor opens pre-filled with
+   * the CURRENT portion's computed values, and what comes back replaces this row's pricing —
+   * logged as one serving of exactly what was typed. "Save to My foods" (off by default here —
+   * tonight's tweak is not the recipe) turns a one-off correction into a reusable entry.
+   */
+  function applyEdit(id: string, result: CustomFoodResult) {
+    const item = items.find((i) => i.id === id);
+    setEditFor(null);
+    if (!item) return;
+    patch(id, reprice(item, { food: result.food, quantity: 1, unit: null }));
   }
 
   return (
@@ -159,6 +161,7 @@ export function ReviewSheet({
                   onRemove={() => remove(item.id)}
                   onOpenPicker={() => setPickerFor(item.id)}
                   onPickAlternative={(food) => chooseFood(item.id, food)}
+                  onEditMacros={() => setEditFor(item.id)}
                 />
               ) : (
                 <UnmatchedRow
@@ -218,11 +221,27 @@ export function ReviewSheet({
         </div>
       </Sheet>
 
-      <CustomEntrySheet
+      <CustomFoodSheet
         open={customFor != null}
+        title="Enter it yourself"
         name={items.find((i) => i.id === customFor)?.sourceText ?? ''}
+        defaultSave
         onCancel={() => setCustomFor(null)}
-        onAdd={(entry) => customFor && addCustom(customFor, entry)}
+        onDone={(result) => customFor && addCustom(customFor, result)}
+      />
+
+      <CustomFoodSheet
+        open={editFor != null}
+        title="Edit macros"
+        name={items.find((i) => i.id === editFor)?.food?.name ?? ''}
+        prefill={(() => {
+          const item = items.find((i) => i.id === editFor);
+          if (!item?.food || !item.portion) return null;
+          return computeMacros(item.food, item.portion.grams);
+        })()}
+        defaultSave={false}
+        onCancel={() => setEditFor(null)}
+        onDone={(result) => editFor && applyEdit(editFor, result)}
       />
 
       <FoodPickerSheet
@@ -245,12 +264,14 @@ function MatchedRow({
   onRemove,
   onOpenPicker,
   onPickAlternative,
+  onEditMacros,
 }: {
   item: ParsedItem;
   onChange: (next: ParsedItem) => void;
   onRemove: () => void;
   onOpenPicker: () => void;
   onPickAlternative: (food: Food) => void;
+  onEditMacros: () => void;
 }) {
   const food = item.food as Food;
   const grams = item.portion?.grams ?? 0;
@@ -300,6 +321,9 @@ function MatchedRow({
         onClick={onOpenPicker}
         className="mt-1 flex w-full items-center gap-2 text-left"
       >
+        <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-base">
+          {emojiForFood(food)}
+        </span>
         <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', styles.dot)} />
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
           {food.name}
@@ -311,6 +335,15 @@ function MatchedRow({
         {item.portion?.label} ·{' '}
         <span className="tabular text-foreground">{Math.round(macros.kcal)} kcal</span> ·{' '}
         <span className="tabular">{formatMacros(macros)}</span>
+        {' · '}
+        <button
+          type="button"
+          data-testid="review-row-edit-macros"
+          onClick={onEditMacros}
+          className="font-semibold text-accent hover:underline"
+        >
+          Edit macros
+        </button>
       </p>
 
       {level !== 'high' && (
@@ -546,107 +579,5 @@ function AiEstimatePanel({
         </Button>
       </div>
     </div>
-  );
-}
-
-/* --------------------------------------------------------------------- custom entry */
-
-interface CustomEntry {
-  name: string;
-  kcal: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-}
-
-/**
- * The escape hatch: a food that genuinely is not in the catalog (a restaurant special, a
- * home recipe) can be entered straight off the packet. Values are stored per serving.
- */
-function CustomEntrySheet({
-  open,
-  name: initialName,
-  onAdd,
-  onCancel,
-}: {
-  open: boolean;
-  name: string;
-  onAdd: (entry: CustomEntry) => void;
-  onCancel: () => void;
-}) {
-  const [name, setName] = React.useState(initialName);
-  const [kcal, setKcal] = React.useState(0);
-  const [p, setP] = React.useState(0);
-  const [c, setC] = React.useState(0);
-  const [f, setF] = React.useState(0);
-
-  React.useEffect(() => {
-    if (open) {
-      setName(initialName);
-      setKcal(0);
-      setP(0);
-      setC(0);
-      setF(0);
-    }
-  }, [open, initialName]);
-
-  if (!open) return null;
-
-  return (
-    <Sheet open onClose={onCancel} title="Enter it yourself">
-      <div className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Straight off the packet — one serving. Nothing is invented for you.
-        </p>
-        <input
-          value={name}
-          aria-label="Food name"
-          placeholder="What was it?"
-          onChange={(e) => setName(e.target.value)}
-          className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-accent"
-        />
-        <div className="grid grid-cols-4 gap-2">
-          {(
-            [
-              ['kcal', kcal, setKcal],
-              ['P', p, setP],
-              ['C', c, setC],
-              ['F', f, setF],
-            ] as const
-          ).map(([label, value, set]) => (
-            <label key={label} className="flex flex-col gap-1">
-              <span className="text-[11px] font-semibold uppercase text-muted-foreground">
-                {label}
-              </span>
-              <input
-                type="number"
-                inputMode="decimal"
-                aria-label={label}
-                value={value || ''}
-                onChange={(e) => set(Math.max(0, Number(e.target.value)))}
-                className="h-11 w-full rounded-xl border border-border bg-surface px-2 text-base tabular-nums outline-none focus:border-accent"
-              />
-            </label>
-          ))}
-        </div>
-        <Button
-          block
-          size="lg"
-          disabled={name.trim().length === 0}
-          data-testid="custom-add"
-          onClick={() =>
-            onAdd({
-              name: name.trim(),
-              kcal,
-              protein_g: p,
-              carbs_g: c,
-              fat_g: f,
-            })
-          }
-        >
-          Add to the list
-        </Button>
-      </div>
-    </Sheet>
   );
 }

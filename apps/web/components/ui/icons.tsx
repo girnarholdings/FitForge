@@ -722,9 +722,9 @@ export function GoldIconDefs() {
     <svg width="0" height="0" aria-hidden focusable="false" style={{ position: 'absolute' }}>
       <defs>
         <linearGradient id="ff-gold-icon" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#f6d883" />
-          <stop offset="0.45" stopColor="#e4b84d" />
-          <stop offset="1" stopColor="#b8862c" />
+          <stop offset="0" stopColor="#ecc0a4" />
+          <stop offset="0.45" stopColor="#c98963" />
+          <stop offset="1" stopColor="#8a5432" />
         </linearGradient>
       </defs>
     </svg>

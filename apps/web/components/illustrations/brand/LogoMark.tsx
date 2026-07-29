@@ -50,9 +50,9 @@ export function LogoMark({ size = 32, mono = false, title, ...props }: LogoMarkP
       {!mono && (
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#F6D883" />
-            <stop offset="0.45" stopColor="#E4B84D" />
-            <stop offset="1" stopColor="#B8862C" />
+            <stop offset="0" stopColor="#ECC0A4" />
+            <stop offset="0.45" stopColor="#C98963" />
+            <stop offset="1" stopColor="#8A5432" />
           </linearGradient>
         </defs>
       )}

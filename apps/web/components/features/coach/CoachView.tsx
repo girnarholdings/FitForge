@@ -160,6 +160,7 @@ function directRoute(entry: KbEntry): KbRoutePlus {
 }
 
 const AUTO_KEY = 'fitforge.coachAuto.v1';
+const AI_KEY = 'fitforge.coachAi.v1';
 
 export function CoachView() {
   const [mode, setMode] = React.useState<Mode>('ask');
@@ -172,29 +173,45 @@ export function CoachView() {
   const abortRef = React.useRef<AbortController | null>(null);
 
   /**
-   * AUTO-PERSONALIZE, ON BY DEFAULT. A confident guide answer is still generic; when the AI
-   * service is configured the coach follows it up with a profile-personalized rewrite without
-   * being asked. Off is a choice (persisted), not the default — the owner's call: an AI coach
-   * that only acts when begged reads as absent.
+   * AI MODE — one switch, on by default, top right of the trainer.
+   *
+   * This replaces the old "Auto-personalize" pill, and it means more than that pill did. The pill
+   * only governed whether a CONFIDENT guide match got an AI rewrite; a question that matched
+   * nothing still went to the model regardless, and a question that matched several entries got a
+   * "did you mean?" list instead of an answer. So the guide was still answering first whenever it
+   * thought it could, which is exactly backwards for someone who turned the AI coach on: the model
+   * answers, the guide grounds it and catches it when it falls.
+   *
+   *   ON  (and the service configured) — every question goes to the model. Curated matches travel
+   *        as grounding and are revealed only if the call fails. Two exceptions stand, and they are
+   *        not preferences: red-flag safety questions never reach a model, and "what can I eat"
+   *        is computed from today's actual remaining macros, which no model may invent.
+   *   OFF — genuinely offline. No model calls at all; the curated guide answers, the way an
+   *        unconfigured build behaves. The per-answer "Personalize with AI" button remains, because
+   *        a deliberate tap is an instruction, not a default.
    */
-  const [autoPersonalize, setAutoPersonalize] = React.useState(true);
+  const [aiEnabled, setAiEnabled] = React.useState(true);
   const [status, setStatus] = React.useState<CoachStatus | null>(null);
   const hasLockedModels = useHasLockedModels();
 
   React.useEffect(() => {
     try {
-      setAutoPersonalize(window.localStorage.getItem(AUTO_KEY) !== '0');
+      const stored = window.localStorage.getItem(AI_KEY);
+      // Honour the retired Auto-personalize preference on first run: someone who had switched
+      // that off had opted out of automatic AI, and this switch is that choice's successor.
+      const legacy = window.localStorage.getItem(AUTO_KEY);
+      setAiEnabled(stored != null ? stored !== '0' : legacy !== '0');
     } catch {
       /* private mode — default on */
     }
     if (configured) void fetchCoachStatus().then(setStatus);
   }, [configured]);
 
-  const toggleAuto = React.useCallback(() => {
-    setAutoPersonalize((prev) => {
+  const toggleAi = React.useCallback(() => {
+    setAiEnabled((prev) => {
       const next = !prev;
       try {
-        window.localStorage.setItem(AUTO_KEY, next ? '1' : '0');
+        window.localStorage.setItem(AI_KEY, next ? '1' : '0');
       } catch {
         /* private mode */
       }
@@ -273,7 +290,13 @@ export function CoachView() {
   );
 
   const pushTurn = React.useCallback(
-    (question: string, route: KbRoutePlus, wantsAi: boolean, aiPrimary = false): string => {
+    (
+      question: string,
+      route: KbRoutePlus,
+      wantsAi: boolean,
+      aiPrimary = false,
+      intent?: 'personalize' | 'meal',
+    ): string => {
       turnSeq += 1;
       const id = `turn-${turnSeq}`;
       const facts = profileFacts(profile);
@@ -290,7 +313,7 @@ export function CoachView() {
 
       setTurns((prev) => [...prev, { id, question, route, ai, facts, aiPrimary }]);
       setMode('ask');
-      if (wantsAi && configured) void runAi(id, question, route, profile);
+      if (wantsAi && configured) void runAi(id, question, route, profile, intent);
       return id;
     },
     [configured, profile, runAi],
@@ -326,33 +349,37 @@ export function CoachView() {
       const route = routeQuery(q, searchKb(q, 8));
       // A red-flagged question NEVER travels to the model, configured or not: a small model given
       // "I have chest pain during exercise" will happily write training advice around it.
-      // A question with NO trustworthy match — either discarded by `weakEvidence` or with no hit
-      // at all (e.g. asked in another language) — only travels to the model when one is actually
-      // configured. On an unconfigured build it must fall through to the honest no-match card,
-      // which names the real problem, rather than the "personalized answers need the Coach
-      // service" card, which asserts the question was personal when nothing established that.
-      const noTrustworthyMatch = route.guard !== null || route.top === null;
-      const wantsAi = route.mode === 'ai' && !route.safety && (configured || !noTrustworthyMatch);
+      if (route.safety) {
+        pushTurn(q, route, false);
+        return;
+      }
 
       /**
-       * AI MODE ANSWERS; THE GUIDE BACKS IT UP.
+       * AI MODE ON: THE MODEL ANSWERS, FULL STOP.
        *
-       * Previously a confident curated entry was rendered immediately and the model's answer
-       * appeared underneath it as a "personalized" extra — so with AI on you read a generic answer
-       * first and the real one second. When the service is configured and auto-personalize is on,
-       * the model's answer IS the response: the curated text still travels as grounding, and it is
-       * revealed only if the call fails. Safety turns are exempt, always.
+       * Not "the model answers when the guide is unsure" — that was the old shape, and it meant
+       * the offline matcher was still the first responder whenever it felt confident, with the AI
+       * demoted to a rewrite underneath. With the switch on, every mode the router can return —
+       * a confident match, a did-you-mean shortlist, or nothing at all — is handed to the model,
+       * with whatever the guide found travelling along as grounding. The curated material comes
+       * back only when the call fails, which is the entire meaning of "fallback".
+       *
+       * A confident match still upgrades the request to the 'personalize' intent so the worker
+       * grounds harder on the matched entry; a shortlist or a miss goes as a plain question.
        */
-      const aiFirst =
-        configured && autoPersonalize && route.mode === 'answer' && !route.safety;
-      const id = pushTurn(q, route, wantsAi, aiFirst);
-
-      if (!wantsAi && aiFirst) {
-        patchTurn(id, { kind: 'pending' });
-        void runAi(id, q, route, profile, 'personalize');
+      if (aiEnabled && configured) {
+        pushTurn(q, route, true, true, route.mode === 'answer' ? 'personalize' : undefined);
+        return;
       }
+
+      /**
+       * AI MODE OFF (or no service): genuinely offline. The guide answers what it can and says so
+       * honestly when it cannot — the no-match card names the real problem rather than pretending
+       * the question was personal. No model call is made on any path here.
+       */
+      pushTurn(q, route, false);
     },
-    [autoPersonalize, configured, patchTurn, profile, pushTurn, runAi],
+    [aiEnabled, configured, pushTurn],
   );
 
   /** Open a specific entry (disambiguation button, followup chip, source chip). No AI, no cost. */
@@ -394,13 +421,61 @@ export function CoachView() {
           barely any room for an answer on a 390 × 664 screen — the content the screen exists for
           started below the fold. Everything here is one step smaller and the AI bar is one row.
           `space-y-4` on the root also drops to `space-y-2.5` in ask mode for the same reason. */}
-      <header className="flex items-baseline justify-between gap-3">
+      <header className="flex items-center justify-between gap-3">
         <h1 className="font-display text-title font-bold leading-none text-foreground md:text-display">
           Coach
         </h1>
-        <p className="truncate text-[11px] text-muted-foreground">
-          {ENTRY_COUNT} answers offline
-        </p>
+        {/* THE AI SWITCH — top right, the one control that decides who answers. Replaces the old
+            status chip + "Auto" pill pair, which together took a full row to say less than this
+            says in one: the dot is the service's live status, the switch is your choice. Shown
+            only when a service is configured — a switch that can never be on is a taunt. */}
+        {configured ? (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={aiEnabled}
+            data-testid="coach-ai-switch"
+            onClick={toggleAi}
+            title={aiEnabled ? 'AI answers first — tap for offline guide only' : 'Offline guide only — tap for AI answers'}
+            className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-chip border border-border px-2.5 py-1 text-[12px] font-semibold text-foreground transition-colors hover:border-border-strong"
+          >
+            <span aria-hidden className="relative flex h-1.5 w-1.5">
+              {aiEnabled && status?.online && (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60 motion-reduce:hidden" />
+              )}
+              <span
+                className={
+                  'relative inline-flex h-1.5 w-1.5 rounded-full ' +
+                  (!aiEnabled
+                    ? 'bg-muted-foreground'
+                    : status == null
+                      ? 'bg-muted-foreground'
+                      : status.online
+                        ? 'bg-success'
+                        : 'bg-danger')
+                }
+              />
+            </span>
+            AI
+            <span
+              aria-hidden
+              className={
+                'relative h-4.5 w-8 rounded-full transition-colors ' +
+                (aiEnabled ? 'bg-accent' : 'bg-muted')
+              }
+              style={{ height: 18 }}
+            >
+              <span
+                className={
+                  'absolute top-[2px] h-3.5 w-3.5 rounded-full bg-surface transition-transform ' +
+                  (aiEnabled ? 'translate-x-[18px]' : 'translate-x-[2px]')
+                }
+              />
+            </span>
+          </button>
+        ) : (
+          <p className="truncate text-[11px] text-muted-foreground">{ENTRY_COUNT} answers offline</p>
+        )}
       </header>
 
       {/* Mode switch */}
@@ -425,68 +500,18 @@ export function CoachView() {
         />
       </div>
 
-      {configured && (
+      {/* With AI on, one slim row remains: which model. The status chip is gone (the switch's dot
+          carries it) and so is the Auto pill (the switch IS that choice now). With AI off the row
+          disappears entirely — offline mode has no model to pick. */}
+      {configured && aiEnabled && (
         <div
           className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px]"
           data-testid="coach-ai-bar"
         >
-          <span
-            data-testid="coach-ai-status"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-accent-muted px-2 py-0.5 text-[10px] font-semibold text-accent"
-          >
-            <span aria-hidden className="relative flex h-1.5 w-1.5">
-              {status?.online && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60 motion-reduce:hidden" />
-              )}
-              <span
-                className={
-                  'relative inline-flex h-1.5 w-1.5 rounded-full ' +
-                  (status == null ? 'bg-muted-foreground' : status.online ? 'bg-success' : 'bg-danger')
-                }
-              />
-            </span>
-            {status == null
-              ? 'AI coach'
-              : status.online
-                ? // With the picker on screen the chip stops repeating the model name — the
-                  // select IS the model name now, and two copies drift the moment one updates.
-                  status.models?.length
-                  ? 'AI online'
-                  : `AI online · ${(status.model ?? '').split('/').pop() || 'ready'}`
-                : 'AI offline — guide answers'}
-          </span>
           {/* THE MODEL PICKER — the shared control (see ModelPicker.tsx). It renders nothing
               until the worker advertises a catalog, and the SAME preference drives the nutrition
               macro estimator, so a model chosen here is the model that estimates a burrito. */}
           <ModelPicker label={null} testId="coach-model-select" className="min-w-0 flex-1" />
-          {/* `ml-auto` rather than justify-between: with three items on one row, pinning only the
-              last one right keeps the status chip and the picker together on the left instead of
-              spreading them across the width. */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={autoPersonalize}
-            data-testid="coach-auto-toggle"
-            onClick={toggleAuto}
-            title="Rewrite guide answers around your profile"
-            className="ml-auto inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-chip px-1.5 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Auto
-            <span
-              aria-hidden
-              className={
-                'relative h-4 w-7 rounded-full transition-colors ' +
-                (autoPersonalize ? 'bg-accent' : 'bg-muted')
-              }
-            >
-              <span
-                className={
-                  'absolute top-0.5 h-3 w-3 rounded-full bg-surface transition-transform ' +
-                  (autoPersonalize ? 'translate-x-3.5' : 'translate-x-0.5')
-                }
-              />
-            </span>
-          </button>
           {/* Wraps to its own line when there is no room, which is the right place for it: it is
               an invitation, not a control. Only when a members-only model exists and this visitor
               cannot reach it. */}
@@ -808,8 +833,11 @@ function TurnBlock({
         />
       )}
 
-      {/* ── 0.30 ≤ conf < 0.55 — disambiguate, zero AI cost ──────────────────────────────── */}
-      {route.mode === 'disambiguate' && (
+      {/* ── 0.30 ≤ conf < 0.55 — disambiguate. In AI mode this turn was answered by the model
+             instead, so the picker list stays out of the way for the whole life of that call:
+             while it is pending, when it answers, and when it fails — the failure card lists the
+             same closest entries itself, and two copies of one list is a worse apology. ──── */}
+      {route.mode === 'disambiguate' && !turn.aiPrimary && (
         <Card data-testid="coach-disambiguate">
           <p className="text-sm font-semibold text-foreground">Did you mean…?</p>
           <p className="mt-1 text-xs text-muted-foreground">

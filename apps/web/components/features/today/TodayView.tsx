@@ -395,7 +395,7 @@ function StreakCard({
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#b8862c] via-[#e4b84d] to-[#f6d883] transition-[width] duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-[#8a5432] via-[#c98963] to-[#ecc0a4] transition-[width] duration-500"
               style={{ width: `${Math.round(standing.progress * 100)}%` }}
             />
           </div>
