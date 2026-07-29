@@ -103,6 +103,12 @@ test.describe('nutrition', () => {
     await expect(suggestion).toBeVisible();
     await expect(suggestion).toContainText(/\+\d+ g protein · \d+ kcal/);
 
+    // Element shot with the suggestion list on screen. Nudge the card below the sticky chrome
+    // first — element screenshots composite any fixed overlay that intersects the box.
+    await analytics.scrollIntoViewIfNeeded();
+    await page.evaluate(() => window.scrollBy(0, -120));
+    await analytics.screenshot({ path: 'tests/screenshots/nutrition-analytics-card.png' });
+
     /* 3 · every logged row carries a face and its macro line. */
     const eggRow = page.getByText(/Egg, whole/i).first();
     await expect(eggRow).toBeVisible();
