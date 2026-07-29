@@ -25,6 +25,9 @@ import {
 import { MuscleGoalHeat, useVolumeGoalContext } from '@/components/features/shared/MuscleVolume';
 import { buildGoalRows, fmtPct, fmtSets } from '@/components/features/shared/volumeMath';
 import { plannedWeeklySets } from '@/components/features/progress/analytics';
+import { MuscleExercisesPanel } from '@/components/features/progress/MuscleExercises';
+import type { MuscleSlug } from '@/components/illustrations';
+import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import {
   mockExerciseBySlug,
   type ProgressPhoto,
@@ -150,6 +153,12 @@ function WeeklyGoalHeatmap() {
 
   const [source, setSource] = React.useState<'logged' | 'planned'>('logged');
   const showPlanned = !hasLogged || source === 'planned';
+
+  // The tapped body part, mirrored OUT of the heat card so the exercises panel can render as a
+  // sibling below it — in normal flow, so the tabs and everything after them get pushed down
+  // instead of covered. Controlled (not just observed) so the panel's Hide button clears the
+  // ring on the body too.
+  const [focusMuscle, setFocusMuscle] = React.useState<MuscleSlug | null>(null);
   const rows = React.useMemo(
     () => buildGoalRows(showPlanned ? plannedSets : loggedSets, ctx),
     [showPlanned, plannedSets, loggedSets, ctx],
@@ -162,6 +171,7 @@ function WeeklyGoalHeatmap() {
     trained.length > 0 ? trained.reduce((n, r) => n + Math.min(1.5, r.pct), 0) / trained.length : 0;
 
   return (
+    <>
     <Card premium data-testid="weekly-goal-heatmap">
       <div className="flex items-baseline justify-between gap-2">
         <CardTitle>Weekly volume vs goal</CardTitle>
@@ -199,6 +209,13 @@ function WeeklyGoalHeatmap() {
           rows={rows}
           height={214}
           bare
+          selectedMuscle={focusMuscle}
+          onSelectedChange={setFocusMuscle}
+          onMuscleSelect={() =>
+            document
+              .querySelector('[data-testid="muscle-exercises"]')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }
           header={
             hasLogged ? (
               <div
@@ -226,6 +243,32 @@ function WeeklyGoalHeatmap() {
         />
       </div>
     </Card>
+
+    {/* The drill-down: which exercises put the sets on the tapped muscle. A normal-flow sibling
+        (fragment child of the page's space-y stack), so opening it pushes the tabs, Trends and
+        every later section down — nothing is overlaid. Height-animated so the push reads as the
+        card making room, not a layout jump. */}
+    <AnimatePresence initial={false}>
+      {focusMuscle && (
+        <m.div
+          key="muscle-exercises"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={SPRING.panel}
+          className="overflow-hidden"
+        >
+          <MuscleExercisesPanel
+            muscle={focusMuscle}
+            source={showPlanned ? 'planned' : 'logged'}
+            sessions={sessions}
+            routine={routine}
+            onClose={() => setFocusMuscle(null)}
+          />
+        </m.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }
 

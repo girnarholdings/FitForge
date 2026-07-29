@@ -159,6 +159,69 @@ test.describe('progress', () => {
 
       expect((await pageOverflow(page)).horizontal).toBeLessThanOrEqual(1);
     });
+
+    test('tapping a body part opens the exercises behind it, pushing the tabs down', async ({
+      page,
+    }) => {
+      const tabs = page.getByTestId('progress-tabs');
+      const panel = page.getByTestId('muscle-exercises');
+      await expect(panel).toHaveCount(0);
+      const tabsYBefore = (await tabs.boundingBox())!.y;
+
+      /* 1 · tap a muscle → the exercises panel opens between the heat card and the tabs. */
+      await tapMuscle(page, 'quads');
+      await expect(panel).toBeVisible();
+      await expect(panel).toContainText('Quads exercises');
+      await expect(page.getByTestId('muscle-exercises-context')).toContainText('last 7 days');
+
+      // The seed's only quads work is the back squat: a PRIMARY mover, 3 sessions × 3 sets in the
+      // last-7-days window — the same window the heat map itself counts.
+      const squat = page.getByTestId('muscle-exercise-row-barbell-back-squat');
+      await expect(squat).toBeVisible();
+      await expect(squat).toContainText('Primary mover');
+      await expect(squat).toContainText('3 sessions');
+      await expect(squat).toContainText(/9\s*sets/);
+      await expect(squat).toHaveAttribute('href', /\/exercises\/barbell-back-squat/);
+      // The footer restates the weighting the heat map is built from.
+      await expect(panel).toContainText('1.0');
+      await expect(panel).toContainText('0.5');
+
+      await page.screenshot({
+        path: 'tests/screenshots/progress-muscle-exercises.png',
+        fullPage: true,
+      });
+
+      /* 2 · the tabs (and everything after) moved DOWN to make room — pushed, not covered. */
+      await expect
+        .poll(async () => (await tabs.boundingBox())!.y, { message: 'tabs pushed down' })
+        .toBeGreaterThan(tabsYBefore + 60);
+
+      /* 3 · a muscle the seed only hits as SUPPORT is credited at ×0.5 and labelled as such. */
+      await tapMuscle(page, 'front-delts');
+      await expect(panel).toContainText('Front Delts exercises');
+      const bench = page.getByTestId('muscle-exercise-row-dumbbell-bench-press');
+      await expect(bench).toContainText('Support');
+      await expect(bench).toContainText(/\+4\.5 to Front Delts/);
+
+      /* 4 · switching the source relabels the SAME panel to the planned week. */
+      await page.getByTestId('heat-source-planned').click();
+      await expect(page.getByTestId('muscle-exercises-context')).toContainText('plans for a week');
+      await page.getByTestId('heat-source-logged').click();
+
+      /* 5 · an untrained muscle gets an honest empty state, not an invented list.
+         dispatchEvent, not a coordinate tap: the abs region's bounding box overlaps the
+         obliques, and a geometric click lands on the wrong shape. */
+      await page.getByTestId('muscle-map-shape-abs').first().dispatchEvent('click');
+      await expect(panel).toContainText('Nothing hit your abs in the last 7 days');
+      await expect(panel).toContainText('Browse exercises');
+
+      /* 6 · Hide collapses the panel AND clears the body selection — no ghost ring. */
+      await page.getByTestId('muscle-exercises-close').click();
+      await expect(panel).toHaveCount(0);
+      await expect(page.getByTestId('muscle-goal-detail')).toContainText('Tap any muscle');
+
+      expect((await pageOverflow(page)).horizontal).toBeLessThanOrEqual(1);
+    });
   });
 
   /* ═══════════════════════════════════════════════════════════ the honest empty state ══ */
@@ -202,6 +265,14 @@ test.describe('progress', () => {
     ]) {
       await expect(page.getByTestId(id)).toHaveCount(0);
     }
+
+    // The muscle drill-down follows the same honesty: with nothing logged it describes the PLAN.
+    await tapMuscle(page, 'quads');
+    const panel = page.getByTestId('muscle-exercises');
+    await expect(panel).toBeVisible();
+    await expect(page.getByTestId('muscle-exercises-context')).toContainText('plans for a week');
+    await page.getByTestId('muscle-exercises-close').click();
+    await expect(panel).toHaveCount(0);
 
     // PRs are equally honest.
     await page.getByTestId('progress-tab-prs').click();

@@ -223,6 +223,19 @@ export interface MuscleGoalHeatProps {
   height?: number;
   /** "Show exercises" deep-link from the selected-muscle detail */
   onMuscleSelect?: (slug: MuscleSlug) => void;
+  /**
+   * Fires on every selection toggle (body tap or rail chip), with `null` on deselect. Lets a
+   * caller mirror the selection — e.g. Progress expands an inline "exercises behind this muscle"
+   * panel the moment a body part is picked.
+   */
+  onSelectedChange?: (slug: MuscleSlug | null) => void;
+  /**
+   * Controlled selection. Leave `undefined` for the default self-managed selection; pass a value
+   * (or `null`) to own it — required when something OUTSIDE the card can clear the selection,
+   * like the close button on Progress's inline exercises panel: without control, dismissing the
+   * panel would leave the body ringed on a muscle the caller no longer considers selected.
+   */
+  selectedMuscle?: MuscleSlug | null;
   /** open the weekly-target tuner for a muscle, from the selected-muscle detail */
   onTuneMuscle?: (slug: MuscleSlug) => void;
   /** rendered above the body (e.g. a Planned / Logged switch) */
@@ -255,12 +268,23 @@ export function MuscleGoalHeat({
   height = 224,
   onMuscleSelect,
   onTuneMuscle,
+  onSelectedChange,
+  selectedMuscle,
   header,
   bare = false,
   rail = true,
   className,
 }: MuscleGoalHeatProps) {
-  const [selected, setSelected] = React.useState<MuscleSlug | null>(null);
+  const [internal, setInternal] = React.useState<MuscleSlug | null>(null);
+  const controlled = selectedMuscle !== undefined;
+  const selected = controlled ? selectedMuscle : internal;
+  // Plain event handler (not inside the state updater) so StrictMode's double-invoke of updaters
+  // can never fire the observer twice per tap.
+  const toggleSelected = (slug: MuscleSlug) => {
+    const next = selected === slug ? null : slug;
+    if (!controlled) setInternal(next);
+    onSelectedChange?.(next);
+  };
   const colors = React.useMemo(() => goalHeatColors(rows), [rows]);
   const bySlug = React.useMemo(() => new Map(rows.map((r) => [r.slug, r])), [rows]);
   const detail = selected ? bySlug.get(selected) : undefined;
@@ -429,7 +453,7 @@ export function MuscleGoalHeat({
           </div>
         }
         ariaLabel="Weekly volume as a percentage of goal, per muscle"
-        onMuscleClick={(slug) => setSelected((cur) => (cur === slug ? null : slug))}
+        onMuscleClick={toggleSelected}
       />
     </div>
   );
