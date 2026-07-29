@@ -43,10 +43,15 @@ import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import { Sheet } from '@/components/ui';
 import { FloatingTabBar, type TabItem } from './FloatingTabBar';
 import { LogoLockup } from '@/components/illustrations';
-import { CloudSyncDriver } from '@/components/auth/GoogleAuth';
 import { useAuth } from '@/lib/auth/useUser';
-import { getSyncStatus, subscribeSync, syncOnSignIn } from '@/lib/auth/sync';
-import { useProfileName } from '@/lib/demo/useDemo';
+import {
+  getRestoreState,
+  getSyncStatus,
+  subscribeRestore,
+  subscribeSync,
+  syncOnSignIn,
+} from '@/lib/auth/sync';
+import { useHasOnboarded, useProfileName } from '@/lib/demo/useDemo';
 import { isOnboarded } from '@/lib/demo/store';
 
 function cn(...parts: Array<string | false | null | undefined>): string {
@@ -340,6 +345,17 @@ function SyncButton({ uid, testId = 'sync-now' }: { uid: string; testId?: string
   );
 }
 
+const RESTORE_SERVER_SNAPSHOT = Object.freeze({ phase: 'idle', pulled: false } as const);
+
+/** Whether the first cloud reconcile has settled — see RestoreState. The routing gate waits on it. */
+function useRestore() {
+  return React.useSyncExternalStore(
+    subscribeRestore,
+    getRestoreState,
+    () => RESTORE_SERVER_SNAPSHOT as ReturnType<typeof getRestoreState>,
+  );
+}
+
 /** The sync store as a snapshot, so the mode sheet can explain a failure the button only hints at. */
 function useSyncStatus() {
   return React.useSyncExternalStore(
@@ -355,6 +371,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const name = useProfileName();
   const { status: authStatus, user } = useAuth();
   const sync = useSyncStatus();
+  const restore = useRestore();
+  // Reactive, so a cloud restore landing mid-wait re-runs the gate rather than leaving the app on
+  // its loading screen until something else happens to re-render.
+  const hasOnboarded = useHasOnboarded();
   const signedIn = authStatus === 'signed-in' && !!user;
   const [checked, setChecked] = React.useState(false);
   const [explain, setExplain] = React.useState(false);
@@ -363,24 +383,56 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // highlighted; the bar still renders and still navigates.
   const activeTabIndex = PRIMARY_NAV.findIndex((i) => isActive(pathname, i));
 
-  // Fresh-visit gate (§5.3). Direct store read avoids the hydration double-render trap.
+  /**
+   * Fresh-visit gate (§5.3) — now aware that "this browser is empty" and "this person is new" are
+   * different statements.
+   *
+   * It used to conflate them: an empty local store meant onboarding, full stop. For a signed-in
+   * user opening the app on a second device that is exactly wrong — the store is empty because
+   * their account has not been fetched yet, and the redirect fired while the fetch was still in
+   * the air. They were walked through building a plan they already had.
+   *
+   * So a signed-in visitor gets to wait for the reconcile to settle. `'done'` rather than
+   * "succeeded" on purpose: a Firestore outage must release them into onboarding, not trap them on
+   * a spinner. The direct store read still avoids the hydration double-render trap, and
+   * `useHasOnboarded` re-runs this the instant a restore writes the plan in.
+   */
   React.useEffect(() => {
-    if (isOnboarded()) setChecked(true);
-    else router.replace('/onboarding/welcome');
-  }, [router]);
+    // ONCE. This is an admission check, not a standing rule. Re-running it after someone is
+    // already inside turns any later emptying of the store into a redirect — and Settings →
+    // "Erase Local Mode data" empties it on purpose. The bounce to onboarding then raced the
+    // erase's own navigation home and left a freshly seeded session behind: a wipe that did not
+    // look wiped. The reactive inputs exist to let the FIRST decision wait for a cloud restore,
+    // not to keep re-deciding afterwards.
+    if (checked) return;
+    if (isOnboarded()) {
+      setChecked(true);
+      return;
+    }
+    // Still resolving who this is — deciding now would be deciding on no information.
+    if (authStatus === 'loading') return;
+    if (signedIn && restore.phase !== 'done') return;
+    router.replace('/onboarding/welcome');
+  }, [checked, router, authStatus, signedIn, restore.phase, hasOnboarded]);
 
   if (!checked) {
-    // Blank canvas while we decide (redirecting fresh visits, confirming onboarded users).
-    return <div className="min-h-screen min-h-[100svh] bg-surface" aria-hidden />;
+    // Blank canvas while we decide — except for the one case worth naming, where the wait is a
+    // network round trip and silence would read as a hang.
+    return (
+      <div className="grid min-h-screen min-h-[100svh] place-items-center bg-surface px-6">
+        {signedIn && restore.phase === 'restoring' && (
+          <p className="text-sm text-muted-foreground" data-testid="restoring-account">
+            Restoring your training…
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen min-h-[100svh] md:flex">
       {/* The forged-gold paint server every active solid icon (sidebar + tab bar) references. */}
       <GoldIconDefs />
-      {/* Reconciles the cloud copy on sign-in and mirrors changes up. Renders nothing, and is a
-          no-op on builds with no Firebase project. */}
-      <CloudSyncDriver />
       {/* Sidebar (≥md) */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-surface md:flex md:flex-col">
         <div className="flex items-center justify-between px-5 py-5">

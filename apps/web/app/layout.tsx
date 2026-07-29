@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { withBase } from '@/lib/utils';
 import { MotionProvider } from '@/components/ui/motion';
+import { CloudSyncDriver } from '@/components/auth/GoogleAuth';
 import './globals.css';
 
 /*
@@ -82,6 +83,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body>
+        {/*
+          AT THE ROOT, not inside the app shell — this is the fix for two bugs that looked
+          unrelated and were the same mistake.
+
+          It used to live in AppShell, which renders on `(app)` routes ONLY, and only AFTER that
+          shell's gate has confirmed onboarding is complete. So:
+
+            · a redirect sign-in returning to the LANDING page had nothing mounted to claim it, and
+              the credential was silently dropped — you tapped "Continue with Google", came back,
+              and were still signed out. Tapping again looked like the remedy; it was just another
+              go at the same broken loop.
+
+            · a signed-in user opening FitForge in a NEW browser had no training data locally, so
+              the shell sent them to onboarding before the component that restores their account
+              had ever mounted. Their plan was sitting in Firestore the whole time.
+
+          Both need auth and sync alive on every route, including the ones outside the shell. It
+          renders nothing, and is inert on builds with no Firebase project.
+        */}
+        <CloudSyncDriver />
         {/* One motion context for the whole app: the lazy DOM feature bundle plus the global
             reduced-motion contract, so no individual component has to remember either. */}
         <MotionProvider>{children}</MotionProvider>

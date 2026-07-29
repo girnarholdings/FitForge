@@ -25,6 +25,7 @@
  * source of truth.
  */
 import { exportAllState, importAllState, isOnboarded, subscribe } from '@/lib/demo/store';
+import { subscribeWorkoutLog } from '@/components/features/shared/workoutLog';
 import { isAuthConfigured, getDb } from './firebase';
 
 /** When this device last pushed, so "is the cloud newer than us?" has an answer. */
@@ -55,6 +56,56 @@ export function subscribeSync(l: () => void): () => void {
 }
 export function getSyncStatus(): SyncStatus {
   return status;
+}
+
+/**
+ * HAS THE FIRST RECONCILE FINISHED FOR THIS SESSION?
+ *
+ * Distinct from `SyncStatus`, which describes the last transfer. This answers a different and
+ * more consequential question: "may the app act on what is currently in localStorage yet?"
+ *
+ * It exists because the answer was previously assumed to be yes, always. A signed-in user opening
+ * FitForge on a new device has an empty local store for the second or two it takes to fetch their
+ * account — and the app read that empty store, concluded they were a new user, and marched them
+ * into onboarding while their real plan was in flight. Anything that branches on "does this
+ * browser have training data" must wait for `'done'` first.
+ *
+ *   idle      — nobody is signed in, or the reconcile has not started.
+ *   restoring — a reconcile is in flight; local state is not yet trustworthy for routing.
+ *   done      — settled, either way. NOT a claim that it succeeded: a failed restore still has to
+ *               release the app, or a Firestore outage would trap everyone on a spinner.
+ */
+export type RestorePhase = 'idle' | 'restoring' | 'done';
+
+export interface RestoreState {
+  phase: RestorePhase;
+  /**
+   * A cloud document was successfully imported into this browser during this session.
+   *
+   * Deliberately NOT the same question as "does the store have a finished plan". Onboarding writes
+   * `completedAt` on the plan-preview screen, while the user is still reviewing what was built for
+   * them — so anything that treats a finished-looking store as "onboarding is over" throws them
+   * out of the wizard one screen early. (That is not hypothetical: it is what the first version of
+   * this did, and the onboarding walk failed immediately.) This flag flips only when data actually
+   * arrived from the account, which is the event worth reacting to.
+   */
+  pulled: boolean;
+}
+
+let restoreState: RestoreState = { phase: 'idle', pulled: false };
+const restoreListeners = new Set<() => void>();
+
+function patchRestore(next: Partial<RestoreState>) {
+  restoreState = { ...restoreState, ...next };
+  for (const l of restoreListeners) l();
+}
+
+export function subscribeRestore(l: () => void): () => void {
+  restoreListeners.add(l);
+  return () => restoreListeners.delete(l);
+}
+export function getRestoreState(): RestoreState {
+  return restoreState;
 }
 
 function lastPushedAt(): number {
@@ -131,6 +182,9 @@ export async function pullFromCloud(uid: string): Promise<boolean> {
     const at = typeof data.updatedAt === 'number' ? data.updatedAt : Date.now();
     markPushed(at);
     setStatus({ state: 'synced', at, direction: 'pull' });
+    // The account's data is now in this browser. Anything still showing a "you look new" flow —
+    // onboarding, most obviously — should stand down.
+    patchRestore({ pulled: true });
     return true;
   } catch (err) {
     setStatus({ state: 'error', detail: describe(err) });
@@ -144,6 +198,7 @@ export async function pullFromCloud(uid: string): Promise<boolean> {
 export async function syncOnSignIn(uid: string): Promise<void> {
   if (!isAuthConfigured()) return;
   setStatus({ state: 'syncing' });
+  patchRestore({ phase: 'restoring' });
   try {
     const ref = await docRefFor(uid);
     if (!ref) return setStatus({ state: 'idle' });
@@ -165,6 +220,10 @@ export async function syncOnSignIn(uid: string): Promise<void> {
     else await pushToCloud(uid);
   } catch (err) {
     setStatus({ state: 'error', detail: describe(err) });
+  } finally {
+    // ALWAYS, including on failure. The routing gate waits on this, so leaving it unset on an
+    // error path would strand a signed-in user on a loading screen forever.
+    patchRestore({ phase: 'done' });
   }
 }
 
@@ -178,13 +237,19 @@ export async function syncOnSignIn(uid: string): Promise<void> {
 export function startCloudMirror(uid: string): () => void {
   if (!isAuthConfigured()) return () => {};
   let timer: ReturnType<typeof setTimeout> | null = null;
-  const unsubscribe = subscribe(() => {
+  const schedule = () => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => void pushToCloud(uid), 4000);
-  });
+  };
+  // BOTH STORES. The plan, profile and preferences live in the demo store; finished workouts live
+  // in a separate one with its own listeners. Watching only the first meant a logged session was
+  // uploaded solely by luck — whenever some unrelated edit happened to fire afterwards — which is
+  // indistinguishable from "my workouts are not being saved", because most of the time they were
+  // not. `exportAllState` always included the log; nothing was ever asking for it to be sent.
+  const unsubscribes = [subscribe(schedule), subscribeWorkoutLog(schedule)];
   return () => {
     if (timer) clearTimeout(timer);
-    unsubscribe();
+    for (const off of unsubscribes) off();
   };
 }
 

@@ -1,11 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { ProgressBar } from '@/components/ui';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import { StepArt } from '@/components/illustrations';
 import { STEP_META, wizardProgress } from '@/lib/onboarding/steps';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
+import { getRestoreState, subscribeRestore } from '@/lib/auth/sync';
 import { useOnboarding } from './OnboardingProvider';
 import { OnboardingDockContext } from './OnboardingFooter';
 import { STEP_COMPONENTS } from './steps';
@@ -26,6 +28,29 @@ export function OnboardingShell({ step }: { step: OnboardingStep }) {
   const { goBack } = useOnboarding();
   const StepBody = STEP_COMPONENTS[step];
   const [dock, setDock] = React.useState<HTMLDivElement | null>(null);
+  const router = useRouter();
+  const restored = React.useSyncExternalStore(
+    subscribeRestore,
+    () => getRestoreState().pulled,
+    () => false,
+  );
+
+  /**
+   * A cloud restore landing mid-onboarding ends onboarding.
+   *
+   * Mostly a safety net — signing in now routes straight to the app, which waits for the account
+   * before deciding anything. But someone can still arrive here first: a deep link, a redirect
+   * sign-in that returns to this URL, or tapping Local Mode and signing in afterwards. If their
+   * real plan arrives while they are answering questions, continuing to ask is absurd.
+   *
+   * KEYED ON AN ACTUAL PULL, not on the store looking finished. `finalizeOnboarding` runs on the
+   * plan-preview screen — while the user is still reading the plan and has not pressed "Start
+   * plan" — so a `completedAt`-based condition ejects them from the wizard one screen early. The
+   * first version did exactly that and the onboarding walk failed on the spot.
+   */
+  React.useEffect(() => {
+    if (restored) router.replace('/today');
+  }, [restored, router]);
 
   if (!meta.wizard) {
     return (

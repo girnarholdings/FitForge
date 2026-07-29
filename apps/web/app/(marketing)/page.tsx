@@ -7,7 +7,7 @@ import { Button, Sheet } from '@/components/ui';
 import { TargetIcon, ShakerIcon, SwapIcon, type IconProps } from '@/components/ui/icons';
 import { LogoLockup, LandingHero } from '@/components/illustrations';
 import { GoogleSignInButton } from '@/components/auth/GoogleAuth';
-import { getState, isOnboarded, resetDemo } from '@/lib/demo/store';
+import { getState, resetDemo } from '@/lib/demo/store';
 
 /**
  * Marketing landing (§5.2) — a SINGLE-VIEWPORT composition.
@@ -49,12 +49,17 @@ export default function LandingPage() {
   };
 
   /**
-   * Where a Google sign-in lands. Onboarding either way, unless this browser already holds a
-   * finished plan — someone signing in on a device they have already used should not be asked to
-   * build a plan they can see behind the dialog. A brand-new device restores from the cloud
-   * instead: CloudSyncDriver pulls the backup, and onboarding's own gate sends them on.
+   * Where a Google sign-in lands: ALWAYS the app, never a decision made here.
+   *
+   * This used to read `isOnboarded()` the instant the popup closed and route to onboarding if the
+   * local store was empty — which, on a device the user had never opened before, it always is. It
+   * was deciding "this person is new" from "this browser is new", microseconds before their real
+   * plan arrived from Firestore, and marching them through building one they already had.
+   *
+   * The app shell owns that decision now, because it is the only place that can wait for the
+   * account to be fetched before making it. Here we just go there.
    */
-  const afterSignIn = () => router.push(isOnboarded() ? '/today' : '/onboarding/welcome');
+  const afterSignIn = () => router.push('/today');
 
   return (
     <main data-flow="desktop" className="screen mx-auto w-full max-w-[430px] sm:max-w-md lg:max-w-[1080px] lg:px-10">

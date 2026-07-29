@@ -288,6 +288,18 @@ function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+/**
+ * The same subscription, for code outside this module.
+ *
+ * The workout log is a SEPARATE store from `lib/demo/store`, with its own key and its own
+ * listeners — easy to miss from the outside, and cloud sync did miss it. The mirror watched the
+ * demo store alone, so finishing a workout (the single most valuable thing this app records) never
+ * triggered an upload. It rode along the next time some unrelated demo-store edit happened to
+ * fire, and if none did, it never left the device.
+ */
+export { subscribe as subscribeWorkoutLog };
+
 function getSnapshot(): LogState {
   return load();
 }
