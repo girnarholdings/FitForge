@@ -136,6 +136,25 @@ jobs:
             and (.confidence | IN("high","medium","low"))
           ' > /dev/null || { echo "::error::macros response failed the contract check"; exit 1; }
 
+      # The custom domain's CORS standing — a WARNING, not a failure, because it measures the
+      # deploy-state transition (has `wrangler deploy` shipped the new ALLOWED_ORIGINS yet?)
+      # rather than the worker's health. The check is the preflight the browser would send from
+      # goforge.fit: an echo of the Origin in Access-Control-Allow-Origin means the site's Coach
+      # calls will be accepted; anything else means the deployed worker predates the list.
+      - name: Check the goforge.fit origin is allowed
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          acao=$(curl -sS -m 20 -X OPTIONS "$ENDPOINT" \
+            -H 'Origin: https://goforge.fit' \
+            -H 'Access-Control-Request-Method: POST' \
+            -D - -o /dev/null | tr -d '\r' | grep -i '^access-control-allow-origin:' | cut -d' ' -f2)
+          if [ "$acao" = "https://goforge.fit" ]; then
+            echo "::notice::CORS ok — the deployed worker allows https://goforge.fit"
+          else
+            echo "::warning::The deployed worker does NOT yet allow https://goforge.fit (got ACAO: ${acao:-none}). Coach calls from the live site will be refused until 'cd workers/coach && npx wrangler deploy' ships the updated ALLOWED_ORIGINS."
+          fi
+
       # Only reached when the above passed, so a green run means the whole chain works.
       - name: Report success
         run: echo "::notice::Coach worker is answering end to end"

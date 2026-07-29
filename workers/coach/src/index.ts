@@ -94,6 +94,64 @@ function workersAiModels(env: Env): string[] {
   return [...new Set(chain)];
 }
 
+/* ═══════════════════════════════════════════════════ the user-facing model catalog ══ */
+
+/**
+ * One entry the client may offer in its model picker. `label` is the human name — the raw
+ * `@cf/meta/...` ids read as plumbing, and the picker exists for people who just want "the fast
+ * one" or "the one my key pays for".
+ */
+export interface ModelChoice {
+  id: string;
+  label: string;
+  provider: 'mistral' | 'workers-ai';
+}
+
+const WORKERS_AI_LABELS: Record<string, string> = {
+  '@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'Llama 3.3 70B · fast',
+  '@cf/meta/llama-4-scout-17b-16e-instruct': 'Llama 4 Scout 17B',
+  '@cf/mistralai/mistral-small-3.1-24b-instruct': 'Mistral Small 3.1 24B',
+  '@cf/google/gemma-3-12b-it': 'Gemma 3 12B',
+};
+
+/**
+ * WHAT THE PICKER MAY OFFER, decided by the worker's own configuration: the Mistral entry exists
+ * only while MISTRAL_API_KEY does (it is the one non-free option, paid for by the deployer's
+ * key), and the Workers AI entries are the free chain this account can already run. The client
+ * renders whatever this returns and nothing else, so a stale client can never offer a backend
+ * the worker cannot honour.
+ */
+function modelCatalog(env: Env): ModelChoice[] {
+  const out: ModelChoice[] = [];
+  if (env.MISTRAL_API_KEY && env.MISTRAL_API_KEY.trim().length > 0) {
+    const id = env.MISTRAL_MODEL ?? DEFAULT_MISTRAL_MODEL;
+    out.push({
+      id,
+      label: id === DEFAULT_MISTRAL_MODEL ? 'Mistral Small · your API key' : `${id} · your API key`,
+      provider: 'mistral',
+    });
+  }
+  if (env.AI) {
+    for (const id of workersAiModels(env)) {
+      out.push({ id, label: WORKERS_AI_LABELS[id] ?? id.split('/').pop()!, provider: 'workers-ai' });
+    }
+  }
+  return out;
+}
+
+/**
+ * A client-requested model, accepted ONLY if it is in the catalog. A whitelist, not a passthrough:
+ * the request body is attacker-controlled, and this is the line that keeps it from steering the
+ * worker at arbitrary (billable) model ids or at backends it is not configured for. An unknown id
+ * quietly resolves to "no preference" — the stale-client case, not an error.
+ */
+function resolvePreferred(env: Env, raw: unknown): ModelChoice | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const id = raw.trim();
+  if (!id) return undefined;
+  return modelCatalog(env).find((m) => m.id === id);
+}
+
 /**
  * Does this error mean "that model is gone", as opposed to "inference failed"?
  *
@@ -124,11 +182,14 @@ async function askWorkersAI(
   system: string,
   user: string,
   opts: GenOpts,
+  /** A catalog-validated model to try FIRST; the normal chain still backs it up. */
+  first?: string,
 ): Promise<
   { ok: true; answer: string; model: string } | { ok: false; status: number; detail: string }
 > {
   const tried: string[] = [];
-  for (const model of workersAiModels(env)) {
+  const chain = first ? [...new Set([first, ...workersAiModels(env)])] : workersAiModels(env);
+  for (const model of chain) {
     try {
       const result = (await env.AI!.run(model, {
         messages: [
@@ -255,6 +316,12 @@ async function generateOnce(
   system: string,
   user: string,
   opts: GenOpts,
+  /**
+   * A catalog-validated user preference (see {@link resolvePreferred}). A workers-ai pick SKIPS
+   * Mistral on purpose — choosing a free model must mean the paid key is not spent — while a
+   * mistral pick keeps the free chain as its safety net, same as the default policy.
+   */
+  preferred?: ModelChoice,
 ): Promise<
   | { ok: true; answer: string; provider: 'mistral' | 'workers-ai'; model: string }
   | { ok: false; status: number; detail: string }
@@ -270,7 +337,9 @@ async function generateOnce(
     };
   }
 
-  if (provider === 'mistral') {
+  const forceWorkersAi = preferred?.provider === 'workers-ai' && !!env.AI;
+
+  if (provider === 'mistral' && !forceWorkersAi) {
     const r = await askMistral(env, system, user, opts);
     if (r.ok) return { ok: true, answer: r.answer, provider: 'mistral', model: modelFor(env) };
     if (env.AI) {
@@ -286,7 +355,7 @@ async function generateOnce(
     return r;
   }
 
-  const r = await askWorkersAI(env, system, user, opts);
+  const r = await askWorkersAI(env, system, user, opts, forceWorkersAi ? preferred!.id : undefined);
   if (!r.ok) return r;
   return { ok: true, answer: r.answer, provider: 'workers-ai', model: r.model };
 }
@@ -297,6 +366,8 @@ interface ChatRequest {
   question?: string;
   /** Client-declared intent. Only 'personalize' and 'meal' are trusted; everything else is classified here. */
   intent?: string;
+  /** The user's model pick from the catalog the health check advertised. Whitelisted, never trusted. */
+  model?: string;
   /** Retrieved KB entries the client already matched (top ~3), used as grounding. */
   snippets?: { question: string; answer: string }[];
   /** The user's onboarding-derived context. Never contains identifying data beyond a name. */
@@ -646,12 +717,13 @@ async function estimateMacros(
   env: Env,
   food: string,
   quantity: string | undefined,
+  preferred?: ModelChoice,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const user = `Food: ${food}${quantity ? `\nQuantity: ${quantity}` : ''}`;
 
   const results = await Promise.all(
     MACRO_TEMPS.map((temperature) =>
-      generateOnce(env, MACRO_SYSTEM, user, { temperature, maxTokens: MACRO_MAX_TOKENS }),
+      generateOnce(env, MACRO_SYSTEM, user, { temperature, maxTokens: MACRO_MAX_TOKENS }, preferred),
     ),
   );
 
@@ -763,6 +835,9 @@ export default {
           // The whole chain, so a probe can see what the worker would fall through to without
           // having to spend an inference to find out.
           fallbacks: env.AI ? workersAiModels(env) : [],
+          // What the client's model picker may offer — decided HERE, by this worker's actual
+          // configuration, so the dropdown can never promise a backend the worker lacks.
+          models: modelCatalog(env),
           tasks: ['chat', 'macros'],
         },
         200,
@@ -792,12 +867,20 @@ export default {
       );
     }
 
+    // The user's model pick, if any — validated against the catalog, unknown ids ignored.
+    const preferred = resolvePreferred(env, (body as { model?: unknown }).model);
+
     /* ── task: macros ──────────────────────────────────────────────────────────────── */
     if (body.task === 'macros') {
       const food = (body.food ?? '').trim().slice(0, MAX_FOOD_CHARS);
       if (!food) return json({ error: 'missing_food' }, 400, cors);
       try {
-        const r = await estimateMacros(env, food, body.quantity?.trim().slice(0, 60) || undefined);
+        const r = await estimateMacros(
+          env,
+          food,
+          body.quantity?.trim().slice(0, 60) || undefined,
+          preferred,
+        );
         return json(r.body, r.status, cors);
       } catch (err) {
         return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);
@@ -812,10 +895,16 @@ export default {
     const system = buildSystemPrompt(body, intent);
 
     try {
-      const r = await generateOnce(env, system, question, {
-        temperature: TEMPERATURE,
-        maxTokens: MAX_TOKENS,
-      });
+      const r = await generateOnce(
+        env,
+        system,
+        question,
+        {
+          temperature: TEMPERATURE,
+          maxTokens: MAX_TOKENS,
+        },
+        preferred,
+      );
       if (!r.ok) return json({ error: 'ai_unavailable', detail: r.detail }, r.status, cors);
 
       const answer = postProcess(r.answer);

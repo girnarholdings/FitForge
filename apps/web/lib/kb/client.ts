@@ -75,6 +75,53 @@ export function snippetsFromHits(hits: KbHit[]): CoachSnippet[] {
   }));
 }
 
+/* --------------------------------------------------------------------------- model preference */
+
+/** One entry of the worker-advertised model catalog (health `models`). */
+export interface CoachModelChoice {
+  id: string;
+  label: string;
+  provider: 'mistral' | 'workers-ai';
+}
+
+const MODEL_PREF_KEY = 'fitforge.coachModel.v1';
+const modelPrefListeners = new Set<() => void>();
+let modelPrefCache: string | null | undefined;
+
+/**
+ * The user's picked model id, or null for "Auto" (the worker's own policy). Stored locally like
+ * every other preference; validated by the WORKER against its live catalog on each request, so a
+ * stale pick (a retired model, a key that went away) degrades to Auto there rather than erroring
+ * here.
+ */
+export function getPreferredModel(): string | null {
+  if (typeof window === 'undefined') return null;
+  if (modelPrefCache === undefined) {
+    try {
+      modelPrefCache = window.localStorage.getItem(MODEL_PREF_KEY);
+    } catch {
+      modelPrefCache = null;
+    }
+  }
+  return modelPrefCache;
+}
+
+export function setPreferredModel(id: string | null): void {
+  modelPrefCache = id;
+  try {
+    if (id) window.localStorage.setItem(MODEL_PREF_KEY, id);
+    else window.localStorage.removeItem(MODEL_PREF_KEY);
+  } catch {
+    /* quota / private mode — the in-memory value still works for this session */
+  }
+  for (const l of modelPrefListeners) l();
+}
+
+export function subscribeModelPref(listener: () => void): () => void {
+  modelPrefListeners.add(listener);
+  return () => modelPrefListeners.delete(listener);
+}
+
 /* ------------------------------------------------------------------------------- local cache */
 
 const CACHE_KEY = 'fitforge.coachCache.v1';
@@ -93,7 +140,9 @@ function fingerprint(question: string, profile: CoachProfile, intent?: string): 
       .sort()
       .map((k) => [k, (profile as Record<string, unknown>)[k]]),
   );
-  return `${q}::${p}`;
+  // The model is part of the key: switching models exists to get a DIFFERENT answer, and a cache
+  // hit from the previous model would make the picker look like a no-op.
+  return `${q}::${p}::${getPreferredModel() ?? 'auto'}`;
 }
 
 function readCache(): CacheShape {
@@ -164,6 +213,7 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
         snippets: req.snippets.slice(0, MAX_SNIPPETS),
         profile: req.profile,
         ...(req.intent ? { intent: req.intent } : {}),
+        ...(getPreferredModel() ? { model: getPreferredModel() } : {}),
       }),
       signal: controller.signal,
     });
@@ -202,6 +252,29 @@ export interface CoachStatus {
   online: boolean;
   provider?: string;
   model?: string;
+  /** The worker-advertised model catalog. Absent on workers that predate the picker. */
+  models?: CoachModelChoice[];
+}
+
+/** Shape-validate the health payload's catalog — a foreign body, never trusted into the UI raw. */
+export function parseModels(raw: unknown): CoachModelChoice[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: CoachModelChoice[] = [];
+  for (const m of raw) {
+    const c = m as CoachModelChoice;
+    if (
+      c &&
+      typeof c.id === 'string' &&
+      c.id.length > 0 &&
+      c.id.length <= 120 &&
+      typeof c.label === 'string' &&
+      c.label.length > 0 &&
+      (c.provider === 'mistral' || c.provider === 'workers-ai')
+    ) {
+      out.push({ id: c.id, label: c.label.slice(0, 60), provider: c.provider });
+    }
+  }
+  return out.length > 0 ? out.slice(0, 12) : undefined;
 }
 
 const STATUS_KEY = 'fitforge.coachStatus.v1';
@@ -235,9 +308,10 @@ export async function fetchCoachStatus(): Promise<CoachStatus | null> {
       ok?: boolean;
       provider?: string;
       model?: string;
+      models?: unknown;
     } | null;
     const status: CoachStatus = body?.ok
-      ? { online: true, provider: body.provider, model: body.model }
+      ? { online: true, provider: body.provider, model: body.model, models: parseModels(body.models) }
       : { online: false };
     try {
       window.sessionStorage.setItem(STATUS_KEY, JSON.stringify({ at: Date.now(), status }));

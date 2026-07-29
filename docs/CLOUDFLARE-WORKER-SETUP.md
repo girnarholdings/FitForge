@@ -132,11 +132,27 @@ Click **Deploy** after saving.
 Workers AI's free tier is small and its model catalog turns over. If you have a Mistral API key, the
 worker will prefer it and fall back to Workers AI only if Mistral is unreachable.
 
+**The reliable way — the CLI.** From a checkout, with wrangler logged in:
+
+```bash
+cd workers/coach
+npx wrangler secret put MISTRAL_API_KEY   # paste the key at the prompt
+```
+
+This attaches the secret to the PRODUCTION worker and creates a deployment in one step. It
+sidesteps the two dashboard pitfalls that make a key invisible while looking perfectly set:
+a change **staged but never deployed** (the panel shows the secret; the running version predates
+it), and the **environment tabs** (a secret added under a preview environment never reaches
+production).
+
+**The dashboard way**, if you prefer it:
+
 1. In the worker's **Settings → Variables and Secrets**, click **Add**.
 2. Name it exactly `MISTRAL_API_KEY`.
 3. Set the type to **Secret**, not plaintext. Secrets are write-only afterwards — Cloudflare will
    never show the value again, which is the point.
-4. Paste the key. Click **Deploy**.
+4. Paste the key. Click **Deploy** — all the way through; a saved-but-undeployed change is the
+   most common reason the health check keeps saying `workers-ai`.
 
 Optionally add `MISTRAL_MODEL` as a plaintext variable to pick a model; the default is
 `mistral-small-latest`.
@@ -154,7 +170,15 @@ curl https://fitforge-coach.<your-subdomain>.workers.dev
 ```
 
 `"provider":"mistral"` means the secret was picked up. `"provider":"workers-ai"` means it was not —
-check the name is exactly `MISTRAL_API_KEY` and that you redeployed after adding it.
+check the name is exactly `MISTRAL_API_KEY`, that the change was actually DEPLOYED (not merely
+saved), and that it went to the production environment, not a preview tab. The URL opens in a
+plain browser tab too, so you can refresh it after each attempt until it flips.
+
+**The model picker.** The health check also advertises a `models` catalog — the free Workers AI
+chain, plus your Mistral model while the key is live. The app's Coach screen renders that catalog
+as a dropdown ("Auto — coach picks" by default), sends the pick with each request, and the worker
+validates it against the same catalog before honouring it. Picking a free Workers AI model
+deliberately skips Mistral, so browsing the free tier never spends your key.
 
 ---
 

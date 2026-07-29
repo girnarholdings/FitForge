@@ -11,7 +11,7 @@
  *
  * Like every Coach call: never throws, hard timeout, unconfigured builds short-circuit locally.
  */
-import { coachEndpoint } from '@/lib/kb/client';
+import { coachEndpoint, getPreferredModel } from '@/lib/kb/client';
 
 export interface MacroField {
   value: number;
@@ -74,7 +74,13 @@ export async function askMacroEstimate(
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task: 'macros', food: name, quantity }),
+      body: JSON.stringify({
+        task: 'macros',
+        food: name,
+        quantity,
+        // The user's picked model rides along; the worker whitelists it against its own catalog.
+        ...(getPreferredModel() ? { model: getPreferredModel() } : {}),
+      }),
       signal: controller.signal,
     });
 

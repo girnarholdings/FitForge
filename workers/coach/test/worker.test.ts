@@ -406,6 +406,84 @@ test('a worker with no binding and no key says exactly what is missing', async (
   assert.match(body.detail, /binding named AI/);
 });
 
+/* ── the model catalog + user picks ───────────────────────────────────────────────────────────
+ *
+ * The dropdown's contract has two halves: the worker ADVERTISES only what its own config can
+ * honour (health `models`), and it ACCEPTS only what it advertised (whitelist). Both halves are
+ * what stand between an attacker-controlled request body and someone else's bill.
+ */
+
+test('health advertises the Mistral entry only while the key exists', async () => {
+  const get = (env: Env) =>
+    worker.fetch(new Request('https://worker.test/', { method: 'GET' }), env);
+
+  const withKey = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test', AI: { run: async () => ({}) } } as unknown as Env;
+  let body = (await (await get(withKey)).json()) as { models: { id: string; provider: string; label: string }[] };
+  assert.equal(body.models[0]!.provider, 'mistral');
+  assert.match(body.models[0]!.label, /your API key/);
+  assert.ok(body.models.filter((m) => m.provider === 'workers-ai').length >= 4);
+
+  const withoutKey = stubEnv();
+  body = (await (await get(withoutKey)).json()) as { models: { provider: string }[] };
+  assert.ok(body.models.length >= 4);
+  assert.ok(body.models.every((m) => m.provider === 'workers-ai'));
+});
+
+test('picking a free Workers AI model skips Mistral even when the key is present', async () => {
+  const calls: string[] = [];
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    AI: {
+      run: async (model: string) => {
+        calls.push(model);
+        return { response: 'Ten to twenty sets.' };
+      },
+    },
+  } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('should never be called'), () =>
+    worker.fetch(post({ question: 'how many sets?', model: '@cf/google/gemma-3-12b-it' }), env),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { provider: string; model: string };
+  assert.equal(body.provider, 'workers-ai', 'a free pick must not spend the paid key');
+  assert.equal(body.model, '@cf/google/gemma-3-12b-it');
+  assert.equal(calls[0], '@cf/google/gemma-3-12b-it', 'the pick goes FIRST in the chain');
+  assert.ok(sent == null, 'Mistral must not be called at all');
+});
+
+test('an unknown model id is ignored, not honoured', async () => {
+  const env = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test' } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('Ten to twenty sets.'), () =>
+    worker.fetch(post({ question: 'how many sets?', model: 'evil/arbitrary-model' }), env),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { provider: string };
+  assert.equal(body.provider, 'mistral', 'an unknown id falls back to the default policy');
+  assert.equal(sent!.body.model, 'mistral-small-latest', 'the raw id must never reach a backend');
+});
+
+test('a model pick applies to every macro sample too', async () => {
+  const calls: string[] = [];
+  const est = JSON.stringify({ per: '1 bowl', kcal: 500, protein_g: 30, carbs_g: 40, fat_g: 20, assumptions: [] });
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    AI: {
+      run: async (model: string) => {
+        calls.push(model);
+        return { response: est };
+      },
+    },
+  } as unknown as Env;
+  const res = await worker.fetch(
+    post({ task: 'macros', food: 'chicken bowl', model: '@cf/google/gemma-3-12b-it' }),
+    env,
+  );
+  assert.equal(res.status, 200);
+  assert.equal(calls.length, 3, 'the consensus loop still takes three samples');
+  assert.ok(calls.every((m) => m === '@cf/google/gemma-3-12b-it'));
+});
+
 /* ── the prompt library ───────────────────────────────────────────────────────────────────────
  *
  * WHY TEMPLATES ARE TESTED AT ALL: the worker's whole quality story on free models is that the
