@@ -53,8 +53,18 @@ jobs:
           for attempt in $(seq 1 12); do
             ok=1
             rm -rf /tmp/site && mkdir -p /tmp/site
-            if ! curl -sSf --max-time 20 "$BASE/today/?v=${GITHUB_RUN_ID}-${attempt}" -o /tmp/site/today.html; then
-              echo "attempt ${attempt}: /today/ did not fetch"
+            # -L: a static host is entitled to redirect (trailing slash, canonical host) and the
+            # verifier's job is what ULTIMATELY serves. Headers + status are kept for diagnostics —
+            # when this fails, the first question is always "what did the CDN actually send?".
+            if ! curl -sSL --max-time 20 -D /tmp/site/headers.txt \
+                 -w '%{http_code} %{url_effective}\n' \
+                 "$BASE/today/?v=${GITHUB_RUN_ID}-${attempt}" -o /tmp/site/today.html \
+                 > /tmp/site/status.txt 2>/tmp/site/curlerr.txt; then
+              echo "attempt ${attempt}: /today/ did not fetch — $(cat /tmp/site/curlerr.txt)"
+              ok=0
+            elif ! grep -q '^2' /tmp/site/status.txt; then
+              echo "attempt ${attempt}: non-2xx: $(cat /tmp/site/status.txt)"
+              sed -n '1,12p' /tmp/site/headers.txt
               ok=0
             else
               # Every hashed asset the page references, absolute-ised against the site base.
@@ -63,6 +73,8 @@ jobs:
               count=$(wc -l < /tmp/site/assets.txt)
               if [ "$count" -lt 3 ]; then
                 echo "attempt ${attempt}: page references only ${count} assets — not a real build"
+                echo "  final url+status: $(cat /tmp/site/status.txt)"
+                echo "  body head: $(head -c 300 /tmp/site/today.html | tr '\n' ' ')"
                 ok=0
               else
                 : > /tmp/site/bundle.txt
