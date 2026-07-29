@@ -12,9 +12,44 @@
 import * as React from 'react';
 import { Button } from '@/components/ui';
 import { SparkIcon, LogOutIcon, CheckIcon } from '@/components/ui/icons';
-import { isAuthConfigured, signInWithGoogle, signOutUser } from '@/lib/auth/firebase';
+import {
+  completeRedirectSignIn,
+  isAuthConfigured,
+  signInWithGoogle,
+  signOutUser,
+  warmGoogleScript,
+  warmSignIn,
+} from '@/lib/auth/firebase';
 import { useAuth } from '@/lib/auth/useUser';
 import { getSyncStatus, startCloudMirror, subscribeSync, syncOnSignIn } from '@/lib/auth/sync';
+
+/**
+ * A sign-in that went out via redirect finishes on a PAGE LOAD, not in the click handler that
+ * started it — by then the component that made the call is long gone. So the outcome lands here,
+ * in a one-slot store, and the button picks it up whenever it next mounts. Without this a redirect
+ * that came back rejected (an unauthorised domain, say) would fail completely silently, which is
+ * the exact failure mode this whole change exists to remove.
+ */
+let redirectError: string | null = null;
+const redirectListeners = new Set<() => void>();
+
+function setRedirectError(message: string | null) {
+  redirectError = message;
+  for (const l of redirectListeners) l();
+}
+
+function subscribeRedirectError(listener: () => void) {
+  redirectListeners.add(listener);
+  return () => redirectListeners.delete(listener);
+}
+
+function useRedirectError() {
+  return React.useSyncExternalStore(
+    subscribeRedirectError,
+    () => redirectError,
+    () => null,
+  );
+}
 
 /** Google's mark, inline. An external image would be a third-party request on the sign-in path. */
 function GoogleMark({ size = 18 }: { size?: number }) {
@@ -47,6 +82,18 @@ function GoogleMark({ size = 18 }: { size?: number }) {
  */
 export function CloudSyncDriver() {
   const { status, user } = useAuth();
+
+  // Finish a redirect sign-in if one is landing on this page load. Mounted app-wide because the
+  // redirect returns to wherever it started, and free when nothing is pending — the SDK checks a
+  // session flag before it touches the network, so ordinary page loads pay nothing and contact
+  // nobody. That "contact nobody" is load-bearing: regression-coach-safety asserts a red-flag
+  // question produces no off-origin request at all, and this component is on that page too.
+  React.useEffect(() => {
+    void completeRedirectSignIn().then((outcome) => {
+      if (outcome && !outcome.ok && outcome.reason === 'failed') setRedirectError(outcome.message);
+    });
+  }, []);
+
   React.useEffect(() => {
     if (status !== 'signed-in' || !user) return;
     let stop = () => {};
@@ -79,35 +126,71 @@ export function GoogleSignInButton({
 }) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [redirecting, setRedirecting] = React.useState(false);
+  const fromRedirect = useRedirectError();
+
+  // Build the sign-in client now rather than inside the click handler. On a phone this is what
+  // makes Firebase load the popup machinery ahead of time, so `window.open` still happens while
+  // the click's user activation is alive. Only ever runs on screens that offer sign-in.
+  React.useEffect(() => {
+    void warmSignIn();
+  }, []);
+
   if (!isAuthConfigured()) return null;
 
   const go = async () => {
     setBusy(true);
     setError(null);
-    try {
-      await signInWithGoogle();
-      onDone?.();
-    } catch {
-      // The popup flow's failures are environmental (blocked popup, unauthorised domain), and the
-      // fix is never something the user can do from inside the app — so say what still works.
-      setError('Google sign-in could not complete. Your data is safe in this browser.');
-    } finally {
+    setRedirectError(null);
+    // signInWithGoogle is total, but this is the one place where being wrong means a button that
+    // spins forever and says nothing — the exact symptom being fixed. Belt as well as braces.
+    const outcome = await signInWithGoogle().catch(
+      (e: unknown) =>
+        ({
+          ok: false,
+          reason: 'failed',
+          code: 'auth/unexpected',
+          message: `Sign-in failed unexpectedly (${String((e as { code?: string })?.code ?? e).slice(0, 80)}).`,
+        }) as const,
+    );
+    if (outcome.ok) {
       setBusy(false);
+      onDone?.();
+      return;
     }
+    if (outcome.reason === 'redirecting') {
+      // The page is navigating to Google. Keep the button disabled so the last thing on screen is
+      // "taking you to Google" rather than an idle button that appears to have ignored the click.
+      setRedirecting(true);
+      return;
+    }
+    setBusy(false);
+    // 'cancelled' is a decision, not a failure, and gets no message at all.
+    if (outcome.reason === 'failed') setError(outcome.message);
   };
+
+  const shown = error ?? fromRedirect;
 
   return (
     <div className={block ? 'w-full' : ''}>
       <Button
         variant="secondary"
         block={block}
-        loading={busy}
+        loading={busy || redirecting}
+        // Google's script is a third-party fetch, so it waits for a sign that someone is actually
+        // reaching for this button rather than firing for every visitor who opens Settings.
+        onPointerDown={warmGoogleScript}
+        onFocus={warmGoogleScript}
         onClick={() => void go()}
         data-testid="google-signin"
       >
-        <GoogleMark /> Continue with Google
+        <GoogleMark /> {redirecting ? 'Taking you to Google…' : 'Continue with Google'}
       </Button>
-      {error && <p className="mt-1.5 text-[11px] leading-snug text-danger">{error}</p>}
+      {shown && (
+        <p className="mt-1.5 text-[11px] leading-snug text-danger" data-testid="signin-error">
+          {shown} Your data is safe in this browser either way.
+        </p>
+      )}
     </div>
   );
 }

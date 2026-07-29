@@ -19,7 +19,9 @@ Everything below fits inside the **Spark (free) plan**. No card, no Blaze upgrad
 > What still has to happen in the Firebase console, because no API can do it for you:
 >
 > - **Step 3** — enable the Google sign-in provider
-> - **Step 4** — add `goforge.fit`, `girnarholdings.github.io` and `localhost` to authorised domains
+> - **Step 4** — add `goforge.fit`, `girnarholdings.github.io` and `localhost` to authorised
+>   domains, **in lower case** (see the note in step 4 — a capitalised entry passes the check you
+>   can see and fails the one you cannot)
 > - **Step 5** — create Firestore and publish the security rules
 >
 > Until those three are done, the Sign in button appears and the popup fails. And run
@@ -71,6 +73,31 @@ localhost
 ```
 
 Missing this is the single most common cause of "the popup opens and immediately closes".
+
+**Type them in lower case.** The client-side check the SDK runs is case-insensitive, so a
+`GoForge.fit` entry gets past it — but the entry is also used server-side by the
+`/__/auth/handler` page that the popup lands on, and that check is not documented as
+case-folding. An entry with capitals therefore fails in the one place you cannot see, after the
+account chooser, which reads as "I picked my account and nothing happened". If an entry already
+has capitals, delete it and re-add it lower case; there is no cost to doing so and it removes a
+suspect that is otherwise very hard to rule out.
+
+You can read back what the project currently has, without any credential beyond the public web
+API key, which is faster than trusting the console UI:
+
+```sh
+curl -s "https://identitytoolkit.googleapis.com/v1/projects?key=$NEXT_PUBLIC_FIREBASE_API_KEY"
+```
+
+The same endpoint is the quickest way to confirm the Google provider is on — a bogus token comes
+back as `INVALID_IDP_RESPONSE` when the provider is enabled and `OPERATION_NOT_ALLOWED` when it
+is not:
+
+```sh
+curl -s -X POST "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=$NEXT_PUBLIC_FIREBASE_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"postBody":"id_token=bogus&providerId=google.com","requestUri":"https://goforge.fit","returnSecureToken":true}'
+```
 
 ## Step 5 · Create Firestore and lock it down
 
@@ -202,10 +229,33 @@ traffic cannot spend the company's model allowance.
 
 ## Troubleshooting
 
+The app now prints the actual Firebase error code under the button rather than a single generic
+sentence, so start by reading what it says — most of these are identifiable at a glance.
+
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | Popup opens then closes instantly | Domain not authorised | Step 4 |
+| Account chooser appears, then nothing | Authorised-domain entry has capitals | Step 4 — re-add it lower case |
 | `auth/operation-not-allowed` | Google provider disabled | Step 3 |
+| "Could not load Google's sign-in script" | Content blocker or network filter is blocking `apis.google.com` | Disable the blocker for this site |
+| Nothing happens at all on a phone | The popup was blocked | The app now retries as a full-page redirect by itself; if that also fails, allow pop-ups |
 | Sync says "rules rejected the write" | Rules not published, or shape changed | Re-publish step 5 |
 | Signed in but still on the free model | Worker has no `FIREBASE_PROJECT_ID` | Step 7, then redeploy |
 | No sign-in button anywhere | Build variables unset | Step 6, then re-run the Pages workflow |
+
+### Why sign-in is built the way it is
+
+Worth knowing before anyone "simplifies" it back. `signInWithPopup` does not open the window
+first — it loads Google's iframe script, opens an iframe on the auth domain and fetches the
+project config, and only then calls `window.open`. Browsers only honour `window.open` while the
+click's user activation is still live, so on a phone those round trips are enough to get the popup
+blocked. Firebase hides this by pre-loading that machinery when the popup resolver is registered
+at construction — but only on mobile, Safari and iOS, which is exactly where it matters.
+
+This app cannot register that resolver on its main Auth client, because doing so pulls
+`apis.google.com/js/api.js` into every page load for every visitor, including people who never
+sign in — which contradicts what the app tells them about their data. So sign-in runs on a
+*second*, in-memory Auth client that does carry the resolver and is created only on the screens
+that actually offer sign-in. The credential it produces is handed to the main client with
+`signInWithCredential`. `/coach` still contacts nobody, and the popup is warm before anyone
+presses the button.

@@ -102,6 +102,55 @@ export async function getAuthClient(): Promise<Auth | null> {
   return authPromise;
 }
 
+/**
+ * THE SIGN-IN CLIENT — a second Auth instance that DOES carry the popup resolver.
+ *
+ * Why a second one instead of just adding the resolver to the first: registering the resolver at
+ * construction is what makes Firebase call `_shouldInitProactively` and, on mobile browsers, Safari
+ * and iOS, load Google's iframe machinery immediately. That is the behaviour that lets
+ * `signInWithPopup` reach `window.open` while the click's user activation is still alive — and it
+ * is the behaviour this app lost when it stopped using `getAuth()`. Losing it is why the button did
+ * nothing on a phone: three round trips inside the click handler, activation expired, popup
+ * blocked, no error worth showing.
+ *
+ * Putting the resolver back on the MAIN instance would restore the eager Google script on every
+ * page for every visitor, which is the privacy regression that made this app stop using `getAuth()`
+ * in the first place. A separate instance, created only where sign-in is actually offered, gets
+ * both: /coach still contacts nobody, and the sign-in screen has the popup machinery warm before
+ * anyone touches the button.
+ *
+ * `inMemoryPersistence` on purpose — this client exists to run one popup. The session it produces
+ * is handed to the main client via `signInWithCredential`, which owns persistence, sync and every
+ * other consumer's view of who is signed in. Two instances writing session state under two storage
+ * keys is how you get an app that disagrees with itself about whether you are logged in.
+ */
+let popupAuthPromise: Promise<Auth> | null = null;
+const SIGNIN_APP = 'fitforge-signin';
+
+async function getPopupAuth(): Promise<Auth | null> {
+  if (!isAuthConfigured()) return null;
+  if (!popupAuthPromise) {
+    popupAuthPromise = (async () => {
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { initializeAuth, getAuth, browserPopupRedirectResolver, inMemoryPersistence } =
+        await import('firebase/auth');
+      const app = getApps().find((a) => a.name === SIGNIN_APP) ?? initializeApp(CONFIG, SIGNIN_APP);
+      try {
+        return initializeAuth(app, {
+          persistence: inMemoryPersistence,
+          popupRedirectResolver: browserPopupRedirectResolver,
+        });
+      } catch {
+        return getAuth(app);
+      }
+    })();
+    popupAuthPromise.catch(() => {
+      popupAuthPromise = null;
+    });
+  }
+  return popupAuthPromise;
+}
+
 export async function getDb(): Promise<Firestore | null> {
   if (!isAuthConfigured()) return null;
   const { getFirestore } = await import('firebase/firestore');
@@ -109,35 +158,212 @@ export async function getDb(): Promise<Firestore | null> {
 }
 
 /**
- * Google sign-in, via popup.
+ * What a sign-in attempt did. Deliberately NOT `User | null`.
  *
- * POPUP RATHER THAN REDIRECT, deliberately. `signInWithRedirect` depends on third-party storage
- * that Safari's ITP and Chrome's third-party-cookie work now partition, which breaks it on
- * exactly the mobile browsers this app is built for unless the auth domain is proxied under the
- * app's own origin. The popup flow has no such dependency.
- *
- * Returns null when the user closes the popup — a cancelled sign-in is a choice, not an error,
- * and must not raise anything the UI would have to dress up as a failure.
+ * The first version of this returned null for "cancelled", null for "blocked popup" and threw for
+ * everything else, so the UI could only ever say "could not complete". That is precisely the shape
+ * of a bug report that reads "sign-in does not work" with nothing to act on: a blocked popup, a
+ * domain missing from the Firebase console and a disabled provider all rendered the same sentence.
+ * The cause has to survive the trip to the UI, because for two of those three the fix is in a
+ * console the user is looking at, not in this code.
  */
-export async function signInWithGoogle(): Promise<User | null> {
-  const auth = await getAuthClient();
-  if (!auth) return null;
-  const { GoogleAuthProvider, signInWithPopup, browserPopupRedirectResolver } = await import(
-    'firebase/auth'
-  );
-  const provider = new GoogleAuthProvider();
-  // Always ask which account — people share devices, and silently reusing the last Google session
-  // is how someone logs their workout into a partner's account.
-  provider.setCustomParameters({ prompt: 'select_account' });
+export type SignInOutcome =
+  | { ok: true; user: User }
+  /** The person closed the popup. A choice, not a failure — the UI says nothing. */
+  | { ok: false; reason: 'cancelled' }
+  /** The popup was blocked; we have handed off to a full-page redirect and are navigating away. */
+  | { ok: false; reason: 'redirecting' }
+  | { ok: false; reason: 'unconfigured' }
+  | { ok: false; reason: 'failed'; code: string; message: string };
+
+const CANCELLED = /popup-closed-by-user|cancelled-popup-request|user-cancelled/;
+
+/**
+ * Turn a Firebase error code into something that names the actual problem AND where it is fixed.
+ * Most of these are configuration in the Firebase console rather than anything the app can repair
+ * at runtime, so the message's job is to point at the right screen.
+ */
+export function describeAuthError(code: string, host: string): string {
+  switch (code) {
+    case 'auth/unauthorized-domain':
+      return `${host} is not in the Firebase console's Authentication → Settings → Authorized domains list. Add it there, then try again.`;
+    case 'auth/operation-not-allowed':
+      return 'Google sign-in is switched off for this Firebase project. Enable it under Authentication → Sign-in method.';
+    case 'auth/popup-blocked':
+      return 'Your browser blocked the sign-in window. Allow pop-ups for this site, then try again.';
+    case 'auth/network-request-failed':
+      return 'Could not reach Google. Check your connection and try again.';
+    case 'auth/invalid-api-key':
+    case 'auth/api-key-not-valid':
+      return 'This build has an invalid Firebase API key.';
+    case 'auth/internal-error':
+      // In the popup flow this almost always means Google's sign-in script never loaded — a
+      // content blocker, a corporate proxy or a dropped connection — rather than anything wrong
+      // inside Google. Naming the real suspects beats repeating the SDK's own word for it.
+      return "Could not load Google's sign-in script. A content blocker or network filter is the usual cause — try again with those off.";
+    case 'auth/no-credential':
+      return 'Google signed you in but returned no credential to keep. Try again.';
+    case 'auth/account-exists-with-different-credential':
+      return 'That email is already registered with a different sign-in method.';
+    default:
+      // Never swallow an unknown code: an unrecognised failure that prints its own name can be
+      // searched for, and a generic apology cannot.
+      return `Sign-in failed (${code || 'unknown error'}).`;
+  }
+}
+
+/**
+ * PRE-WARM THE POPUP PATH. Call when a sign-in surface mounts.
+ *
+ * `signInWithPopup` does not call `window.open` first — it loads Google's `apis.google.com/js/api.js`,
+ * opens an iframe on the auth domain and fetches the project config, and only THEN opens the
+ * window. That is three round trips sitting between the click and the popup, and browsers only
+ * honour `window.open` while the click's user activation is still live. On a phone on cellular
+ * that budget is routinely blown, and the popup is blocked through no fault of the person pressing
+ * the button. `getAuth()` hides this by registering the resolver at construction so the warm-up has
+ * usually finished before anyone clicks; this app cannot use `getAuth()` (see getAuthClient), so it
+ * has to do the warming itself.
+ *
+ * Split in two by cost:
+ *   `warmSignIn`      — builds the sign-in client (see getPopupAuth), which on a phone makes the
+ *                       SDK load the iframe machinery there and then. This is the one that
+ *                       actually fixes the blocked popup.
+ *   `warmGoogleScript`— for desktop, where the SDK declines to warm anything by itself. Waits for
+ *                       a sign of intent (pointer down or focus) rather than firing at every
+ *                       visitor who opens Settings, because it is a third-party fetch. `loadGapi`
+ *                       takes a no-network branch when `window.gapi.load` already exists, which is
+ *                       exactly what this leaves behind.
+ *
+ * Neither runs on /coach: nothing there renders a sign-in surface, which is what keeps the
+ * regression-coach-safety rule (a red-flag question makes no off-origin request) true.
+ */
+export async function warmSignIn(): Promise<void> {
+  if (!isAuthConfigured()) return;
   try {
-    // The resolver is supplied HERE rather than at construction — see getAuthClient. This is the
-    // call that legitimately needs Google's iframe script, and the only one.
-    const cred = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
-    return cred.user;
+    await Promise.all([getAuthClient(), getPopupAuth()]);
+  } catch {
+    // Warming is an optimisation. Failing to warm must never block the real attempt.
+  }
+}
+
+let gapiWarmed = false;
+
+export function warmGoogleScript(): void {
+  if (gapiWarmed || !isAuthConfigured() || typeof document === 'undefined') return;
+  gapiWarmed = true;
+  const w = window as unknown as { gapi?: { load?: unknown } };
+  if (w.gapi?.load) return;
+  const s = document.createElement('script');
+  s.src = 'https://apis.google.com/js/api.js';
+  s.async = true;
+  // A failed warm is silent on purpose: the SDK will load the script itself on click, and an error
+  // banner about a preload nobody asked for would be noise.
+  s.onerror = () => {};
+  document.head.appendChild(s);
+}
+
+/**
+ * Google sign-in: popup first, full-page redirect if the popup is blocked.
+ *
+ * POPUP FIRST, deliberately. `signInWithRedirect` leans on third-party storage that Safari's ITP
+ * and Chrome's cookie partitioning now split, so with a `*.firebaseapp.com` auth domain it is the
+ * less reliable flow, not the safer one. It is here strictly as the answer to a blocked popup,
+ * where the alternative is a button that does nothing at all.
+ */
+export async function signInWithGoogle(): Promise<SignInOutcome> {
+  const host = typeof location === 'undefined' ? 'this site' : location.hostname;
+
+  // EVERYTHING is inside the try, including building the clients and loading the SDK chunk. This
+  // function's contract is that it RETURNS an outcome; if it can throw, the caller has to hold a
+  // second error path, and the version of this code that left the setup outside the try did
+  // exactly that — a throw there left the button spinning forever with nothing on screen, which is
+  // indistinguishable from the bug being fixed.
+  try {
+    const auth = await getAuthClient();
+    const popupAuth = await getPopupAuth();
+    if (!auth || !popupAuth) return { ok: false, reason: 'unconfigured' };
+    const {
+      GoogleAuthProvider,
+      signInWithPopup,
+      signInWithCredential,
+      signInWithRedirect,
+      browserPopupRedirectResolver,
+    } = await import('firebase/auth');
+
+    const provider = () => {
+      const p = new GoogleAuthProvider();
+      // Always ask which account — people share devices, and silently reusing the last Google
+      // session is how someone logs their workout into a partner's account.
+      p.setCustomParameters({ prompt: 'select_account' });
+      return p;
+    };
+
+    try {
+      // Run on the sign-in client, whose resolver was registered at construction so the popup
+      // machinery is already warm and `window.open` happens inside the click's activation window.
+      const cred = await signInWithPopup(popupAuth, provider(), browserPopupRedirectResolver);
+      // Hand the credential to the main client, which is the one everything else reads.
+      const credential = GoogleAuthProvider.credentialFromResult(cred);
+      if (!credential) {
+        return {
+          ok: false,
+          reason: 'failed',
+          code: 'auth/no-credential',
+          message: describeAuthError('auth/no-credential', host),
+        };
+      }
+      const bridged = await signInWithCredential(auth, credential);
+      return { ok: true, user: bridged.user };
+    } catch (err) {
+      const code = (err as { code?: string }).code ?? '';
+      if (CANCELLED.test(code)) return { ok: false, reason: 'cancelled' };
+
+      if (code === 'auth/popup-blocked') {
+        try {
+          await signInWithRedirect(auth, provider(), browserPopupRedirectResolver);
+          // The browser is now navigating to Google; nothing after this runs.
+          return { ok: false, reason: 'redirecting' };
+        } catch (redirectErr) {
+          const rCode = (redirectErr as { code?: string }).code ?? code;
+          return {
+            ok: false,
+            reason: 'failed',
+            code: rCode,
+            message: describeAuthError(rCode, host),
+          };
+        }
+      }
+
+      return { ok: false, reason: 'failed', code, message: describeAuthError(code, host) };
+    }
+  } catch (setupErr) {
+    // Building the clients or fetching the SDK chunk failed. Rare, but it must still surface as a
+    // named outcome rather than a rejected promise.
+    const code = (setupErr as { code?: string }).code ?? 'auth/setup-failed';
+    return { ok: false, reason: 'failed', code, message: describeAuthError(code, host) };
+  }
+}
+
+/**
+ * Finish a sign-in that went out via redirect. Mounted app-wide, and FREE when there is nothing to
+ * finish: the SDK checks a session-storage flag first and returns without touching the network or
+ * loading Google's script unless a redirect is genuinely pending. That is what makes it safe to
+ * call on every page rather than only on the ones with a sign-in button — the redirect can land
+ * anywhere, so anywhere has to be able to complete it.
+ */
+export async function completeRedirectSignIn(): Promise<SignInOutcome | null> {
+  if (!isAuthConfigured()) return null;
+  const host = typeof location === 'undefined' ? 'this site' : location.hostname;
+  try {
+    const auth = await getAuthClient();
+    if (!auth) return null;
+    const { getRedirectResult, browserPopupRedirectResolver } = await import('firebase/auth');
+    const cred = await getRedirectResult(auth, browserPopupRedirectResolver);
+    return cred ? { ok: true, user: cred.user } : null;
   } catch (err) {
     const code = (err as { code?: string }).code ?? '';
-    if (/popup-closed-by-user|cancelled-popup-request|popup-blocked/.test(code)) return null;
-    throw err;
+    if (CANCELLED.test(code)) return { ok: false, reason: 'cancelled' };
+    return { ok: false, reason: 'failed', code, message: describeAuthError(code, host) };
   }
 }
 
