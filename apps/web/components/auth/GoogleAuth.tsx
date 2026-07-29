@@ -114,14 +114,30 @@ function useSyncStatus() {
 }
 
 /**
- * The sign-in call to action, for the places where someone might start an account: the settings
- * screen and the login page.
+ * The sign-in call to action, for the two places someone might start an account: the landing page
+ * and Settings.
+ *
+ * `warmOnMount` decides when the popup machinery is prepared, and the two callers want different
+ * answers. Warming means fetching Google's script and opening an iframe on the auth domain, which
+ * is what lets `window.open` fire inside the click's user-activation window on a phone — but it is
+ * also a third-party request made on behalf of someone who has not asked for one.
+ *
+ * On SETTINGS that is a fair trade: you navigated into account territory deliberately, and the
+ * account card is the reason you are looking at the screen.
+ *
+ * On the LANDING PAGE it is not. That page's own copy says "Free, no account", most of its
+ * visitors will choose Local Mode, and making every one of them talk to Google to prepare a button
+ * they will not press is exactly the kind of thing this app has been careful not to do. So there
+ * it warms on the first sign of intent — pointer down or keyboard focus — and a popup that gets
+ * blocked anyway falls back to a redirect, which needs no warming at all.
  */
 export function GoogleSignInButton({
   block = true,
+  warmOnMount = true,
   onDone,
 }: {
   block?: boolean;
+  warmOnMount?: boolean;
   onDone?: () => void;
 }) {
   const [busy, setBusy] = React.useState(false);
@@ -129,12 +145,15 @@ export function GoogleSignInButton({
   const [redirecting, setRedirecting] = React.useState(false);
   const fromRedirect = useRedirectError();
 
-  // Build the sign-in client now rather than inside the click handler. On a phone this is what
-  // makes Firebase load the popup machinery ahead of time, so `window.open` still happens while
-  // the click's user activation is alive. Only ever runs on screens that offer sign-in.
   React.useEffect(() => {
+    if (warmOnMount) void warmSignIn();
+  }, [warmOnMount]);
+
+  /** Someone is reaching for the button. Prepare everything, whether or not mount already did. */
+  const warmNow = () => {
     void warmSignIn();
-  }, []);
+    warmGoogleScript();
+  };
 
   if (!isAuthConfigured()) return null;
 
@@ -177,10 +196,10 @@ export function GoogleSignInButton({
         variant="secondary"
         block={block}
         loading={busy || redirecting}
-        // Google's script is a third-party fetch, so it waits for a sign that someone is actually
-        // reaching for this button rather than firing for every visitor who opens Settings.
-        onPointerDown={warmGoogleScript}
-        onFocus={warmGoogleScript}
+        // The intent signals. On Settings this tops up a warm that already happened at mount; on
+        // the landing page it IS the warm-up, and it is the earliest honest moment to start one.
+        onPointerDown={warmNow}
+        onFocus={warmNow}
         onClick={() => void go()}
         data-testid="google-signin"
       >

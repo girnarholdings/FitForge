@@ -59,6 +59,6 @@ See [`api.md`](./api.md) for the full endpoint/RPC list.
 
 ## Client architecture
 
-- **Web** (`apps/web`): App Router with route groups — `(marketing)`, `(auth)`, `onboarding/[step]`, `(app)`. Supabase SSR auth via middleware guards. A mobile-first design system in `components/ui`.
+- **Web** (`apps/web`): App Router with route groups — `(marketing)`, `onboarding/[step]`, `(app)`. There is no `(auth)` group: the shipped build is a static export, so the account decision is two buttons on the landing page (Local Mode, or Google via the Firebase client SDK) rather than a login route with server-side guards. A mobile-first design system in `components/ui`.
 - **iOS** (`apps/ios`): SwiftUI (iOS 17+), `supabase-swift`, repository pattern (protocol + live + preview mocks), Swift Charts, Sign in with Apple.
 - **Shared** (`packages/shared`): DB types, zod schemas, pure-TS mirrors of every rule (so the web client can preview results instantly before the authoritative RPC call), and typed RPC wrappers.

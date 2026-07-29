@@ -19,7 +19,7 @@ import { STEP_COMPONENTS } from './steps';
  *   3. dock    — `.cta-dock`, a real flex zone the step's `OnboardingFooter` portals into, so the
  *                CTA is always in the thumb zone and can never sit on top of the step content.
  *
- * `welcome` / `auth` / `done` get a bare `.screen` frame and lay out their own zones.
+ * `welcome` / `done` get a bare `.screen` frame and lay out their own zones.
  */
 export function OnboardingShell({ step }: { step: OnboardingStep }) {
   const meta = STEP_META[step];

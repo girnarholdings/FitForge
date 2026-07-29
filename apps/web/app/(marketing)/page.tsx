@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Button, Sheet } from '@/components/ui';
 import { TargetIcon, ShakerIcon, SwapIcon, type IconProps } from '@/components/ui/icons';
 import { LogoLockup, LandingHero } from '@/components/illustrations';
-import { getState, resetDemo } from '@/lib/demo/store';
+import { GoogleSignInButton } from '@/components/auth/GoogleAuth';
+import { getState, isOnboarded, resetDemo } from '@/lib/demo/store';
 
 /**
  * Marketing landing (§5.2) — a SINGLE-VIEWPORT composition.
@@ -46,6 +47,14 @@ export default function LandingPage() {
     setReturning(false);
     router.push('/onboarding/welcome');
   };
+
+  /**
+   * Where a Google sign-in lands. Onboarding either way, unless this browser already holds a
+   * finished plan — someone signing in on a device they have already used should not be asked to
+   * build a plan they can see behind the dialog. A brand-new device restores from the cloud
+   * instead: CloudSyncDriver pulls the backup, and onboarding's own gate sends them on.
+   */
+  const afterSignIn = () => router.push(isOnboarded() ? '/today' : '/onboarding/welcome');
 
   return (
     <main data-flow="desktop" className="screen mx-auto w-full max-w-[430px] sm:max-w-md lg:max-w-[1080px] lg:px-10">
@@ -123,12 +132,27 @@ export default function LandingPage() {
                   Start in Local Mode
                 </Button>
               </Link>
-              <Link
-                href="/login"
-                className="mx-auto flex h-11 items-center px-4 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                I have an account
-              </Link>
+              {/* THE SECOND DOOR, AND THE LAST ONE.
+                  Sign up and sign in are one button because Google does not distinguish them —
+                  and splitting them into "create account" and "I have an account" is most of what
+                  made this screen confusing: three routes (landing CTA, a login page, an
+                  onboarding auth step) that all led to the same two outcomes. Two doors now, and
+                  nothing behind either of them asks the question again.
+                  Renders nothing on a build with no Firebase project, which correctly leaves
+                  Local Mode as the only way in. */}
+              {/* warmOnMount={false}: this page promises "Free, no account", and most people who
+                  read it will tap Local Mode. Preparing Google's popup for all of them would mean
+                  a third-party request on behalf of visitors who never asked for one. It warms on
+                  pointer-down instead. See GoogleSignInButton. */}
+              <GoogleSignInButton warmOnMount={false} onDone={afterSignIn} />
+              <p className="px-2 pt-0.5 text-center text-[11px] leading-snug text-muted-foreground">
+                {/* Says the quiet part out loud. "Continue with Google" is the standard label and
+                    covers both cases, but a first-time visitor reading it next to a Local Mode
+                    button can reasonably wonder whether an account is something they already need
+                    to have. */}
+                New or returning — Google does both, and backs your training up across devices.
+                Local Mode keeps everything in this browser instead.
+              </p>
             </>
           )}
         </div>

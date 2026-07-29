@@ -42,7 +42,8 @@ test.describe('onboarding', () => {
     await page.goto('/onboarding/welcome');
     await page.getByTestId('onboarding-name').fill('Kai');
     await page.getByRole('button', { name: 'Get started' }).click();
-    await page.waitForURL(/\/onboarding\/auth/);
+    // Straight to the first question now — the auth step it used to pass through is gone.
+    await page.waitForURL(/\/onboarding\/goals/);
 
     const state = await readDemoState(page);
     const draft = (state as { draft: { display_name: string | null } }).draft;

@@ -45,8 +45,6 @@ test.describe('regression · generation', () => {
 
     await page.goto('/onboarding/welcome');
     await page.getByRole('button', { name: 'Get started' }).click();
-    await page.waitForURL(/\/onboarding\/auth/);
-    await page.getByTestId('enter-demo').click();
 
     await page.waitForURL(/\/onboarding\/goals/);
     await page.getByText('General health', { exact: true }).click();

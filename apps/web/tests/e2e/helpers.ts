@@ -97,15 +97,16 @@ export async function resetDemo(page: Page): Promise<void> {
 }
 
 /**
- * Enter the demo from the landing page: `/` → onboarding welcome → auth → goals. Seeds the fake
- * local session. Lands on `/onboarding/goals`.
+ * Enter the demo: onboarding welcome → goals. Seeds the local session and lands on
+ * `/onboarding/goals`.
+ *
+ * There is no `auth` step in between any more. Choosing Local Mode or Google happens once, on the
+ * landing page, so "Get started" on the welcome screen now goes straight to the first question and
+ * seeds the session on the way.
  */
 export async function enterDemo(page: Page): Promise<void> {
   await page.goto('/onboarding/welcome');
-  // Welcome screen "Get started" advances to the auth (enter-demo) screen.
   await page.getByRole('button', { name: 'Get started' }).click();
-  await page.waitForURL(/\/onboarding\/auth/);
-  await page.getByTestId('enter-demo').click();
   await page.waitForURL(/\/onboarding\/goals/);
 }
 

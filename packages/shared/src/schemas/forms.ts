@@ -24,8 +24,14 @@ const uuid = z.string().uuid();
 
 /** Onboarding state-machine step ids (§2.2). `profiles.onboarding_step` resume pointer. */
 export const ONBOARDING_STEPS = [
+  // `welcome` is the ONLY screen before the questionnaire, and it asks one thing: your name.
+  //
+  // There used to be an `auth` step here offering "Start in Local Mode" a second time plus a link
+  // to a login page that offered it a third. Choosing between an account and Local Mode is a
+  // one-time decision and it belongs on the landing page, where it is now the entire content of
+  // the CTA dock: two doors, no third path. Asking again mid-questionnaire made a settled choice
+  // look unsettled, which is the definition of a confusing flow.
   'welcome',
-  'auth',
   'goals',
   'experience',
   'schedule',

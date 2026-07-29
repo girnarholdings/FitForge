@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
 import { WelcomeStep } from './WelcomeStep';
-import { AuthStep } from './AuthStep';
 import { GoalsStep } from './GoalsStep';
 import { ExperienceStep } from './ExperienceStep';
 import { ScheduleStep } from './ScheduleStep';
@@ -20,7 +19,6 @@ import { DoneStep } from './DoneStep';
 /** Registry mapping each §2.2 step id to its screen component. */
 export const STEP_COMPONENTS: Record<OnboardingStep, ComponentType> = {
   welcome: WelcomeStep,
-  auth: AuthStep,
   goals: GoalsStep,
   experience: ExperienceStep,
   schedule: ScheduleStep,

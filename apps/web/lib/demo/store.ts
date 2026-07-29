@@ -148,9 +148,24 @@ function allowed<T extends string>(members: Record<T, true>): ReadonlySet<string
   return new Set(Object.keys(members));
 }
 
+/**
+ * Steps that USED to exist, mapped to where their occupants belong now.
+ *
+ * This is a compatibility shim with a specific job: a backup file is a durable artefact, and the
+ * import path treats ANY repair as a rejection. Without this, a backup exported by an older build
+ * while its owner happened to be sitting on the retired `auth` step would simply refuse to import
+ * — the one failure this app can least afford, given Local Mode tells people a backup file is how
+ * their training survives. Retired steps are rewritten before validation, so an old file is
+ * accepted rather than repaired.
+ */
+const RETIRED_ONBOARDING_STEPS: Record<string, OnboardingStep> = {
+  // Choosing Local Mode vs an account moved to the landing page; anyone parked on the old step
+  // resumes at the name screen, which is now the first thing after that choice.
+  auth: 'welcome',
+};
+
 const ONBOARDING_STEP_VALUES = allowed<OnboardingStep>({
   welcome: true,
-  auth: true,
   goals: true,
   experience: true,
   schedule: true,
@@ -723,7 +738,11 @@ export function normalizeDemoState(value: unknown, issues: ShapeIssues = []): De
     version: 1,
     userId: readStringOrNull(value.userId, 'state.userId', issues),
     onboardingStep: readEnum(
-      value.onboardingStep,
+      // Rewrite retired step ids first, so an older backup is ACCEPTED rather than repaired —
+      // see RETIRED_ONBOARDING_STEPS.
+      typeof value.onboardingStep === 'string' && value.onboardingStep in RETIRED_ONBOARDING_STEPS
+        ? RETIRED_ONBOARDING_STEPS[value.onboardingStep]
+        : value.onboardingStep,
       'state.onboardingStep',
       issues,
       ONBOARDING_STEP_VALUES,

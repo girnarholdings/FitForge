@@ -23,7 +23,21 @@ const RED_FLAG_QUERIES = [
 /** Ordinary questions that must keep working exactly as before. */
 const NORMAL_QUERIES = ['How much protein do I need?', 'What is progressive overload?'];
 
-async function openCoach(page: Page): Promise<void> {
+/**
+ * @param armed cleared immediately before /coach is loaded, so the off-origin ledger covers the
+ *   Coach page load and everything after it — and nothing before.
+ *
+ *   That boundary matters. The ledger used to open at the top of the test, which meant it also
+ *   covered the landing page `resetDemo` leaves behind, and the landing page legitimately talks to
+ *   Google: it carries the "Continue with Google" button, and that button warms the sign-in popup
+ *   so it is not blocked when someone taps it. Under parallel load that warm-up could still be in
+ *   flight when the ledger opened, and the test failed for something the previous page did.
+ *
+ *   Narrowing it does not weaken what this assertion is for. The regression it was written to
+ *   catch — `getAuth()` pulling `apis.google.com/js/api.js` into EVERY page load — happened on
+ *   the Coach page's own load, which is still inside the window.
+ */
+async function openCoach(page: Page, armed?: string[]): Promise<void> {
   await page.goto('/today');
   await page.evaluate(
     ({ key, value }) => {
@@ -32,6 +46,7 @@ async function openCoach(page: Page): Promise<void> {
     },
     { key: DEMO_STORAGE_KEY, value: JSON.stringify(bareCompletedState()) },
   );
+  armed?.splice(0, armed.length);
   await page.goto('/coach');
   await expect(page.getByTestId('coach-input')).toBeVisible();
 }
@@ -60,7 +75,7 @@ test.describe('regression · coach safety routing', () => {
         return route.continue();
       });
 
-      await openCoach(page);
+      await openCoach(page, offOrigin);
       await ask(page, q);
 
       const turn = page.getByTestId('coach-turn').last();
@@ -85,13 +100,14 @@ test.describe('regression · coach safety routing', () => {
       });
       expect(firstCard, 'the safety card is not the primary response').toBe('coach-safety-card');
 
-      // NOT NARROWED TO THE COACH ENDPOINT, on purpose. Any off-origin request at all during a
-      // red-flag turn is worth failing on, and this caught something real: adding Firebase Auth
-      // made every page load fetch `apis.google.com/js/api.js`, because `getAuth()` registers a
-      // popup resolver that boots Google's iframe machinery eagerly. That was a third-party
-      // script on an app that promises your data stays in your browser, and no narrower assertion
-      // would have noticed. See lib/auth/firebase.ts — the resolver is now passed only to the
-      // sign-in call that genuinely needs it.
+      // NOT NARROWED TO THE COACH ENDPOINT, on purpose. Any off-origin request at all from the
+      // moment the Coach page loads is worth failing on, and this caught something real: adding
+      // Firebase Auth made every page load fetch `apis.google.com/js/api.js`, because `getAuth()`
+      // registers a popup resolver that boots Google's iframe machinery eagerly. That was a
+      // third-party script on an app that promises your data stays in your browser, and no
+      // narrower assertion would have noticed. See lib/auth/firebase.ts: the resolver now lives on
+      // a separate Auth client that only the sign-in screens ever build, which is what keeps this
+      // page silent while still letting the popup open in time when someone does sign in.
       expect(offOrigin, 'a red-flag query hit the network').toEqual([]);
     });
   }
