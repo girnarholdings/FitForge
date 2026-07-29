@@ -219,7 +219,22 @@ export async function eraseCloudCopy(uid: string): Promise<boolean> {
     // Latch BEFORE the delete: a mirror push racing the delete would otherwise resurrect the doc.
     cloudWritesDisabled = true;
     const { deleteDoc } = await import('firebase/firestore');
-    await deleteDoc(ref);
+    /**
+     * RACED AGAINST A DEADLINE, because Firestore writes never fail on a dead network — the SDK
+     * queues the mutation and the promise just… waits, potentially forever. For every other
+     * write in this app that behavior is a feature; for THIS one it is a trap: the confirm
+     * button would show "Erasing…" until the heat death of the connection while the user's data
+     * sat undeleted. No confirmation within the deadline = report failure (the latch stays set,
+     * so a queued delete that lands later is harmless — deleting twice deletes once).
+     */
+    const confirmed = await Promise.race([
+      deleteDoc(ref).then(() => true),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), 8000)),
+    ]);
+    if (!confirmed) {
+      setStatus({ state: 'error', detail: 'The delete could not be confirmed — are you offline?' });
+      return false;
+    }
     try {
       window.localStorage.removeItem(LAST_PUSH_KEY);
     } catch {

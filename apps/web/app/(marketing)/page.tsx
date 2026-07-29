@@ -82,11 +82,11 @@ export default function LandingPage() {
               top of the file) — about 90 characters. It also may NOT claim offline support: there
               is no service worker, so a cold load still needs a connection, and the Coach KB entry
               "Does the app work offline?" states that precisely. Marketing does not get to out-run
-              the app's own honest answer. Every figure here is checkable: 26 programs in
+              the app's own honest answer. Every figure here is checkable: 31 programs in
               seed/data/splits.json, 91 rows in seed/data/exercises.json, macros from
               @fitforge/shared → rules/macros.ts. */}
           <p className="mt-3 max-w-[36ch] text-base leading-relaxed text-muted-foreground">
-            26 real training programs, 91 coached exercises, macros that match. Free, no account.
+            31 real training programs, 91 coached exercises, macros that match. Free, no account.
           </p>
         </section>
 

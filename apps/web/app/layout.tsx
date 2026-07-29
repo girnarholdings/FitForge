@@ -54,14 +54,14 @@ export const metadata: Metadata = {
     siteName: 'FitForge',
     title: 'FitForge — your personal trainer, forged around you.',
     description:
-      '26 real training programs, 91 coached exercises, macros that match. Free, no account, and your data stays in your browser.',
+      '31 real training programs, 91 coached exercises, macros that match. Free, no account, and your data stays in your browser.',
     images: [{ url: withBase('/og.png'), width: 1200, height: 630, alt: 'FitForge' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FitForge — your personal trainer, forged around you.',
     description:
-      '26 real training programs, 91 coached exercises, macros that match. Free, no account, and your data stays in your browser.',
+      '31 real training programs, 91 coached exercises, macros that match. Free, no account, and your data stays in your browser.',
     images: [withBase('/og.png')],
   },
 };

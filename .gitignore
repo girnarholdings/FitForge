@@ -39,6 +39,10 @@ blob-report/
 .env.*
 !.env.example
 !apps/web/.env.example
+# The Firebase WEB config is public by design (protection = Firestore rules + authorized
+# domains) and already committed in ci.yml/pages.yml — committing it here keeps local builds
+# identical to CI. Never put a private key in any .env file.
+!apps/web/.env.production
 *.pem
 
 # --- Supabase (local stack, generated artifacts) ---

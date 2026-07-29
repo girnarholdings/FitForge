@@ -48,7 +48,10 @@ async function openCoach(page: Page, armed?: string[]): Promise<void> {
   );
   armed?.splice(0, armed.length);
   await page.goto('/coach');
-  await expect(page.getByTestId('coach-input')).toBeVisible();
+  // Generous mount wait: on a Firebase-configured build the coach route hydrates behind the
+  // lazy KB bundle AND the firebase chunks, and under four parallel workers that occasionally
+  // clears 10s — a load flake, not a product signal. Everything after this uses default timeouts.
+  await expect(page.getByTestId('coach-input')).toBeVisible({ timeout: 25000 });
 }
 
 async function ask(page: Page, question: string): Promise<void> {

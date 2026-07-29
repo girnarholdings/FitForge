@@ -23,9 +23,17 @@ import {
  *     tour becomes a recurring one, and it is invisible until a user complains.
  */
 
-/** Land on `/today` as a completed user whose tour is still owed. */
+/**
+ * Land on `/today` as a completed user whose tour is still owed.
+ *
+ * The seed happens on `/` (where `resetDemo` already left us) — NOT on a first `/today` visit.
+ * Visiting `/today` with an empty store starts a client redirect into onboarding, and on a
+ * Firebase-configured build the auth `loading` state delays that redirect just enough for it to
+ * land AFTER this function had seeded the store — at which point the onboarding wizard's own
+ * writes clobber the seeded `completedAt` and the second `/today` visit bounces straight back to
+ * the welcome screen. The landing page neither redirects nor writes, so it is where to seed.
+ */
 async function armTourAndVisitToday(page: Page): Promise<void> {
-  await page.goto('/today');
   await page.evaluate(
     ({ key, value }) => {
       window.localStorage.clear();
@@ -191,7 +199,7 @@ test.describe('first-run tour', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
 
-    await page.goto('/today');
+    // Seed on `/` (post-resetDemo), for the same clobber-race reason as armTourAndVisitToday.
     await page.evaluate(
       ({ key, value }) => {
         window.localStorage.clear();

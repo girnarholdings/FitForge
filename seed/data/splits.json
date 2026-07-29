@@ -4759,6 +4759,873 @@
           ]
         }
       ]
+    },
+    {
+      "slug": "hybrid-lift-run-5",
+      "name": "Hybrid Athlete · Lift + Run",
+      "description": "Two strength days, two runs and a power day — muscle kept, engine built.",
+      "days_per_week": 5,
+      "days_options": [
+        4,
+        5,
+        6
+      ],
+      "levels": [
+        "intermediate",
+        "advanced"
+      ],
+      "goals": [
+        "endurance",
+        "strength",
+        "fat_loss"
+      ],
+      "equipment_profile": "full_gym",
+      "required_equipment": [],
+      "progression": "Lift days move load; run days move easy volume first, pace second.",
+      "tags": [
+        "hybrid",
+        "running",
+        "lift and run",
+        "trending",
+        "engine"
+      ],
+      "days": [
+        {
+          "day_index": 0,
+          "key": "hybrid_lower",
+          "label": "Lower strength · squat anchor",
+          "focus": "Lower",
+          "slots": [
+            {
+              "pattern": "squat",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "hinge",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "lunge",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "calf_raise",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_stability",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 1,
+          "key": "easy_run_day",
+          "label": "Zone 2 · easy pace",
+          "focus": "Endurance",
+          "slots": [
+            {
+              "pattern": "cardio",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "mobility",
+              "alt": [
+                "static_stretch"
+              ],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 2,
+          "key": "hybrid_upper",
+          "label": "Upper strength · push + pull",
+          "focus": "Upper",
+          "slots": [
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "vertical_push",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "vertical_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_flexion",
+              "alt": [
+                "elbow_extension"
+              ],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 3,
+          "key": "interval_run_day",
+          "label": "Intervals · tempo work",
+          "focus": "Endurance",
+          "slots": [
+            {
+              "pattern": "cardio",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_flexion",
+              "alt": [
+                "core_stability"
+              ],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 4,
+          "key": "hybrid_power_full",
+          "label": "Full-body power + engine",
+          "focus": "Power",
+          "slots": [
+            {
+              "pattern": "hinge",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "carry",
+              "alt": [
+                "core_stability"
+              ],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "conditioning",
+              "alt": [
+                "cardio"
+              ],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "hyrox-prep-4",
+      "name": "Hyrox Race Prep",
+      "description": "Station strength, erg engine, easy runs and a brick day — built for the race format.",
+      "days_per_week": 4,
+      "days_options": [
+        4,
+        5
+      ],
+      "levels": [
+        "intermediate",
+        "advanced"
+      ],
+      "goals": [
+        "endurance",
+        "fat_loss",
+        "strength"
+      ],
+      "equipment_profile": "full_gym",
+      "required_equipment": [],
+      "progression": "Compress station rest and hold run pace as fatigue climbs — race fitness is pace under fatigue.",
+      "tags": [
+        "hyrox",
+        "race",
+        "conditioning",
+        "hybrid",
+        "trending"
+      ],
+      "days": [
+        {
+          "day_index": 0,
+          "key": "hyrox_stations",
+          "label": "Station strength · lunges + carries",
+          "focus": "Stations",
+          "slots": [
+            {
+              "pattern": "squat",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "lunge",
+              "alt": [],
+              "mechanics": null,
+              "note": "walking"
+            },
+            {
+              "pattern": "hinge",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "carry",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_stability",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 1,
+          "key": "interval_run_day",
+          "label": "Intervals · tempo work",
+          "focus": "Endurance",
+          "slots": [
+            {
+              "pattern": "cardio",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_flexion",
+              "alt": [
+                "core_stability"
+              ],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 2,
+          "key": "hyrox_engine",
+          "label": "Engine · erg + wall-ball patterns",
+          "focus": "Conditioning",
+          "slots": [
+            {
+              "pattern": "conditioning",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "squat",
+              "alt": [
+                "lunge"
+              ],
+              "mechanics": null,
+              "note": "wall-ball pattern"
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "cardio",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 3,
+          "key": "hyrox_brick",
+          "label": "Brick · compromised running",
+          "focus": "Race prep",
+          "slots": [
+            {
+              "pattern": "conditioning",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "cardio",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "carry",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "lunge",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "hit-heavy-duty-3",
+      "name": "HIT · Heavy Duty (Mentzer style)",
+      "description": "Three short sessions, one all-out working set per exercise, days of recovery between.",
+      "days_per_week": 3,
+      "days_options": [
+        2,
+        3
+      ],
+      "levels": [
+        "intermediate"
+      ],
+      "goals": [
+        "hypertrophy",
+        "strength"
+      ],
+      "equipment_profile": "full_gym",
+      "required_equipment": [],
+      "progression": "One hard set to clean failure per movement; add load only when the top of the rep range is owned.",
+      "tags": [
+        "hit",
+        "heavy duty",
+        "mentzer",
+        "low volume",
+        "time-poor",
+        "trending"
+      ],
+      "days": [
+        {
+          "day_index": 0,
+          "key": "hit_chest_back",
+          "label": "Chest & Back · one hard set each",
+          "focus": "Chest & Back",
+          "slots": [
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": "isolation",
+              "note": "pre-exhaust flye"
+            },
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "vertical_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 1,
+          "key": "hit_legs",
+          "label": "Legs · pre-exhaust then squat",
+          "focus": "Legs",
+          "slots": [
+            {
+              "pattern": "knee_extension_iso",
+              "alt": [],
+              "mechanics": null,
+              "note": "pre-exhaust"
+            },
+            {
+              "pattern": "squat",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "knee_flexion_iso",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "calf_raise",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_flexion",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 2,
+          "key": "hit_shoulders_arms",
+          "label": "Shoulders & Arms · one hard set each",
+          "focus": "Shoulders & Arms",
+          "slots": [
+            {
+              "pattern": "shoulder_isolation",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "vertical_push",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "shoulder_isolation",
+              "alt": [],
+              "mechanics": null,
+              "note": "rear"
+            },
+            {
+              "pattern": "elbow_flexion",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_extension",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "five-three-one-beginners-3",
+      "name": "5/3/1 for Beginners",
+      "description": "Two main lifts per day on 5/3/1 waves plus balanced assistance — the r/Fitness wiki flagship.",
+      "days_per_week": 3,
+      "days_options": [
+        3
+      ],
+      "levels": [
+        "beginner",
+        "intermediate"
+      ],
+      "goals": [
+        "strength",
+        "general_health"
+      ],
+      "equipment_profile": "barbell",
+      "required_equipment": [
+        "barbell",
+        "weight-plates",
+        "squat-rack",
+        "flat-bench"
+      ],
+      "progression": "5/3/1 percentage waves + First Set Last 5×5; small TM bumps each 3-week cycle.",
+      "tags": [
+        "531",
+        "wendler",
+        "barbell",
+        "beginner",
+        "wiki"
+      ],
+      "days": [
+        {
+          "day_index": 0,
+          "key": "fsl_day_a",
+          "label": "Squat 5/3/1 + Bench 5/3/1",
+          "focus": "Squat & Bench",
+          "slots": [
+            {
+              "pattern": "squat",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "vertical_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_extension",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_stability",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 1,
+          "key": "fsl_day_b",
+          "label": "Deadlift 5/3/1 + Press 5/3/1",
+          "focus": "Deadlift & Press",
+          "slots": [
+            {
+              "pattern": "hinge",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "vertical_push",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_flexion",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "lunge",
+              "alt": [
+                "core_flexion"
+              ],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 2,
+          "key": "fsl_day_a",
+          "label": "Squat 5/3/1 + Bench 5/3/1",
+          "focus": "Squat & Bench",
+          "slots": [
+            {
+              "pattern": "squat",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "vertical_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_extension",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_stability",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "high-frequency-full-body-5",
+      "name": "High-Frequency Full Body",
+      "description": "Five full-body days, each with a different emphasis — the science-based answer to PPL.",
+      "days_per_week": 5,
+      "days_options": [
+        4,
+        5
+      ],
+      "levels": [
+        "intermediate",
+        "advanced"
+      ],
+      "goals": [
+        "hypertrophy",
+        "strength"
+      ],
+      "equipment_profile": "full_gym",
+      "required_equipment": [],
+      "progression": "Rotate emphasis so no lift repeats on consecutive days; add reps then load per slot.",
+      "tags": [
+        "full body",
+        "high frequency",
+        "science-based",
+        "hypertrophy",
+        "trending"
+      ],
+      "days": [
+        {
+          "day_index": 0,
+          "key": "hffb_squat",
+          "label": "Full body · squat emphasis",
+          "focus": "Full Body",
+          "slots": [
+            {
+              "pattern": "squat",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "knee_flexion_iso",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "shoulder_isolation",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 1,
+          "key": "hffb_push",
+          "label": "Full body · push emphasis",
+          "focus": "Full Body",
+          "slots": [
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "lunge",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "vertical_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_extension",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "calf_raise",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 2,
+          "key": "hffb_hinge",
+          "label": "Full body · hinge emphasis",
+          "focus": "Full Body",
+          "slots": [
+            {
+              "pattern": "hinge",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "vertical_push",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_flexion",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_stability",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 3,
+          "key": "hffb_pull",
+          "label": "Full body · pull emphasis",
+          "focus": "Full Body",
+          "slots": [
+            {
+              "pattern": "vertical_pull",
+              "alt": [],
+              "mechanics": "compound",
+              "note": null
+            },
+            {
+              "pattern": "squat",
+              "alt": [],
+              "mechanics": null,
+              "note": "front or goblet"
+            },
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": null,
+              "note": "incline"
+            },
+            {
+              "pattern": "hip_extension_iso",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "shoulder_isolation",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        },
+        {
+          "day_index": 4,
+          "key": "hffb_pump",
+          "label": "Full body · pump + weak points",
+          "focus": "Full Body",
+          "slots": [
+            {
+              "pattern": "lunge",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "horizontal_push",
+              "alt": [],
+              "mechanics": "isolation",
+              "note": null
+            },
+            {
+              "pattern": "horizontal_pull",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_flexion",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "elbow_extension",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            },
+            {
+              "pattern": "core_flexion",
+              "alt": [],
+              "mechanics": null,
+              "note": null
+            }
+          ]
+        }
+      ]
     }
   ]
 }
