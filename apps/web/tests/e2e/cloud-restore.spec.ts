@@ -269,8 +269,10 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
     await page.waitForURL(/\/settings/);
     await expect(page.getByTestId('mode-chip')).toHaveAttribute('data-mode', 'google');
     await page.getByTestId('erase-local-data').click();
-    // The confirm sheet names the cloud consequence for a signed-in user.
-    await expect(page.getByText(/deletes your cloud copy/i)).toBeVisible();
+    // The confirm sheet names the cloud consequence for a signed-in user. SCOPED TO THE DIALOG:
+    // the settings page now states the same consequence under the erase button as well (so it is
+    // known BEFORE the sheet opens), and an unscoped match resolves to both.
+    await expect(page.getByRole('dialog').getByText(/deletes your cloud copy/i)).toBeVisible();
     const hitsBeforeConfirm = firestoreHits;
     await page.getByRole('button', { name: /yes, erase everything/i }).click();
 

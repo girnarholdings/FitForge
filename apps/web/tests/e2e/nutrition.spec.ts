@@ -66,7 +66,7 @@ test.describe('nutrition', () => {
     await expect(page.getByText(/Egg, whole/i).first()).toBeVisible();
   });
 
-  test('a logged day gets the analytics layer: energy split, gap-to-goal and one-tap fixes', async ({
+  test('a logged day gets the analytics layer: macro gaps, suggestions and one-tap fixes', async ({
     page,
   }) => {
     await seedOnboarded(page);
@@ -84,15 +84,18 @@ test.describe('nutrition', () => {
     await page.getByTestId('review-confirm').click();
     await expect(review).toBeHidden();
 
-    /* 1 · the analytics card appears, with the energy split in three labelled percentages
-       against the target split. */
+    /* 1 · the analytics card appears, leading with what is STILL OWED per macro in grams.
+       (It used to lead with a share-of-calories bar against the plan's share, which could read
+       as on-plan while the athlete was 100 g of protein short — and it sat under a progress row
+       using `%` for the other meaning. The grams framing is the fix; `no-percent-of-energy`
+       below is what keeps it fixed.) */
     const analytics = page.getByTestId('day-analytics');
     await expect(analytics).toBeVisible();
-    const splitLegend = page.getByTestId('energy-split');
+    const gapsList = page.getByTestId('macro-gaps');
     for (const label of ['Protein', 'Carbs', 'Fat']) {
-      await expect(splitLegend).toContainText(label);
+      await expect(gapsList).toContainText(label);
     }
-    await expect(splitLegend).toContainText(/% goal/);
+    await expect(gapsList).toContainText(/\d+ g to go|goal hit/);
 
     /* 2 · the gap to the protein goal, in grams, with real-portion suggestions. */
     const gap = page.getByTestId('close-gap');
@@ -101,7 +104,8 @@ test.describe('nutrition', () => {
     expect(gapBefore).toBeGreaterThan(0);
     const suggestion = page.getByTestId('gap-suggestion').first();
     await expect(suggestion).toBeVisible();
-    await expect(suggestion).toContainText(/\+\d+ g protein · \d+ kcal/);
+    // "would add", not "+": the row is a recommendation, and the copy has to say so.
+    await expect(suggestion).toContainText(/would add \d+ g protein · \d+ kcal/);
 
     // Element shot with the suggestion list on screen. Nudge the card below the sticky chrome
     // first — element screenshots composite any fixed overlay that intersects the box.

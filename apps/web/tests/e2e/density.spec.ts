@@ -124,4 +124,145 @@ test.describe('density', () => {
     // this bar where it actually lives.
     await page.screenshot({ path: 'tests/screenshots/tab-bar-compact.png' });
   });
+
+  test('every percentage on the nutrition screen means % of a GOAL', async ({ page }) => {
+    /**
+     * THE CARDINAL-SIN GUARD. The deleted visual showed each macro's share of CONSUMED energy
+     * against the share the plan wants — so 20 g of protein and nothing else rendered as "89%,
+     * plan 26%", reading as triumphantly on-plan while 105 g short. It sat directly beneath
+     * "Protein 121/125 g · 97%", so the same word and the same `%` sign carried two meanings a
+     * thumb-width apart.
+     *
+     * The invariant, asserted rather than trusted: for any macro name paired with a percentage on
+     * this screen, that percentage must be consistent with progress toward the target — never a
+     * share of energy. The gaps list therefore states GRAMS TO GO, and the only percentages left
+     * belong to the summary rows (x/y g) and the by-meal split (explicitly "% of day").
+     */
+    await page.goto('/nutrition');
+    await page.getByTestId('nutrition-composer').fill('2 eggs');
+    await page.getByTestId('composer-submit').click();
+    await page.getByTestId('review-confirm').click();
+
+    const analytics = page.getByTestId('day-analytics');
+    await expect(analytics).toBeVisible();
+
+    // The gaps list leads with grams owed, and carries no percentage at all.
+    const gaps = page.getByTestId('macro-gaps');
+    await expect(gaps).toContainText(/\d+ g to go|goal hit/);
+    expect(
+      (await gaps.innerText()).includes('%'),
+      'the gaps list must not mix a percentage into a grams-to-go statement',
+    ).toBe(false);
+
+    /* Cross-check the one place both cards describe protein: the summary's percentage must equal
+       eaten/target, which is what makes it safe to sit above a grams-to-go figure. Two eggs is
+       ~12.6 g against a 3-figure target, so a share-of-energy number (~35%) and a share-of-goal
+       number (~10%) are far apart — this assertion would have caught the old visual. */
+    const summaryText = await page.getByTestId('day-summary').innerText();
+    // `g10%` — innerText puts no whitespace between the row's value span and its percentage span.
+    const row = summaryText.match(/Protein\s+(\d+)\s*\/\s*(\d+)\s*g\s*(\d+)%/);
+    expect(row, `summary protein row parsed from:\n${summaryText}`).toBeTruthy();
+    const [eaten, target, shown] = [Number(row![1]), Number(row![2]), Number(row![3])];
+    expect(Math.abs(shown - Math.round((eaten / target) * 100))).toBeLessThanOrEqual(1);
+  });
+
+  test('the gap suggestions read as recommendations, not as food already logged', async ({
+    page,
+  }) => {
+    // Three rows of foods with grams and macros, in a screen whose every other list is "what you
+    // ate", read as a log. The heading, the "would add" phrasing and a labelled Add pill are what
+    // separate the two — all three are asserted because any one of them alone was not enough.
+    await page.goto('/nutrition');
+    await page.getByTestId('nutrition-composer').fill('2 eggs');
+    await page.getByTestId('composer-submit').click();
+    await page.getByTestId('review-confirm').click();
+
+    const gap = page.getByTestId('close-gap');
+    await expect(gap).toContainText(/Suggestions/i);
+    await expect(gap).toContainText(/not logged yet/i);
+    const suggestion = page.getByTestId('gap-suggestion').first();
+    await expect(suggestion).toContainText(/would add \d+ g protein/i);
+    await expect(suggestion).toContainText(/Add/);
+    // The accessible name says what tapping does, for anyone who never sees the pill.
+    await expect(suggestion).toHaveAttribute('aria-label', /^Add about/);
+  });
+});
+
+test.describe('settings · signed-in relevance', () => {
+  test('a signed-in athlete is not told their data is browser-only, and cannot "sign out" into an erase', async ({
+    page,
+  }) => {
+    /**
+     * Signed in, the old screen said three untrue or dangerous things: a "Local Mode" heading over
+     * their data, "Nothing is uploaded" (it is — that is the point of the account), and a second
+     * "Sign out" button that actually erased the browser, one screen below the Account card's real
+     * sign-out. Same word, opposite consequences.
+     */
+    await seedOnboarded(page);
+    const apiKey = await page.evaluate(async () => {
+      const html = await (await fetch('/today/')).text();
+      for (const m of html.matchAll(/\/_next\/[A-Za-z0-9/._-]+\.js/g)) {
+        const js = await (await fetch(m[0])).text();
+        const key = js.match(/AIza[0-9A-Za-z_-]{35}/);
+        if (key) return key[0];
+      }
+      return null;
+    });
+    test.skip(!apiKey, 'build has no Firebase project — there is no signed-in state to test');
+
+    await page.context().route(
+      /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com|firestore\.googleapis\.com/,
+      (r) => r.abort(),
+    );
+    await page.evaluate(
+      ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
+      {
+        key: `firebase:authUser:${apiKey}:[DEFAULT]`,
+        value: {
+          uid: 'settings-uid-1',
+          email: 'lifter@example.com',
+          displayName: 'Kai',
+          emailVerified: true,
+          isAnonymous: false,
+          providerData: [{ providerId: 'google.com', uid: 'g-1', email: 'lifter@example.com' }],
+          stsTokenManager: {
+            refreshToken: 'spec-refresh',
+            accessToken: 'spec-access',
+            expirationTime: 4102444800000,
+          },
+          createdAt: '1700000000000',
+          lastLoginAt: '1700000000000',
+          apiKey,
+          appName: '[DEFAULT]',
+        },
+      },
+    );
+
+    await page.goto('/settings');
+    // Wait for the restored session before reading copy that depends on it.
+    await expect(page.getByTestId('account-signed-in')).toBeVisible({ timeout: 30000 });
+
+    const body = page.locator('main');
+    await expect(body).toContainText('Your data');
+    await expect(body).toContainText(/synced to your Google account/i);
+    await expect(body, 'the browser-only promise is false for an account holder').not.toContainText(
+      'Nothing is uploaded',
+    );
+
+    // The erase button states its true reach…
+    await expect(page.getByTestId('erase-local-data')).toContainText(/everywhere/i);
+    // …and the destructive look-alike "Sign out" is gone, leaving the account card's real one.
+    await expect(page.getByTestId('demo-signout')).toHaveCount(0);
+    await expect(page.getByTestId('signout')).toBeVisible();
+  });
+
+  test('signed out, the Local Mode language and its erase button are untouched', async ({ page }) => {
+    await seedOnboarded(page);
+    await page.goto('/settings');
+    const body = page.locator('main');
+    await expect(body).toContainText('Local Mode');
+    await expect(body).toContainText('Nothing is uploaded');
+    await expect(page.getByRole('button', { name: 'Erase Local Mode data' })).toBeVisible();
+    await expect(page.getByTestId('demo-signout')).toBeVisible();
+  });
 });

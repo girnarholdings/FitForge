@@ -1008,8 +1008,13 @@ export function SettingsView() {
         </>
       )}
 
-      {/* ---------------------------------------------------------------- Local Mode */}
-      <GroupHeader>Local Mode</GroupHeader>
+      {/* ---------------------------------------------------------------- data + device */}
+      {/* THE HEADING FOLLOWS THE TRUTH. "Local Mode" is the name of the no-account experience, so
+          stamping it over a signed-in athlete's data section told them the wrong thing about where
+          their training lives — and the copy underneath used to promise "nothing is uploaded",
+          which for them is simply false. Signed in, this is "Your data": on the device AND in the
+          account. */}
+      <GroupHeader>{user ? 'Your data' : 'Local Mode'}</GroupHeader>
 
       {/* THE TOUR, ON DEMAND. A first-run tour that can only ever be seen once is a tour you have
           to get right on the first read; one you can replay is a reference. Re-arming CLEARS the
@@ -1034,8 +1039,12 @@ export function SettingsView() {
       </Section>
 
       <Section
-        title="Local Mode"
-        hint="Everything lives in this browser. Nothing is uploaded. Back up or move your data anytime."
+        title={user ? 'Backup and portability' : 'Local Mode'}
+        hint={
+          user
+            ? `Your training is saved in this browser and synced to your Google account (${user.email ?? 'signed in'}), so a new device picks it up after you sign in. A JSON export is still yours to keep — it needs no account to restore.`
+            : 'Everything lives in this browser. Nothing is uploaded. Back up or move your data anytime.'
+        }
       >
         <div className="flex flex-col gap-2">
           <Button size="lg" variant="secondary" block onClick={exportData} data-testid="settings-export">
@@ -1067,6 +1076,9 @@ export function SettingsView() {
               {importError}
             </p>
           )}
+          {/* The label states the REACH of the button, which changed once erase started deleting
+              the account document too. Signed out it is still exactly "Erase Local Mode data" —
+              that is what it does, and several specs quite rightly hold it to that name. */}
           <Button
             size="lg"
             variant="danger"
@@ -1074,26 +1086,36 @@ export function SettingsView() {
             onClick={() => setDeleteOpen(true)}
             data-testid="erase-local-data"
           >
-            <TrashIcon size={18} /> Erase Local Mode data
+            <TrashIcon size={18} />{' '}
+            {user ? 'Erase everything, everywhere' : 'Erase Local Mode data'}
           </Button>
           <p className="text-xs text-muted-foreground">
             A backup covers everything this app stores here — your answers, plan, food logs and full
-            training history. Erasing clears all of it.
+            training history.{' '}
+            {user
+              ? 'Erasing clears this browser AND deletes your cloud copy, then signs you out.'
+              : 'Erasing clears all of it.'}
           </p>
         </div>
       </Section>
 
-      <Section title="Account">
-        <div className="flex flex-col gap-2">
-          <Button size="lg" variant="secondary" block onClick={eraseAndLeave} data-testid="demo-signout">
-            <LogOutIcon size={18} /> Sign out
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Local Mode has no account to sign out of — this clears this browser&apos;s data and
-            returns you to the start. Export a backup first if you want to keep it.
-          </p>
-        </div>
-      </Section>
+      {/* START OVER — a LOCAL-MODE-ONLY control, and hiding it when signed in is a safety fix
+          rather than tidying. It is labelled "Sign out" but calls the erase path, and a signed-in
+          athlete already has a real sign-out in the Account card above (which keeps their data).
+          Two controls a screen apart, one word, opposite consequences: the destructive one goes. */}
+      {!user && (
+        <Section title="Start over">
+          <div className="flex flex-col gap-2">
+            <Button size="lg" variant="secondary" block onClick={() => void eraseAndLeave()} data-testid="demo-signout">
+              <LogOutIcon size={18} /> Clear this browser and start over
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Local Mode has no account to sign out of — this clears this browser&apos;s data and
+              returns you to the start. Export a backup first if you want to keep it.
+            </p>
+          </div>
+        </Section>
+      )}
 
       {/* Regenerate prompt — fired by equipment / protected-area edits (§2.3). */}
       <Sheet open={regenPrompt} onClose={() => setRegenPrompt(false)} title="Re-generate your plan?">
