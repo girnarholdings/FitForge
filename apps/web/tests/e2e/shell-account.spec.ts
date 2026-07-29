@@ -106,6 +106,60 @@ test.describe('shell · which mode you are in', () => {
     await expect(page.getByTestId('mode-sheet-google')).toContainText('lifter@example.com');
   });
 
+  test('pressing sync says what happened, in words', async ({ page }) => {
+    /**
+     * A spinner that flashes a colour for two seconds answers "did anything happen", not "did it
+     * work" — and it was easy to miss entirely. Pressing sync is a deliberate act with a question
+     * behind it, so the answer is written out.
+     */
+    await seedOnboarded(page);
+    const apiKey = await apiKeyFromBundle(page);
+    test.skip(!apiKey, 'build has no Firebase project');
+    await page.context().route(GOOGLE, (r) => r.abort());
+    await page.evaluate(
+      ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
+      { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: session(apiKey!) },
+    );
+    await page.goto('/today');
+
+    // Nothing narrated until asked: background pushes fire every few seconds while you train, and
+    // reporting those would turn the top of the screen into a status log.
+    await expect(page.getByTestId('sync-now')).toBeVisible();
+    await expect(page.getByTestId('sync-announcement')).toHaveCount(0);
+
+    await page.getByTestId('sync-now').click();
+    const announcement = page.getByTestId('sync-announcement');
+    await expect(announcement).toBeVisible();
+    // Firestore is unreachable here, so it must settle on a REASON rather than on "Syncing…".
+    await expect(announcement).toHaveAttribute('data-state', 'error');
+    await expect(announcement).not.toHaveText(/^syncing/i);
+    // A real sentence, not a shrug.
+    expect(((await announcement.textContent()) ?? '').trim().length).toBeGreaterThan(15);
+  });
+
+  test('the wordless top-bar buttons can say their names', async ({ page }) => {
+    // A phone has no hover at all, so `title` renders nothing there and an icon-only bar is a
+    // permanent guessing game. Holding the button is the closest touch equivalent.
+    await seedOnboarded(page);
+    await page.goto('/today');
+    const button = page.getByTestId('mobile-settings');
+    await expect(button).toBeVisible();
+    const label = page
+      .locator('span.group', { has: button })
+      .locator('span[aria-hidden]')
+      .first();
+    await expect(label).toHaveText('Settings');
+    expect(await label.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+
+    const box = (await button.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await expect
+      .poll(() => label.evaluate((el) => getComputedStyle(el).opacity))
+      .toBe('1');
+    await page.mouse.up();
+  });
+
   test('the sync button reports the OUTCOME, never a bare acknowledgement', async ({ page }) => {
     await seedOnboarded(page);
     const apiKey = await apiKeyFromBundle(page);

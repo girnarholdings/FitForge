@@ -301,7 +301,16 @@ function ModeChip({
  * That is worse than having no button. The reason itself is one tap away in the mode sheet beside
  * it, and in Settings.
  */
-function SyncButton({ uid, testId = 'sync-now' }: { uid: string; testId?: string }) {
+function SyncButton({
+  uid,
+  testId = 'sync-now',
+  onRun,
+}: {
+  uid: string;
+  testId?: string;
+  /** Fired when the user starts a sync, so the shell can narrate this one and not the automatic ones. */
+  onRun?: () => void;
+}) {
   const [state, setState] = React.useState<'idle' | 'busy' | 'done' | 'error'>('idle');
 
   React.useEffect(() => {
@@ -313,6 +322,7 @@ function SyncButton({ uid, testId = 'sync-now' }: { uid: string; testId?: string
 
   const run = async () => {
     if (state === 'busy') return;
+    onRun?.();
     setState('busy');
     await syncOnSignIn(uid);
     setState(getSyncStatus().state === 'error' ? 'error' : 'done');
@@ -323,7 +333,6 @@ function SyncButton({ uid, testId = 'sync-now' }: { uid: string; testId?: string
       type="button"
       onClick={() => void run()}
       aria-label={state === 'error' ? 'Sync failed — tap to try again' : 'Sync now'}
-      title={state === 'error' ? 'Sync failed — tap to try again' : 'Sync now'}
       data-testid={testId}
       data-state={state}
       className={cn(
@@ -342,6 +351,96 @@ function SyncButton({ uid, testId = 'sync-now' }: { uid: string; testId?: string
         <RepeatIcon size={17} className={state === 'busy' ? 'animate-spin' : undefined} />
       )}
     </button>
+  );
+}
+
+/**
+ * A NAME FOR AN ICON, on both kinds of device.
+ *
+ * The top bar is four wordless glyphs. On a desktop the answer is hover; on a phone there is no
+ * hover at all, and `title` renders nothing — so an icon-only bar is a guessing game there
+ * permanently. This shows the label on hover AND while the control is held, which is the closest
+ * thing touch has to "tell me what this is" and costs a press the user was making anyway.
+ *
+ * `right-0` rather than centred so the label grows leftwards: the rightmost button sits against
+ * the screen edge, and a centred label would hang off it.
+ */
+function WithLabel({
+  label,
+  children,
+  suppressed = false,
+}: {
+  label: string;
+  children: React.ReactNode;
+  /**
+   * Stand down while something more important occupies the space directly below the bar.
+   * The labels hang under their buttons, which is exactly where the sync announcement goes — and
+   * a tooltip covering the sentence that says whether your data saved is a worse trade than a
+   * button briefly not naming itself.
+   */
+  suppressed?: boolean;
+}) {
+  return (
+    <span className="group relative inline-flex">
+      {children}
+      {!suppressed && (
+      <span
+        aria-hidden
+        className="pointer-events-none absolute right-0 top-full z-40 mt-1.5 whitespace-nowrap rounded-md border border-border bg-elevated px-1.5 py-0.5 text-[10px] font-semibold text-foreground opacity-0 shadow-[var(--shadow-card)] transition-opacity duration-100 group-hover:opacity-100 group-active:opacity-100 group-focus-within:opacity-100"
+      >
+        {label}
+      </span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * WHAT THE SYNC BUTTON JUST DID, in words.
+ *
+ * The button alone could only spin and then flash a colour, which answered "did anything happen"
+ * and not "did it work" — and the two-second tick was easy to miss entirely. Pressing sync is a
+ * deliberate act with a question behind it, so the answer is written out: which direction the data
+ * went, or why it did not go.
+ *
+ * Only ever shown for a sync the user ASKED for. Background pushes fire every few seconds while
+ * you train, and narrating those would turn the top of the screen into a status log.
+ */
+function SyncAnnouncement({ onDone, testId = 'sync-announcement' }: { onDone: () => void; testId?: string }) {
+  const status = useSyncStatus();
+  const settled = status.state === 'synced' || status.state === 'error';
+
+  React.useEffect(() => {
+    if (!settled) return;
+    // A failure lingers: it is the one you need time to read.
+    const t = setTimeout(onDone, status.state === 'error' ? 9000 : 3500);
+    return () => clearTimeout(t);
+  }, [settled, status.state, onDone]);
+
+  const text =
+    status.state === 'syncing'
+      ? 'Syncing…'
+      : status.state === 'synced'
+        ? status.direction === 'pull'
+          ? 'Restored from your account'
+          : 'Backed up to your account'
+        : status.state === 'error'
+          ? status.detail
+          : 'Syncing…';
+
+  return (
+    <p
+      data-testid={testId}
+      data-state={status.state}
+      className={cn(
+        'flex items-center gap-1.5 px-4 pb-2 text-[11px] leading-snug',
+        status.state === 'error' ? 'text-danger' : 'text-muted-foreground',
+      )}
+    >
+      {status.state === 'syncing' && <RepeatIcon size={12} className="animate-spin shrink-0" />}
+      {status.state === 'synced' && <CheckIcon size={12} className="shrink-0 text-success" />}
+      <span className="min-w-0">{text}</span>
+    </p>
   );
 }
 
@@ -378,6 +477,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const signedIn = authStatus === 'signed-in' && !!user;
   const [checked, setChecked] = React.useState(false);
   const [explain, setExplain] = React.useState(false);
+  // Only true for a sync the user pressed — background pushes stay silent. See SyncAnnouncement.
+  const [announceSync, setAnnounceSync] = React.useState(false);
+  const startAnnounce = React.useCallback(() => setAnnounceSync(true), []);
+  const endAnnounce = React.useCallback(() => setAnnounceSync(false), []);
 
   // -1 when the route is not one of the five tabs (Coach, Settings). That simply means no tab is
   // highlighted; the bar still renders and still navigates.
@@ -442,7 +545,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <LogoLockup size={20} />
           </Link>
           <div className="flex items-center gap-2">
-            {signedIn && <SyncButton uid={user.uid} testId="sync-now-desktop" />}
+            {signedIn && (
+              <WithLabel label="Sync now" suppressed={announceSync}>
+                <SyncButton uid={user.uid} testId="sync-now-desktop" onRun={startAnnounce} />
+              </WithLabel>
+            )}
             <ModeChip
               signedIn={signedIn}
               onClick={() => setExplain(true)}
@@ -450,6 +557,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           </div>
         </div>
+        {announceSync && (
+          <SyncAnnouncement onDone={endAnnounce} testId="sync-announcement-desktop" />
+        )}
         <nav className="flex flex-1 flex-col gap-1 px-3">
           {NAV.map((item) => {
             const active = isActive(pathname, item);
@@ -500,7 +610,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             compositor re-sample the page behind it on every scroll frame — full width, for the
             whole scroll, on every screen. Solid costs nothing and looks identical over a solid
             page. */}
-        <div className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border bg-surface px-4 py-3 md:hidden">
+        <div className="sticky top-0 z-30 border-b border-border bg-surface md:hidden">
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
           <Link href="/today" aria-label="FitForge home" data-testid="logo-home-mobile">
             <LogoLockup size={18} />
           </Link>
@@ -511,7 +622,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               immediately — a tap near the edge of Coach landed on Settings. */}
           <div className="flex items-center gap-2">
             <ModeChip signedIn={signedIn} onClick={() => setExplain(true)} />
-            {signedIn && <SyncButton uid={user.uid} />}
+            {signedIn && (
+              <WithLabel label="Sync now" suppressed={announceSync}>
+                <SyncButton uid={user.uid} onRun={startAnnounce} />
+              </WithLabel>
+            )}
+            <WithLabel label="Coach" suppressed={announceSync}>
             <Link
               href="/coach"
               aria-label="Coach"
@@ -533,6 +649,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <CoachIcon size={18} />
             </Link>
+            </WithLabel>
+            <WithLabel label="Settings" suppressed={announceSync}>
             <Link
               href="/settings"
               aria-label="Settings"
@@ -549,7 +667,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <SettingsIcon size={18} />
             </Link>
+            </WithLabel>
           </div>
+        </div>
+        {/* Under the bar, full width — the one place a sentence fits on a 390px screen. */}
+        {announceSync && <SyncAnnouncement onDone={endAnnounce} />}
         </div>
         {/* Desktop width is opt-in per surface: only screens that lay out a real second column
             get it. A 1040px single-column card stack is worse than the 720px one. */}
