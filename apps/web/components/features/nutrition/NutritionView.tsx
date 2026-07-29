@@ -177,7 +177,7 @@ export function NutritionView() {
   return (
     /* Extra bottom room on mobile only: the composer is fixed above the floating tab bar, so the
        last meal card would otherwise sit permanently under it with no way to scroll clear. */
-    <div className="space-y-4 pb-20 md:pb-0">
+    <div className="ff-dense space-y-3.5 pb-20 md:pb-0" data-testid="nutrition-view">
       <header>
         <h1 className="font-display text-display font-bold">Nutrition</h1>
       </header>

@@ -148,6 +148,32 @@
 }
 .tabular { font-variant-numeric: tabular-nums; }
 
+/* ── DENSITY: one class, the whole type scale ────────────────────────────────
+   Today and Nutrition are the two screens that carry the most numbers per inch, and at the
+   house scale they read zoomed-in on a 390px phone — the copy fills the cards rather than
+   sitting in them.
+
+   THE MECHANISM matters, because the obvious approaches do not work. Tailwind v4 compiles
+   `text-sm` to `font-size: var(--text-sm)`, so overriding those custom properties on a
+   CONTAINER cascades to every descendant utility — one declaration block re-scales a whole
+   screen, and any future markup inherits it for free. (Setting `font-size` on the container
+   would do nothing: the utilities are rem-based, not em-based. `zoom` would work but blurs
+   text on some Android webviews and breaks measured hit-testing in the E2E suite.)
+
+   ~93% across the board: enough to feel roomier, not enough to strand anyone who picked the
+   larger of the two iOS text sizes. Deliberately TYPE ONLY — `--spacing` is left alone so
+   every 44px touch target stays 44px. Screen-level breathing room is tuned in the views. */
+.ff-dense {
+  --text-xs: 0.7rem;        /* 12   → 11.2 */
+  --text-sm: 0.8125rem;     /* 14   → 13   */
+  --text-base: 0.9375rem;   /* 16   → 15   */
+  --text-lg: 1.0625rem;     /* 18   → 17   */
+  --text-xl: 1.1875rem;     /* 20   → 19   */
+  --text-2xl: 1.375rem;     /* 24   → 22   */
+  --text-display: 1.5rem;   /* 28   → 24   */
+  --text-title: 1.125rem;   /* 20   → 18   */
+}
+
 /* Touch feedback for plain elements: compositor-only, zero JS, safe on 91-row lists where a
    motion component per row would cost real mount time. Hover never fires on a phone — every
    tappable thing needs an :active answer, and this is the one-class way to give it. */

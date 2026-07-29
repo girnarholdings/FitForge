@@ -16,12 +16,17 @@ export function DaySummary({ totals, targets }: { totals: Macros; targets: Nutri
 
   return (
     <Card premium data-testid="day-summary">
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-5">
+        {/* THE SUBLABEL SAYS WHAT THE NUMBER IS, NOT WHAT THE RING IS. "protein left" inside a ring
+            captioned `Protein` underneath said the same word twice and needed ~81px of glyphs in a
+            76px opening — the crowding the athlete noticed. `left` is the part that isn't already
+            on screen. (MacroRing now also shrinks anything that would still overflow, so this is
+            a copy fix on top of a structural one, not instead of it.) */}
         <MacroRing
           value={totals.kcal}
           target={targets.kcal_target}
-          size={126}
-          stroke={12}
+          size={116}
+          stroke={11}
           color="var(--color-foreground)"
           caption={remainingKcal.toLocaleString()}
           sublabel={remainingKcal < 0 ? 'over' : 'kcal left'}
@@ -30,16 +35,16 @@ export function DaySummary({ totals, targets }: { totals: Macros; targets: Nutri
         <MacroRing
           value={totals.protein_g}
           target={targets.protein_g_target}
-          size={96}
-          stroke={10}
+          size={90}
+          stroke={9}
           color="var(--color-accent)"
           caption={`${Math.max(0, remainingProtein)}g`}
-          sublabel="protein left"
+          sublabel="left"
           label="Protein"
         />
       </div>
 
-      <dl className="mt-4 space-y-2.5">
+      <dl className="mt-3.5 space-y-2">
         <MacroRow
           label="Protein"
           value={totals.protein_g}

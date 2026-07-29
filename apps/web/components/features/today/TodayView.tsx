@@ -141,7 +141,10 @@ export function TodayView() {
   ];
 
   return (
-    <div className="space-y-5">
+    /* `ff-dense` re-scales the whole type ramp for this screen (see globals.css) — Today stacks
+       seven cards of numbers, and at the house scale they read zoomed-in on a 390px phone. The
+       stack gap comes down with it so the saving is vertical as well as textual. */
+    <div className="ff-dense space-y-4" data-testid="today-view">
       {/* THE FIRST-RUN TOUR. Mounted on Today because Today is where onboarding lands and where a
           returning user starts — orienting someone on the five tabs anywhere else would mean
           explaining a screen they are not on. It renders nothing at all unless it is owed (see the

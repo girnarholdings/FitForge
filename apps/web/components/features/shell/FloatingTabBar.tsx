@@ -124,7 +124,7 @@ export function FloatingTabBar({
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 md:hidden"
       data-testid="tab-bar"
     >
-      <div className="mx-auto w-full max-w-[26rem] px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      <div className="mx-auto w-full max-w-[26rem] px-3 pb-[calc(0.3125rem+env(safe-area-inset-bottom))]">
         {/*
           COACH, ABOVE THE BAR RATHER THAN IN IT.
           The five tabs are the app's structure and Coach is not a sixth destination of the same
@@ -137,11 +137,12 @@ export function FloatingTabBar({
           resting on the bar, and it is the one spot that cannot be hit by accident while scrubbing
           across the tabs.
         */}
-        {/* mb-4, not mb-2: at two units of gap the button read as part of the pill rather than a
+        {/* mb-3, not mb-2: at two units of gap the button read as part of the pill rather than a
             separate control, and its 44px target sat close enough to the tab row to be caught by a
-            thumb aiming for Progress. */}
+            thumb aiming for Progress. 3 rather than the original 4 because the row it clears is
+            now 9px shorter — the optical separation is what mattered, not the absolute figure. */}
         {coach && (
-          <div className="mb-4 flex justify-end pr-1">
+          <div className="mb-3 flex justify-end pr-1">
             {/* THE AI COACH WEARS A REAL BADGE, not a themed circle. A conic gold ring (an actual
                 border, not a border-color), a gold glow, and a sparkle dot — the one control in
                 the frame that is allowed to be loud, because it is the one that answers back.
@@ -163,7 +164,7 @@ export function FloatingTabBar({
                   coach.active ? 'bg-accent text-accent-foreground' : 'bg-surface-2 text-accent',
                 )}
               >
-                <coach.Icon size={21} />
+                <coach.Icon size={19} />
               </span>
               <span
                 aria-hidden
@@ -219,7 +220,11 @@ export function FloatingTabBar({
                   // pointer would end the scrub the instant the finger crossed a tab boundary.
                   style={{ touchAction: 'inherit' }}
                   className={cn(
-                    'group flex select-none flex-col items-center gap-0.5 px-0.5 py-2 text-[10px] font-semibold leading-none',
+                    // COMPACT, NOT CRAMPED. 60px of bar height went to 51: py-2→py-1.5, a 28px
+                    // icon pill instead of 32, and a 9px label. Each tab is still ~68px wide on a
+                    // 390px screen, so every one of the five clears 44px to a finger — the row is
+                    // shorter, not the targets.
+                    'group flex select-none flex-col items-center gap-0.5 px-0.5 py-1.5 text-[9px] font-semibold leading-none',
                     'transition-colors duration-150',
                     highlighted ? 'text-accent' : 'text-muted-foreground',
                   )}
@@ -232,7 +237,7 @@ export function FloatingTabBar({
                       bar carried colour alone and read as a template. */}
                   <span
                     className={cn(
-                      'relative grid h-8 w-12 place-items-center rounded-chip transition-[background-color,transform,box-shadow] duration-150',
+                      'relative grid h-7 w-11 place-items-center rounded-chip transition-[background-color,transform,box-shadow] duration-150',
                       'group-active:scale-90',
                       highlighted
                         ? 'bg-accent-muted shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)] ' +
@@ -241,14 +246,14 @@ export function FloatingTabBar({
                       scrubbing && preview === i && 'scale-110',
                     )}
                   >
-                    {active && Solid ? <Solid size={21} gold /> : <item.Icon size={21} />}
+                    {active && Solid ? <Solid size={18} gold /> : <item.Icon size={18} />}
                     {active && (
                       <span
                         key={`spark-${activeIndex}`}
                         aria-hidden
-                        className="ff-tab-spark pointer-events-none absolute -right-1 -top-1.5 text-accent"
+                        className="ff-tab-spark pointer-events-none absolute -right-0.5 -top-1 text-accent"
                       >
-                        <SparkIcon size={11} />
+                        <SparkIcon size={10} />
                       </span>
                     )}
                   </span>
