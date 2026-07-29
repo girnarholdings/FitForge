@@ -41,6 +41,7 @@ import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import { Sheet } from '@/components/ui';
 import { FloatingTabBar, type TabItem } from './FloatingTabBar';
 import { LogoLockup } from '@/components/illustrations';
+import { CloudSyncDriver } from '@/components/auth/GoogleAuth';
 import { useProfileName } from '@/lib/demo/useDemo';
 import { isOnboarded } from '@/lib/demo/store';
 
@@ -279,6 +280,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen min-h-[100svh] md:flex">
       {/* The forged-gold paint server every active solid icon (sidebar + tab bar) references. */}
       <GoldIconDefs />
+      {/* Reconciles the cloud copy on sign-in and mirrors changes up. Renders nothing, and is a
+          no-op on builds with no Firebase project. */}
+      <CloudSyncDriver />
       {/* Sidebar (≥md) */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-surface md:flex md:flex-col">
         <div className="flex items-center justify-between px-5 py-5">

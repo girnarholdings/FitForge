@@ -32,6 +32,8 @@ import {
   type SelectableOption,
 } from '@/components/ui';
 import { StarIcon } from '@/components/ui/icons';
+import { AccountCard } from '@/components/auth/GoogleAuth';
+import { isAuthConfigured } from '@/lib/auth/firebase';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { ProgressionEvidenceNote } from '@/components/features/shared/ProgressionEvidence';
 import {
@@ -333,6 +335,8 @@ function commitPatch(patch: Draft): void {
 
 export function SettingsView() {
   const router = useRouter();
+  /** Constant for a given build — an env-var read, not reactive state. */
+  const authConfigured = isAuthConfigured();
   const state = useDemoState();
   const answers = React.useMemo(() => resolveAnswers(state), [state]);
   const routine = state.routine;
@@ -961,6 +965,22 @@ export function SettingsView() {
           </div>
         </div>
       </Section>
+
+      {/* ---------------------------------------------------------------- Account */}
+      {/* Rendered only on builds with a Firebase project — see GoogleAuth.tsx. An account is
+          additive: Local Mode remains what the app reads, and this adds a copy that outlives the
+          device. */}
+      {authConfigured && (
+        <>
+          <GroupHeader>Account</GroupHeader>
+          <Section
+            title="Google account"
+            hint="Back your training up and pick it up on another device. Signing in also uses FitForge's faster AI model instead of the shared free tier."
+          >
+            <AccountCard />
+          </Section>
+        </>
+      )}
 
       {/* ---------------------------------------------------------------- Local Mode */}
       <GroupHeader>Local Mode</GroupHeader>

@@ -1,0 +1,197 @@
+'use client';
+
+/**
+ * CLOUD SYNC of the Local Mode bundle.
+ *
+ * ─── what is stored ─────────────────────────────────────────────────────────────────────────
+ * Exactly the bytes Settings → Export data already produces: `exportAllState()` serialises the
+ * demo state, the full workout log and every ancillary `fitforge.*` cache, and `importAllState()`
+ * validates the lot before writing a single key. Reusing that pair rather than inventing a
+ * Firestore schema means the cloud copy is a BACKUP FILE — restorable by hand, inspectable, and
+ * already covered by the shape validation that exists because localStorage is user-writable. A
+ * hostile document from the network gets the same treatment as a hostile file from disk.
+ *
+ * ─── the conflict rule, stated plainly ──────────────────────────────────────────────────────
+ * One document per user, last-write-wins, with one guard that matters: this device only ADOPTS
+ * the cloud copy when the cloud is genuinely newer than what this device last pushed, or when
+ * this browser has no training data of its own. Anything else pushes. That deliberately favours
+ * "the data in front of you", because the failure people cannot forgive is opening the app after
+ * a workout and finding the sets gone.
+ *
+ * ─── it is never load-bearing ───────────────────────────────────────────────────────────────
+ * Every function resolves to a status and never throws. Offline, rules misconfigured, quota
+ * exhausted — the app keeps working exactly as it does with no account at all, because the
+ * localStorage copy remains the one the UI reads. Sync is a convenience laid on top, not the
+ * source of truth.
+ */
+import { exportAllState, importAllState, isOnboarded, subscribe } from '@/lib/demo/store';
+import { isAuthConfigured, getDb } from './firebase';
+
+/** When this device last pushed, so "is the cloud newer than us?" has an answer. */
+const LAST_PUSH_KEY = 'fitforge.cloudPushedAt.v1';
+/**
+ * Firestore's hard limit is 1 MiB per document. Stopping short of it with a real message beats a
+ * write that fails at the edge every few seconds for a user who cannot see why.
+ */
+const MAX_BYTES = 900_000;
+
+export type SyncStatus =
+  | { state: 'idle' }
+  | { state: 'syncing' }
+  | { state: 'synced'; at: number; direction: 'push' | 'pull' | 'none' }
+  | { state: 'error'; detail: string };
+
+let status: SyncStatus = { state: 'idle' };
+const listeners = new Set<() => void>();
+
+function setStatus(next: SyncStatus) {
+  status = next;
+  for (const l of listeners) l();
+}
+
+export function subscribeSync(l: () => void): () => void {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+export function getSyncStatus(): SyncStatus {
+  return status;
+}
+
+function lastPushedAt(): number {
+  try {
+    return Number(window.localStorage.getItem(LAST_PUSH_KEY) ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+function markPushed(at: number) {
+  try {
+    window.localStorage.setItem(LAST_PUSH_KEY, String(at));
+  } catch {
+    /* private mode — sync still works, it just re-pulls more eagerly */
+  }
+}
+
+/** The bundle, compacted. `exportAllState` pretty-prints for humans; the wire does not need it. */
+function bundleForCloud(): string {
+  return JSON.stringify(JSON.parse(exportAllState()));
+}
+
+async function docRefFor(uid: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const { doc } = await import('firebase/firestore');
+  return doc(db, 'users', uid);
+}
+
+/** Upload this device's state. Resolves false when it could not be written. */
+export async function pushToCloud(uid: string): Promise<boolean> {
+  if (!isAuthConfigured()) return false;
+  try {
+    const ref = await docRefFor(uid);
+    if (!ref) return false;
+    const bundle = bundleForCloud();
+    if (bundle.length > MAX_BYTES) {
+      setStatus({
+        state: 'error',
+        detail: 'Your training history is too large to sync. Export a backup from Settings.',
+      });
+      return false;
+    }
+    const { setDoc } = await import('firebase/firestore');
+    const at = Date.now();
+    await setDoc(ref, { bundle, updatedAt: at, schema: 2 });
+    markPushed(at);
+    setStatus({ state: 'synced', at, direction: 'push' });
+    return true;
+  } catch (err) {
+    setStatus({ state: 'error', detail: describe(err) });
+    return false;
+  }
+}
+
+/** Adopt the cloud copy. Resolves false when there was nothing to adopt or it would not validate. */
+export async function pullFromCloud(uid: string): Promise<boolean> {
+  if (!isAuthConfigured()) return false;
+  try {
+    const ref = await docRefFor(uid);
+    if (!ref) return false;
+    const { getDoc } = await import('firebase/firestore');
+    const snap = await getDoc(ref);
+    const data = snap.exists() ? (snap.data() as { bundle?: unknown; updatedAt?: unknown }) : null;
+    if (!data || typeof data.bundle !== 'string') return false;
+
+    // The SAME validator the file importer uses. A document that fails it is left alone rather
+    // than partially applied — a half-restored account is worse than an un-restored one.
+    const result = importAllState(data.bundle);
+    if (!result.ok) {
+      setStatus({ state: 'error', detail: `Cloud copy could not be read: ${result.error}` });
+      return false;
+    }
+    const at = typeof data.updatedAt === 'number' ? data.updatedAt : Date.now();
+    markPushed(at);
+    setStatus({ state: 'synced', at, direction: 'pull' });
+    return true;
+  } catch (err) {
+    setStatus({ state: 'error', detail: describe(err) });
+    return false;
+  }
+}
+
+/**
+ * Reconcile once, at sign-in. See the conflict rule in the file header.
+ */
+export async function syncOnSignIn(uid: string): Promise<void> {
+  if (!isAuthConfigured()) return;
+  setStatus({ state: 'syncing' });
+  try {
+    const ref = await docRefFor(uid);
+    if (!ref) return setStatus({ state: 'idle' });
+    const { getDoc } = await import('firebase/firestore');
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      // First sign-in on this account: this device's data becomes the account's data.
+      await pushToCloud(uid);
+      return;
+    }
+
+    const data = snap.data() as { updatedAt?: unknown };
+    const cloudAt = typeof data.updatedAt === 'number' ? data.updatedAt : 0;
+    // A browser with no finished onboarding has nothing to lose and everything to gain — this is
+    // the new-device case, and it is the one where pulling is unambiguously right.
+    const localIsEmpty = !isOnboarded();
+    if (localIsEmpty || cloudAt > lastPushedAt()) await pullFromCloud(uid);
+    else await pushToCloud(uid);
+  } catch (err) {
+    setStatus({ state: 'error', detail: describe(err) });
+  }
+}
+
+/**
+ * Mirror local changes up, debounced.
+ *
+ * DEBOUNCED HARD (4s) because the store notifies on every keystroke-ish edit — a set logged, a
+ * weight nudged — and Firestore's free tier is metered in document WRITES. A workout is hundreds
+ * of state changes and should cost a handful of writes, not hundreds.
+ */
+export function startCloudMirror(uid: string): () => void {
+  if (!isAuthConfigured()) return () => {};
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const unsubscribe = subscribe(() => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => void pushToCloud(uid), 4000);
+  });
+  return () => {
+    if (timer) clearTimeout(timer);
+    unsubscribe();
+  };
+}
+
+function describe(err: unknown): string {
+  const code = (err as { code?: string }).code;
+  if (code === 'permission-denied')
+    return 'Firestore rules rejected the write — see docs/FIREBASE-SETUP.md.';
+  if (code === 'unavailable') return 'Offline — your data is safe in this browser and will sync later.';
+  return String((err as { message?: string }).message ?? err).slice(0, 140);
+}

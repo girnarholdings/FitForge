@@ -42,7 +42,8 @@ import {
   snippetsFromHits,
   type CoachStatus,
 } from '@/lib/kb/client';
-import { ModelPicker } from '@/components/features/shared/ModelPicker';
+import { ModelPicker, useHasLockedModels } from '@/components/features/shared/ModelPicker';
+import { MembersModelHint } from '@/components/auth/GoogleAuth';
 import { MealSuggestionCard, wantsMealSuggestion } from './MealSuggestionCard';
 import { useNutritionTargets, useLogsForDate } from '@/lib/demo/useDemo';
 import { useSelectedDate } from '@/lib/demo/selectedDate';
@@ -168,6 +169,7 @@ export function CoachView() {
    */
   const [autoPersonalize, setAutoPersonalize] = React.useState(true);
   const [status, setStatus] = React.useState<CoachStatus | null>(null);
+  const hasLockedModels = useHasLockedModels();
 
   React.useEffect(() => {
     try {
@@ -398,7 +400,11 @@ export function CoachView() {
           {/* THE MODEL PICKER — the shared control (see ModelPicker.tsx). It renders nothing
               until the worker advertises a catalog, and the SAME preference drives the nutrition
               macro estimator, so a model chosen here is the model that estimates a burrito. */}
-          <ModelPicker label={null} testId="coach-model-select" />
+          <div className="flex min-w-0 items-center gap-2">
+            <ModelPicker label={null} testId="coach-model-select" />
+            {/* Only when a members-only model exists and this visitor cannot reach it. */}
+            {hasLockedModels && <MembersModelHint />}
+          </div>
           <button
             type="button"
             role="switch"

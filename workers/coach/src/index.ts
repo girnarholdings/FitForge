@@ -17,6 +17,7 @@
  *    the web app is a static export, so anything given to it is inlined into JavaScript every
  *    visitor downloads. A key in the bundle is a key published.
  */
+import { verifyFirebaseToken } from './firebaseAuth';
 
 export interface Env {
   /**
@@ -36,6 +37,13 @@ export interface Env {
    * Variables → Add → Encrypt). THE KEY MUST LIVE HERE AND NOWHERE ELSE — see the file header.
    */
   MISTRAL_API_KEY?: string;
+  /**
+   * The Firebase project whose ID tokens this worker trusts, e.g. "fitforge-app". A plain var,
+   * not a secret — it is public by nature (it ships in the web app's config). Unset means no
+   * token can ever be verified, so the company model stays reserved and everyone gets the free
+   * tier: the safe direction to fail.
+   */
+  FIREBASE_PROJECT_ID?: string;
   /** Overrides the default Mistral model. Ignored unless MISTRAL_API_KEY is set. */
   MISTRAL_MODEL?: string;
 }
@@ -105,6 +113,12 @@ export interface ModelChoice {
   id: string;
   label: string;
   provider: 'mistral' | 'workers-ai';
+  /**
+   * This entry costs the COMPANY's Mistral allowance, so it is offered to signed-in users only.
+   * The client hides it when signed out; {@link resolvePreferred} refuses it without a verified
+   * Firebase token, which is the half that actually holds.
+   */
+  requiresAuth?: boolean;
 }
 
 const WORKERS_AI_LABELS: Record<string, string> = {
@@ -126,9 +140,26 @@ function modelCatalog(env: Env): ModelChoice[] {
   if (env.MISTRAL_API_KEY && env.MISTRAL_API_KEY.trim().length > 0) {
     const id = env.MISTRAL_MODEL ?? DEFAULT_MISTRAL_MODEL;
     out.push({
+      // NOT "your API key" — the key belongs to FitForge, not to the person reading the label,
+      // and calling it theirs would be a small lie that invites "where do I put mine?".
       id,
-      label: id === DEFAULT_MISTRAL_MODEL ? 'Mistral Small · your API key' : `${id} · your API key`,
+      label: id === DEFAULT_MISTRAL_MODEL ? 'Mistral Small' : id,
       provider: 'mistral',
+      // GATED ONLY WHEN THE GATE IS MEANINGFUL — which takes two things, and neither is optional:
+      //
+      //  1. A FREE TIER TO FALL BACK TO (`env.AI`). The gate exists to keep anonymous traffic off
+      //     the company's paid allowance so signed-in users are unaffected when the free tier runs
+      //     out. On a worker with no AI binding there is nothing to fall back to, so gating would
+      //     leave guests with no backend at all: an outage, not protection.
+      //
+      //  2. A WAY TO BE LET THROUGH (`env.FIREBASE_PROJECT_ID`). Without a project id no token can
+      //     ever be verified, so "members only" would mean "nobody, ever" — the paid key sits
+      //     unused while every request takes the weaker model. A lock with no key cut for it is
+      //     not security, it is a wall.
+      //
+      // Both present: guests get Workers AI, signed-in users get Mistral. Either absent: Mistral
+      // serves everyone, exactly as it did before accounts existed.
+      requiresAuth: gateActive(env),
     });
   }
   if (env.AI) {
@@ -140,16 +171,32 @@ function modelCatalog(env: Env): ModelChoice[] {
 }
 
 /**
+ * Is the members-only gate switched on for this deployment? See the reasoning in
+ * {@link modelCatalog}: it needs both a free tier to reserve capacity FROM and a verifiable
+ * sign-in to let members THROUGH.
+ */
+function gateActive(env: Env): boolean {
+  return !!env.AI && !!env.FIREBASE_PROJECT_ID;
+}
+
+/** The catalog as a given caller may use it: gated entries drop out when nobody is signed in. */
+function catalogFor(env: Env, signedIn: boolean): ModelChoice[] {
+  return modelCatalog(env).filter((m) => signedIn || !m.requiresAuth);
+}
+
+/**
  * A client-requested model, accepted ONLY if it is in the catalog. A whitelist, not a passthrough:
  * the request body is attacker-controlled, and this is the line that keeps it from steering the
  * worker at arbitrary (billable) model ids or at backends it is not configured for. An unknown id
  * quietly resolves to "no preference" — the stale-client case, not an error.
  */
-function resolvePreferred(env: Env, raw: unknown): ModelChoice | undefined {
+function resolvePreferred(env: Env, raw: unknown, signedIn: boolean): ModelChoice | undefined {
   if (typeof raw !== 'string') return undefined;
   const id = raw.trim();
   if (!id) return undefined;
-  return modelCatalog(env).find((m) => m.id === id);
+  // catalogFor, not modelCatalog: a signed-out caller asking for the gated model gets `undefined`
+  // and therefore the default policy, exactly as if they had asked for a model that never existed.
+  return catalogFor(env, signedIn).find((m) => m.id === id);
 }
 
 /**
@@ -322,6 +369,8 @@ async function generateOnce(
    * mistral pick keeps the free chain as its safety net, same as the default policy.
    */
   preferred?: ModelChoice,
+  /** A verified Firebase user, or false. Decides whether Mistral is on the table AT ALL. */
+  signedIn = false,
 ): Promise<
   | { ok: true; answer: string; provider: 'mistral' | 'workers-ai'; model: string }
   | { ok: false; status: number; detail: string }
@@ -337,7 +386,15 @@ async function generateOnce(
     };
   }
 
-  const forceWorkersAi = preferred?.provider === 'workers-ai' && !!env.AI;
+  /**
+   * THE GATE, APPLIED TO THE DEFAULT PATH TOO — which is the whole point and the easy thing to
+   * get wrong. Reserving Mistral only when a user explicitly picks it would leave every anonymous
+   * "Auto" request spending the company allowance, i.e. the exact bill the gate exists to prevent,
+   * because Auto is what almost everyone uses. A signed-out visitor is served by Workers AI on
+   * every path. (`!env.AI` — no free tier to fall back to — is covered in `modelCatalog`.)
+   */
+  const mayUseMistral = signedIn || !gateActive(env);
+  const forceWorkersAi = (preferred?.provider === 'workers-ai' || !mayUseMistral) && !!env.AI;
 
   if (provider === 'mistral' && !forceWorkersAi) {
     const r = await askMistral(env, system, user, opts);
@@ -355,7 +412,10 @@ async function generateOnce(
     return r;
   }
 
-  const r = await askWorkersAI(env, system, user, opts, forceWorkersAi ? preferred!.id : undefined);
+  // Only an explicit workers-ai PICK names a first model. `forceWorkersAi` is also true for every
+  // signed-out request, where there is no pick at all — reading `preferred.id` off that path threw.
+  const firstModel = preferred?.provider === 'workers-ai' ? preferred.id : undefined;
+  const r = await askWorkersAI(env, system, user, opts, firstModel);
   if (!r.ok) return r;
   return { ok: true, answer: r.answer, provider: 'workers-ai', model: r.model };
 }
@@ -368,6 +428,8 @@ interface ChatRequest {
   intent?: string;
   /** The user's model pick from the catalog the health check advertised. Whitelisted, never trusted. */
   model?: string;
+  /** Firebase ID token, when the user is signed in. Verified here; absence just means "guest". */
+  idToken?: string;
   /** Retrieved KB entries the client already matched (top ~3), used as grounding. */
   snippets?: { question: string; answer: string }[];
   /** The user's onboarding-derived context. Never contains identifying data beyond a name. */
@@ -718,12 +780,20 @@ async function estimateMacros(
   food: string,
   quantity: string | undefined,
   preferred?: ModelChoice,
+  signedIn = false,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
   const user = `Food: ${food}${quantity ? `\nQuantity: ${quantity}` : ''}`;
 
   const results = await Promise.all(
     MACRO_TEMPS.map((temperature) =>
-      generateOnce(env, MACRO_SYSTEM, user, { temperature, maxTokens: MACRO_MAX_TOKENS }, preferred),
+      generateOnce(
+        env,
+        MACRO_SYSTEM,
+        user,
+        { temperature, maxTokens: MACRO_MAX_TOKENS },
+        preferred,
+        signedIn,
+      ),
     ),
   );
 
@@ -836,8 +906,13 @@ export default {
           // having to spend an inference to find out.
           fallbacks: env.AI ? workersAiModels(env) : [],
           // What the client's model picker may offer — decided HERE, by this worker's actual
-          // configuration, so the dropdown can never promise a backend the worker lacks.
+          // configuration, so the dropdown can never promise a backend the worker lacks. The
+          // FULL catalog, gated entries included and flagged `requiresAuth`: GET carries no body
+          // and therefore no token, so the caller's sign-in state is unknown at this point. The
+          // client hides what it may not use; the POST path is where the gate is enforced.
           models: modelCatalog(env),
+          /** Whether this worker can verify sign-ins at all (an unset project id gates nothing open). */
+          auth: env.FIREBASE_PROJECT_ID ? 'firebase' : 'none',
           tasks: ['chat', 'macros'],
         },
         200,
@@ -867,8 +942,17 @@ export default {
       );
     }
 
-    // The user's model pick, if any — validated against the catalog, unknown ids ignored.
-    const preferred = resolvePreferred(env, (body as { model?: unknown }).model);
+    // WHO IS ASKING. The token is verified against Google's keys before it can unlock anything;
+    // any failure (absent, expired, forged, JWKS unreachable) simply reads as "guest", which is
+    // the free tier. Nobody is ever refused an answer for failing to prove who they are.
+    const user = await verifyFirebaseToken(
+      (body as { idToken?: unknown }).idToken as string | undefined,
+      env.FIREBASE_PROJECT_ID,
+    );
+    const signedIn = user != null;
+    // The user's model pick, if any — validated against the catalog THIS caller may use, so a
+    // signed-out request naming the gated model falls through to the default policy.
+    const preferred = resolvePreferred(env, (body as { model?: unknown }).model, signedIn);
 
     /* ── task: macros ──────────────────────────────────────────────────────────────── */
     if (body.task === 'macros') {
@@ -880,6 +964,7 @@ export default {
           food,
           body.quantity?.trim().slice(0, 60) || undefined,
           preferred,
+          signedIn,
         );
         return json(r.body, r.status, cors);
       } catch (err) {
@@ -904,6 +989,7 @@ export default {
           maxTokens: MAX_TOKENS,
         },
         preferred,
+        signedIn,
       );
       if (!r.ok) return json({ error: 'ai_unavailable', detail: r.detail }, r.status, cors);
 

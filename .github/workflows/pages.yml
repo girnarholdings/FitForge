@@ -179,6 +179,17 @@ jobs:
           # `isCoachConfigured()` reads that as "no worker", and Coach answers from the local
           # knowledge base exactly as it does today. Nothing needs to change to keep it off.
           NEXT_PUBLIC_AI_ENDPOINT: ${{ vars.AI_ENDPOINT }}
+          # FIREBASE — Google sign-in and cloud sync. All six unset is a SUPPORTED build: the app
+          # ships with no sign-in UI and Local Mode only, exactly as it did before accounts existed.
+          # These are public by design (a web config identifies a project, it authorises nothing);
+          # what protects the data is the Firestore rules and the authorised-domain list. See
+          # docs/FIREBASE-SETUP.md.
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
 
       # Says, on every deploy, whether the Coach worker is actually wired into the bundle.
       #

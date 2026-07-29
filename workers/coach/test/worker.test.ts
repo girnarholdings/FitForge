@@ -308,7 +308,70 @@ test('the health check publishes the fallback chain', async () => {
  * what makes it the right and only place for it.
  */
 
-/** Stubs `fetch` for the duration of one call, recording what Mistral was sent. */
+/* ── real Firebase ID tokens ──────────────────────────────────────────────────────────────────
+ *
+ * The signed-in path is worth more than a stubbed `verifyFirebaseToken` would prove: the gate on
+ * the company's Mistral allowance IS the signature check, so these tests generate an RSA key pair,
+ * publish it where the worker looks for Google's keys, and sign genuine RS256 JWTs. What runs is
+ * the deployed verifier — WebCrypto, `kid` lookup, claim validation and all.
+ */
+const PROJECT_ID = 'fitforge-test';
+const KID = 'test-kid';
+
+let signing: { priv: CryptoKey; jwk: JsonWebKey } | null = null;
+
+async function signingKeys() {
+  if (signing) return signing;
+  const pair = (await crypto.subtle.generateKey(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256',
+    },
+    true,
+    ['sign', 'verify'],
+  )) as CryptoKeyPair;
+  const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+  signing = { priv: pair.privateKey, jwk: { ...jwk, kid: KID, alg: 'RS256' } };
+  return signing;
+}
+
+const b64u = (b: Uint8Array) =>
+  Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64uStr = (s: string) => b64u(new TextEncoder().encode(s));
+
+/** A genuine, correctly-signed ID token. `claims` override the defaults to test each rejection. */
+async function idToken(claims: Record<string, unknown> = {}): Promise<string> {
+  const k = await signingKeys();
+  const now = Math.floor(Date.now() / 1000);
+  const header = b64uStr(JSON.stringify({ alg: 'RS256', typ: 'JWT', kid: KID }));
+  const payload = b64uStr(
+    JSON.stringify({
+      iss: `https://securetoken.google.com/${PROJECT_ID}`,
+      aud: PROJECT_ID,
+      sub: 'uid-123',
+      email: 'lifter@example.com',
+      iat: now,
+      exp: now + 3600,
+      ...claims,
+    }),
+  );
+  const sig = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    k.priv,
+    new TextEncoder().encode(`${header}.${payload}`),
+  );
+  return `${header}.${payload}.${b64u(new Uint8Array(sig))}`;
+}
+
+/**
+ * Stubs `fetch` for the duration of one call, recording what Mistral was sent.
+ *
+ * ROUTES BY URL rather than answering everything: the worker also fetches Google's JWKS to verify
+ * a token, and a blanket stub would hand Mistral's reply to the verifier and quietly fail every
+ * signed-in test for the wrong reason.
+ */
 async function withMistral(
   reply: { status: number; body: unknown },
   run: () => Promise<Response>,
@@ -316,8 +379,16 @@ async function withMistral(
   const original = globalThis.fetch;
   let sent: { url: string; auth: string; body: any } | null = null;
   globalThis.fetch = (async (url: any, init: any) => {
+    const href = String(url);
+    if (href.includes('googleapis.com')) {
+      const k = await signingKeys();
+      return new Response(JSON.stringify({ keys: [k.jwk] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     sent = {
-      url: String(url),
+      url: href,
       auth: String(init?.headers?.Authorization ?? ''),
       body: JSON.parse(String(init?.body ?? '{}')),
     };
@@ -338,10 +409,15 @@ const mistralOk = (content: string) => ({
   body: { choices: [{ message: { content } }] },
 });
 
-test('a Mistral key takes priority over the AI binding', async () => {
-  const env = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test', AI: { run: async () => ({ response: 'from workers ai' }) } } as unknown as Env;
-  const { res, sent } = await withMistral(mistralOk('Ten to twenty sets.'), () =>
-    worker.fetch(post({ question: 'how many sets?' }), env),
+test('a Mistral key takes priority over the AI binding — FOR A SIGNED-IN USER', async () => {
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    AI: { run: async () => ({ response: 'from workers ai' }) },
+  } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('Ten to twenty sets.'), async () =>
+    worker.fetch(post({ question: 'how many sets?', idToken: await idToken() }), env),
   );
   assert.equal(res.status, 200);
   const body = (await res.json()) as { answer: string; provider: string };
@@ -349,6 +425,143 @@ test('a Mistral key takes priority over the AI binding', async () => {
   assert.match(body.answer, /Ten to twenty/);
   assert.match(sent!.url, /api\.mistral\.ai/);
   assert.equal(sent!.auth, 'Bearer sk-test', 'the key must go in the Authorization header');
+});
+
+/* ── the company-key gate ─────────────────────────────────────────────────────────────────────
+ *
+ * Mistral is paid for by FitForge, and the reason it is reserved for signed-in users is capacity,
+ * not upsell: anonymous traffic exhausting the allowance would degrade the experience of people
+ * who signed in. That only holds if the gate is enforced on the DEFAULT path as well as on an
+ * explicit pick — "Auto" is what nearly everyone uses — and if it survives a hostile client, which
+ * is why the tests below post forged and expired tokens rather than trusting the UI to hide it.
+ */
+
+test('a signed-OUT request never reaches Mistral, even on the default path', async () => {
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    AI: { run: async () => ({ response: 'Ten to twenty hard sets.' }) },
+  } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('should never be called'), () =>
+    worker.fetch(post({ question: 'how many sets?' }), env),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { provider: string };
+  assert.equal(body.provider, 'workers-ai', 'guests are served by the free tier');
+  assert.ok(sent == null, 'the company key must not be spent for an anonymous request');
+});
+
+test('naming the gated model without a token does not unlock it', async () => {
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    AI: { run: async () => ({ response: 'Ten to twenty hard sets.' }) },
+  } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('should never be called'), () =>
+    worker.fetch(post({ question: 'how many sets?', model: 'mistral-small-latest' }), env),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(((await res.json()) as { provider: string }).provider, 'workers-ai');
+  assert.ok(sent == null, 'hiding it in the UI is not the boundary — this is');
+});
+
+test('a forged or expired token is treated as signed out, never as an error', async () => {
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    AI: { run: async () => ({ response: 'Ten to twenty hard sets.' }) },
+  } as unknown as Env;
+
+  const good = await idToken();
+  const cases: [string, string][] = [
+    ['tampered signature', `${good.slice(0, -6)}AAAAAA`],
+    ['expired', await idToken({ exp: Math.floor(Date.now() / 1000) - 7200 })],
+    ['wrong audience', await idToken({ aud: 'someone-elses-project' })],
+    ['wrong issuer', await idToken({ iss: 'https://evil.example.com/' })],
+    ['not a jwt', 'obviously-not-a-token'],
+  ];
+
+  for (const [why, token] of cases) {
+    const { res, sent } = await withMistral(mistralOk('should never be called'), () =>
+      worker.fetch(post({ question: 'how many sets?', idToken: token }), env),
+    );
+    assert.equal(res.status, 200, `${why}: still answered`);
+    assert.equal(
+      ((await res.json()) as { provider: string }).provider,
+      'workers-ai',
+      `${why}: must not unlock the company key`,
+    );
+    assert.ok(sent == null, `${why}: Mistral was called`);
+  }
+});
+
+test('with no way to sign in, Mistral serves everyone rather than nobody', async () => {
+  // No FIREBASE_PROJECT_ID means no token can ever be verified. Gating there would reserve the
+  // paid key for a group that cannot exist, leaving every request on the weaker model while the
+  // key goes unused — so the gate stays off until sign-in is actually possible.
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    AI: { run: async () => ({ response: 'from workers ai' }) },
+  } as unknown as Env;
+  const { res } = await withMistral(mistralOk('Ten to twenty sets.'), () =>
+    worker.fetch(post({ question: 'how many sets?' }), env),
+  );
+  assert.equal(((await res.json()) as { provider: string }).provider, 'mistral');
+
+  const health = (await (
+    await worker.fetch(new Request('https://worker.test/', { method: 'GET' }), env)
+  ).json()) as { models: { requiresAuth?: boolean }[]; auth: string };
+  assert.equal(health.auth, 'none');
+  assert.ok(
+    health.models.every((m) => !m.requiresAuth),
+    'nothing is advertised as members-only when there are no members',
+  );
+});
+
+test('with no free tier to fall back to, Mistral serves everyone', async () => {
+  // A worker with a key but no AI binding has nothing to reserve capacity FOR; gating there would
+  // be an outage for guests rather than protection for members.
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+  } as unknown as Env;
+  const { res } = await withMistral(mistralOk('Ten to twenty sets.'), () =>
+    worker.fetch(post({ question: 'how many sets?' }), env),
+  );
+  assert.equal(((await res.json()) as { provider: string }).provider, 'mistral');
+});
+
+test('a signed-in user can still choose a free model, and it is honoured', async () => {
+  const calls: string[] = [];
+  const env = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    AI: {
+      run: async (model: string) => {
+        calls.push(model);
+        return { response: 'Ten to twenty hard sets.' };
+      },
+    },
+  } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk('should never be called'), async () =>
+    worker.fetch(
+      post({
+        question: 'how many sets?',
+        model: '@cf/google/gemma-3-12b-it',
+        idToken: await idToken(),
+      }),
+      env,
+    ),
+  );
+  assert.equal(((await res.json()) as { provider: string }).provider, 'workers-ai');
+  assert.equal(calls[0], '@cf/google/gemma-3-12b-it');
+  assert.ok(sent == null, 'choosing free must not spend the key');
 });
 
 test('the same caps and system prompt apply to Mistral', async () => {
@@ -417,11 +630,25 @@ test('health advertises the Mistral entry only while the key exists', async () =
   const get = (env: Env) =>
     worker.fetch(new Request('https://worker.test/', { method: 'GET' }), env);
 
-  const withKey = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test', AI: { run: async () => ({}) } } as unknown as Env;
-  let body = (await (await get(withKey)).json()) as { models: { id: string; provider: string; label: string }[] };
+  const withKey = {
+    ALLOWED_ORIGINS: ORIGIN,
+    MISTRAL_API_KEY: 'sk-test',
+    // The project id is what arms the gate — see "with no way to sign in" below.
+    FIREBASE_PROJECT_ID: PROJECT_ID,
+    AI: { run: async () => ({}) },
+  } as unknown as Env;
+  let body = (await (await get(withKey)).json()) as {
+    models: { id: string; provider: string; label: string; requiresAuth?: boolean }[];
+  };
   assert.equal(body.models[0]!.provider, 'mistral');
-  assert.match(body.models[0]!.label, /your API key/);
+  // The key belongs to FitForge, not to the reader — the label must not claim otherwise.
+  assert.doesNotMatch(body.models[0]!.label, /your API key/i);
+  assert.equal(body.models[0]!.requiresAuth, true, 'the company model is flagged for the client');
   assert.ok(body.models.filter((m) => m.provider === 'workers-ai').length >= 4);
+  assert.ok(
+    body.models.filter((m) => m.provider === 'workers-ai').every((m) => !m.requiresAuth),
+    'the free tier is never gated',
+  );
 
   const withoutKey = stubEnv();
   body = (await (await get(withoutKey)).json()) as { models: { provider: string }[] };

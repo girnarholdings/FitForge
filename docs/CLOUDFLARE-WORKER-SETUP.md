@@ -366,3 +366,39 @@ temperatures, each sanity-gated (kcal must agree with 4·P + 4·C + 9·F, else i
 the macros), answered as the per-field median with the min–max carried as an honest range and a
 spread-based confidence. Fewer than two sane samples refuses (`estimate_unreliable`) rather than
 guessing; a majority of `not_food` verdicts is a 422.
+
+---
+
+## Step 8 · Reserve the company model for signed-in users (optional)
+
+Once Firebase is set up (see `docs/FIREBASE-SETUP.md`), the worker can reserve FitForge's Mistral
+allowance for signed-in users and serve everyone else from the free Workers AI tier. The point is
+capacity, not upsell: when anonymous traffic exhausts the free tier, signed-in users are unaffected.
+
+Set the project id in `workers/coach/wrangler.toml` and redeploy:
+
+```toml
+[vars]
+FIREBASE_PROJECT_ID = "your-firebase-project-id"
+```
+
+```bash
+cd workers/coach && npx wrangler deploy
+```
+
+**The gate arms itself only when it is meaningful.** It needs a free tier to fall back to (the
+`[ai]` binding) *and* a way for members to get through (`FIREBASE_PROJECT_ID`). With either
+missing, Mistral serves everyone exactly as before — a lock with no key cut for it would simply
+strand the model you are paying for. The health check reports which mode is live:
+
+```bash
+curl https://fitforge-coach.<subdomain>.workers.dev | jq '{auth, gated: [.models[] | select(.requiresAuth) | .id]}'
+# {"auth":"firebase","gated":["mistral-small-latest"]}   ← gate armed
+# {"auth":"none","gated":[]}                             ← dormant, Mistral serves everyone
+```
+
+Enforcement is server-side and non-negotiable: the client hides the gated entry from the picker,
+but the worker independently verifies a Firebase ID token (signature against Google's published
+keys, plus `exp`/`aud`/`iss`) before honouring it. A forged, expired or absent token is simply
+"guest", and guests are served by the free tier rather than refused. `probe-coach.yml` re-checks
+this against the live worker on every run.

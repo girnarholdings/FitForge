@@ -12,6 +12,7 @@
  * Like every Coach call: never throws, hard timeout, unconfigured builds short-circuit locally.
  */
 import { coachEndpoint, getPreferredModel } from '@/lib/kb/client';
+import { currentIdToken } from '@/lib/auth/firebase';
 
 export interface MacroField {
   value: number;
@@ -77,6 +78,7 @@ export async function askMacroEstimate(
   external?.addEventListener('abort', onExternalAbort);
 
   try {
+    const idToken = await currentIdToken();
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -86,6 +88,7 @@ export async function askMacroEstimate(
         quantity,
         // The user's picked model rides along; the worker whitelists it against its own catalog.
         ...(getPreferredModel() ? { model: getPreferredModel() } : {}),
+        ...(idToken ? { idToken } : {}),
       }),
       signal: controller.signal,
     });

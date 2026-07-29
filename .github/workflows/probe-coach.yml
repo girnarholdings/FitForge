@@ -165,6 +165,39 @@ jobs:
             echo "::warning::The deployed worker does NOT yet allow https://goforge.fit (got ACAO: ${acao:-none}). Coach calls from the live site will be refused until 'cd workers/coach && npx wrangler deploy' ships the updated ALLOWED_ORIGINS."
           fi
 
+      # THE COMPANY-KEY GATE, checked against the live worker.
+      #
+      # The picker hides the members-only model from signed-out visitors, but hiding is not a
+      # boundary — anyone can post the model id with curl. This asks the deployed worker to serve
+      # that model with NO token and asserts it refuses, which is the property that keeps
+      # anonymous traffic from spending FitForge's allowance and degrading signed-in users.
+      #
+      # Skipped, not failed, while the gate is dormant: with no FIREBASE_PROJECT_ID nobody can
+      # sign in, so Mistral correctly serves everyone (a lock with no key cut for it would just
+      # strand the paid model). The health check says which mode is live.
+      - name: The members-only model is not reachable without a token
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          health=$(curl -sS -m 20 "$ENDPOINT")
+          auth=$(printf '%s' "$health" | jq -r '.auth // "none"')
+          gated=$(printf '%s' "$health" | jq -r '[.models // [] | .[] | select(.requiresAuth)] | length')
+          if [ "$auth" != "firebase" ] || [ "$gated" = "0" ]; then
+            echo "::notice::Members-only gate is dormant (auth=${auth}, gated models=${gated}) — Mistral serves everyone, which is correct until Firebase is configured."
+            exit 0
+          fi
+          id=$(printf '%s' "$health" | jq -r '[.models[] | select(.requiresAuth)][0].id')
+          got=$(curl -sS -m 45 -X POST "$ENDPOINT" \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://goforge.fit' \
+            -d "$(jq -nc --arg m "$id" '{question:"how many sets per muscle per week?",model:$m,snippets:[{question:"Weekly volume",answer:"10-20 hard sets per muscle per week."}]}')" \
+            | jq -r '.provider // "none"')
+          if [ "$got" = "mistral" ]; then
+            echo "::error::AN ANONYMOUS REQUEST REACHED THE COMPANY KEY. Asking for ${id} with no ID token was served by Mistral; it must fall back to workers-ai. The gate in workers/coach is not holding."
+            exit 1
+          fi
+          echo "::notice::Gate holds — an anonymous request for ${id} was served by ${got}"
+
       # Only reached when the above passed, so a green run means the whole chain works.
       - name: Report success
         run: echo "::notice::Coach worker is answering end to end"

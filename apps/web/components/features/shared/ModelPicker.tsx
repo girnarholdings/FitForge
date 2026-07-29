@@ -24,15 +24,22 @@ import {
   subscribeModelPref,
   type CoachModelChoice,
 } from '@/lib/kb/client';
+import { useIsSignedIn } from '@/lib/auth/useUser';
 
 /**
- * The worker-advertised catalog, or `[]` when there is nothing to choose between.
+ * The catalog THIS visitor may use, or `[]` when there is nothing to choose between.
+ *
+ * Members-only entries (FitForge's own model allowance) are filtered out while signed out. That
+ * is presentation, not protection: the worker refuses them without a verified Firebase token, and
+ * has to, since anyone can post to it directly. What the filter buys is honesty — never offering
+ * a choice that would be silently ignored.
  *
  * The underlying health probe is cached in sessionStorage for an hour by `fetchCoachStatus`, so
  * mounting this on several screens costs one request per session, not one per screen.
  */
 export function useCoachModels(): CoachModelChoice[] {
   const [models, setModels] = React.useState<CoachModelChoice[]>([]);
+  const signedIn = useIsSignedIn();
   React.useEffect(() => {
     if (!isCoachConfigured()) return;
     let alive = true;
@@ -43,7 +50,27 @@ export function useCoachModels(): CoachModelChoice[] {
       alive = false;
     };
   }, []);
-  return models;
+  return React.useMemo(
+    () => models.filter((m) => signedIn || !m.requiresAuth),
+    [models, signedIn],
+  );
+}
+
+/** True when a members-only model exists that this visitor cannot use yet — the reason to sign in. */
+export function useHasLockedModels(): boolean {
+  const [models, setModels] = React.useState<CoachModelChoice[]>([]);
+  const signedIn = useIsSignedIn();
+  React.useEffect(() => {
+    if (!isCoachConfigured()) return;
+    let alive = true;
+    void fetchCoachStatus().then((s) => {
+      if (alive && s?.online && s.models?.length) setModels(s.models);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return !signedIn && models.some((m) => m.requiresAuth);
 }
 
 /** The current pick ('' = Auto), live across every mounted picker. */

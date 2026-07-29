@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AuthPanel } from '@/components/auth/AuthPanel';
+import { GoogleSignInButton } from '@/components/auth/GoogleAuth';
 import { LogoLockup } from '@/components/illustrations';
 
 /**
@@ -23,9 +24,15 @@ export default function LoginPage() {
           Welcome back
         </h1>
         <p className="mt-2 text-[0.8125rem] leading-snug text-muted-foreground">
-          Cloud accounts are part of the hosted build. On this version, jump straight into Local
-          Mode — your data stays in this browser.
+          Sign in to sync your training across devices — or jump straight into Local Mode, where
+          everything stays in this browser.
         </p>
+
+        {/* Renders nothing when the build has no Firebase project, leaving the Local Mode entry
+            exactly as it has always been. */}
+        <div className="mt-6">
+          <GoogleSignInButton />
+        </div>
 
         <div className="mt-6">
           <AuthPanel next="/onboarding/welcome" />

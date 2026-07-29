@@ -15,6 +15,7 @@
  *    repeat question costs nothing and works offline afterwards (§3 fallback ladder, item 3).
  */
 import type { CoachProfile, CoachRequest, CoachResult, CoachSnippet, KbHit } from './types';
+import { currentIdToken } from '@/lib/auth/firebase';
 
 /** Read literally so Next can inline it at build time (static export — there is no server). */
 const AI_ENDPOINT = process.env.NEXT_PUBLIC_AI_ENDPOINT ?? '';
@@ -82,6 +83,12 @@ export interface CoachModelChoice {
   id: string;
   label: string;
   provider: 'mistral' | 'workers-ai';
+  /**
+   * Costs FitForge's own model allowance, so it is offered to signed-in users only. The picker
+   * hides these when signed out; the worker refuses them without a verified token, which is the
+   * half that actually protects the capacity.
+   */
+  requiresAuth?: boolean;
 }
 
 const MODEL_PREF_KEY = 'fitforge.coachModel.v1';
@@ -205,6 +212,9 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
   external?.addEventListener('abort', onExternalAbort);
 
   try {
+    // Proof of sign-in, when there is any. The worker verifies it and unlocks the members-only
+    // model; without it the request is served by the free tier, which is the correct default.
+    const idToken = await currentIdToken();
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -214,6 +224,7 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
         profile: req.profile,
         ...(req.intent ? { intent: req.intent } : {}),
         ...(getPreferredModel() ? { model: getPreferredModel() } : {}),
+        ...(idToken ? { idToken } : {}),
       }),
       signal: controller.signal,
     });
@@ -271,7 +282,12 @@ export function parseModels(raw: unknown): CoachModelChoice[] | undefined {
       c.label.length > 0 &&
       (c.provider === 'mistral' || c.provider === 'workers-ai')
     ) {
-      out.push({ id: c.id, label: c.label.slice(0, 60), provider: c.provider });
+      out.push({
+        id: c.id,
+        label: c.label.slice(0, 60),
+        provider: c.provider,
+        requiresAuth: c.requiresAuth === true,
+      });
     }
   }
   return out.length > 0 ? out.slice(0, 12) : undefined;

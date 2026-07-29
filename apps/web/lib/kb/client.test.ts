@@ -31,13 +31,36 @@ test('junk shapes are dropped, not coerced', () => {
     good,
   ]);
   assert.equal(models?.length, 1);
-  assert.deepEqual(models![0], good);
+  // `requiresAuth` is normalised in rather than passed through, so every consumer can read it as
+  // a boolean without an `?? false` at each call site.
+  assert.deepEqual(models![0], { ...good, requiresAuth: false });
 });
 
 test('an empty or non-array catalog reads as "no picker", not as an error', () => {
   assert.equal(parseModels([]), undefined);
   assert.equal(parseModels('nope'), undefined);
   assert.equal(parseModels(undefined), undefined);
+});
+
+test('the members-only flag survives parsing, and defaults to false', () => {
+  // The picker hides `requiresAuth` entries while signed out. Losing the flag in transit would
+  // silently offer the company-key model to guests — who would then be refused by the worker, so
+  // the visible symptom would be "the dropdown does nothing", the worst kind of bug to diagnose.
+  const models = parseModels([
+    { id: 'mistral-small-latest', label: 'Mistral Small', provider: 'mistral', requiresAuth: true },
+    good,
+  ]);
+  assert.equal(models![0]!.requiresAuth, true);
+  assert.equal(models![1]!.requiresAuth, false, 'absent must read as ungated, never undefined');
+});
+
+test('a label must not claim the key belongs to the reader', () => {
+  // The Mistral key is FitForge's, paid for by FitForge. Copy that calls it "your API key" invites
+  // "where do I paste mine?" and misdescribes who is being billed.
+  const models = parseModels([
+    { id: 'mistral-small-latest', label: 'Mistral Small', provider: 'mistral', requiresAuth: true },
+  ]);
+  assert.doesNotMatch(models![0]!.label, /your (api )?key/i);
 });
 
 test('a hostile catalog is clamped: 12 entries max, labels cut to 60 chars', () => {
