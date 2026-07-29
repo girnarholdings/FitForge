@@ -2066,11 +2066,11 @@ function ShareCardButton({
       if (!ctx) return;
 
       // Brand background.
-      ctx.fillStyle = '#0A0D14';
+      ctx.fillStyle = '#0B121A';
       ctx.fillRect(0, 0, W, H);
       const glow = ctx.createRadialGradient(200, 120, 40, 200, 120, 900);
-      glow.addColorStop(0, 'rgba(228,184,77,0.16)');
-      glow.addColorStop(1, 'rgba(228,184,77,0)');
+      glow.addColorStop(0, 'rgba(226,112,58,0.16)');
+      glow.addColorStop(1, 'rgba(226,112,58,0)');
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, W, H);
 
@@ -2079,7 +2079,7 @@ function ShareCardButton({
       ctx.fillStyle = '#F4F1E8';
       ctx.fillText('Fit', 80, 150);
       const fitW = ctx.measureText('Fit').width;
-      ctx.fillStyle = '#E4B84D';
+      ctx.fillStyle = '#C98963';
       ctx.fillText('Forge', 80 + fitW, 150);
 
       // Session title.
@@ -2098,7 +2098,7 @@ function ShareCardButton({
       ];
       stats.forEach(([val, label], i) => {
         const x = 80 + i * 320;
-        ctx.fillStyle = '#E4B84D';
+        ctx.fillStyle = '#C98963';
         ctx.font = '700 92px "Space Grotesk", system-ui, sans-serif';
         ctx.fillText(val, x, 640);
         ctx.fillStyle = '#9AA3B5';
@@ -2109,7 +2109,7 @@ function ShareCardButton({
       // PR banner.
       let y = 820;
       if (prs.length > 0) {
-        ctx.fillStyle = '#E4B84D';
+        ctx.fillStyle = '#C98963';
         // On-brand 4-point gold spark (mirrors WS-A SparkIcon) in place of an emoji.
         const sx = 96;
         const sy = y - 14;
