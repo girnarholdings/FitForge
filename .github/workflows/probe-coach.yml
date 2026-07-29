@@ -71,6 +71,11 @@ jobs:
       # back with "3-4 sets per muscle per week", which is badly wrong (the landmark is 10-20 hard
       # sets) and passed the probe anyway. A green run has to mean the path the app takes works, so
       # the probe now sends what the app sends, and asserts the model actually used it.
+      # The Origin header stays github.io ON PURPOSE: it is in the DEPLOYED worker's allow-list
+      # today, and switching it to goforge.fit before the worker is redeployed with the new
+      # ALLOWED_ORIGINS would make every probe 403 for a reason that has nothing to do with the
+      # worker's health. Once a redeploy ships the new list (which allows both), this can move to
+      # the custom domain.
       - name: POST a real question
         env:
           ENDPOINT: ${{ vars.AI_ENDPOINT }}

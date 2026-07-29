@@ -22,9 +22,11 @@ const spaceGrotesk = Space_Grotesk({
   display: 'swap',
 });
 
-// Origin only — the /FitForge base path is added per-asset via withBase(); Next does not prefix
-// basePath onto metadata icon/OG URLs, so we do it ourselves. Overridable for other deploys.
-const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://girnarholdings.github.io';
+// Origin only — any base path is added per-asset via withBase(); Next does not prefix basePath
+// onto metadata icon/OG URLs, so we do it ourselves. Overridable for other deploys. The default
+// is the custom domain the Pages site actually serves from (see pages.yml for the fallback
+// story if that domain is ever removed).
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://goforge.fit';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),

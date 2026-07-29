@@ -108,11 +108,13 @@ neither is a secret:
 Comma-separated, no trailing slashes, scheme included:
 
 ```
-https://girnarholdings.github.io,http://localhost:3000,http://localhost:4599
+https://goforge.fit,http://goforge.fit,https://girnarholdings.github.io,http://localhost:3000,http://localhost:4599
 ```
 
-Use the origin your site is actually served from. `*` works for a quick test but means any website
-on the internet can spend your Workers AI allowance, so do not leave it that way.
+Use the origin your site is actually served from — since the custom domain was added that is
+`goforge.fit` (the `http://` form matters until Enforce HTTPS is on; `github.io` only redirects
+now but stays allowed for the probe). `*` works for a quick test but means any website on the
+internet can spend your Workers AI allowance, so do not leave it that way.
 
 **`MODEL`** *(optional — and best left unset)*
 
@@ -169,7 +171,7 @@ Test it with the origin header a browser would send:
 ```bash
 curl -X POST https://fitforge-coach.<your-subdomain>.workers.dev \
   -H 'Content-Type: application/json' \
-  -H 'Origin: https://girnarholdings.github.io' \
+  -H 'Origin: https://goforge.fit' \
   -d '{"question":"How many sets per muscle per week?","snippets":[]}'
 ```
 
@@ -222,8 +224,11 @@ so setting it after the fact does nothing. Add it to the Pages workflow's build 
       - name: Build web static export
         run: npm run build -w @fitforge/web
         env:
-          NEXT_PUBLIC_BASE_PATH: /FitForge
-          NEXT_PUBLIC_SITE_URL: https://girnarholdings.github.io
+          # Base path is EMPTY while the site serves from the custom domain goforge.fit;
+          # it goes back to /FitForge (with SITE_URL https://girnarholdings.github.io) only
+          # if the custom domain is ever removed. See the comments in pages.yml.
+          NEXT_PUBLIC_BASE_PATH: ""
+          NEXT_PUBLIC_SITE_URL: https://goforge.fit
           NEXT_PUBLIC_DEMO: "1"
           NEXT_PUBLIC_AI_ENDPOINT: https://fitforge-coach.<your-subdomain>.workers.dev
 ```

@@ -22,7 +22,15 @@ binding = "AI"
 [vars]
 # Comma-separated list of origins allowed to call this worker (CORS allow-list).
 # Include your Pages origin. "*" is accepted for local testing but not recommended.
-ALLOWED_ORIGINS = "https://girnarholdings.github.io,http://localhost:3000,http://localhost:4599"
+#
+# goforge.fit is the custom domain the Pages site serves from; the http:// form matters until
+# "Enforce HTTPS" is switched on for the domain (a page loaded over http sends Origin
+# http://goforge.fit). github.io stays allowed for the transition — it now only 301-redirects to
+# the domain, and the probe workflow still posts with that Origin.
+#
+# NOTE: this value reaches the LIVE worker only on deploy — after changing it, run
+#   cd workers/coach && npx wrangler deploy
+ALLOWED_ORIGINS = "https://goforge.fit,http://goforge.fit,https://girnarholdings.github.io,http://localhost:3000,http://localhost:4599"
 # MODEL is deliberately NOT set.
 #
 # It used to be pinned to "@cf/meta/llama-3.1-8b-instruct". Cloudflare retired that model on

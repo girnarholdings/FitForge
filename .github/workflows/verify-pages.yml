@@ -44,7 +44,11 @@ jobs:
     steps:
       - name: Fetch /today/ and every asset it references
         env:
-          BASE: https://girnarholdings.github.io/FitForge
+          # The CUSTOM DOMAIN, not github.io. The first real run of this workflow is why: the
+          # site had grown a custom domain (repo Settings → Pages), github.io answered every URL
+          # with a 301 stub, and a checker pointed at github.io "verified" a pile of redirect
+          # bodies. The host under test must be the host users load.
+          BASE: ${{ vars.PAGES_SITE_URL || 'https://goforge.fit' }}
           MARKERS: ${{ inputs.markers || 'ff-tab-spark' }}
         run: |
           set -u
@@ -53,9 +57,9 @@ jobs:
           for attempt in $(seq 1 12); do
             ok=1
             rm -rf /tmp/site && mkdir -p /tmp/site
-            # -L: a static host is entitled to redirect (trailing slash, canonical host) and the
-            # verifier's job is what ULTIMATELY serves. Headers + status are kept for diagnostics —
-            # when this fails, the first question is always "what did the CDN actually send?".
+            # -L on the PAGE ONLY: a canonical-host or trailing-slash redirect on the HTML is a
+            # host's prerogative. Assets get NO -L below — an asset that redirects is exactly the
+            # wrong-domain/wrong-base-path failure this workflow exists to catch.
             if ! curl -sSL --max-time 20 -D /tmp/site/headers.txt \
                  -w '%{http_code} %{url_effective}\n' \
                  "$BASE/today/?v=${GITHUB_RUN_ID}-${attempt}" -o /tmp/site/today.html \
@@ -67,10 +71,12 @@ jobs:
               sed -n '1,12p' /tmp/site/headers.txt
               ok=0
             else
-              # Every hashed asset the page references, absolute-ised against the site base.
-              grep -o '/FitForge/_next/[A-Za-z0-9/._()%-]*\.\(js\|css\)' /tmp/site/today.html \
+              # Every hashed asset the page references (any base path), absolute-ised below
+              # against the ORIGIN of $BASE — asset URLs in the HTML are root-relative.
+              grep -o '/[A-Za-z0-9/._()%-]*_next/[A-Za-z0-9/._()%-]*\.\(js\|css\)' /tmp/site/today.html \
                 | sort -u > /tmp/site/assets.txt
               count=$(wc -l < /tmp/site/assets.txt)
+              origin=$(printf '%s' "$BASE" | sed -E 's#^(https?://[^/]+).*#\1#')
               if [ "$count" -lt 3 ]; then
                 echo "attempt ${attempt}: page references only ${count} assets — not a real build"
                 echo "  final url+status: $(cat /tmp/site/status.txt)"
@@ -79,11 +85,16 @@ jobs:
               else
                 : > /tmp/site/bundle.txt
                 while read -r path; do
-                  if ! curl -sSf --max-time 20 "https://girnarholdings.github.io${path}" >> /tmp/site/bundle.txt; then
-                    echo "attempt ${attempt}: asset 404/failed: ${path}"
+                  code=$(curl -sS --max-time 20 -o /tmp/site/asset.bin -w '%{http_code}' \
+                         "${origin}${path}" || echo 000)
+                  if [ "$code" != "200" ]; then
+                    # A redirect here means the HTML's asset paths do not exist on this host —
+                    # the built base path and the serving domain disagree. Say so precisely.
+                    echo "attempt ${attempt}: asset ${code} (want 200): ${origin}${path}"
                     ok=0
                     break
                   fi
+                  cat /tmp/site/asset.bin >> /tmp/site/bundle.txt
                 done < /tmp/site/assets.txt
               fi
             fi
@@ -93,12 +104,14 @@ jobs:
                 grep -qF "$m" /tmp/site/bundle.txt /tmp/site/today.html || missing="$missing $m"
               done
               if [ -z "$missing" ]; then
-                echo "::notice::Pages site verified: $(wc -l < /tmp/site/assets.txt) assets all 200, markers present:${MARKERS:+ }$MARKERS"
+                echo "::notice::Pages site verified at ${BASE}: $(wc -l < /tmp/site/assets.txt) assets all 200, markers present:${MARKERS:+ }$MARKERS"
                 exit 0
               fi
               echo "attempt ${attempt}: markers not yet in the served bundle:${missing}"
+              echo "  final url+status: $(cat /tmp/site/status.txt)"
+              grep -i '^last-modified\|^x-github-request' /tmp/site/headers.txt || true
             fi
             sleep 15
           done
-          echo "::error::The deployed site never verified: assets missing or markers absent after 12 attempts (~3 min). The CDN may be serving a stale build, or the markers are wrong."
+          echo "::error::The deployed site never verified at ${BASE}: assets missing or markers absent after 12 attempts (~3 min). See the per-attempt lines above for the served status, URL and body."
           exit 1

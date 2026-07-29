@@ -12,7 +12,7 @@
 [![E2E: 100 Playwright tests](https://img.shields.io/badge/e2e-100%20Playwright%20tests-2EAD33?logo=playwright)](./apps/web/tests/e2e)
 [![Monorepo: Turborepo](https://img.shields.io/badge/monorepo-Turborepo-EF4444?logo=turborepo)](./turbo.json)
 
-[**🚀 Live demo → girnarholdings.github.io/FitForge**](https://girnarholdings.github.io/FitForge/)
+[**🚀 Live demo → goforge.fit**](https://goforge.fit/)
 
 </div>
 
@@ -20,7 +20,7 @@
 
 ## 🚀 Live demo
 
-### **→ [girnarholdings.github.io/FitForge](https://girnarholdings.github.io/FitForge/)**
+### **→ [goforge.fit](https://goforge.fit/)**
 
 The web app is a **static export** published to GitHub Pages on every push to `main`
 ([`.github/workflows/pages.yml`](./.github/workflows/pages.yml)).
