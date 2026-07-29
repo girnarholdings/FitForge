@@ -8,7 +8,15 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Card, CardTitle, Button, MacroRing } from '@/components/ui';
-import { PlusIcon, ScaleIcon, ShakerIcon, ArrowRightIcon, FlameSolidIcon } from '@/components/ui/icons';
+import {
+  PlusIcon,
+  ScaleIcon,
+  ShakerIcon,
+  ArrowRightIcon,
+  FlameSolidIcon,
+  HammerIcon,
+} from '@/components/ui/icons';
+import { rankFor } from '@/components/features/shared/forgeRank';
 import { todaysRoutineDay } from '@/components/features/_mock/data';
 import {
   useActiveRoutine,
@@ -117,12 +125,13 @@ export function TodayView() {
         hasContent={(iso) => (state.logsByDate[iso]?.length ?? 0) > 0}
       />
 
-      {/* Weekly-target streak (§6 P1-11) */}
+      {/* Weekly-target streak + smith rank (§6 P1-11) */}
       <StreakCard
         streak={streak.streak}
         daysThisWeek={streak.daysThisWeek}
         target={streak.target}
         metThisWeek={streak.metThisWeek}
+        strikes={sessions.length}
       />
 
       {/* Today's workout */}
@@ -297,15 +306,19 @@ function StreakCard({
   daysThisWeek,
   target,
   metThisWeek,
+  strikes,
 }: {
   streak: number;
   daysThisWeek: number;
   target: number;
   metThisWeek: boolean;
+  /** Total finished sessions — the currency of the smith-rank ladder. */
+  strikes: number;
 }) {
   const active = streak > 0 || daysThisWeek > 0;
+  const standing = rankFor(strikes);
   return (
-    <Card premium className="shadow-[var(--shadow-card)]">
+    <Card premium className="shadow-[var(--shadow-card)]" data-testid="forge-card">
       <div className="flex items-center gap-4">
         <span
           className={
@@ -331,6 +344,21 @@ function StreakCard({
               : `Train ${target} days this week to light the forge.`}
           </p>
         </div>
+        {/* THE RANK CREST. Rank name over the strike count, hammer beside it — the ladder in
+            four words. The detail (progress to the next rung) sits under the day pips, where a
+            second glance goes; the crest is for the first one. */}
+        <div
+          className="shrink-0 rounded-field border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-accent-muted px-2.5 py-1.5 text-right"
+          data-testid="forge-rank"
+        >
+          <p className="flex items-center justify-end gap-1 text-[13px] font-bold leading-tight text-accent">
+            <HammerIcon size={13} />
+            {standing.rank.name}
+          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground tabular-nums">
+            {strikes} {strikes === 1 ? 'strike' : 'strikes'}
+          </p>
+        </div>
       </div>
       <div className="mt-3 flex items-center gap-1.5" aria-hidden>
         {Array.from({ length: target }).map((_, i) => (
@@ -353,6 +381,26 @@ function StreakCard({
           </>
         )}
       </p>
+      {/* Progress to the next rung — a real bar over real numbers, not a vibe. Hidden at the top
+          of the ladder, where "N to next" stops being true. */}
+      {standing.next && (
+        <div className="mt-3 border-t border-border pt-3">
+          <div className="flex items-baseline justify-between gap-2 text-[11px] font-semibold">
+            <span className="uppercase tracking-wide text-muted-foreground">
+              Next rank · {standing.next.name}
+            </span>
+            <span className="text-accent tabular-nums" data-testid="forge-to-next">
+              {standing.toNext} {standing.toNext === 1 ? 'workout' : 'workouts'} away
+            </span>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#b8862c] via-[#e4b84d] to-[#f6d883] transition-[width] duration-500"
+              style={{ width: `${Math.round(standing.progress * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

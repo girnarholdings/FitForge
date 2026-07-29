@@ -459,6 +459,32 @@ body {
   animation: ff-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) var(--ff-delay, 0ms) 1 both;
 }
 
+/* One-shot spark popping off the tab you just landed on. Mounted fresh per tab change (keyed on
+   the active index), ends at opacity 0, so under the reduced-motion collapse below it simply
+   never paints — nothing can park half-played. */
+@keyframes ff-tab-spark {
+  0% {
+    transform: scale(0.2) rotate(-30deg);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.25) rotate(8deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.95) rotate(20deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.4) rotate(38deg);
+    opacity: 0;
+  }
+}
+.ff-tab-spark {
+  animation: ff-tab-spark 620ms cubic-bezier(0.22, 1, 0.36, 1) 1 both;
+  will-change: transform, opacity;
+}
+
 /* Blocked-action headshake — a full list refusing a sixth pick. Gated in JS as well
    (usePrefersReducedMotion), like every other ff-* class applied from a component. */
 @keyframes ff-shake {

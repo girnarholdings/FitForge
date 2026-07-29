@@ -25,6 +25,7 @@ import {
   AnvilSolidIcon,
   BarbellIcon,
   BarbellSolidIcon,
+  GoldIconDefs,
   KettlebellIcon,
   KettlebellSolidIcon,
   PlateChartIcon,
@@ -34,6 +35,7 @@ import {
   SettingsIcon,
   CoachIcon,
   type IconProps,
+  type SolidIconProps,
 } from '@/components/ui/icons';
 import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import { Sheet } from '@/components/ui';
@@ -51,10 +53,11 @@ interface NavItem {
   label: string;
   Icon: (p: IconProps) => React.ReactElement;
   /**
-   * The FILLED twin of `Icon`, rendered while this destination is the current one. Primary tabs
-   * all carry one; Coach and Settings do not (see {@link NavIcon}).
+   * The FILLED twin of `Icon`, rendered while this destination is the current one — in FORGED
+   * GOLD (the shared `ff-gold-icon` gradient), not flat accent, so the active tab reads as the
+   * brand's metal. Primary tabs all carry one; Coach and Settings do not (see {@link NavIcon}).
    */
-  IconSolid?: (p: IconProps) => React.ReactElement;
+  IconSolid?: (p: SolidIconProps) => React.ReactElement;
   /** also treat these path prefixes as "active" for this tab */
   match: string[];
   primary: boolean;
@@ -147,7 +150,12 @@ const NAV: NavItem[] = [
 
 /** The mobile bar's items, in order. Derived from NAV so the bar and the sidebar cannot drift. */
 const PRIMARY_NAV = NAV.filter((i) => i.primary);
-const TAB_ITEMS: TabItem[] = PRIMARY_NAV.map(({ href, label, Icon }) => ({ href, label, Icon }));
+const TAB_ITEMS: TabItem[] = PRIMARY_NAV.map(({ href, label, Icon, IconSolid }) => ({
+  href,
+  label,
+  Icon,
+  IconSolid,
+}));
 
 const SETTINGS_ITEM = NAV.find((i) => i.href === '/settings')!;
 const COACH_ITEM = NAV.find((i) => i.href === '/coach')!;
@@ -224,7 +232,7 @@ function NavIcon({
           transition={SPRING.press}
           className="absolute inset-0 grid place-items-center"
         >
-          {showSolid ? <Solid size={size} /> : <item.Icon size={size} />}
+          {showSolid ? <Solid size={size} gold /> : <item.Icon size={size} />}
         </m.span>
       </AnimatePresence>
     </span>
@@ -269,6 +277,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen min-h-[100svh] md:flex">
+      {/* The forged-gold paint server every active solid icon (sidebar + tab bar) references. */}
+      <GoldIconDefs />
       {/* Sidebar (≥md) */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-surface md:flex md:flex-col">
         <div className="flex items-center justify-between px-5 py-5">

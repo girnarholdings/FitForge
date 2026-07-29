@@ -97,6 +97,8 @@ export function BrandBadge({ size = 28 }: { size?: number }) {
     <span
       aria-hidden
       style={{
+        position: 'relative',
+        overflow: 'hidden',
         display: 'grid',
         placeItems: 'center',
         width: size,
@@ -111,6 +113,22 @@ export function BrandBadge({ size = 28 }: { size?: number }) {
       <span style={{ display: 'grid' }}>
         <LogoMark size={size * 0.72} aria-hidden />
       </span>
+      {/* One glint across the plate on mount — freshly-struck metal, once, then still. The
+          ff-shimmer keyframe ends at opacity 0 and fill-mode holds it there, so this costs one
+          paint on app open and nothing after (and nothing at all under reduced motion). */}
+      <span
+        className="ff-shimmer"
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: '55%',
+          pointerEvents: 'none',
+          background:
+            'linear-gradient(105deg, transparent 0%, rgba(246, 216, 131, 0.35) 50%, transparent 100%)',
+        }}
+      />
     </span>
   );
 }

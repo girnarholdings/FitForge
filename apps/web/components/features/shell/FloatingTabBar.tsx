@@ -22,12 +22,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { IconProps } from '@/components/ui/icons';
+import { SparkIcon, type IconProps, type SolidIconProps } from '@/components/ui/icons';
 
 export interface TabItem {
   href: string;
   label: string;
   Icon: (p: IconProps) => React.ReactElement;
+  /** Filled twin, rendered in forged gold while the tab is current (see AppShell's NAV). */
+  IconSolid?: (p: SolidIconProps) => React.ReactElement;
 }
 
 /** Hold this long before the bar switches from "tapping" to "scrubbing". */
@@ -165,9 +167,11 @@ export function FloatingTabBar({
               </span>
               <span
                 aria-hidden
-                className="absolute -right-0.5 -top-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-accent text-[8px] font-bold text-accent-foreground shadow-[0_0_0_2px_var(--surface)]"
+                className="absolute -right-0.5 -top-0.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-accent text-accent-foreground shadow-[0_0_0_2px_var(--surface)]"
               >
-                ✦
+                {/* The house 4-point spark, not a font glyph — ✦ rendered at 8px in whatever
+                    fallback font the OS picks, which on Android was a smudge. */}
+                <SparkIcon size={8} />
               </span>
             </Link>
           </div>
@@ -204,6 +208,7 @@ export function FloatingTabBar({
           {items.map((item, i) => {
             const active = i === activeIndex;
             const highlighted = scrubbing ? preview === i : active;
+            const Solid = item.IconSolid;
             return (
               <li key={item.href} className="min-w-0 flex-1">
                 <Link
@@ -219,15 +224,33 @@ export function FloatingTabBar({
                     highlighted ? 'text-accent' : 'text-muted-foreground',
                   )}
                 >
+                  {/* THE ACTIVE TAB IS FORGED. Outline glyphs everywhere except where you ARE:
+                      there the filled twin renders in the molten-gold gradient, the pill grows a
+                      hairline gold ring and lifts a pixel, and a 4-point spark pops off its
+                      shoulder (one-shot, keyed on the tab index — see .ff-tab-spark). Colour,
+                      shape, elevation and a moment of motion all carry the state now; the old
+                      bar carried colour alone and read as a template. */}
                   <span
                     className={cn(
-                      'grid h-8 w-12 place-items-center rounded-chip transition-[background-color,transform] duration-150',
+                      'relative grid h-8 w-12 place-items-center rounded-chip transition-[background-color,transform,box-shadow] duration-150',
                       'group-active:scale-90',
-                      highlighted ? 'bg-accent-muted' : 'bg-transparent',
+                      highlighted
+                        ? 'bg-accent-muted shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_45%,transparent)] ' +
+                          '-translate-y-px'
+                        : 'bg-transparent',
                       scrubbing && preview === i && 'scale-110',
                     )}
                   >
-                    <item.Icon size={21} />
+                    {active && Solid ? <Solid size={21} gold /> : <item.Icon size={21} />}
+                    {active && (
+                      <span
+                        key={`spark-${activeIndex}`}
+                        aria-hidden
+                        className="ff-tab-spark pointer-events-none absolute -right-1 -top-1.5 text-accent"
+                      >
+                        <SparkIcon size={11} />
+                      </span>
+                    )}
                   </span>
                   <span className="max-w-full truncate">{item.label}</span>
                 </Link>

@@ -49,5 +49,10 @@ test.describe('workout', () => {
     // Session summary.
     await expect(page.getByRole('heading', { name: 'Workout complete' })).toBeVisible();
     await expect(page.getByText('sets logged')).toBeVisible();
+
+    // The ladder advanced: this seeded user's first finished session is strike #1, still Spark
+    // (Apprentice needs 3). The chip is the same count Today's rank crest reads, so the two
+    // surfaces can never tell different stories.
+    await expect(page.getByTestId('summary-strike')).toContainText('Strike #1 · Spark');
   });
 });

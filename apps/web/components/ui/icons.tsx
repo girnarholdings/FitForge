@@ -651,6 +651,19 @@ export const CoachIcon = (p: IconProps) => (
 );
 
 
+/**
+ * Sledgehammer — the SMITH-RANK crest. The coach's hammer (see {@link CoachIcon}) drawn alone:
+ * every finished session is a STRIKE on the anvil, and the rank ladder counts strikes. Two
+ * elements only — diagonal handle, wide head — so it stays legible at the 13–16px chip sizes the
+ * rank UI actually uses.
+ */
+export const HammerIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m4 20 9.2-9.2" />
+    <path d="m12.2 7.8 4-4 4.2 4.2-4 4Z" />
+  </Svg>
+);
+
 /** Protein shaker — the Nutrition tab. The one gym object that is genuinely about food. */
 export const ShakerIcon = (p: IconProps) => (
   <Svg {...p}>
@@ -697,6 +710,31 @@ export const ChevronUpIcon = (p: IconProps) => (
   </Svg>
 );
 
+/* ═══════════════════════════════════════════════════════ the FORGED-GOLD fill (defs) ══
+ *
+ * One shared `<linearGradient>` so an active icon can be MOLTEN GOLD — the brand's actual metal,
+ * with a light edge and a bronze shadow — instead of a flat accent fill. SVG paint servers resolve
+ * by document id, so this renders ONCE (AppShell mounts it) and every `fill="url(#ff-gold-icon)"`
+ * in the same document picks it up. The svg is 0×0 and aria-hidden: it is paint, not content.
+ */
+export function GoldIconDefs() {
+  return (
+    <svg width="0" height="0" aria-hidden focusable="false" style={{ position: 'absolute' }}>
+      <defs>
+        <linearGradient id="ff-gold-icon" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f6d883" />
+          <stop offset="0.45" stopColor="#e4b84d" />
+          <stop offset="1" stopColor="#b8862c" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+/** Solid icons take `gold` to swap flat `currentColor` for the forged-gold gradient fill. */
+export type SolidIconProps = IconProps & { gold?: boolean };
+const solidFill = (gold?: boolean) => (gold ? 'url(#ff-gold-icon)' : 'currentColor');
+
 /* ════════════════════════════════════════════════════════ the SOLID pair-family (24×24) ══
  *
  * WHY THESE EXIST. The five primary tabs used to signal "you are here" with COLOUR ALONE — the
@@ -721,13 +759,13 @@ export const ChevronUpIcon = (p: IconProps) => (
  */
 
 /** Filled dumbbell — for solid/active states where a stroke glyph would disappear against a fill. */
-export const DumbbellSolidIcon = ({ size = 24, ...p }: IconProps) => (
+export const DumbbellSolidIcon = ({ size = 24, gold, ...p }: SolidIconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="currentColor"
+    fill={solidFill(gold)}
     aria-hidden="true"
     {...p}
   >
@@ -745,13 +783,13 @@ export const DumbbellSolidIcon = ({ size = 24, ...p }: IconProps) => (
  * three shapes at 22 px. The horn is still the only cue that separates an anvil from a block, so
  * it keeps its full length even though the fill makes everything else heavier.
  */
-export const AnvilSolidIcon = ({ size = 24, ...p }: IconProps) => (
+export const AnvilSolidIcon = ({ size = 24, gold, ...p }: SolidIconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="currentColor"
+    fill={solidFill(gold)}
     aria-hidden="true"
     {...p}
   >
@@ -765,13 +803,13 @@ export const AnvilSolidIcon = ({ size = 24, ...p }: IconProps) => (
  * which survives at 22 px, and they show the accent-muted pill through rather than a knockout.
  * The outline's knurling ticks are dropped — at this weight they would only muddy the bar.
  */
-export const BarbellSolidIcon = ({ size = 24, ...p }: IconProps) => (
+export const BarbellSolidIcon = ({ size = 24, gold, ...p }: SolidIconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="currentColor"
+    fill={solidFill(gold)}
     aria-hidden="true"
     {...p}
   >
@@ -793,13 +831,13 @@ export const BarbellSolidIcon = ({ size = 24, ...p }: IconProps) => (
  * through. Painting that window with a background-coloured shape instead would render an
  * accent-muted bar on an accent-muted pill: invisible, and the glyph blobs.
  */
-export const KettlebellSolidIcon = ({ size = 24, ...p }: IconProps) => (
+export const KettlebellSolidIcon = ({ size = 24, gold, ...p }: SolidIconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="currentColor"
+    fill={solidFill(gold)}
     aria-hidden="true"
     {...p}
   >
@@ -817,13 +855,13 @@ export const KettlebellSolidIcon = ({ size = 24, ...p }: IconProps) => (
  * rounded slab. A `stroke="var(--color-surface)"` divider would have been invisible on the
  * accent-muted active pill, which is the one background this icon is guaranteed to sit on.
  */
-export const ShakerSolidIcon = ({ size = 24, ...p }: IconProps) => (
+export const ShakerSolidIcon = ({ size = 24, gold, ...p }: SolidIconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="currentColor"
+    fill={solidFill(gold)}
     aria-hidden="true"
     {...p}
   >
@@ -838,13 +876,13 @@ export const ShakerSolidIcon = ({ size = 24, ...p }: IconProps) => (
  * plain bar chart: the plates are drawn as full STADIUMS (`rx` = half the width), which is the
  * rounded rim of a plate stood on its edge and is not a shape any bar chart uses.
  */
-export const PlateChartSolidIcon = ({ size = 24, ...p }: IconProps) => (
+export const PlateChartSolidIcon = ({ size = 24, gold, ...p }: SolidIconProps) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={size}
     height={size}
     viewBox="0 0 24 24"
-    fill="currentColor"
+    fill={solidFill(gold)}
     aria-hidden="true"
     {...p}
   >
