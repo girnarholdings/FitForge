@@ -181,7 +181,7 @@ export function MembersModelHint() {
   return (
     <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground" data-testid="members-hint">
       <SparkIcon size={11} className="text-accent" />
-      Sign in for FitForge&apos;s faster model
+      Sign in for a faster model
     </span>
   );
 }

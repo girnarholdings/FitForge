@@ -220,6 +220,46 @@ interface GenOpts {
   maxTokens: number;
 }
 
+/** One prior exchange, replayed so a follow-up question can mean what it says. */
+export interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/** Hard caps on replayed context — the models here are small and a long tail degrades them. */
+const MAX_HISTORY_MESSAGES = 6;
+const MAX_HISTORY_CHARS = 700;
+
+/**
+ * Sanitise client-supplied history.
+ *
+ * It arrives from the browser, so it is input, not memory: roles are whitelisted, content is
+ * clamped, and only the most recent exchanges survive. The clamp is not only about abuse — a free
+ * instruct model given four long turns of its own prose starts answering the history instead of
+ * the question.
+ */
+function normalizeHistory(raw: unknown): HistoryMessage[] {
+  if (!Array.isArray(raw)) return [];
+  const out: HistoryMessage[] = [];
+  for (const m of raw.slice(-MAX_HISTORY_MESSAGES)) {
+    const msg = m as { role?: unknown; content?: unknown };
+    if (msg?.role !== 'user' && msg?.role !== 'assistant') continue;
+    if (typeof msg.content !== 'string') continue;
+    const content = msg.content.trim().slice(0, MAX_HISTORY_CHARS);
+    if (content) out.push({ role: msg.role, content });
+  }
+  return out;
+}
+
+/** The messages array: system, the conversation so far, then what was just asked. */
+function messagesFor(system: string, user: string, history: HistoryMessage[]) {
+  return [
+    { role: 'system' as const, content: system },
+    ...history,
+    { role: 'user' as const, content: user },
+  ];
+}
+
 /**
  * Run the chain. Returns the answer together with the model that actually produced it, so the
  * response and the health check report reality rather than the first name in the list.
@@ -231,6 +271,7 @@ async function askWorkersAI(
   opts: GenOpts,
   /** A catalog-validated model to try FIRST; the normal chain still backs it up. */
   first?: string,
+  history: HistoryMessage[] = [],
 ): Promise<
   { ok: true; answer: string; model: string } | { ok: false; status: number; detail: string }
 > {
@@ -239,10 +280,7 @@ async function askWorkersAI(
   for (const model of chain) {
     try {
       const result = (await env.AI!.run(model, {
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
+        messages: messagesFor(system, user, history),
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
       })) as { response?: unknown };
@@ -302,6 +340,7 @@ async function askMistral(
   system: string,
   user: string,
   opts: GenOpts,
+  history: HistoryMessage[] = [],
 ): Promise<{ ok: true; answer: string } | { ok: false; status: number; detail: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20_000);
@@ -314,10 +353,7 @@ async function askMistral(
       },
       body: JSON.stringify({
         model: modelFor(env),
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
+        messages: messagesFor(system, user, history),
         max_tokens: opts.maxTokens,
         temperature: opts.temperature,
       }),
@@ -371,6 +407,8 @@ async function generateOnce(
   preferred?: ModelChoice,
   /** A verified Firebase user, or false. Decides whether Mistral is on the table AT ALL. */
   signedIn = false,
+  /** The conversation so far, already sanitised, so a follow-up can refer to what was said. */
+  history: HistoryMessage[] = [],
 ): Promise<
   | { ok: true; answer: string; provider: 'mistral' | 'workers-ai'; model: string }
   | { ok: false; status: number; detail: string }
@@ -397,10 +435,10 @@ async function generateOnce(
   const forceWorkersAi = (preferred?.provider === 'workers-ai' || !mayUseMistral) && !!env.AI;
 
   if (provider === 'mistral' && !forceWorkersAi) {
-    const r = await askMistral(env, system, user, opts);
+    const r = await askMistral(env, system, user, opts, history);
     if (r.ok) return { ok: true, answer: r.answer, provider: 'mistral', model: modelFor(env) };
     if (env.AI) {
-      const fallback = await askWorkersAI(env, system, user, opts);
+      const fallback = await askWorkersAI(env, system, user, opts, undefined, history);
       if (fallback.ok)
         return { ok: true, answer: fallback.answer, provider: 'workers-ai', model: fallback.model };
       return {
@@ -415,7 +453,7 @@ async function generateOnce(
   // Only an explicit workers-ai PICK names a first model. `forceWorkersAi` is also true for every
   // signed-out request, where there is no pick at all — reading `preferred.id` off that path threw.
   const firstModel = preferred?.provider === 'workers-ai' ? preferred.id : undefined;
-  const r = await askWorkersAI(env, system, user, opts, firstModel);
+  const r = await askWorkersAI(env, system, user, opts, firstModel, history);
   if (!r.ok) return r;
   return { ok: true, answer: r.answer, provider: 'workers-ai', model: r.model };
 }
@@ -430,6 +468,11 @@ interface ChatRequest {
   model?: string;
   /** Firebase ID token, when the user is signed in. Verified here; absence just means "guest". */
   idToken?: string;
+  /**
+   * The conversation so far, oldest first, so "why?" and "what about dumbbells?" mean something.
+   * The client trims it and drops it on a topic change; this worker clamps it again regardless.
+   */
+  history?: { role?: string; content?: string }[];
   /** Retrieved KB entries the client already matched (top ~3), used as grounding. */
   snippets?: { question: string; answer: string }[];
   /** The user's onboarding-derived context. Never contains identifying data beyond a name. */
@@ -580,7 +623,7 @@ function clamp(s: string, n: number): string {
 }
 
 /** Build the system prompt. Slots with no value are omitted rather than left blank. */
-function buildSystemPrompt(req: ChatRequest, intent: Intent): string {
+function buildSystemPrompt(req: ChatRequest, intent: Intent, hasHistory = false): string {
   const p = req.profile ?? {};
   const profileLines: string[] = [];
   if (p.goal) profileLines.push(`- Goal: ${p.goal}`);
@@ -631,6 +674,17 @@ function buildSystemPrompt(req: ChatRequest, intent: Intent): string {
       '- No headings, no tables, no links, no emojis, no code blocks, no greetings, no sign-offs, no repeating the question back.\n' +
       '- Put every number, weight and exercise name in **bold**.\n' +
       '- Hard cap: 110 words.',
+    // CONVERSATION RULES, only when there is a conversation. Free instruct models are strongly
+    // biased toward answering the LAST thing they see, which is why an unqualified "why?" used to
+    // come back as a fresh lecture. Two failure modes are worth naming explicitly: losing the
+    // thread on a follow-up, and dragging the old topic into a genuinely new question. The client
+    // already drops history when it detects a change of subject; this is the second line.
+    hasHistory
+      ? 'CONVERSATION\n' +
+        '- The messages above are this same conversation. A short question ("why?", "how much?", "what about dumbbells?") is a FOLLOW-UP: resolve what "it"/"that" refers to from the exchange above and answer THAT, without restating what you already said.\n' +
+        '- If the new question is clearly a different subject, answer it on its own and ignore the earlier turns.\n' +
+        '- Never contradict a number you gave earlier unless the REFERENCE NOTES say otherwise; if you are correcting yourself, say so in three words.'
+      : '',
     `FOCUS\n${t.focus}`,
     `ANSWER SHAPE (follow it exactly)\n${t.shape}`,
     'SAFETY\n' +
@@ -977,7 +1031,8 @@ export default {
     if (!question) return json({ error: 'missing_question' }, 400, cors);
 
     const intent = classifyIntent(question, body.intent);
-    const system = buildSystemPrompt(body, intent);
+    const history = normalizeHistory(body.history);
+    const system = buildSystemPrompt(body, intent, history.length > 0);
 
     try {
       const r = await generateOnce(
@@ -990,6 +1045,7 @@ export default {
         },
         preferred,
         signedIn,
+        history,
       );
       if (!r.ok) return json({ error: 'ai_unavailable', detail: r.detail }, r.status, cors);
 

@@ -116,7 +116,7 @@ export function ModelPicker({
         onChange={(e) => setPreferredModel(e.target.value || null)}
         data-testid={testId}
         aria-label="AI model"
-        className="h-8 min-w-0 max-w-[13rem] cursor-pointer truncate rounded-chip border border-border bg-surface-2 px-2 text-[11px] font-semibold text-foreground outline-none transition-colors hover:border-border-strong focus-visible:border-accent"
+        className="h-8 min-w-0 max-w-[11rem] flex-1 cursor-pointer truncate rounded-chip border border-border bg-surface-2 px-1.5 text-[11px] font-semibold text-foreground outline-none transition-colors hover:border-border-strong focus-visible:border-accent"
       >
         {/* Auto is first and is the recommendation: it lets the worker apply its own policy,
             which is the only setting that stays correct when a model is retired. */}

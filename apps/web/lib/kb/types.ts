@@ -112,6 +112,11 @@ export interface CoachSnippet {
   answer: string;
 }
 
+export interface CoachHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface CoachRequest {
   question: string;
   snippets: CoachSnippet[];
@@ -121,6 +126,12 @@ export interface CoachRequest {
    * client genuinely knows (which button was pressed) — and classifies everything else itself.
    */
   intent?: 'personalize' | 'meal';
+  /**
+   * The conversation so far, oldest first — so "why?" and "what about dumbbells?" resolve against
+   * what was actually said. Omitted when `lib/coach/history` judges the subject to have changed;
+   * the worker clamps and re-validates it regardless.
+   */
+  history?: CoachHistoryMessage[];
 }
 
 /** Never throws to the caller — every failure mode is a value. */

@@ -34,6 +34,7 @@ import {
   CoachIcon,
 } from '@/components/ui/icons';
 import { KB_ENTRIES, entryById, routeQuery, searchKb } from '@/lib/kb';
+import { buildHistory } from '@/lib/coach/history';
 import type { KbRoutePlus } from '@/lib/kb/route';
 import {
   askCoach,
@@ -69,6 +70,15 @@ interface Turn {
   route: KbRoutePlus | null;
   ai: AiState;
   facts: string[];
+  /**
+   * THE AI IS THE ANSWER, not a footnote to one.
+   *
+   * With a Coach service configured, a curated entry is grounding for the model — not a second
+   * answer to read first. When this is set the guide answer stays hidden while the model is
+   * working and is revealed only if the model fails, which is exactly the fallback it was always
+   * meant to be. On an unconfigured build it is never set, so that behaviour is unchanged.
+   */
+  aiPrimary: boolean;
 }
 
 /** Total curated entries — read from the shipped KB so the copy can never drift from the data. */
@@ -198,6 +208,16 @@ export function CoachView() {
     setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ai } : t)));
   }, []);
 
+  /**
+   * The thread as the model should see it. Read from a ref rather than state so a question asked
+   * while a previous answer is still arriving still sees the finished turns — and so `runAi` does
+   * not have to be re-created on every keystroke of the conversation.
+   */
+  const turnsRef = React.useRef<Turn[]>([]);
+  React.useEffect(() => {
+    turnsRef.current = turns;
+  }, [turns]);
+
   const runAi = React.useCallback(
     async (
       turnId: string,
@@ -208,8 +228,22 @@ export function CoachView() {
     ) => {
       const controller = new AbortController();
       abortRef.current = controller;
+      // What was actually SAID so far — the model's own answers where it gave one, the curated
+      // text where the guide answered. Anything still pending contributes nothing.
+      const history = buildHistory(
+        turnsRef.current
+          .filter((t) => t.id !== turnId)
+          .map((t) => ({
+            question: t.question,
+            answer:
+              t.ai.kind === 'answer'
+                ? t.ai.text
+                : (t.route?.top?.entry.answer ?? null),
+          })),
+        question,
+      );
       const result = await askCoach(
-        { question, snippets: snippetsFromHits(route.hits), profile: p, intent },
+        { question, snippets: snippetsFromHits(route.hits), profile: p, intent, history },
         controller.signal,
       );
       if (controller.signal.aborted) return;
@@ -239,7 +273,7 @@ export function CoachView() {
   );
 
   const pushTurn = React.useCallback(
-    (question: string, route: KbRoutePlus, wantsAi: boolean): string => {
+    (question: string, route: KbRoutePlus, wantsAi: boolean, aiPrimary = false): string => {
       turnSeq += 1;
       const id = `turn-${turnSeq}`;
       const facts = profileFacts(profile);
@@ -254,7 +288,7 @@ export function CoachView() {
                 'This question is specific to you, which the curated guide cannot know. A personalized answer needs the FitForge Coach service configured (NEXT_PUBLIC_AI_ENDPOINT); this build has none, so nothing was sent anywhere. The closest guide entries are below.',
             };
 
-      setTurns((prev) => [...prev, { id, question, route, ai, facts }]);
+      setTurns((prev) => [...prev, { id, question, route, ai, facts, aiPrimary }]);
       setMode('ask');
       if (wantsAi && configured) void runAi(id, question, route, profile);
       return id;
@@ -276,7 +310,14 @@ export function CoachView() {
         turnSeq += 1;
         setTurns((prev) => [
           ...prev,
-          { id: `turn-${turnSeq}`, question: q, route: null, ai: { kind: 'meal' }, facts: [] },
+          {
+            id: `turn-${turnSeq}`,
+            question: q,
+            route: null,
+            ai: { kind: 'meal' },
+            facts: [],
+            aiPrimary: false,
+          },
         ]);
         setMode('ask');
         return;
@@ -292,12 +333,21 @@ export function CoachView() {
       // service" card, which asserts the question was personal when nothing established that.
       const noTrustworthyMatch = route.guard !== null || route.top === null;
       const wantsAi = route.mode === 'ai' && !route.safety && (configured || !noTrustworthyMatch);
-      const id = pushTurn(q, route, wantsAi);
 
-      // The default-on follow-up: a confident guide answer gets an AI personalization pass
-      // automatically. Never on safety turns, never when the AI path is already running, and
-      // never on an unconfigured build — those keep today's exact behaviour.
-      if (!wantsAi && configured && autoPersonalize && route.mode === 'answer' && !route.safety) {
+      /**
+       * AI MODE ANSWERS; THE GUIDE BACKS IT UP.
+       *
+       * Previously a confident curated entry was rendered immediately and the model's answer
+       * appeared underneath it as a "personalized" extra — so with AI on you read a generic answer
+       * first and the real one second. When the service is configured and auto-personalize is on,
+       * the model's answer IS the response: the curated text still travels as grounding, and it is
+       * revealed only if the call fails. Safety turns are exempt, always.
+       */
+      const aiFirst =
+        configured && autoPersonalize && route.mode === 'answer' && !route.safety;
+      const id = pushTurn(q, route, wantsAi, aiFirst);
+
+      if (!wantsAi && aiFirst) {
         patchTurn(id, { kind: 'pending' });
         void runAi(id, q, route, profile, 'personalize');
       }
@@ -335,24 +385,29 @@ export function CoachView() {
     <div
       data-testid="coach-view"
       className={
-        'space-y-4' +
-        (mode === 'ask' ? ' md:flex md:h-[calc(100svh-4.5rem)] md:min-h-0 md:flex-col' : '')
+        (mode === 'ask' ? 'space-y-2.5' : 'space-y-4') +
+        (mode === 'ask' ? ' md:flex md:h-[calc(100svh-4.5rem)] md:min-h-0 md:flex-col md:gap-2.5' : '')
       }
     >
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-display text-display font-bold text-foreground">Coach</h1>
-          <p className="text-sm text-muted-foreground">
-            {ENTRY_COUNT} curated answers, offline. Ask anything or browse the guide.
-          </p>
-        </div>
+      {/* THE CHROME ABOVE THE THREAD IS A BUDGET, and it was overdrawn: a display-size heading, a
+          full-sentence subtitle, the mode switch and an AI bar that wrapped onto three lines left
+          barely any room for an answer on a 390 × 664 screen — the content the screen exists for
+          started below the fold. Everything here is one step smaller and the AI bar is one row.
+          `space-y-4` on the root also drops to `space-y-2.5` in ask mode for the same reason. */}
+      <header className="flex items-baseline justify-between gap-3">
+        <h1 className="font-display text-title font-bold leading-none text-foreground md:text-display">
+          Coach
+        </h1>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {ENTRY_COUNT} answers offline
+        </p>
       </header>
 
       {/* Mode switch */}
       <div
         role="tablist"
         aria-label="Coach mode"
-        className="grid grid-cols-2 gap-1 rounded-field bg-muted p-1"
+        className="grid grid-cols-2 gap-1 rounded-field bg-muted p-0.5"
       >
         <TabButton
           active={mode === 'ask'}
@@ -371,10 +426,13 @@ export function CoachView() {
       </div>
 
       {configured && (
-        <div className="flex flex-wrap items-center justify-between gap-2" data-testid="coach-ai-bar">
+        <div
+          className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px]"
+          data-testid="coach-ai-bar"
+        >
           <span
             data-testid="coach-ai-status"
-            className="inline-flex items-center gap-1.5 rounded-chip border border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-accent-muted px-2.5 py-1 text-[11px] font-semibold text-accent"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-chip border border-[color-mix(in_srgb,var(--accent)_40%,transparent)] bg-accent-muted px-2 py-0.5 text-[10px] font-semibold text-accent"
           >
             <span aria-hidden className="relative flex h-1.5 w-1.5">
               {status?.online && (
@@ -393,27 +451,27 @@ export function CoachView() {
                 ? // With the picker on screen the chip stops repeating the model name — the
                   // select IS the model name now, and two copies drift the moment one updates.
                   status.models?.length
-                  ? 'AI coach online'
-                  : `AI coach online · ${(status.model ?? '').split('/').pop() || 'ready'}`
-                : 'AI unreachable — guide still answers'}
+                  ? 'AI online'
+                  : `AI online · ${(status.model ?? '').split('/').pop() || 'ready'}`
+                : 'AI offline — guide answers'}
           </span>
           {/* THE MODEL PICKER — the shared control (see ModelPicker.tsx). It renders nothing
               until the worker advertises a catalog, and the SAME preference drives the nutrition
               macro estimator, so a model chosen here is the model that estimates a burrito. */}
-          <div className="flex min-w-0 items-center gap-2">
-            <ModelPicker label={null} testId="coach-model-select" />
-            {/* Only when a members-only model exists and this visitor cannot reach it. */}
-            {hasLockedModels && <MembersModelHint />}
-          </div>
+          <ModelPicker label={null} testId="coach-model-select" className="min-w-0 flex-1" />
+          {/* `ml-auto` rather than justify-between: with three items on one row, pinning only the
+              last one right keeps the status chip and the picker together on the left instead of
+              spreading them across the width. */}
           <button
             type="button"
             role="switch"
             aria-checked={autoPersonalize}
             data-testid="coach-auto-toggle"
             onClick={toggleAuto}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-chip px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            title="Rewrite guide answers around your profile"
+            className="ml-auto inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-chip px-1.5 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
-            Auto-personalize
+            Auto
             <span
               aria-hidden
               className={
@@ -429,6 +487,14 @@ export function CoachView() {
               />
             </span>
           </button>
+          {/* Wraps to its own line when there is no room, which is the right place for it: it is
+              an invitation, not a control. Only when a members-only model exists and this visitor
+              cannot reach it. */}
+          {hasLockedModels && (
+            <div className="basis-full">
+              <MembersModelHint />
+            </div>
+          )}
         </div>
       )}
 
@@ -466,7 +532,12 @@ export function CoachView() {
               e.preventDefault();
               ask(input);
             }}
-            className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 pt-3 md:static md:pb-0"
+            /* OPAQUE, and it has to be. The composer pill is opaque but the strip around it —
+               the gap above and the disclaimer below — was not, so thread content scrolling past
+               rendered THROUGH the safety disclaimer: two texts on top of each other, one of them
+               the medical one. `-mx-4 px-4` bleeds the fill to the screen edges past <main>'s
+               padding, so nothing shows around the sides either. */
+            className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 -mx-4 bg-surface px-4 pt-3 md:static md:pb-0"
           >
             {/* ONE BORDERED CONTROL, not a field sitting next to a button.
                 The composer used to be a hairline box on a same-tone surface, and on a phone in
@@ -679,9 +750,18 @@ function TurnBlock({
   const top = route.top;
   const safety = route.safety;
   const isAiPath = route.mode === 'ai';
-  // The curated answer stays on screen for every path except "the AI already replaced it" — and
-  // never at all on the safety path, where a curated entry as the primary response IS the defect.
-  const showKb = !safety && Boolean(top) && route.mode !== 'disambiguate' && ai.kind !== 'answer';
+  /**
+   * The curated answer stays on screen for every path except "the AI already replaced it" — and
+   * never at all on the safety path, where a curated entry as the primary response IS the defect.
+   *
+   * ON AN AI-PRIMARY TURN it is also held back WHILE the model works. It used to render straight
+   * away as an interim card, which meant that with AI enabled you read a generic answer first and
+   * the real one a second later — the guide leading, the coach trailing. Here it is what it was
+   * always described as: the fallback, shown if the call fails.
+   */
+  const kbHeldForAi = turn.aiPrimary && (ai.kind === 'pending' || ai.kind === 'answer');
+  const showKb =
+    !safety && Boolean(top) && route.mode !== 'disambiguate' && ai.kind !== 'answer' && !kbHeldForAi;
 
   // Pain / injury / medical: one card, and nothing else can outrank it.
   if (safety) {

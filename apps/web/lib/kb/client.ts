@@ -223,6 +223,7 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
         snippets: req.snippets.slice(0, MAX_SNIPPETS),
         profile: req.profile,
         ...(req.intent ? { intent: req.intent } : {}),
+        ...(req.history?.length ? { history: req.history } : {}),
         ...(getPreferredModel() ? { model: getPreferredModel() } : {}),
         ...(idToken ? { idToken } : {}),
       }),
