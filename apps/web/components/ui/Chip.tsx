@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { CheckIcon } from './icons';
 
 export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   selected?: boolean;
@@ -16,14 +17,18 @@ export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
  * A capsule toggle. Selectable equipment / allergen / weekday / suggestion chip (§2.2).
  * Renders as a button with `aria-pressed` so it is accessible as a toggle.
  *
- * SELECTED CHIPS GET A COLLAR MARKER: a short accent bar clamped onto the leading edge, the way a
- * collar sits on a sleeve. It is the most-used toggle in the app and it was carrying its state in
- * colour alone; a physical marker gives the eye something to scan a wrapped row of chips by.
+ * SELECTED CHIPS GET A CHECK, not a bar. The previous marker was a 3px accent line clamped to the
+ * leading edge — meant as a "collar", read by an actual user as "a straight line I can't tell the
+ * meaning of". A selection indicator that has to be explained has already failed; a check mark is
+ * the one glyph every human reads as "chosen" without being taught. It springs from zero width so
+ * toggling FEELS like the chip acknowledged you, and the CSS-only transition keeps this hot
+ * primitive free of the motion runtime.
  *
  * ANYTHING ADDED TO A CHIP MUST BE `aria-hidden` AND MUST NOT ADD A TEXT NODE. The settings and
  * equipment specs match `getByRole('button', { name: 'Barbell', exact: true })` — an exact
- * accessible name. A stray glyph or label here breaks them silently. Hit area, padding and text
- * are all unchanged; the marker is absolutely positioned inside the existing capsule.
+ * accessible name. A stray glyph or label here breaks them silently; an aria-hidden SVG
+ * contributes nothing to the name, which is what makes the check safe where a "✓" character
+ * would not be.
  */
 export function Chip({
   selected,
@@ -50,14 +55,16 @@ export function Chip({
       )}
       {...rest}
     >
-      {selected && (
-        <span
-          aria-hidden
-          // left-1.5 rather than hard against the edge: the capsule is `rounded-full`, so a marker
-          // flush left visually collides with the border's curve.
-          className="pointer-events-none absolute left-1.5 top-1/2 h-[55%] w-[3px] -translate-y-1/2 rounded-full bg-accent"
-        />
-      )}
+      {/* Always mounted so the width can TRANSITION; grid-with-0fr would be heavier than this. */}
+      <span
+        aria-hidden
+        className={cn(
+          'pointer-events-none -my-1 inline-flex shrink-0 items-center overflow-hidden transition-all duration-200 ease-out',
+          selected ? 'w-[15px] scale-100 opacity-100' : 'w-0 scale-50 opacity-0',
+        )}
+      >
+        <CheckIcon size={14} strokeWidth={3} />
+      </span>
       {leading && <span aria-hidden>{leading}</span>}
       {children}
       {removable && (

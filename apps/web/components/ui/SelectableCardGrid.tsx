@@ -89,11 +89,14 @@ export function SelectableCardGrid<V extends string>({
             <span
               aria-hidden
               className={cn(
-                'grid shrink-0 place-items-center rounded-full border transition-colors',
+                // The scale pop is the acknowledgement: an indicator that merely changes colour
+                // reads as "something happened somewhere"; one that physically arrives reads as
+                // "you did that".
+                'grid shrink-0 place-items-center rounded-full border transition-all duration-200 ease-out',
                 order && mode === 'multiple' ? 'h-6 w-6 text-[11px] font-bold' : 'h-5 w-5',
                 isSelected
-                  ? 'border-accent bg-accent text-accent-foreground'
-                  : 'border-border text-transparent',
+                  ? 'scale-100 border-accent bg-accent text-accent-foreground shadow-[0_0_8px_color-mix(in_srgb,var(--accent)_50%,transparent)]'
+                  : 'scale-75 border-border text-transparent',
               )}
             >
               {order && mode === 'multiple' ? (
@@ -101,7 +104,7 @@ export function SelectableCardGrid<V extends string>({
                   selectedList.indexOf(opt.value) + 1
                 ) : null
               ) : (
-                <CheckIcon size={13} />
+                <CheckIcon size={13} strokeWidth={2.5} />
               )}
             </span>
           </Card>

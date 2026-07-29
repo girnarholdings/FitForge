@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { computeNutritionTargets } from '@fitforge/shared/rules';
+import { m, SPRING } from '@/components/ui/motion';
 import { useOnboarding } from '../OnboardingProvider';
 import type { OnboardingDraft } from '../types';
 import { OnboardingFooter } from '../OnboardingFooter';
@@ -84,15 +85,28 @@ export function TargetsReviewStep() {
             Your daily target
           </p>
           <p className="mt-1 font-display text-4xl font-bold tabular-nums text-foreground">
-            <span className="text-gradient-gold">{draft.kcal_target ?? '—'}</span>{' '}
+            {/* Keyed on the value: the number physically arrives, and REARRIVES when edited —
+                the payoff moment of the whole questionnaire should not just be sitting there. */}
+            <m.span
+              key={draft.kcal_target ?? 'none'}
+              initial={{ opacity: 0, scale: 0.8, y: 6 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={SPRING}
+              className="inline-block text-gradient-gold"
+            >
+              {draft.kcal_target ?? '—'}
+            </m.span>{' '}
             <span className="text-lg font-semibold text-muted-foreground">kcal / day</span>
           </p>
           {method && <p className="mt-1 text-xs text-muted-foreground">{method}</p>}
           <div className="mt-4 flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full">
             {segments.map((s, i) => (
-              <div
+              <m.div
                 key={s.label}
-                style={{ width: `${(s.kcal / totalK) * 100}%`, backgroundColor: macroColors[i] }}
+                initial={{ width: 0 }}
+                animate={{ width: `${(s.kcal / totalK) * 100}%` }}
+                transition={{ ...SPRING, delay: 0.12 * i }}
+                style={{ backgroundColor: macroColors[i] }}
               />
             ))}
           </div>
