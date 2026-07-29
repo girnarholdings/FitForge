@@ -382,12 +382,37 @@ export function CoachView() {
     [aiEnabled, configured, pushTurn],
   );
 
-  /** Open a specific entry (disambiguation button, followup chip, source chip). No AI, no cost. */
+  /**
+   * Open a specific entry as CURATED READING — no AI, no cost. This is the right verb for the
+   * places that explicitly offer the guide: the reading list under a safety card, and the
+   * "closest answers" list shown when an AI call has already failed (sending those back to the
+   * model would loop a failure into another failure).
+   */
   const openEntry = React.useCallback(
     (entry: KbEntry) => {
       pushTurn(entry.question, directRoute(entry), false);
     },
     [pushTurn],
+  );
+
+  /**
+   * Follow a question the user tapped — a follow-up chip, a did-you-mean option, a source chip.
+   *
+   * THESE HONOUR THE AI SWITCH. They used to be hard-wired to the curated open above, which made
+   * the switch a lie: you asked in AI mode, got a model answer, tapped the follow-up it offered —
+   * and were quietly handed back to offline mode. A tapped question is still a question; with AI
+   * on it goes to the model like any typed one, with the tapped entry travelling as
+   * highest-confidence grounding. With AI off (or no service) it is the curated open it always was.
+   */
+  const followEntry = React.useCallback(
+    (entry: KbEntry) => {
+      if (aiEnabled && configured) {
+        pushTurn(entry.question, directRoute(entry), true, true, 'personalize');
+        return;
+      }
+      openEntry(entry);
+    },
+    [aiEnabled, configured, openEntry, pushTurn],
   );
 
   /** "Ask the coach about this" on a curated answer that is flagged as personalizable. */
@@ -540,7 +565,8 @@ export function CoachView() {
                 <TurnBlock
                   key={turn.id}
                   turn={turn}
-                  onOpenEntry={openEntry}
+                  onOpenEntry={followEntry}
+                  onOpenEntryDirect={openEntry}
                   onPersonalize={configured ? personalize : undefined}
                 />
               ))
@@ -752,10 +778,14 @@ function CoachTyping() {
 function TurnBlock({
   turn,
   onOpenEntry,
+  onOpenEntryDirect,
   onPersonalize,
 }: {
   turn: Turn;
+  /** a tapped QUESTION — follow-ups, did-you-mean, sources. Honours the AI switch. */
   onOpenEntry: (entry: KbEntry) => void;
+  /** curated READING — safety secondary reading, the after-failure list. Never calls the model. */
+  onOpenEntryDirect: (entry: KbEntry) => void;
   onPersonalize?: (turn: Turn) => void;
 }) {
   const { route, ai } = turn;
@@ -796,7 +826,7 @@ function TurnBlock({
         <SafetyCard
           flag={safety}
           entries={secondaryReading(safety.level, route.hits)}
-          onOpenEntry={onOpenEntry}
+          onOpenEntry={onOpenEntryDirect}
         />
       </div>
     );
@@ -872,6 +902,12 @@ function TurnBlock({
               facts={turn.facts}
               sources={hitEntries(route.hits)}
               onSource={onOpenEntry}
+              // The same "keep going" chips the curated card carries, drawn from the top grounded
+              // entry. They arrive through the AI-aware handler, so in AI mode a tapped follow-up
+              // is the next model turn — not a silent demotion to the offline guide, which is the
+              // bug this line exists to keep dead.
+              followups={top ? followupEntries(top.entry) : []}
+              onFollowup={onOpenEntry}
             />
           )}
 
@@ -889,7 +925,7 @@ function TurnBlock({
                       <li key={e.id}>
                         <button
                           type="button"
-                          onClick={() => onOpenEntry(e)}
+                          onClick={() => onOpenEntryDirect(e)}
                           data-testid="coach-closest-option"
                           className="w-full rounded-field border border-border bg-surface px-3.5 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
                         >

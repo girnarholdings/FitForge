@@ -13,6 +13,17 @@ import { ChevronRightIcon, CoachIcon } from '@/components/ui/icons';
 
 const PROMPTS = ['How much protein?', 'When do I add weight?', 'Why am I not losing fat?'];
 
+/**
+ * The env var read INLINE rather than via `lib/kb/client`, keeping this card dependency-free (the
+ * whole point of this file — see the header). Next inlines the value at build time either way.
+ *
+ * The copy must match what tapping through actually delivers: with a Coach service configured the
+ * product is an AI trainer grounded in the guide, and "curated answers, instantly and offline"
+ * was selling the FALLBACK as the feature — the exact inversion the AI-first work removed
+ * everywhere else. Offline copy remains for builds that genuinely are offline-only.
+ */
+const AI_CONFIGURED = ((process.env.NEXT_PUBLIC_AI_ENDPOINT ?? '').trim().length > 0);
+
 export function CoachEntryCard() {
   return (
     <Card className="shadow-[var(--shadow-card)]" data-testid="today-coach-card">
@@ -27,9 +38,13 @@ export function CoachEntryCard() {
           <CoachIcon size={20} />
         </span>
         <span className="min-w-0 flex-1 py-0.5">
-          <span className="block font-semibold text-foreground">Ask your coach</span>
+          <span className="block font-semibold text-foreground">
+            {AI_CONFIGURED ? 'Ask your AI trainer' : 'Ask your coach'}
+          </span>
           <span className="block text-sm text-muted-foreground">
-            Curated answers, instantly and offline.
+            {AI_CONFIGURED
+              ? 'Personalized to your plan, goals and gear.'
+              : 'Curated answers, instantly and offline.'}
           </span>
         </span>
         <span
