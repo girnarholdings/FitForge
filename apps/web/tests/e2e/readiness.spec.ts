@@ -162,4 +162,86 @@ test.describe('morning check-in', () => {
     await expect(page.getByText('Rest day').first()).toBeVisible();
     await expect(page.getByTestId('morning-checkin')).toHaveCount(0);
   });
+
+  test('an accepted rest day PARKS the standard workout — and the override eases you in at half', async ({
+    page,
+  }) => {
+    await trainingToday(page);
+
+    // Accept the rest day via the illness gate.
+    await page.getByTestId('checkin-open').click();
+    await page.getByTestId('checkin-unwell').click();
+    await page.getByTestId('checkin-submit').click();
+    await expect(page.getByTestId('offer-action')).toHaveText('Take a rest day');
+    await page.getByTestId('adapt-accept').click();
+
+    /* The page stops contradicting itself: the rest card stands, the standard session is parked
+       (no Start button, no quick-workout side door), and the parked note says the plan survives. */
+    await expect(page.getByText('Rest day, on purpose')).toBeVisible();
+    const parked = page.getByTestId('rest-parked');
+    await expect(parked).toBeVisible();
+    await expect(parked).toContainText(/parked, not deleted/i);
+    await expect(page.getByRole('button', { name: 'Start workout' })).toHaveCount(0);
+    await expect(page.getByTestId('quick-workout-open')).toHaveCount(0);
+
+    /* The one door back in is a deliberate confirm that restates the morning's why —
+       with the illness warning, since that is what called the rest. */
+    await page.getByTestId('rest-override-open').click();
+    const sheet = page.getByTestId('rest-override-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(page.getByTestId('rest-override-reason')).toContainText(/unwell/i);
+    await expect(page.getByTestId('rest-override-safety')).toContainText(/doctor/i);
+    await page.screenshot({ path: 'tests/screenshots/rest-day-override.png', fullPage: false });
+
+    /* "Keep resting" closes with nothing changed. */
+    await page.getByTestId('rest-override-keep').click();
+    await expect(sheet).toBeHidden();
+    await expect(parked).toBeVisible();
+
+    /* Taking the recommended half-dose path stages a REAL reduced day and hands the day to the
+       adapted-session card — the guard stands down because the adapted card now owns the day. */
+    await page.getByTestId('rest-override-open').click();
+    await page.getByTestId('rest-override-half').click();
+    await page.waitForURL(/\/workout\/quick/);
+    const state = (await readDemoState(page)) as { quickSession: { name: string } | null };
+    expect(state.quickSession!.name).toMatch(/· reduced$/);
+
+    await page.goto('/today');
+    await expect(page.getByTestId('adapted-session-title')).toContainText(/· reduced$/);
+    await expect(page.getByTestId('rest-parked')).toHaveCount(0);
+    await expect(page.getByTestId('quick-workout-open')).toBeVisible();
+  });
+
+  test('overriding rest with the FULL session is let through — and recorded as rejecting the rest', async ({
+    page,
+  }) => {
+    await trainingToday(page);
+
+    // A wrecked-but-not-ill morning: red band, rest offered, no illness flag.
+    await page.getByTestId('checkin-open').click();
+    await page.getByRole('button', { name: '< 5h' }).click();
+    await page.getByRole('button', { name: 'Energy 1 of 5' }).click();
+    await page.getByRole('button', { name: 'Soreness 5 of 5' }).click();
+    await page.getByTestId('checkin-submit').click();
+    await expect(page.getByTestId('offer-action')).toHaveText('Take a rest day');
+    await expect(page.getByTestId('offer-safety')).toHaveCount(0);
+    await page.getByTestId('adapt-accept').click();
+    await expect(page.getByTestId('rest-parked')).toBeVisible();
+
+    await page.getByTestId('rest-override-open').click();
+    // No illness — no doctor line; the sheet still restates the morning's why.
+    await expect(page.getByTestId('rest-override-safety')).toHaveCount(0);
+    await expect(page.getByTestId('rest-override-reason')).toContainText(/recovery day/i);
+    await page.getByTestId('rest-override-full').click();
+
+    // Straight into the STANDARD session (the routine day, not a quick session)…
+    await page.waitForURL(/\/workout\/(?!quick)/);
+    await expect(page.getByText(/Exercise \d+ of \d+/)).toBeVisible();
+
+    // …and the record is honest: the rest offer now reads as rejected, the guard is gone.
+    await page.goto('/today');
+    await expect(page.getByTestId('checkin-summary')).toContainText(/kept the plan/i);
+    await expect(page.getByTestId('rest-parked')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+  });
 });

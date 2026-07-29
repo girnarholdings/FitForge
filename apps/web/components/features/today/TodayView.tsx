@@ -7,7 +7,8 @@
  */
 import * as React from 'react';
 import Link from 'next/link';
-import { Card, CardTitle, Button, MacroRing } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { Card, CardTitle, Button, MacroRing, Sheet } from '@/components/ui';
 import {
   PlusIcon,
   ScaleIcon,
@@ -36,6 +37,9 @@ import {
 import { DateNav } from '@/components/features/shared/DateNav';
 import { exerciseCountLabel } from '@/lib/demo/generate';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
+import { setQuickSession } from '@/lib/demo/store';
+import { buildAdaptedDay } from '@/lib/readiness/dayEdits';
+import { patchEntry, todayISO, useReadinessEntries } from '@/lib/readiness/store';
 import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
 import { MorningCheckIn } from './MorningCheckIn';
 import { QuickWorkoutCard } from './QuickWorkoutCard';
@@ -54,6 +58,7 @@ export function TodayView() {
   const displayName = useProfileName();
   const state = useDemoState();
   const sessions = useWorkoutSessions();
+  const router = useRouter();
   const targetDays = state.profile?.days_per_week ?? 3;
   const streak = React.useMemo(
     () => weeklyStreak(sessions, targetDays),
@@ -70,6 +75,45 @@ export function TodayView() {
     { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
   );
   const hasLogged = logs.length > 0;
+
+  /**
+   * THE REST-DAY GUARD. When this morning's check-in ended in an ACCEPTED rest day, the page has
+   * to stop contradicting itself: a bright "Start workout" button an inch under "Rest day, on
+   * purpose" is two cards giving opposite orders. So while the rest decision stands, the
+   * standard session is PARKED — visibly dimmed, its start button replaced by a deliberate
+   * override flow that (a) restates why rest was called, (b) recommends half the sets if they
+   * insist, and (c) only then lets the full session through, recording the override honestly as
+   * a rejection of the rest offer. `!adaptedDay` matters: once they take the half-session route,
+   * the adapted card above owns the day and the guard stands down.
+   */
+  const readiness = useReadinessEntries();
+  const todayEntry = onToday ? readiness.find((e) => e.date === todayISO()) : undefined;
+  const restingToday =
+    !!todayEntry &&
+    todayEntry.decision === 'accepted' &&
+    todayEntry.offered === 'rest' &&
+    !todayEntry.adaptedDay;
+  const [restConfirmOpen, setRestConfirmOpen] = React.useState(false);
+
+  /** Override path A: train, but at half the dose. Feeds the adapted-session card above. */
+  function trainHalfInstead() {
+    if (!day || !todayEntry) return;
+    const adapted = buildAdaptedDay(day, 'reduce');
+    patchEntry(todayEntry.date, { adaptedDay: adapted });
+    setRestConfirmOpen(false);
+    if (adapted) {
+      setQuickSession(adapted);
+      router.push('/workout/quick');
+    }
+  }
+
+  /** Override path B: the full session. Logged as rejecting the rest offer — the honest record. */
+  function trainFullAnyway() {
+    if (!day || !todayEntry) return;
+    patchEntry(todayEntry.date, { decision: 'rejected' });
+    setRestConfirmOpen(false);
+    router.push(`/workout/${day.id}`);
+  }
 
   /**
    * THE HEADING IS THE DATE, not a greeting and not an abbreviation.
@@ -145,39 +189,64 @@ export function TodayView() {
         // anchor a screen; making them read as machined metal rather than paper is enough to shift
         // the app's whole material feel without flattening the premium/standard hierarchy.
         <Card variant="steel" className="overflow-hidden !p-0 shadow-[var(--shadow-card)]">
-          <div className="px-5 pt-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
-              {onToday ? "Today's workout" : `${dayLabel(date)}'s workout`}
-            </p>
-            <h2 className="mt-1 font-display text-xl font-bold text-foreground">{day.name}</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {exerciseCountLabel(day.exercises.length)} · from {routine.name}
-            </p>
+          {/* Parked = dimmed and inert, NOT hidden: the plan still exists and saying so is the
+              point. aria-hidden with pointer-events-none keeps it out of tab order too. */}
+          <div
+            className={restingToday ? 'pointer-events-none select-none opacity-50 blur-[2px]' : undefined}
+            aria-hidden={restingToday || undefined}
+          >
+            <div className="px-5 pt-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+                {onToday ? "Today's workout" : `${dayLabel(date)}'s workout`}
+              </p>
+              <h2 className="mt-1 font-display text-xl font-bold text-foreground">{day.name}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {exerciseCountLabel(day.exercises.length)} · from {routine.name}
+              </p>
+            </div>
+            <div className="px-5 pt-4 pb-1">
+              <ul className="mb-4 space-y-1.5 text-sm">
+                {day.exercises.slice(0, 4).map((e) => (
+                  <li key={e.id} className="flex justify-between text-foreground">
+                    <span className="truncate pr-3">{e.exercise_name}</span>
+                    <span className="shrink-0 tabular-nums text-muted-foreground">
+                      {e.sets} × {e.rep_min}–{e.rep_max}
+                    </span>
+                  </li>
+                ))}
+                {day.exercises.length > 4 && (
+                  <li className="text-xs text-muted-foreground">+{day.exercises.length - 4} more</li>
+                )}
+              </ul>
+            </div>
           </div>
-          <div className="px-5 py-4">
-            <ul className="mb-4 space-y-1.5 text-sm">
-              {day.exercises.slice(0, 4).map((e) => (
-                <li key={e.id} className="flex justify-between text-foreground">
-                  <span className="truncate pr-3">{e.exercise_name}</span>
-                  <span className="shrink-0 tabular-nums text-muted-foreground">
-                    {e.sets} × {e.rep_min}–{e.rep_max}
-                  </span>
-                </li>
-              ))}
-              {day.exercises.length > 4 && (
-                <li className="text-xs text-muted-foreground">+{day.exercises.length - 4} more</li>
-              )}
-            </ul>
+          <div className="px-5 pb-4">
             {/* STARTING A SESSION IS A TODAY ACTION. The player writes into the live log as you
                 lift, so firing it from a Thursday you are merely previewing would record the sets
                 against now, not against Thursday. Past and future days are therefore readable but
                 not startable, and the copy says which it is rather than showing a dead button. */}
             {onToday ? (
-              <Link href={`/workout/${day.id}`} className="block">
-                <Button size="lg" block glow texture>
-                  Start workout
-                </Button>
-              </Link>
+              restingToday ? (
+                <div data-testid="rest-parked">
+                  <p className="mb-2 rounded-field border border-border bg-surface-2 px-3 py-2 text-center text-xs text-muted-foreground">
+                    You chose a rest day — this session is parked, not deleted.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    block
+                    data-testid="rest-override-open"
+                    onClick={() => setRestConfirmOpen(true)}
+                  >
+                    I want to train anyway
+                  </Button>
+                </div>
+              ) : (
+                <Link href={`/workout/${day.id}`} className="block">
+                  <Button size="lg" block glow texture>
+                    Start workout
+                  </Button>
+                </Link>
+              )
             ) : (
               <p
                 className="rounded-field border border-border bg-surface-2 px-3 py-2.5 text-center text-sm text-muted-foreground"
@@ -204,8 +273,10 @@ export function TodayView() {
       )}
 
       {/* Even on a training day, "not today's session" is a real need — pulling tomorrow forward
-          is the whole reason this exists. Shown second so it never competes with the plan. */}
-      {day && onToday && <QuickWorkoutCard />}
+          is the whole reason this exists. Shown second so it never competes with the plan — and
+          not at all while a rest decision stands: the override sheet is the ONE sanctioned door
+          back into training on a rest day, so a second unguarded door here would defeat it. */}
+      {day && onToday && !restingToday && <QuickWorkoutCard />}
 
       {/* Ask your coach — the knowledge base is one tap from home (§KB). */}
       <CoachEntryCard />
@@ -297,6 +368,54 @@ export function TodayView() {
           </Link>
         </div>
       </Card>
+
+      {/* THE OVERRIDE SHEET — the one sanctioned way from an accepted rest day back into
+          training. Restates the morning's why, recommends the halved dose, lets the full session
+          through only as an explicit second choice, and records that choice honestly. */}
+      <Sheet
+        open={restConfirmOpen}
+        onClose={() => setRestConfirmOpen(false)}
+        title="You chose rest today"
+      >
+        <div className="space-y-3" data-testid="rest-override-sheet">
+          {todayEntry && (
+            <p className="text-sm text-muted-foreground" data-testid="rest-override-reason">
+              This morning: {todayEntry.verdict.reason}
+            </p>
+          )}
+          {todayEntry?.verdict.safety && (
+            <p className="text-sm font-medium text-danger" data-testid="rest-override-safety">
+              You said you were feeling unwell. Training through illness usually costs more days
+              than it saves — if you&rsquo;re still off, keep the rest day and see a doctor if it
+              persists.
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            Genuinely feeling better? Don&rsquo;t jump straight back to full load — ease in:
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button block data-testid="rest-override-half" onClick={trainHalfInstead}>
+              Do it at half the sets (recommended)
+            </Button>
+            <Button
+              variant="secondary"
+              block
+              data-testid="rest-override-full"
+              onClick={trainFullAnyway}
+            >
+              Full session — I feel fine now
+            </Button>
+            <Button
+              variant="ghost"
+              block
+              data-testid="rest-override-keep"
+              onClick={() => setRestConfirmOpen(false)}
+            >
+              Keep resting
+            </Button>
+          </div>
+        </div>
+      </Sheet>
     </div>
   );
 }

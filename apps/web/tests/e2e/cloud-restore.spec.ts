@@ -21,6 +21,9 @@ import { seedOnboarded, resetDemo, readDemoState, DEMO_STORAGE_KEY } from './hel
 
 const GOOGLE_AUTH = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com/;
 const FIRESTORE = /firestore\.googleapis\.com/;
+/** Auth + Firestore in one matcher — see the erase test for why a single handler matters. */
+const GOOGLE_ALL =
+  /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com|firestore\.googleapis\.com/;
 
 /**
  * Memoised per worker + retried: under a parallel suite the static server occasionally drops a
@@ -225,11 +228,17 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
     await seedOnboarded(page);
     const apiKey = await apiKeyFromBundle(page);
     expect(apiKey, 'this build has a Firebase project').toBeTruthy();
-    await page.context().route(GOOGLE_AUTH, (r) => r.abort());
 
+    /**
+     * ONE combined handler for every Google host, exactly as shell-account.spec does it — that
+     * spec has restored a faked session reliably for many CI runs, while this test's two-handler
+     * version (auth aborted by one route, Firestore counted by another) flaked. Handler
+     * precedence between overlapping `context.route` patterns is the difference; with a single
+     * matcher there is nothing to get wrong, and Firestore hits are still counted here.
+     */
     let firestoreHits = 0;
-    await page.context().route(FIRESTORE, (route) => {
-      firestoreHits++;
+    await page.context().route(GOOGLE_ALL, (route) => {
+      if (FIRESTORE.test(route.request().url())) firestoreHits++;
       return route.abort();
     });
 
@@ -238,16 +247,27 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
       { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: session(apiKey!) },
     );
 
-    await page.goto('/settings');
-    // SERIALIZE ON THE RESTORED SESSION before touching the erase flow: the sheet's cloud clause
-    // (and the cloud-delete path itself) exist only for a signed-in user, and the localStorage
-    // session restore is async. The mode chip flipping to `google` IS the app saying the user
-    // landed — waiting on it here is what makes the rest of the test deterministic on a slow
-    // runner. (CI caught this: the sheet opened before restoration finished and showed the
-    // local-only copy.)
+    /**
+     * Land on /today first and let the app CONFIRM the restore (the chip flipping to `google` is
+     * the app's own signal), then walk to Settings. Asserting the restore on the route that the
+     * proven spec uses removes the last timing assumption: by the time Settings mounts, the
+     * signed-in state is already live, so the sheet cannot render its local-only copy.
+     */
+    await page.goto('/today');
     await expect(page.getByTestId('mode-chip')).toHaveAttribute('data-mode', 'google', {
       timeout: 30000,
     });
+    /**
+     * Then reach Settings the way a USER does — tapping the in-app link, a client-side route
+     * change — instead of `goto`, which is a full reload that restarts the async session restore
+     * from scratch. That reload is precisely how this test failed twice: Settings mounted with
+     * auth still resolving, so the confirm sheet rendered its (correct at that instant)
+     * local-only copy. Client-side navigation carries the already-restored user in memory, so
+     * the state under test is settled before the sheet can open.
+     */
+    await page.getByTestId('mobile-settings').click();
+    await page.waitForURL(/\/settings/);
+    await expect(page.getByTestId('mode-chip')).toHaveAttribute('data-mode', 'google');
     await page.getByTestId('erase-local-data').click();
     // The confirm sheet names the cloud consequence for a signed-in user.
     await expect(page.getByText(/deletes your cloud copy/i)).toBeVisible();
