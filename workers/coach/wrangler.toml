@@ -76,7 +76,7 @@ FIREBASE_PROJECT_ID = "fitforge-007"
 #
 # PRO_USERS — comma-separated Firebase uids with a Pro subscription. This allowlist IS the
 # subscription record until a billing system exists. Find a uid in Firebase console → Auth.
-# PRO_USERS = "uid1, uid2"
+PRO_USERS = "rVFC3tkOgtVs8DGrq0LFMJVKoxx2, uid2"
 #
 # DEEPSEEK_MODEL — optional override; safe to commit. Current IDs (the old deepseek-chat /
 # deepseek-reasoner aliases were RETIRED on 2026-07-24 and now return errors):
