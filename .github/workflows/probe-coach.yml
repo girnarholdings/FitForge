@@ -45,20 +45,30 @@ jobs:
         run: |
           body=$(curl -sS -m 30 -w '\n%{http_code}' "$ENDPOINT" || echo "CURL_FAILED")
           code=$(printf '%s' "$body" | tail -1)
-          payload=$(printf '%s' "$body" | sed '$d' | tr '\n' ' ' | cut -c1-400)
-          echo "::notice::GET ${code} — ${payload}"
+          payload=$(printf '%s' "$body" | sed '$d')
+          echo "::notice::GET ${code} — $(printf '%s' "$payload" | tr '\n' ' ' | cut -c1-900)"
           if [ "$code" != "200" ]; then
             echo "::error::Health check failed with ${code}. The worker is not serving."
             exit 1
           fi
-          # Which backend is actually serving. Workers AI alone is a legitimate config, so this is
-          # a WARNING, not a failure — but a green run that silently used the fallback is exactly
-          # how "I added the Mistral key" and "the worker never saw it" coexist for weeks.
-          provider=$(printf '%s' "$body" | sed '$d' | jq -r '.provider // "unknown"')
-          if [ "$provider" = "mistral" ]; then
-            echo "::notice::Primary backend: Mistral (MISTRAL_API_KEY is set on the worker)"
+          # Which backend is actually serving, and what the app's model picker will offer. Both
+          # printed as their own lines rather than left inside a truncated JSON blob: this is the
+          # question every "did my key land?" check is really asking, and it deserves a sentence.
+          provider=$(printf '%s' "$payload" | jq -r '.provider // "unknown"')
+          models=$(printf '%s' "$payload" | jq -r '(.models // []) | length')
+          catalog=$(printf '%s' "$payload" | jq -r '(.models // []) | map("\(.label) [\(.provider)]") | join(", ")')
+          if [ "$models" = "0" ]; then
+            echo "::warning::This worker advertises no model catalog — the app's model picker will not appear. Deploy the current workers/coach (npx wrangler deploy)."
           else
-            echo "::warning::Primary backend: ${provider} — MISTRAL_API_KEY is NOT visible to this worker. If you meant to add it: the worker must be exactly 'fitforge-coach', the secret name exactly MISTRAL_API_KEY (type Secret, then Deploy), added under the worker's own Settings → Variables and Secrets — not the account-level Secrets Store. See docs/CLOUDFLARE-WORKER-SETUP.md §5b."
+            echo "::notice::Model picker will offer ${models}: ${catalog}"
+          fi
+          # Workers AI alone is a legitimate config, so a missing key is a WARNING, not a failure —
+          # but a green run that silently used the fallback is exactly how "I added the Mistral key"
+          # and "the worker never saw it" coexist for weeks.
+          if [ "$provider" = "mistral" ]; then
+            echo "::notice::Primary backend: Mistral — the MISTRAL_API_KEY secret is live on this worker"
+          else
+            echo "::warning::Primary backend: ${provider} — MISTRAL_API_KEY is NOT visible to this worker. 'wrangler deploy' does NOT carry secrets: set it explicitly with 'cd workers/coach && npx wrangler secret put MISTRAL_API_KEY', and confirm with 'npx wrangler secret list' (which prints the names actually bound to the deployed worker). A dashboard entry that was saved-but-not-deployed, added to a preview environment, or stored in the account-level Secrets Store without a binding will all look set while being invisible here."
           fi
 
       # POST is the real path the browser takes, Origin header included. Its failure modes are
