@@ -318,7 +318,18 @@ export function CoachView() {
   }, [turns]);
 
   return (
-    <div data-testid="coach-view" className="space-y-4">
+    /* DESKTOP IS A CHAT PANE, NOT A SCROLLING PAGE. On ≥md in ask mode this root pins itself to
+       the viewport (100svh minus <main>'s md pt-8 + pb-10 = 4.5rem of chrome), the THREAD becomes
+       the scroll container, and the composer is an ordinary flex footer — parked, no sticky
+       arithmetic. On mobile nothing changes: the page scrolls and the composer stays sticky above
+       the tab bar, because a phone keyboard + a nested scroll container is a fight nobody wins. */
+    <div
+      data-testid="coach-view"
+      className={
+        'space-y-4' +
+        (mode === 'ask' ? ' md:flex md:h-[calc(100svh-4.5rem)] md:min-h-0 md:flex-col' : '')
+      }
+    >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-display font-bold text-foreground">Coach</h1>
@@ -404,7 +415,12 @@ export function CoachView() {
         <BrowseKb expandedId={expandedId} onExpand={setExpandedId} />
       ) : (
         <>
-          <div className="min-h-[38vh] space-y-4" data-testid="coach-thread">
+          <div
+            /* flex-1 + min-h-0 is what lets the thread shrink INSIDE the pane and grow a scrollbar
+               of its own; the negative/positive px pair keeps that scrollbar out of the text. */
+            className="min-h-[38vh] space-y-4 md:-mx-2 md:min-h-0 md:flex-1 md:overflow-y-auto md:px-2"
+            data-testid="coach-thread"
+          >
             {turns.length === 0 ? (
               <EmptyAsk onPick={ask} onBrowse={() => setMode('browse')} configured={configured} />
             ) : (
@@ -429,7 +445,7 @@ export function CoachView() {
               e.preventDefault();
               ask(input);
             }}
-            className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 pt-3 md:bottom-2 md:pb-0"
+            className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 pt-3 md:static md:pb-0"
           >
             {/* ONE BORDERED CONTROL, not a field sitting next to a button.
                 The composer used to be a hairline box on a same-tone surface, and on a phone in

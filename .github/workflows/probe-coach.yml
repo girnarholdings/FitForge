@@ -51,6 +51,15 @@ jobs:
             echo "::error::Health check failed with ${code}. The worker is not serving."
             exit 1
           fi
+          # Which backend is actually serving. Workers AI alone is a legitimate config, so this is
+          # a WARNING, not a failure — but a green run that silently used the fallback is exactly
+          # how "I added the Mistral key" and "the worker never saw it" coexist for weeks.
+          provider=$(printf '%s' "$body" | sed '$d' | jq -r '.provider // "unknown"')
+          if [ "$provider" = "mistral" ]; then
+            echo "::notice::Primary backend: Mistral (MISTRAL_API_KEY is set on the worker)"
+          else
+            echo "::warning::Primary backend: ${provider} — MISTRAL_API_KEY is NOT visible to this worker. If you meant to add it: the worker must be exactly 'fitforge-coach', the secret name exactly MISTRAL_API_KEY (type Secret, then Deploy), added under the worker's own Settings → Variables and Secrets — not the account-level Secrets Store. See docs/CLOUDFLARE-WORKER-SETUP.md §5b."
+          fi
 
       # POST is the real path the browser takes, Origin header included. Its failure modes are
       # distinct and each points at a different fix, so the status code is reported verbatim rather

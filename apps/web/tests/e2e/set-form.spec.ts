@@ -86,6 +86,22 @@ test.describe('set-entry form', () => {
     await expect(page.getByRole('spinbutton', { name: 'Set 1 reps' })).toBeVisible();
     await expect(page.getByRole('spinbutton', { name: 'Set 1 RPE' })).toBeVisible();
 
+    // CAPTION DEDUP: a caption line paints exactly where the row shape changes. On open, row 1 is
+    // the stepper shape and row 2 is the first plain row — both caption. Row 3 repeats row 2's
+    // shape, so its caption is clipped to a 1px sr-only rect — in the DOM (assertLabelsBound
+    // above already walked it) but painting nothing. Playwright counts a 1×1 clipped box as
+    // "visible", so the assertion is on the painted SIZE, not the visibility bit.
+    const row2Box = await page
+      .getByTestId('set-fields-2')
+      .locator('label[for="set-2-reps"]')
+      .boundingBox();
+    expect(row2Box && row2Box.width > 8, 'row 2 caption paints').toBe(true);
+    const row3Label = page.getByTestId('set-fields-3').locator('label[for="set-3-reps"]');
+    if (await row3Label.count()) {
+      const row3Box = await row3Label.boundingBox();
+      expect(row3Box == null || row3Box.width <= 1, 'row 3 caption is clipped').toBe(true);
+    }
+
     // Nothing may push the page sideways at 390 px.
     expect((await pageOverflow(page)).horizontal).toBeLessThanOrEqual(1);
   });

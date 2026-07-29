@@ -32,11 +32,23 @@ test.describe('today', () => {
     expect(kcalTarget).toBeGreaterThan(0);
     await expect(page.getByRole('button', { name: /Log your first meal/i })).toBeVisible();
 
-    // A CTA into a workout exists whether today is a training or rest day.
+    // A CTA into a workout exists whether today is a training or rest day. DATE-DEPENDENT ON
+    // PURPOSE: which branch renders depends on the weekday the suite runs on, so both real labels
+    // are accepted. ("Start a freestyle workout" was the rest-day CTA before the quick-workout
+    // picker replaced it; the stale alternative kept this green only on training days, and the
+    // first rest-day run caught it.)
     const startBtn = page.getByRole('button', {
-      name: /Start workout|Start a freestyle workout/,
+      name: /Start workout|Quick workout/,
     });
     await expect(startBtn).toBeVisible();
+
+    // The smith-rank ladder, fresh-user state: rank Spark, zero strikes, first rung 3 away.
+    // The crest and the progress line are real data off the workout log, not decoration — a
+    // fresh log must read as the BOTTOM of the ladder, never as missing UI.
+    const rank = page.getByTestId('forge-rank');
+    await expect(rank).toContainText('Spark');
+    await expect(rank).toContainText('0 strikes');
+    await expect(page.getByTestId('forge-to-next')).toContainText('3 workouts away');
 
     await page.screenshot({ path: 'tests/screenshots/today.png', fullPage: true });
   });

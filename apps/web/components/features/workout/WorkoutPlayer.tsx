@@ -46,6 +46,7 @@ import {
   ChevronLeftIcon,
   ChevronDownIcon,
   DumbbellIcon,
+  HammerIcon,
 } from '@/components/ui/icons';
 import { haptic } from '@/components/ui/motion';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
@@ -90,6 +91,15 @@ import {
   type LoggedExercise,
   type PersonalRecord,
 } from '@/components/features/shared/workoutLog';
+import { rankFor } from '@/components/features/shared/forgeRank';
+import { Confetti, usePrefersReducedMotion, type BurstSpec } from '@/components/ui/Confetti';
+
+/** What the summary needs to tell the strike/rank story, frozen at finish time. */
+interface StrikeInfo {
+  strikes: number;
+  rankName: string;
+  rankedUp: boolean;
+}
 
 interface SetEntry {
   reps: number;
@@ -324,23 +334,11 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   const [startedAt] = React.useState(() => Date.now());
   const [finishedSession, setFinishedSession] = React.useState<WorkoutSession | null>(null);
   const [prs, setPrs] = React.useState<PersonalRecord[]>([]);
+  /** Strike count + ladder standing at the moment the session landed — see finishWorkout. */
+  const [strike, setStrike] = React.useState<StrikeInfo | null>(null);
 
   // Rest timer -------------------------------------------------------------
-  const [restLeft, setRestLeft] = React.useState<number | null>(null);
-  const restTotalRef = React.useRef(0);
-  React.useEffect(() => {
-    if (restLeft == null) return;
-    if (restLeft <= 0) {
-      // Buzz on completion where supported (§6 P0-5).
-      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-        navigator.vibrate(120);
-      }
-      setRestLeft(null);
-      return;
-    }
-    const t = setTimeout(() => setRestLeft((s) => (s == null ? null : s - 1)), 1000);
-    return () => clearTimeout(t);
-  }, [restLeft]);
+  const [rest, setRest] = React.useState<{ endsAt: number; total: number } | null>(null);
 
   // Sheets -----------------------------------------------------------------
   const [swapOpen, setSwapOpen] = React.useState(false);
@@ -455,7 +453,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
    * hard sets. */
   const totalSets = exercises.reduce((n, e) => n + e.sets.length, 0);
   const doneSets = exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
-  const resting = restLeft != null;
+  const resting = rest != null;
 
   /**
    * Edit one set — and, when that set is the ANCHOR, re-derive the sets that hang off it.
@@ -518,8 +516,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         role,
         mechanicsOf(active.exerciseId) ?? null,
       );
-      restTotalRef.current = total;
-      setRestLeft(total);
+      setRest({ endsAt: Date.now() + total * 1000, total });
     }
   }
 
@@ -612,6 +609,16 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
     // Compute PRs against everything logged *before* this session, then persist.
     const beaten = prsInSession(session, getSessions());
     logSession(session);
+    // The ladder is counted off the log AFTER this session lands, so the summary's strike number
+    // and the Today card can never disagree about what a "strike" is. Rank-up = the boundary
+    // between strike N-1 and strike N.
+    const strikes = getSessions().length;
+    const standing = rankFor(strikes);
+    setStrike({
+      strikes,
+      rankName: standing.rank.name,
+      rankedUp: standing.rank.index > rankFor(strikes - 1).rank.index,
+    });
     // The first-workout explainer has done its job the moment a workout is finished, whether or not
     // the athlete ever tapped its X. Without this, someone who simply ignored the card would meet
     // it again on session two — and a "read this once" card that shows twice is worse than none.
@@ -628,6 +635,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
         exercises={exercises}
         elapsedMs={Date.now() - startedAt}
         prs={prs}
+        strike={strike}
       />
     );
   }
@@ -975,6 +983,15 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
                   ? String(suggested)
                   : '';
               const setNo = i + 1;
+              /* CAPTION DEDUP. A caption line appears exactly where the row SHAPE changes — the
+                 first row always, the active row (its stepper layout is a different shape), and
+                 the first plain row after it. A row that repeats the shape above inherits its
+                 caption instead of re-printing WEIGHT·REPS·RPE·DONE at 10px four times over.
+                 The `<label for>` stays in the DOM on every row (SetField clips it), so nothing
+                 about the accessibility contract or the label-walk spec changes. */
+              const rowShape = (row: number) =>
+                row === activeSetIdx && !plan.isBodyweight ? 'stepper' : 'grid';
+              const captionsHidden = i > 0 && rowShape(i) === rowShape(i - 1);
               /* The three fields, built ONCE and placed by the row shape rather than re-declared
                  per shape. Each one carries its own label — that is the invariant this card is
                  built around, and building them here is what stops a future shape re-inventing
@@ -986,6 +1003,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
                   name={`Set ${setNo} reps`}
                   inputMode="numeric"
                   value={s.reps || null}
+                  labelHidden={captionsHidden}
                   /* GHOST FIRST in the placeholder, because the target is now in the VALUE. The
                      hint under this card promises the greyed numbers are last session's sets, so
                      the greyed number has to be last session's set. */
@@ -998,17 +1016,19 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
                   id={`set-${setNo}-rpe`}
                   label="RPE"
                   name={`Set ${setNo} RPE`}
-                  /* The one word on this card a beginner cannot guess, and the app asks for it in a
-                     box. It gets the `?` on every row, not only the first. */
+                  /* The one word on this card a beginner cannot guess, and the app asks for it in
+                     a box. The `?` rides the caption line, so a row that inherits the caption
+                     above inherits its `?` too — every VISIBLE "RPE" still has one. */
                   glossary="rpe"
                   align="center"
                   value={s.rpe}
+                  labelHidden={captionsHidden}
                   placeholder={ghost?.rpe != null ? String(ghost.rpe) : '—'}
                   onChange={(v) => updateSet(index, i, { rpe: v })}
                 />
               );
               const doneCell = (
-                <SetFieldCell label="Done" align="center">
+                <SetFieldCell label="Done" align="center" labelHidden={captionsHidden}>
                   {/* Was a to-do-list checkbox. Now a spring collar that closes — the gesture a
                       lifter already performs to lock a bar. aria-label and aria-pressed are
                       byte-for-byte what they were; the workout spec matches /Mark set 1/. */}
@@ -1265,13 +1285,14 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
       </div>
 
       {/* Rest timer overlay */}
-      {restLeft != null && (
+      {rest != null && (
         <RestTimer
-          left={restLeft}
-          total={restTotalRef.current}
-          onSkip={() => setRestLeft(null)}
+          endsAt={rest.endsAt}
+          total={rest.total}
+          onDone={() => setRest(null)}
+          onSkip={() => setRest(null)}
           onAdjust={(delta) =>
-            setRestLeft((s) => (s == null ? null : Math.max(1, s + delta)))
+            setRest((s) => (s == null ? null : { ...s, endsAt: Math.max(Date.now() + 1000, s.endsAt + delta * 1000) }))
           }
         />
       )}
@@ -1696,16 +1717,42 @@ function PlateCalculator({ total }: { total: number }) {
 const TICKS = [0, 45, 90, 135, 180, 225, 270, 315];
 
 function RestTimer({
-  left,
+  endsAt,
   total,
+  onDone,
   onSkip,
   onAdjust,
 }: {
-  left: number;
+  endsAt: number;
   total: number;
+  onDone: () => void;
   onSkip: () => void;
   onAdjust: (delta: number) => void;
 }) {
+  // The clock lives HERE, not in the player: this overlay is nine SVG nodes and a numeral, so a
+  // once-per-second re-render costs nothing — where the same tick in the player's own state was
+  // re-running prescriptions and set lists ~120× per rest. Deadline-derived, so a background tab
+  // that throttles timers still lands on the right number when it wakes.
+  const remaining = () => Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+  const [left, setLeft] = React.useState(remaining);
+  React.useEffect(() => {
+    setLeft(remaining());
+    const t = setInterval(() => {
+      const next = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+      setLeft(next);
+      if (next <= 0) {
+        clearInterval(t);
+        // Buzz on completion where supported (§6 P0-5).
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          navigator.vibrate(120);
+        }
+        onDone();
+      }
+    }, 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- endsAt is the full identity of one rest
+  }, [endsAt]);
+
   const pct = total > 0 ? Math.min(100, (left / total) * 100) : 0;
   const mm = Math.floor(left / 60);
   const ss = String(left % 60).padStart(2, '0');
@@ -1795,16 +1842,46 @@ function RestTimer({
 
 /* ----------------------------------------------------------------------------------- summary */
 
+/**
+ * Count a numeral up from 0 over ~650ms. Pure flair — but the honest kind: it always LANDS on the
+ * true value, reduced-motion users get the value immediately, and anything reading the text mid-
+ * flight (a spec, a screen reader) sees a number that is merely still settling.
+ */
+function CountUp({ value, format }: { value: number; format?: (n: number) => string }) {
+  const reduced = usePrefersReducedMotion();
+  const [shown, setShown] = React.useState(0);
+  React.useEffect(() => {
+    if (reduced || value <= 0) {
+      setShown(value);
+      return;
+    }
+    let raf = 0;
+    const t0 = performance.now();
+    const dur = 650;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setShown(Math.round(value * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, reduced]);
+  return <>{(format ?? String)(shown)}</>;
+}
+
 function Summary({
   day,
   exercises,
   elapsedMs,
   prs,
+  strike,
 }: {
   day: RoutineDay;
   exercises: ExerciseState[];
   elapsedMs: number;
   prs: PersonalRecord[];
+  strike: StrikeInfo | null;
 }) {
   const doneSets = exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
   const volume = exercises.reduce(
@@ -1813,10 +1890,23 @@ function Summary({
   );
   const mins = Math.max(1, Math.round(elapsedMs / 60000));
   const hasPRs = prs.length > 0;
+  const rankedUp = strike?.rankedUp ?? false;
+
+  // One gold burst out of the check badge when there is genuinely something to celebrate — a PR
+  // or a rank-up — a beat after the screen settles. Confetti no-ops for reduced motion.
+  const [burst, setBurst] = React.useState<BurstSpec | null>(null);
+  React.useEffect(() => {
+    if (!hasPRs && !rankedUp) return;
+    const t = window.setTimeout(
+      () => setBurst({ id: 1, x: 32, y: 32, kind: 'spark', power: 2 }),
+      260,
+    );
+    return () => window.clearTimeout(t);
+  }, [hasPRs, rankedUp]);
 
   return (
     <div className="space-y-5">
-      <div className="relative text-center">
+      <div className="ff-rise-in relative text-center">
         <div className="relative mx-auto grid h-16 w-16 place-items-center rounded-full bg-accent-muted text-accent shadow-[var(--shadow-glow)]">
           <CheckIcon size={32} />
           {hasPRs && (
@@ -1827,13 +1917,45 @@ function Summary({
               <SparkIcon size={22} />
             </span>
           )}
+          <Confetti burst={burst} />
         </div>
         <h1 className="mt-3 font-display text-display font-bold">Workout complete</h1>
         <p className="mt-1 text-sm text-muted-foreground">{day.name}</p>
+        {/* The ladder, advanced. Every session is one strike — the number that Today's rank crest
+            counts — so the summary names the blow it just landed. */}
+        {strike && (
+          <p
+            className="mt-2 inline-flex items-center gap-1.5 rounded-chip border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-accent-muted px-3 py-1 text-xs font-bold text-accent"
+            data-testid="summary-strike"
+          >
+            <HammerIcon size={13} />
+            Strike #{strike.strikes} · {strike.rankName}
+          </p>
+        )}
       </div>
 
+      {rankedUp && strike && (
+        <Card
+          premium
+          className="ff-rise-in border-[color-mix(in_srgb,var(--accent)_45%,transparent)] text-center"
+          style={{ '--ff-delay': '90ms' } as React.CSSProperties}
+          data-testid="summary-rank-up"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Rank up
+          </p>
+          <p className="mt-1 font-display text-2xl font-bold text-gradient-gold">
+            {strike.rankName}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Forged over {strike.strikes} {strike.strikes === 1 ? 'workout' : 'workouts'}. Keep
+            striking.
+          </p>
+        </Card>
+      )}
+
       {hasPRs && (
-        <Card premium>
+        <Card premium className="ff-rise-in" style={{ '--ff-delay': '140ms' } as React.CSSProperties}>
           <div className="flex items-center gap-2 text-accent">
             {/* A medal is a record. The trophy now means one thing only — session complete — and
                 is no longer doing double duty for goals, PRs and finishing. */}
@@ -1855,19 +1977,26 @@ function Summary({
         </Card>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div
+        className="ff-rise-in grid grid-cols-3 gap-3"
+        style={{ '--ff-delay': '190ms' } as React.CSSProperties}
+      >
         <Card className="text-center">
-          <p className="font-display text-2xl font-bold tabular-nums text-accent">{doneSets}</p>
+          <p className="font-display text-2xl font-bold tabular-nums text-accent">
+            <CountUp value={doneSets} />
+          </p>
           <p className="text-xs text-muted-foreground">sets logged</p>
         </Card>
         <Card className="text-center">
           <p className="font-display text-2xl font-bold tabular-nums">
-            {Math.round(volume).toLocaleString()}
+            <CountUp value={Math.round(volume)} format={(n) => n.toLocaleString()} />
           </p>
           <p className="text-xs text-muted-foreground">kg volume</p>
         </Card>
         <Card className="text-center">
-          <p className="font-display text-2xl font-bold tabular-nums">{mins}</p>
+          <p className="font-display text-2xl font-bold tabular-nums">
+            <CountUp value={mins} />
+          </p>
           <p className="text-xs text-muted-foreground">minutes</p>
         </Card>
       </div>

@@ -48,6 +48,7 @@ function FieldLabelLine({
   unit,
   glossary,
   align,
+  hidden,
 }: {
   /** absent = the control is not a labelable element (the collar latch), so the caption is text */
   htmlFor?: string;
@@ -55,7 +56,22 @@ function FieldLabelLine({
   unit?: string;
   glossary?: GlossaryTermId;
   align: 'left' | 'center';
+  hidden?: boolean;
 }) {
+  if (hidden) {
+    // CLIPPED, NOT REMOVED. The `<label for>` binding stays in the DOM — assistive tech still
+    // announces the field and the spec that walks every `label[for]` still proves it resolves —
+    // but the caption line paints nothing. The unit and glossary button are dropped entirely:
+    // they are sighted-user affordances, and a focusable button inside a 1px clip rect is a
+    // keyboard trap wearing a blindfold.
+    return htmlFor ? (
+      <label htmlFor={htmlFor} className="sr-only">
+        {label}
+      </label>
+    ) : (
+      <span className="sr-only">{label}</span>
+    );
+  }
   const text = (
     <span className="text-[10px] font-semibold uppercase leading-none tracking-wide text-muted-foreground">
       {label}
@@ -120,6 +136,12 @@ export interface SetFieldProps {
    */
   trailing?: React.ReactNode;
   align?: 'left' | 'center';
+  /**
+   * Visually hide the caption line while keeping the `<label for>` in the DOM. Used by the set
+   * list to DEDUPE consecutive rows of identical shape: a caption line appears exactly where the
+   * columns it describes change, and a row that repeats the shape above inherits its caption.
+   */
+  labelHidden?: boolean;
   className?: string;
 }
 
@@ -136,6 +158,7 @@ export function SetField({
   variant = 'plain',
   trailing,
   align = 'left',
+  labelHidden,
   className,
 }: SetFieldProps) {
   // Dev-only guard on the 2.5.3 contract. A console error rather than a throw: a mismatched label
@@ -149,7 +172,14 @@ export function SetField({
 
   return (
     <div className={cn('min-w-0', className)}>
-      <FieldLabelLine htmlFor={id} label={label} unit={unit} glossary={glossary} align={align} />
+      <FieldLabelLine
+        htmlFor={id}
+        label={label}
+        unit={unit}
+        glossary={glossary}
+        align={align}
+        hidden={labelHidden}
+      />
       <div className="flex min-w-0 items-center gap-1.5">
         {variant === 'stepper' ? (
           <PlateStepper
@@ -194,17 +224,20 @@ export function SetField({
 export function SetFieldCell({
   label,
   align = 'left',
+  labelHidden,
   className,
   children,
 }: {
   label: string;
   align?: 'left' | 'center';
+  /** Same contract as {@link SetFieldProps.labelHidden}. */
+  labelHidden?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={cn('min-w-0', className)}>
-      <FieldLabelLine label={label} align={align} />
+      <FieldLabelLine label={label} align={align} hidden={labelHidden} />
       {children}
     </div>
   );
