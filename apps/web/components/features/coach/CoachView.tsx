@@ -38,13 +38,11 @@ import type { KbRoutePlus } from '@/lib/kb/route';
 import {
   askCoach,
   fetchCoachStatus,
-  getPreferredModel,
   isCoachConfigured,
-  setPreferredModel,
   snippetsFromHits,
-  subscribeModelPref,
   type CoachStatus,
 } from '@/lib/kb/client';
+import { ModelPicker } from '@/components/features/shared/ModelPicker';
 import { MealSuggestionCard, wantsMealSuggestion } from './MealSuggestionCard';
 import { useNutritionTargets, useLogsForDate } from '@/lib/demo/useDemo';
 import { useSelectedDate } from '@/lib/demo/selectedDate';
@@ -170,12 +168,6 @@ export function CoachView() {
    */
   const [autoPersonalize, setAutoPersonalize] = React.useState(true);
   const [status, setStatus] = React.useState<CoachStatus | null>(null);
-  /** The user's model pick ('' = Auto), live across tabs/components via the client-side store. */
-  const preferredModel = React.useSyncExternalStore(
-    subscribeModelPref,
-    () => getPreferredModel() ?? '',
-    () => '',
-  );
 
   React.useEffect(() => {
     try {
@@ -403,32 +395,10 @@ export function CoachView() {
                   : `AI coach online · ${(status.model ?? '').split('/').pop() || 'ready'}`
                 : 'AI unreachable — guide still answers'}
           </span>
-          {/* THE MODEL PICKER. Options come from the worker's own health check — the worker
-              advertises exactly what its config can honour (the free Workers AI chain, plus a
-              Mistral entry only while the deployer's key exists) and validates the pick again on
-              every request. A worker that predates the catalog sends no `models`, and the picker
-              simply is not there. "Auto" is the worker's default policy and the recommended
-              setting; the pick is a preference, not a guarantee — if a chosen model is retired
-              mid-week, the chain still answers and the response says which model really spoke. */}
-          {status?.online && (status.models?.length ?? 0) > 0 && (
-            <label className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
-              <span className="sr-only">AI model</span>
-              <select
-                value={preferredModel}
-                onChange={(e) => setPreferredModel(e.target.value || null)}
-                data-testid="coach-model-select"
-                aria-label="AI model"
-                className="h-8 min-w-0 max-w-[13rem] cursor-pointer truncate rounded-chip border border-border bg-surface-2 px-2 text-[11px] font-semibold text-foreground outline-none transition-colors hover:border-border-strong focus-visible:border-accent"
-              >
-                <option value="">Auto — coach picks</option>
-                {status.models!.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          {/* THE MODEL PICKER — the shared control (see ModelPicker.tsx). It renders nothing
+              until the worker advertises a catalog, and the SAME preference drives the nutrition
+              macro estimator, so a model chosen here is the model that estimates a burrito. */}
+          <ModelPicker label={null} testId="coach-model-select" />
           <button
             type="button"
             role="switch"

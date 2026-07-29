@@ -15,6 +15,7 @@ import { Button, Card, Chip, Sheet } from '@/components/ui';
 import { CheckIcon, PlusIcon, SearchIcon, SparkleIcon, XIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 import { askMacroEstimate, type MacroEstimate } from '@/lib/food/aiEstimate';
+import { ModelPicker, labelForModel, useCoachModels } from '@/components/features/shared/ModelPicker';
 import { isCoachConfigured } from '@/lib/kb/client';
 import { computeMacros, confidenceHint, confidenceLevel, formatMacros, sumMacros } from '@/lib/food/format';
 import { formatQuantity, unitOptions } from '@/lib/food/measures';
@@ -133,6 +134,17 @@ export function ReviewSheet({
           <p className="-mt-2 mb-3 line-clamp-2 shrink-0 text-sm text-muted-foreground">
             You said “<span className="text-foreground">{input}</span>” · tap anything to fix it.
           </p>
+
+          {/* WHICH MODEL WILL ESTIMATE. Only when something actually needs estimating — with every
+              item matched there is no AI in this flow and a model dropdown would be noise. One
+              control for the whole sheet rather than one per row: the preference is global (it is
+              the same setting the Coach chat shows), so N copies of it would be N chances to
+              disagree with each other. */}
+          {unmatchedCount > 0 && (
+            <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
+              <ModelPicker label="Estimate with" testId="review-model-select" />
+            </div>
+          )}
 
           <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto">
             {items.length === 0 && (
@@ -493,6 +505,11 @@ function AiEstimatePanel({
   onDiscard: () => void;
 }) {
   const styles = LEVEL_STYLES[est.confidence];
+  const models = useCoachModels();
+  // Which model REALLY answered, which is not always the one that was picked — a retired choice
+  // falls through the chain. Attributing the number honestly is the same principle as printing
+  // the min–max range instead of a single confident figure.
+  const by = labelForModel(models, est.model);
   return (
     <div data-testid="unmatched-ai-result" className="mt-2 rounded-field border border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-surface p-2.5">
       <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
@@ -500,6 +517,11 @@ function AiEstimatePanel({
         <span aria-hidden className={cn('ml-auto h-2 w-2 rounded-full', styles.dot)} />
         <span className={cn('text-[10px] normal-case', styles.text)}>{est.confidence} confidence</span>
       </div>
+      {by && (
+        <p className="mt-0.5 text-[10px] text-muted-foreground" data-testid="unmatched-ai-model">
+          by {by}
+        </p>
+      )}
       <p className="tabular mt-1.5 text-sm font-semibold text-foreground">
         ≈ {Math.round(est.kcal.value)} kcal{' '}
         <span className="font-normal text-muted-foreground">

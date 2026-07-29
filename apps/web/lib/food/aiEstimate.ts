@@ -28,6 +28,12 @@ export interface MacroEstimate {
   confidence: 'high' | 'medium' | 'low';
   assumptions: string[];
   samples: number;
+  /**
+   * The model that ACTUALLY produced this, as reported by the worker — not the one the user
+   * picked. Those differ whenever a pick was retired or a backend fell through, and the number a
+   * person is about to eat deserves the true attribution rather than the requested one.
+   */
+  model?: string;
 }
 
 export type MacroEstimateResult =
@@ -114,6 +120,7 @@ export async function askMacroEstimate(
           body.confidence === 'high' || body.confidence === 'medium' ? body.confidence : 'low',
         assumptions: Array.isArray(body.assumptions) ? body.assumptions.map(String) : [],
         samples: typeof body.samples === 'number' ? body.samples : 0,
+        model: typeof body.model === 'string' ? body.model.slice(0, 120) : undefined,
       },
     };
   } catch (err) {

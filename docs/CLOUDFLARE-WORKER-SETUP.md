@@ -175,10 +175,14 @@ saved), and that it went to the production environment, not a preview tab. The U
 plain browser tab too, so you can refresh it after each attempt until it flips.
 
 **The model picker.** The health check also advertises a `models` catalog — the free Workers AI
-chain, plus your Mistral model while the key is live. The app's Coach screen renders that catalog
-as a dropdown ("Auto — coach picks" by default), sends the pick with each request, and the worker
-validates it against the same catalog before honouring it. Picking a free Workers AI model
-deliberately skips Mistral, so browsing the free tier never spends your key.
+chain, plus your Mistral model while the key is live. The app renders that catalog as a dropdown
+("Auto — coach picks" by default) on **both** AI surfaces: the Coach chat, and the nutrition
+review sheet whenever a food needs an AI macro estimate. There is one shared preference behind
+both, so a model chosen in the chat is the model that estimates a burrito. The pick rides every
+request and the worker validates it against the same catalog before honouring it; picking a free
+Workers AI model deliberately skips Mistral, so browsing the free tier never spends your key. An
+estimate is labelled with the model that actually produced it, which is not always the one picked
+— a retired choice falls through the chain.
 
 ---
 
