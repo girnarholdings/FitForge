@@ -84,13 +84,21 @@ export function QuickWorkoutCard({ restDay = false }: QuickWorkoutCardProps) {
               carries the row's real optical weight instead of approximating it. The portrait keeps
               the sizes it was actually drawn for — the equipment picker, and the 48 px empty
               states in Progress. */}
-          {restDay && <BenchIcon size={22} className="shrink-0 text-accent" />}
-          <CardTitle>{restDay ? 'Rest day' : 'Want to train anyway?'}</CardTitle>
+          {restDay ? (
+            <BenchIcon size={22} className="shrink-0 text-accent" />
+          ) : (
+            <BoltIcon size={22} className="shrink-0 text-accent" />
+          )}
+          {/* On a training day this card sits DIRECTLY under "Start workout", so "Want to train
+              anyway?" read as nonsense — you were just invited to train. The headline now names
+              the lane itself: the manual, off-plan way in, next to the scheduled one. The
+              question-phrasing only survives on a rest day, where it is actually a question. */}
+          <CardTitle>{restDay ? 'Rest day' : 'Quick workout'}</CardTitle>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {restDay
             ? 'No workout scheduled today — recovery is part of the plan. Want to move anyway?'
-            : 'Pull tomorrow forward, run a single day, or condense the whole split into one session.'}
+            : 'Not doing today’s session? Pull tomorrow forward, run a single day, or condense the split — your call.'}
         </p>
         <Button
           variant="secondary"
@@ -99,7 +107,10 @@ export function QuickWorkoutCard({ restDay = false }: QuickWorkoutCardProps) {
           data-testid="quick-workout-open"
           onClick={() => setOpen(true)}
         >
-          <BoltIcon size={18} /> Quick workout
+          {/* The rest-day button keeps the "Quick workout" name (it is the card's only label for
+              the lane there); on a training day the title already says it, so the button states
+              the action instead of repeating the noun. */}
+          <BoltIcon size={18} /> {restDay ? 'Quick workout' : 'Pick a session'}
         </Button>
       </Card>
 
