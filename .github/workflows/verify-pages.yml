@@ -1,0 +1,92 @@
+# Verify the DEPLOYED Pages site actually serves what was just shipped.
+#
+# WHY THIS RUNS HERE AND NOT IN THE DEV SANDBOX. The development environment's egress proxy
+# refuses CONNECT to github.io (403), exactly as it does for *.workers.dev — which is how a green
+# deploy sat unverified for twenty minutes while a sandbox-side watcher silently failed every
+# poll. Any check of the live site has to run from a network that can see the live site; for this
+# repo that means a GitHub runner, the same answer the Coach worker probe already settled on.
+#
+# WHAT IT PROVES:
+#   1. The site responds and the /today/ page is real HTML referencing hashed _next/ assets.
+#   2. EVERY asset that HTML references resolves 200 — the half-propagated state where the CDN
+#      serves fresh HTML pointing at chunks it has not got yet fails here, loudly.
+#   3. (Optional) the served bundle CONTAINS given marker strings — pass `markers` on manual
+#      dispatch to prove a specific change is live (e.g. a class name or copy string the change
+#      introduced). The default marker is a token every build since the forge-identity pass
+#      carries, so the standing check also catches a rollback to something ancient.
+#
+# The HTML fetch is cache-busted per run; the hashed assets are immutable by name and need none.
+name: Verify the deployed Pages site
+
+on:
+  workflow_dispatch:
+    inputs:
+      markers:
+        description: 'Space-separated strings the served JS+CSS must contain'
+        required: false
+        default: 'ff-tab-spark'
+  workflow_run:
+    workflows: ['Deploy web demo to GitHub Pages']
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: verify-pages
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    # On workflow_run, only bother when the deploy itself succeeded — a failed deploy already
+    # reported its own failure and this would just repeat it with a worse error message.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch /today/ and every asset it references
+        env:
+          BASE: https://girnarholdings.github.io/FitForge
+          MARKERS: ${{ inputs.markers || 'ff-tab-spark' }}
+        run: |
+          set -u
+          # The CDN can take a couple of minutes to propagate a fresh deploy; retry the whole
+          # check rather than failing on the first stale read.
+          for attempt in $(seq 1 12); do
+            ok=1
+            rm -rf /tmp/site && mkdir -p /tmp/site
+            if ! curl -sSf --max-time 20 "$BASE/today/?v=${GITHUB_RUN_ID}-${attempt}" -o /tmp/site/today.html; then
+              echo "attempt ${attempt}: /today/ did not fetch"
+              ok=0
+            else
+              # Every hashed asset the page references, absolute-ised against the site base.
+              grep -o '/FitForge/_next/[A-Za-z0-9/._()%-]*\.\(js\|css\)' /tmp/site/today.html \
+                | sort -u > /tmp/site/assets.txt
+              count=$(wc -l < /tmp/site/assets.txt)
+              if [ "$count" -lt 3 ]; then
+                echo "attempt ${attempt}: page references only ${count} assets — not a real build"
+                ok=0
+              else
+                : > /tmp/site/bundle.txt
+                while read -r path; do
+                  if ! curl -sSf --max-time 20 "https://girnarholdings.github.io${path}" >> /tmp/site/bundle.txt; then
+                    echo "attempt ${attempt}: asset 404/failed: ${path}"
+                    ok=0
+                    break
+                  fi
+                done < /tmp/site/assets.txt
+              fi
+            fi
+            if [ "$ok" = 1 ]; then
+              missing=""
+              for m in $MARKERS; do
+                grep -qF "$m" /tmp/site/bundle.txt /tmp/site/today.html || missing="$missing $m"
+              done
+              if [ -z "$missing" ]; then
+                echo "::notice::Pages site verified: $(wc -l < /tmp/site/assets.txt) assets all 200, markers present:${MARKERS:+ }$MARKERS"
+                exit 0
+              fi
+              echo "attempt ${attempt}: markers not yet in the served bundle:${missing}"
+            fi
+            sleep 15
+          done
+          echo "::error::The deployed site never verified: assets missing or markers absent after 12 attempts (~3 min). The CDN may be serving a stale build, or the markers are wrong."
+          exit 1
