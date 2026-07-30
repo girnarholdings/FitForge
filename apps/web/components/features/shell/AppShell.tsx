@@ -33,6 +33,8 @@ import {
   ShakerIcon,
   ShakerSolidIcon,
   SettingsIcon,
+  UserIcon,
+  LogOutIcon,
   CoachIcon,
   RepeatIcon,
   CheckIcon,
@@ -43,7 +45,8 @@ import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import { Sheet } from '@/components/ui';
 import { FloatingTabBar, type TabItem } from './FloatingTabBar';
 import { LogoLockup } from '@/components/illustrations';
-import { useAuth } from '@/lib/auth/useUser';
+import { useAuth, type AuthUser } from '@/lib/auth/useUser';
+import { signOutUser } from '@/lib/auth/firebase';
 import {
   getRestoreState,
   getSyncStatus,
@@ -365,6 +368,129 @@ function SyncButton({
  * `right-0` rather than centred so the label grows leftwards: the rightmost button sits against
  * the screen edge, and a centred label would hang off it.
  */
+/**
+ * THE TOP-RIGHT CONTROL IS THE PERSON, NOT THE GEAR — and it is a real dropdown.
+ *
+ * Two owner complaints drove this. First, the screen behind it became a PROFILE, so a gear was
+ * naming the wrong thing. Second, the old control was a plain link: tapping it while already on
+ * /settings did nothing, which reads as a stuck button. A dropdown answers both — every tap
+ * either opens or closes it, and what drops down is identity first (who you are, where your data
+ * lives), then the way into the full profile screen.
+ *
+ * Closes on: second tap (aria-expanded toggle), outside tap, Escape, and any route change.
+ * `data-testid="mobile-settings"` stays on the BUTTON — it is the same 44px top-bar target the
+ * touch-target and overflow specs have always measured.
+ */
+function ProfileMenu({
+  pathname,
+  user,
+  displayName,
+}: {
+  pathname: string;
+  user: AuthUser | null;
+  displayName: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+
+  // Route changes close the menu — following a menu item must not leave it hanging open.
+  React.useEffect(() => setOpen(false), [pathname]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const initial = (displayName.trim() || user?.email || '').slice(0, 1).toUpperCase();
+  const onSettings = /^\/settings(\/|$)/.test(pathname);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-label="Profile"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-testid="mobile-settings"
+        aria-current={onSettings ? 'page' : undefined}
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'relative touch-manipulation before:absolute before:-inset-1 before:content-[""]',
+          'grid h-9 w-9 place-items-center overflow-hidden rounded-full border transition-colors',
+          open || onSettings
+            ? 'border-transparent bg-accent-muted text-accent'
+            : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+        )}
+      >
+        {user?.photoURL ? (
+          // eslint-disable-next-line @next/next/no-img-element -- static export: no optimizer
+          <img src={user.photoURL} alt="" width={34} height={34} referrerPolicy="no-referrer" />
+        ) : initial ? (
+          <span className="text-sm font-bold">{initial}</span>
+        ) : (
+          <UserIcon size={18} />
+        )}
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Profile menu"
+          data-testid="profile-menu"
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-60 rounded-sm border border-border bg-surface-2 p-1.5 shadow-[var(--shadow-pop)]"
+        >
+          {/* Identity first: who this device thinks you are, and where the data lives. */}
+          <div className="px-2.5 py-2">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {user?.name ?? (displayName.trim() || 'Local Mode athlete')}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user ? (user.email ?? 'Synced to Google') : 'Local Mode — this browser'}
+            </p>
+          </div>
+          <div className="mx-1 border-t border-border" role="none" />
+          <Link
+            href="/settings"
+            role="menuitem"
+            data-testid="profile-menu-settings"
+            onClick={() => setOpen(false)}
+            className="mt-1 flex min-h-11 items-center gap-2.5 rounded-sm px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            <SettingsIcon size={17} className="text-muted-foreground" />
+            Profile &amp; settings
+          </Link>
+          {user && (
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="profile-menu-signout"
+              onClick={() => {
+                setOpen(false);
+                void signOutUser();
+              }}
+              className="flex min-h-11 w-full items-center gap-2.5 rounded-sm px-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <LogOutIcon size={17} className="text-muted-foreground" />
+              Sign out
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WithLabel({
   label,
   children,
@@ -650,23 +776,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <CoachIcon size={18} />
             </Link>
             </WithLabel>
-            <WithLabel label="Settings" suppressed={announceSync}>
-            <Link
-              href="/settings"
-              aria-label="Settings"
-              data-testid="mobile-settings"
-              aria-current={isActive(pathname, SETTINGS_ITEM) ? 'page' : undefined}
-              className={cn(
-                // Same 36px-pill / 44px-target treatment as Coach above.
-                'relative touch-manipulation before:absolute before:-inset-1 before:content-[""]',
-                'grid h-9 w-9 place-items-center rounded-full border border-border transition-colors',
-                isActive(pathname, SETTINGS_ITEM)
-                  ? 'border-transparent bg-accent-muted text-accent'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )}
-            >
-              <SettingsIcon size={18} />
-            </Link>
+            <WithLabel label="Profile" suppressed={announceSync}>
+              <ProfileMenu pathname={pathname} user={user} displayName={name} />
             </WithLabel>
           </div>
         </div>

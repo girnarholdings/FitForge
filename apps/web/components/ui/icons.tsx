@@ -636,17 +636,14 @@ export const CollarIcon = ({ open = false, ...p }: IconProps & { open?: boolean 
  */
 export const CoachIcon = (p: IconProps) => (
   <Svg {...p}>
-    {/* head */}
-    <circle cx="9" cy="6.2" r="2.9" />
-    {/* shoulders — the widest line in the glyph, which is what reads as strong */}
-    <path d="M3.4 17.5c0-3.6 2.5-6.1 5.6-6.1s5.6 2.5 5.6 6.1" />
-    {/* torso */}
-    <path d="M9 11.4v9.4" />
-    {/* raised arm to the hammer */}
-    <path d="M13.2 13.2 16.8 9.9" />
-    {/* sledgehammer: long handle, wide head */}
-    <path d="m15.9 11.2 4.6-4.9" />
-    <path d="m17.4 3.3 3.9 3.6" />
+    {/* THE HAMMER, not the stick figure. The old glyph was a little person with a raised arm —
+        mascot territory, unreadable scribble at 18px. (An intermediate draft added spark
+        crosses and promptly read as a magic wand — sparkles are their own slop.) This is the
+        classic smith's hammer, head-down mid-swing: the coach is the one who swings it on your
+        behalf. Same family as the rank crest's sledge ({@link HammerIcon}), different tool. */}
+    <path d="m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9" />
+    <path d="m18 15 4-4" />
+    <path d="m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5" />
   </Svg>
 );
 

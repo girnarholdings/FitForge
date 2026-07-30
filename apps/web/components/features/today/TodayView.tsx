@@ -337,7 +337,8 @@ export function TodayView() {
             <p className="text-sm font-semibold text-foreground">Body weight</p>
             <p className="text-xs text-muted-foreground">Log weigh-ins to see your trend.</p>
           </div>
-          <Link href="/progress" className="shrink-0">
+          {/* Straight to the WEIGHT tab — "Add" that lands on Trends is a broken promise. */}
+          <Link href="/progress?tab=weight" className="shrink-0">
             <Button variant="secondary" size="sm">
               Add <ArrowRightIcon size={16} />
             </Button>

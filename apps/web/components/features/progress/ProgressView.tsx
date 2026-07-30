@@ -97,6 +97,21 @@ function EmptyState({
 
 export function ProgressView() {
   const [tab, setTab] = React.useState<Tab>('trends');
+
+  /**
+   * DEEP-LINKABLE TABS. Today's "Add" weight action lands here meaning the WEIGHT tab, and a
+   * link that dumps you on Trends to hunt for a second tap is a broken promise. Read from
+   * `window.location` in an effect rather than `useSearchParams` — on a static export the Next
+   * hook drags the whole route into a Suspense/client bailout for what is one string read.
+   */
+  React.useEffect(() => {
+    try {
+      const wanted = new URLSearchParams(window.location.search).get('tab');
+      if (wanted && TABS.some((t) => t.id === wanted)) setTab(wanted as Tab);
+    } catch {
+      /* no window (prerender) or malformed search — Trends stands */
+    }
+  }, []);
   return (
     <div className="space-y-5">
       <h1 className="font-display text-display font-bold">Progress</h1>

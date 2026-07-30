@@ -174,7 +174,8 @@ test.describe('exercise library access, how-to, and aggregated targeting', () =>
     );
 
     // Settings left the tab bar but is still one tap away via the mobile top-bar gear.
-    await page.getByTestId('mobile-settings').click();
+    await page.getByTestId('mobile-settings').click(); // opens the profile dropdown
+    await page.getByTestId('profile-menu-settings').click();
     await openSettings(page);
     await page.waitForURL(/\/settings/);
     // The gear lands on the PROFILE screen, whose settings live behind a disclosure.

@@ -236,7 +236,8 @@ test.describe('settings · signed-in relevance', () => {
     const signedIn = await signInFakeUser(page, 'settings-uid-1');
     test.skip(!signedIn, 'build has no Firebase project — there is no signed-in state to test');
 
-    await page.getByTestId('mobile-settings').click();
+    await page.getByTestId('mobile-settings').click(); // opens the profile dropdown
+    await page.getByTestId('profile-menu-settings').click();
     await openSettings(page);
     await page.waitForURL(/\/settings/);
     await expect(page.getByTestId('account-signed-in')).toBeVisible();

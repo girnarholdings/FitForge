@@ -148,7 +148,7 @@ test.describe('shell · which mode you are in', () => {
       .locator('span.group', { has: button })
       .locator('span[aria-hidden]')
       .first();
-    await expect(label).toHaveText('Settings');
+    await expect(label).toHaveText('Profile');
     expect(await label.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
 
     const box = (await button.boundingBox())!;

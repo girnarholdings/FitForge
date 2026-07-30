@@ -833,3 +833,16 @@ export async function openSettings(page: Page): Promise<void> {
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
   await expect(page.getByTestId('settings-panel')).toBeVisible();
 }
+
+/**
+ * OPEN THE PROFILE SCREEN from the shell's top-right control.
+ *
+ * That control is a DROPDOWN now (profile menu), not a direct link — tapping it opens the menu
+ * and tapping it again closes it, which is the toggle the old gear never had. Reaching /settings
+ * the way a user does is therefore two taps: the avatar, then "Profile & settings".
+ */
+export async function openProfileScreen(page: Page): Promise<void> {
+  await page.getByTestId('mobile-settings').click();
+  await page.getByTestId('profile-menu-settings').click();
+  await page.waitForURL(/\/settings/);
+}

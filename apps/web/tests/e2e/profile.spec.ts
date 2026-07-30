@@ -82,6 +82,57 @@ test.describe('profile screen', () => {
     await expect(page.getByTestId('erase-local-data')).toContainText(/Erase Local Mode data/);
   });
 
+  test('the top-right control is a profile dropdown that toggles — open, and CLOSED AGAIN', async ({
+    page,
+  }) => {
+    /* The owner's exact complaint about the old gear: "the settings button does not collapse
+       back if you hit it again." It was a plain link, so a second tap on /settings did nothing.
+       It is a menu now, and every tap must answer. */
+    await page.goto('/today');
+    const control = page.getByTestId('mobile-settings');
+    await expect(control).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(control).toHaveAttribute('aria-expanded', 'false');
+
+    await control.click();
+    await expect(page.getByTestId('profile-menu')).toBeVisible();
+    await expect(control).toHaveAttribute('aria-expanded', 'true');
+    // Identity leads: the menu says who you are and where the data lives before it offers links.
+    await expect(page.getByTestId('profile-menu')).toContainText(/Local Mode/i);
+
+    // THE FIX: hitting it again collapses it.
+    await control.click();
+    await expect(page.getByTestId('profile-menu')).toHaveCount(0);
+    await expect(control).toHaveAttribute('aria-expanded', 'false');
+
+    // Escape and outside taps also close it — a dropdown that only its own button can dismiss
+    // is a modal wearing a menu's clothes.
+    await control.click();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('profile-menu')).toHaveCount(0);
+    await control.click();
+    // A point genuinely outside the 240px panel (the heading's CENTER sits under it at 390px,
+    // which is a fact about the click target, not about the menu).
+    await page.mouse.click(20, 400);
+    await expect(page.getByTestId('profile-menu')).toHaveCount(0);
+
+    // And the menu still reaches the profile screen in two taps.
+    await control.click();
+    await page.getByTestId('profile-menu-settings').click();
+    await page.waitForURL(/\/settings/);
+    await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
+  });
+
+  test("Today's body-weight Add lands on the WEIGHT tab, not on Trends", async ({ page }) => {
+    await page.goto('/today');
+    // The ledger's Add action promises weight logging; dumping the athlete on Trends to hunt for
+    // a second tap breaks that promise.
+    await page.getByRole('button', { name: /^Add/ }).click();
+    // The static host serves directories, so the URL lands with a trailing slash.
+    await page.waitForURL(/\/progress\/?\?tab=weight/);
+    await expect(page.getByTestId('progress-tab-weight')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('progress-tab-trends')).toHaveAttribute('aria-pressed', 'false');
+  });
+
   test('signed in, identity is rendered once and the local-only warning is gone', async ({
     page,
   }) => {
@@ -89,7 +140,8 @@ test.describe('profile screen', () => {
     const signedIn = await signInFakeUser(page, 'profile-uid-1');
     test.skip(!signedIn, 'build has no Firebase project — there is no signed-in state to test');
 
-    await page.getByTestId('mobile-settings').click();
+    await page.getByTestId('mobile-settings').click(); // opens the profile dropdown
+    await page.getByTestId('profile-menu-settings').click();
     await page.waitForURL(/\/settings/);
 
     // The account block is IN the profile card, and there is exactly one of it. The settings body

@@ -218,7 +218,8 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
      * local-only copy. Client-side navigation carries the already-restored user in memory, so
      * the state under test is settled before the sheet can open.
      */
-    await page.getByTestId('mobile-settings').click();
+    await page.getByTestId('mobile-settings').click(); // opens the profile dropdown
+    await page.getByTestId('profile-menu-settings').click();
     await openSettings(page);
     await page.waitForURL(/\/settings/);
     await expect(page.getByTestId('mode-chip')).toHaveAttribute('data-mode', 'google');
