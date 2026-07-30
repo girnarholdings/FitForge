@@ -76,7 +76,7 @@ export default function LandingPage() {
           <h1 className="font-display text-[clamp(2rem,9vw,2.75rem)] font-bold leading-[1.06] tracking-tight text-foreground lg:text-[3.5rem]">
             Your personal trainer.
             <br />
-            <span className="text-gradient-gold">Forged around you.</span>
+            <span className="text-accent-soft">Forged around you.</span>
           </h1>
           {/* COPY BUDGET: this line must stay within ~2 lines at 390px (see the layout note at the
               top of the file) — about 90 characters. It also may NOT claim offline support: there

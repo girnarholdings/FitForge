@@ -6,7 +6,7 @@ import { withBase } from '@/lib/utils';
  * FitForge wordmark lockups (§3.1 / §3.2).
  *
  * "FitForge" set in Space Grotesk SemiBold, tracking -0.01em: "Fit" in ivory
- * `--foreground`, "Forge" in the gold text gradient (`.text-gradient-gold`,
+ * `--foreground`, "Forge" in solid copper (`text-accent-soft` — gradient text was
  * defined in globals.css). Never letter-spaced wide — it's machined, not
  * fashion.
  *
@@ -31,7 +31,7 @@ export interface LogoLockupProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
 }
 
 const FONT_STACK =
-  'var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif';
+  'var(--font-big-shoulders), var(--font-archivo), ui-sans-serif, system-ui, -apple-system, sans-serif';
 
 export function LogoLockup({
   size = 24,
@@ -62,7 +62,7 @@ export function LogoLockup({
       {mono ? (
         <span>Forge</span>
       ) : (
-        <span className="text-gradient-gold">Forge</span>
+        <span className="text-accent-soft">Forge</span>
       )}
     </span>
   );

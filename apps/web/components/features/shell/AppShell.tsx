@@ -678,7 +678,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main
           className={cn(
             'mx-auto w-full flex-1 px-4 pb-[var(--dock-clearance)] pt-4 md:px-8 md:pb-10 md:pt-8',
-            /^\/(today|exercises|progress|routines)(\/|$)/.test(pathname)
+            /^\/(exercises|progress|routines)(\/|$)/.test(pathname)
               ? 'max-w-[720px] lg:max-w-[1040px]'
               : 'max-w-[720px]',
           )}

@@ -763,7 +763,7 @@ function CoachTyping() {
             <span
               key={delay}
               style={{ animationDelay: `${delay}ms` }}
-              className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent motion-reduce:animate-none"
+              className="ff-ember-dot h-1.5 w-1.5 rounded-full bg-energy"
             />
           ))}
         </span>

@@ -136,10 +136,14 @@ test.describe('nutrition', () => {
     await page.evaluate(() => window.scrollBy(0, -120));
     await analytics.screenshot({ path: 'tests/screenshots/nutrition-analytics-card.png' });
 
-    /* 3 · every logged row carries a face and its macro line. */
+    /* 3 · every logged row carries a face and its macro line. The face is a DRAWN icon from the
+       food set (one stroke grammar with the rest of the app), never an emoji — asserted by
+       checking the row renders an SVG glyph, which an emoji text node cannot satisfy. */
     const eggRow = page.getByText(/Egg, whole/i).first();
     await expect(eggRow).toBeVisible();
-    await expect(page.getByText('🥚').first()).toBeVisible();
+    await expect(
+      page.getByTestId('nutrition-view').locator('.bg-accent-muted svg').first(),
+    ).toBeVisible();
     // The meal header is a stat line: kcal, share of the day, protein.
     await expect(page.getByText(/% of day/).first()).toBeVisible();
 

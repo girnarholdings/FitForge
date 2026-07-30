@@ -35,7 +35,7 @@ import { parseFoodText } from '@/lib/food/parse';
 import { learnedFoodIds } from '@/lib/food/learning';
 import { popularFoods } from '@/lib/food/search';
 import type { Food, ParsedItem } from '@/lib/food/types';
-import { emojiForFood } from '@/lib/food/emoji';
+import { FoodGlyph } from '@/components/ui/foodIcons';
 import { MEAL_SLOTS } from './mealSlots';
 import { Composer } from './Composer';
 import { DayAnalytics } from './DayAnalytics';
@@ -329,11 +329,18 @@ export function NutritionView() {
                       onClick={() => setEditing(l)}
                       className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                     >
-                      {/* Every row gets a face (emoji, same system as search/review) and a macro
-                          composition strip — protein/carb/fat share of THIS item's calories — so
-                          a glance down the list shows which entries carry the protein. */}
-                      <span aria-hidden className="w-6 shrink-0 text-center text-lg leading-none">
-                        {emojiForFood(food ?? { name: l.custom_name ?? '', category: 'dish' })}
+                      {/* Every row gets a face — a DRAWN glyph from the food icon set, in the
+                          same stroke grammar as every other icon on screen — plus a macro
+                          composition strip, so a glance down the list shows which entries carry
+                          the protein. */}
+                      <span
+                        aria-hidden
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-muted text-accent-soft"
+                      >
+                        <FoodGlyph
+                          food={food ?? { name: l.custom_name ?? '', category: 'dish' }}
+                          size={17}
+                        />
                       </span>
                       <span className="min-w-0 flex-1">
                         <p className="flex items-baseline gap-1.5 truncate text-sm font-medium text-foreground">
@@ -455,8 +462,10 @@ function MacroStrip({ m }: { m: { protein_g: number; carbs_g: number; fat_g: num
   if (total <= 0) return null;
   return (
     <span aria-hidden className="mt-1 flex h-1 w-11 overflow-hidden rounded-full bg-muted">
+      {/* COPPER FAMILY ONLY (finish-review fix): protein full copper, carbs soft copper, fat
+          ember. Green was a second identity hue in a one-accent world. */}
       <span style={{ width: `${(p / total) * 100}%`, backgroundColor: 'var(--color-accent)' }} />
-      <span style={{ width: `${(c / total) * 100}%`, backgroundColor: 'var(--color-success)' }} />
+      <span style={{ width: `${(c / total) * 100}%`, backgroundColor: 'var(--color-accent-soft)' }} />
       <span style={{ width: `${(f / total) * 100}%`, backgroundColor: 'var(--color-energy)' }} />
     </span>
   );

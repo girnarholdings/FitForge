@@ -79,16 +79,14 @@ export function WelcomeStep() {
         <h1 className="mt-4 flex-none text-center font-display text-[clamp(1.5rem,6.6vw,2rem)] font-bold leading-[1.1] tracking-tight text-foreground">
           Your personal trainer,
           <br />
-          <span className="text-gradient-gold">forged around you.</span>
+          <span className="text-accent-soft">forged around you.</span>
         </h1>
         <p className="mt-2 flex-none text-center text-[0.9375rem] leading-snug text-muted-foreground">
           A few quick questions about your goals, gear, and preferences — we&apos;ll forge the rest.
         </p>
 
         <label className="mt-5 block flex-none">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            What should we call you?
-          </span>
+          <span className="text-sm font-medium text-foreground">What should we call you?</span>
           <input
             type="text"
             value={name}

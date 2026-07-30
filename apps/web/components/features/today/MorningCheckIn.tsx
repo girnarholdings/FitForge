@@ -311,28 +311,30 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
 
   return (
     <>
-      <Card className="shadow-[var(--shadow-card)]" data-testid="morning-checkin">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-muted text-accent">
-            <SparkleIcon size={18} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <CardTitle>Morning check-in</CardTitle>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Thirty seconds — and today&rsquo;s plan adapts to how you actually slept.
-            </p>
-          </div>
+      {/* A ROW, not a card. The prompt sits directly under the workout anchor and exists to be
+          answered once — the finish review named Today's uniform card stack, and an unanswered
+          question does not outrank the work. The answered states keep their own shapes. */}
+      <div
+        className="flex items-center gap-3 border-y border-border py-3"
+        data-testid="morning-checkin"
+      >
+        <SparkleIcon size={18} className="shrink-0 text-accent" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground">Morning check-in</p>
+          <p className="text-xs text-muted-foreground">
+            Thirty seconds — today&rsquo;s plan adapts to how you slept.
+          </p>
         </div>
         <Button
           variant="secondary"
-          block
-          className="mt-3"
+          size="sm"
+          className="shrink-0"
           data-testid="checkin-open"
           onClick={() => setOpen(true)}
         >
-          <BoltIcon size={18} /> Check in
+          Check in
         </Button>
-      </Card>
+      </div>
 
       <Sheet open={open} onClose={() => setOpen(false)} title="How are you feeling?">
         {!verdict && !aiOffer && (

@@ -519,7 +519,7 @@ export function ExerciseCatalog() {
               {groups.map((group) => (
                 <section key={group.key} aria-label={group.label}>
                   <div className="mb-1.5 flex items-baseline justify-between gap-2 border-b border-border pb-1">
-                    <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    <h2 className="font-display text-base font-bold text-foreground">
                       {group.label}
                     </h2>
                     <span className="tabular text-xs font-semibold text-muted-foreground">

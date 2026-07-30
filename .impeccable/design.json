@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-30T00:00:00Z",
+  "title": "Design System: FitForge",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Copper",
+        "canonical": "#c98963",
+        "tonalRamp": ["#2b1d14", "#4a3020", "#6b452e", "#8a5432", "#b0714c", "#c98963", "#d99b76", "#ecc0a4"]
+      },
+      "energy": {
+        "role": "secondary",
+        "displayName": "Ember (heat-state only)",
+        "canonical": "#e2703a",
+        "tonalRamp": ["#2a170e", "#4a2412", "#7a3a1a", "#a84e24", "#d85f1e", "#e2703a", "#ec8f5f", "#f7c4a6"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Iron Black",
+        "canonical": "#131010",
+        "tonalRamp": ["#131010", "#1d1815", "#231d18", "#282019", "#4a4036", "#6e6154", "#a89e93", "#f3ede5"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Forge White",
+        "canonical": "#f3ede5",
+        "tonalRamp": ["#2c2520", "#4a4036", "#6e6154", "#8a7d6f", "#a89e93", "#c9c0b4", "#e2dbd1", "#f3ede5"]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Ash",
+        "canonical": "#a89e93",
+        "tonalRamp": ["#231d18", "#3a322a", "#554a3f", "#6e6154", "#8a7d6f", "#a89e93", "#c2b9ad", "#ddd6cc"]
+      },
+      "danger": {
+        "role": "state",
+        "displayName": "Danger Red",
+        "canonical": "#ff6b70",
+        "tonalRamp": ["#3a1214", "#661f23", "#932c31", "#c03a40", "#d92d33", "#ff6b70", "#ff9599", "#ffc9cb"]
+      },
+      "success": {
+        "role": "state",
+        "displayName": "Success Green (true success states only)",
+        "canonical": "#3ecf8e",
+        "tonalRamp": ["#0d2b1e", "#124a32", "#0f8a4c", "#1fab68", "#3ecf8e", "#68dba6", "#9be8c4", "#cef4e1"]
+      },
+      "info": {
+        "role": "state",
+        "displayName": "Info Blue",
+        "canonical": "#7cb4ff",
+        "tonalRamp": ["#101f33", "#1c3a63", "#2668c5", "#4a8ce6", "#7cb4ff", "#9cc6ff", "#bedaff", "#dfedff"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (Big Shoulders)", "purpose": "Screen headings and hero numerals only. Condensed — takes a size step more than Archivo, wants neutral-to-positive tracking." },
+      "title": { "displayName": "Title (Big Shoulders)", "purpose": "Section headings; tuned for the condensed face (1.375rem / 1.12 / +0.012em)." },
+      "body": { "displayName": "Body (Archivo)", "purpose": "Everything spoken at UI size — labels, body, buttons, data at 13–16px. `.tabular` on numerals." },
+      "label": { "displayName": "Micro Label (Archivo)", "purpose": "Terse uppercase data labels beside values only. Never a kicker above a heading." }
+    },
+    "shadows": [
+      { "name": "elev-card", "value": "inset 0 1px 0 rgba(255,255,255,0.055), 0 2px 6px -2px rgba(0,0,0,0.65), 0 12px 28px -16px rgba(0,0,0,0.95)", "purpose": "Default card depth: 1px machined top-light plus two true downward drops." },
+      { "name": "elev-pop", "value": "0 16px 48px -12px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.04)", "purpose": "Floating/overlay chrome." },
+      { "name": "elev-ember", "value": "inset 0 1px 0 rgba(255,235,220,0.10), 0 3px 8px -2px rgba(0,0,0,0.6), 0 10px 28px -10px rgba(226,112,58,0.38)", "purpose": "Heat under a raised piece — a TRUE offset warm shadow for the one hero action per screen. Replaced the banned zero-offset copper halo." },
+      { "name": "dock-shade", "value": "0 -14px 22px -14px rgba(0,0,0,0.75)", "purpose": "Upward shade separating the docked CTA from the scroll region behind it." }
+    ],
+    "motion": [
+      { "name": "spring-press", "value": "spring(stiffness 700, damping 34, mass 0.55)", "purpose": "Taps, toggles, chips — direct physical response; paired with scale 0.97 (0.985 for cards)." },
+      { "name": "spring-panel", "value": "spring(stiffness 420, damping 38, mass 0.9)", "purpose": "Panels and cards arriving." },
+      { "name": "spring-sheet", "value": "spring(stiffness 340, damping 36, mass 1)", "purpose": "Bottom sheets in; exit is a faster 160ms ease-in tween." },
+      { "name": "spring-settle", "value": "spring(stiffness 180, damping 30, mass 1)", "purpose": "Numbers, bars, gauges settling — overshoot-free." },
+      { "name": "ff-keyframes", "value": "transform+opacity only; JS-gated on prefers-reduced-motion", "purpose": "Celebration kit (ff-spark, ff-ripple, ff-pop, ff-pop-fade, ff-shimmer, ff-halo, ff-rise-in, ff-tab-spark, ff-ember-breathe, ff-shake) — compositor-only overlays." }
+    ],
+    "breakpoints": [
+      { "name": "target-viewport", "value": "390x664" },
+      { "name": "sheet-centered", "value": "640px" },
+      { "name": "desktop-flow", "value": "900px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button (knurled hero CTA)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Copper fill, near-black ink; the knurl grip band marks the one full-width primary CTA per screen.",
+      "html": "<button class=\"ds-btn-primary\">Start workout</button>",
+      "css": ".ds-btn-primary { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 56px; padding: 0 24px; background: var(--accent, #c98963); color: var(--accent-foreground, #1c0f08); font-weight: 500; font-size: 16px; border: none; border-radius: 16px; cursor: pointer; transition: background-color 150ms ease-out, transform 100ms ease; } .ds-btn-primary::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background-image: repeating-linear-gradient(90deg, transparent 0 4px, rgba(0,0,0,0.07) 4px 5px); -webkit-mask-image: linear-gradient(90deg, transparent 22%, #000 38%, #000 62%, transparent 78%); mask-image: linear-gradient(90deg, transparent 22%, #000 38%, #000 62%, transparent 78%); } .ds-btn-primary:hover { background: var(--accent-hover, #d99b76); } .ds-btn-primary:active { background: var(--accent-press, #b0714c); transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent, #c98963); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet surface-2 button with a hairline border that strengthens on hover.",
+      "html": "<button class=\"ds-btn-secondary\">Swap exercise</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 16px; background: var(--surface-2, #1d1815); color: var(--foreground, #f3ede5); font-weight: 500; font-size: 16px; border: 1px solid var(--border, #2c2520); border-radius: 16px; cursor: pointer; transition: background-color 150ms ease-out, border-color 150ms ease-out, transform 100ms ease; } .ds-btn-secondary:hover { border-color: var(--border-strong, #4a4036); background: var(--elevated, #282019); } .ds-btn-secondary:active { opacity: 0.8; transform: scale(0.97); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--accent, #c98963); outline-offset: 2px; }"
+    },
+    {
+      "name": "Chip (selected)",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Capsule toggle; selection is marked by a check that springs in from zero width.",
+      "html": "<button class=\"ds-chip ds-chip--selected\" aria-pressed=\"true\"><span class=\"ds-chip-check\" aria-hidden=\"true\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"3\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20 6 9 17l-5-5\"/></svg></span>Barbell</button> <button class=\"ds-chip\" aria-pressed=\"false\">Dumbbells</button>",
+      "css": ".ds-chip { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; margin: 2px; border-radius: 9999px; font-size: 14px; font-weight: 500; background: var(--surface-2, #1d1815); color: var(--foreground, #f3ede5); border: 1px solid var(--border, #2c2520); cursor: pointer; transition: color 150ms, background-color 150ms, border-color 150ms, transform 100ms ease; } .ds-chip:hover { border-color: var(--border-strong, #4a4036); } .ds-chip:active { transform: scale(0.97); } .ds-chip:focus-visible { outline: 2px solid var(--accent, #c98963); outline-offset: 2px; } .ds-chip--selected { border-color: var(--accent, #c98963); background: var(--accent-muted, #2b1d14); color: var(--accent, #c98963); } .ds-chip-check { display: inline-flex; align-items: center; }"
+    },
+    {
+      "name": "Card (standard)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Surface-2 fill, hairline border, 24px radius, machined top-light shadow.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Bench Press</h3><p class=\"ds-card-desc\">4 sets × 6–8 reps · 72.5 kg</p></div>",
+      "css": ".ds-card { background: var(--surface-2, #1d1815); border: 1px solid var(--border, #2c2520); border-radius: 24px; padding: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 2px 6px -2px rgba(0,0,0,0.65), 0 12px 28px -16px rgba(0,0,0,0.95); } .ds-card-title { margin: 0; font-size: 16px; font-weight: 600; color: var(--foreground, #f3ede5); } .ds-card-desc { margin: 4px 0 0; font-size: 14px; color: var(--muted-foreground, #a89e93); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Premium Card (forged)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Gold gradient hairline border — reserved for the plan preview, PR cards, and the Today hero.",
+      "html": "<div class=\"ds-card-premium\"><p class=\"ds-hero-num\">1,363</p><p class=\"ds-hero-sub\">kcal left · of 2,600</p></div>",
+      "css": ".ds-card-premium { border: 1px solid transparent; border-radius: 24px; padding: 16px; background: linear-gradient(var(--surface-2, #1d1815), var(--surface-2, #1d1815)) padding-box, linear-gradient(160deg, rgba(201,137,99,0.55), rgba(201,137,99,0.08) 70%) border-box; box-shadow: inset 0 1px 0 rgba(255,255,255,0.055), 0 2px 6px -2px rgba(0,0,0,0.65), 0 12px 28px -16px rgba(0,0,0,0.95); } .ds-hero-num { margin: 0; font-family: 'Big Shoulders', 'Arial Narrow', sans-serif; font-size: 36px; font-weight: 700; line-height: 1; letter-spacing: 0.01em; color: var(--foreground, #f3ede5); font-variant-numeric: tabular-nums; } .ds-hero-sub { margin: 6px 0 0; font-size: 14px; color: var(--muted-foreground, #a89e93); }"
+    },
+    {
+      "name": "Steel Card (machined anchor)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Top-lit vertical gradient + 1px inner highlight; rationed to the two structural anchor surfaces.",
+      "html": "<div class=\"ds-card-steel\"><h3 class=\"ds-steel-title\">Push Day A</h3><p class=\"ds-steel-desc\">6 exercises · ~52 min</p></div>",
+      "css": ".ds-card-steel { background: linear-gradient(180deg, var(--elevated, #282019) 0%, var(--surface-2, #1d1815) 22%); border: 1px solid var(--border, #2c2520); border-radius: 24px; padding: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.055), 0 2px 6px -2px rgba(0,0,0,0.65), 0 12px 28px -16px rgba(0,0,0,0.95); } .ds-steel-title { margin: 0; font-family: 'Big Shoulders', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 700; line-height: 1.12; letter-spacing: 0.012em; color: var(--foreground, #f3ede5); } .ds-steel-desc { margin: 4px 0 0; font-size: 14px; color: var(--muted-foreground, #a89e93); font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Heat Bar (signature progress)",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "The progress grammar: copper stock heating toward the goal, ember at the leading edge. Bars, never rings.",
+      "html": "<div class=\"ds-heat-wrap\"><div class=\"ds-heat-head\"><span class=\"ds-heat-label\">Protein</span><span class=\"ds-heat-val\">142 / 180 g <b>79%</b></span></div><div class=\"ds-heat-track\"><div class=\"ds-heat-fill\" style=\"transform: scaleX(0.79)\"></div></div></div>",
+      "css": ".ds-heat-wrap { width: 100%; min-width: 240px; } .ds-heat-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; font-size: 12px; } .ds-heat-label { font-weight: 500; color: var(--foreground, #f3ede5); } .ds-heat-val { color: var(--muted-foreground, #a89e93); font-variant-numeric: tabular-nums; } .ds-heat-val b { margin-left: 6px; font-weight: 600; color: var(--foreground, #f3ede5); } .ds-heat-track { height: 8px; width: 100%; overflow: hidden; border-radius: 9999px; background: var(--muted, #231d18); } .ds-heat-fill { height: 100%; width: 100%; transform-origin: left; border-radius: 9999px; background-image: linear-gradient(90deg, var(--accent-press, #b0714c), var(--accent, #c98963) 62%, var(--energy, #e2703a) 97%); transition: transform 300ms ease-out; }"
+    },
+    {
+      "name": "Barbell Progress Bar",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Collar caps on each end so training progress filling up reads as a barbell loading.",
+      "html": "<div class=\"ds-bar-wrap\"><span class=\"ds-bar-collar ds-bar-collar--l\" aria-hidden=\"true\"></span><span class=\"ds-bar-collar ds-bar-collar--r\" aria-hidden=\"true\"></span><div class=\"ds-bar-track\" role=\"progressbar\" aria-valuenow=\"3\" aria-valuemin=\"0\" aria-valuemax=\"5\"><div class=\"ds-bar-fill\" style=\"transform: scaleX(0.6)\"></div></div></div>",
+      "css": ".ds-bar-wrap { position: relative; width: 100%; min-width: 240px; padding: 6px; } .ds-bar-collar { pointer-events: none; position: absolute; top: 50%; height: 14px; width: 8px; transform: translateY(-50%); border-radius: 4px; background: var(--border-strong, #4a4036); } .ds-bar-collar--l { left: 0; } .ds-bar-collar--r { right: 0; } .ds-bar-track { height: 6px; width: 100%; overflow: hidden; border-radius: 9999px; background: var(--muted, #231d18); } .ds-bar-fill { height: 100%; width: 100%; transform-origin: left; border-radius: 9999px; background: var(--accent, #c98963); transition: transform 300ms ease-out; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Forged Iron",
+    "overview": "FitForge's world is the forge itself: warm iron surfaces (charcoal with heat under it, never blue-black), machined edges, and copper as the single voice of emphasis. Dark is the brand default; the light Ivory theme is opt-in only and never auto-switched. Depth is machined, not glowing: a 1px inset top-light where a milled edge would catch light, plus true offset shadows that fall down as light demands. Progress is heated stock — copper filling toward the goal with ember at the leading edge — rendered as bars, never rings. The direction contract ships inside the artifact (layout.tsx embeds it as a production HTML comment) and is the world's charter; the owner pins dark + copper and the untouched anvil logo.",
+    "keyCharacteristics": [
+      "Warm iron neutrals — every gray carries a whisker of heat; blue-black is the named anti-reference.",
+      "One accent (copper), one heat state (ember), one progress grammar (the heat bar).",
+      "Machined depth: inset top-lights and true offset shadows; zero-offset halos are banned.",
+      "Two faces with a hard division of labor: Big Shoulders condensed for headings and hero numerals, Archivo for everything else.",
+      "Drawn 1.75-stroke icons on a 24 grid — food included; emoji are not an icon system here.",
+      "Phone-first: 390×664 target viewport, bounded 3-zone screen shell, ≥44px touch targets."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Copper is the only accent. A second identity hue anywhere — including per-macro colors — breaks the world. Macros are told apart by label and value, not by hue.", "section": "colors" },
+      { "name": "The Heat-State Rule", "body": "Ember (--energy) appears strictly as heat-state: the leading edge of real progress and the honest over-target signal. Never as ambience, backgrounds at rest, or emphasis.", "section": "colors" },
+      { "name": "The Warm Iron Rule", "body": "Every neutral carries warmth. Blue-tinted neutrals (#0b121a–#3e4a58, the retired palette) are the named anti-reference — 'the most saturated AI-dashboard look there is.'", "section": "colors" },
+      { "name": "The Two Faces Rule", "body": "Big Shoulders = headings + hero numerals ONLY. Archivo = everything else — labels, body, buttons, data. A Big Shoulders label or body line is a defect.", "section": "typography" },
+      { "name": "The No-Kicker Rule", "body": "No kicker/eyebrow labels above headings. Uppercase micro-labels exist solely as terse data labels beside values. Emphasis is weight, size, or solid copper — never gradient text.", "section": "typography" },
+      { "name": "The Density Mechanism", "body": ".ff-dense on a screen container re-scales the whole Tailwind type ramp to ~93% via the --text-* custom properties. TYPE ONLY — spacing is untouched so every 44px target stays 44px.", "section": "typography" },
+      { "name": "The One Anchor Rule", "body": "One full card per screen region earns a card; secondary content rides hairline ledger rows, not more cards.", "section": "layout" },
+      { "name": "The Heading Is the Date Rule", "body": "Screen headings state facts (the full weekday, the date), never greetings.", "section": "layout" },
+      { "name": "The Machined Edge Rule", "body": "Depth = 1px inset top-light + true offset shadows falling down. Zero-offset halos ('glow') are banned from the token file — decoration is not depth.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep dark + copper as the brand: dark :root is default, light Ivory only via explicit data-theme=\"light\"; the anvil logo is pinned untouched.",
+      "Do put .tabular on every data numeral and keep touch targets ≥44px (md button = h-11; .ff-dense scales type only, never spacing).",
+      "Do render continuous progress as heat bars (.ff-heat), with solid ember only when over target; keep discrete pips and rings solid.",
+      "Do ration the signature treatments: one glow hero action per screen, knurl only on the one full-width primary CTA, steel only on structural anchors, premium only on the few forged cards.",
+      "Do draw every icon on the 24-grid / 1.75-stroke / round-caps / currentColor grammar, food included.",
+      "Do give every tappable element an :active answer (.ff-press/.ff-press-soft or Motion whileTap), and the house focus ring (outline-accent, 2px, offset 2).",
+      "Do compose screens as one anchor card + hairline ledger rows; build app screens on the .screen / .scroll-region / .cta-dock shell with svh units and --dock-clearance."
+    ],
+    "donts": [
+      "Don't use gradient text — emphasis is weight, size, or solid copper (.text-gradient-gold was deleted; do not recreate it).",
+      "Don't use zero-offset glows/halos — depth is the 1px inset top-light plus true offset shadows falling down.",
+      "Don't use emoji as icons, kicker/eyebrow labels above headings, or uppercase micro-labels for anything but terse data labels.",
+      "Don't introduce a second accent: ember is heat-state only, green is a true success state only — never macro or identity hues.",
+      "Don't set Big Shoulders on labels or body copy, or negative-track it anywhere.",
+      "Don't bring back rings for progress (MacroRing is retired from product surfaces), blue-tinted neutrals, or the Inter/Space Grotesk pairing.",
+      "Don't use dvh for animated heights, off-family radii (the family is 12/16/24 + pill), or Tailwind layered utilities against the unlayered shell primitives (.cta-dock + empty:hidden, etc.).",
+      "Don't cap desktop single-column layouts wider than 720px unless a real second column exists."
+    ]
+  }
+}

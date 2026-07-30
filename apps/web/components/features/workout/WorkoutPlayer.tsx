@@ -1944,7 +1944,7 @@ function Summary({
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Rank up
           </p>
-          <p className="mt-1 font-display text-2xl font-bold text-gradient-gold">
+          <p className="mt-1 font-display text-2xl font-bold text-accent-soft">
             {strike.rankName}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -1960,7 +1960,7 @@ function Summary({
             {/* A medal is a record. The trophy now means one thing only — session complete — and
                 is no longer doing double duty for goals, PRs and finishing. */}
             <MedalIcon size={18} />
-            <CardTitle className="text-gradient-gold">
+            <CardTitle className="text-accent-soft">
               New {prs.length === 1 ? 'PR' : 'PRs'}!
             </CardTitle>
           </div>

@@ -27,8 +27,8 @@ export interface EmptyStateProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const SLATE = 'var(--muted-foreground)';
 const GOLD = 'var(--accent)';
-const FONT_DISPLAY = 'var(--font-space-grotesk), var(--font-inter), system-ui, sans-serif';
-const FONT_BODY = 'var(--font-inter), ui-sans-serif, system-ui, sans-serif';
+const FONT_DISPLAY = 'var(--font-big-shoulders), var(--font-archivo), system-ui, sans-serif';
+const FONT_BODY = 'var(--font-archivo), ui-sans-serif, system-ui, sans-serif';
 
 const DEFAULT_COPY: Record<EmptyStateVariant, { title: string; description: string }> = {
   'no-workouts': {

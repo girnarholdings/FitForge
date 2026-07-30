@@ -27,46 +27,39 @@ test.describe('density', () => {
     await seedOnboarded(page);
   });
 
-  test('ring read-outs stay inside the ring, never touching the stroke', async ({ page }) => {
+  test('the day-summary header fits its card: hero numeral and heat bar, no overflow', async ({
+    page,
+  }) => {
+    /* The rings this test used to measure are GONE — the finish review retired the donut-gauge
+       header for the heat grammar (hero kcal numeral + heat bars). What still deserves a
+       measured guarantee is the same failure class in the new form: the display-face numeral and
+       its trailing label sharing one row without wrapping or escaping the card. */
     await page.goto('/nutrition');
-    await expect(page.getByTestId('day-summary')).toBeVisible();
+    const summary = page.getByTestId('day-summary');
+    await expect(summary).toBeVisible();
 
-    /* For every ring on the screen, compare each text run's rendered width against the opening
-       available at its own vertical offset — a circle gives less room the further you are from the
-       middle, which is exactly why the sublabel was the line that overflowed. */
-    const results = await page.evaluate(() => {
-      const out: { kind: string; width: number; opening: number; text: string }[] = [];
-      for (const svg of Array.from(document.querySelectorAll('[data-testid="day-summary"] svg'))) {
-        const track = svg.querySelector('circle');
-        if (!track) continue;
-        const size = parseFloat(svg.getAttribute('width') ?? '0');
-        const stroke = parseFloat(track.getAttribute('stroke-width') ?? '0');
-        const innerRadius = (size - 2 * stroke) / 2;
-        for (const kind of ['ring-caption', 'ring-sublabel']) {
-          const el = svg.querySelector<SVGTextElement>(`[data-testid="${kind}"]`);
-          if (!el) continue;
-          // Worst case for a line of text is its far edge from the centre, not its baseline.
-          const fs = parseFloat(getComputedStyle(el).fontSize);
-          const dy = Math.abs(parseFloat(el.getAttribute('dy') ?? '0')) + fs * 0.5;
-          const opening = 2 * Math.sqrt(Math.max(0, innerRadius * innerRadius - dy * dy));
-          out.push({
-            kind,
-            width: el.getComputedTextLength(),
-            opening,
-            text: el.textContent ?? '',
-          });
-        }
-      }
-      return out;
+    const m = await summary.evaluate((card) => {
+      const cardBox = card.getBoundingClientRect();
+      const numeral = card.querySelector('p');
+      const numeralBox = numeral?.getBoundingClientRect();
+      const bars = [...card.querySelectorAll('.ff-heat, dl [style*="scaleX"]')].length;
+      return {
+        cardRight: cardBox.right,
+        numeralRight: numeralBox?.right ?? 0,
+        numeralFont: numeral ? parseFloat(getComputedStyle(numeral).fontSize) : 0,
+        overflowX: card.scrollWidth > card.clientWidth + 1,
+        bars,
+      };
     });
 
-    expect(results.length, 'both rings expose a caption and a sublabel').toBeGreaterThanOrEqual(4);
-    for (const r of results) {
-      expect(
-        r.width,
-        `"${r.text}" (${r.kind}) is ${r.width.toFixed(1)}px wide in a ${r.opening.toFixed(1)}px opening`,
-      ).toBeLessThanOrEqual(r.opening);
-    }
+    // Hero numeral at genuine display scale, inside the card, and nothing scrolls sideways.
+    expect(m.numeralFont).toBeGreaterThanOrEqual(28);
+    expect(m.numeralRight).toBeLessThanOrEqual(m.cardRight);
+    expect(m.overflowX, 'day-summary must not overflow horizontally').toBe(false);
+    // The heat grammar is present: the kcal bar plus three macro rows.
+    expect(m.bars).toBeGreaterThanOrEqual(4);
+    // And no donut gauge came back.
+    expect(await summary.locator('svg circle').count(), 'rings are retired').toBe(0);
   });
 
   test('Today and Nutrition render at the dense type scale', async ({ page }) => {

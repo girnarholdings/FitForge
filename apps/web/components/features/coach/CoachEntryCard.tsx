@@ -8,10 +8,7 @@
  */
 import * as React from 'react';
 import Link from 'next/link';
-import { Card } from '@/components/ui';
 import { ChevronRightIcon, CoachIcon } from '@/components/ui/icons';
-
-const PROMPTS = ['How much protein?', 'When do I add weight?', 'Why am I not losing fat?'];
 
 /**
  * The env var read INLINE rather than via `lib/kb/client`, keeping this card dependency-free (the
@@ -26,10 +23,12 @@ const AI_CONFIGURED = ((process.env.NEXT_PUBLIC_AI_ENDPOINT ?? '').trim().length
 
 export function CoachEntryCard() {
   return (
-    <Card className="shadow-[var(--shadow-card)]" data-testid="today-coach-card">
+    <div data-testid="today-coach-card">
       {/* SHAPED LIKE THE COMPOSER IT LEADS TO — same ring, same coach glyph on the left, same
-          filled accent circle on the right where the send button sits. Tapping this should read as
-          continuing one object, not as opening an unrelated screen. */}
+          filled accent circle on the right where the send button sits — and NOT wrapped in a
+          card: the finish review named Today's uniform card stack, and a composer pill standing
+          on the iron is a different object from a card in a pile. The prompt-chip row went with
+          the shell; the Coach screen owns its own suggestions. */}
       <Link
         href="/coach"
         className="flex items-center gap-3 rounded-full border-2 border-border bg-surface-2 py-1.5 pl-3 pr-1.5 transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
@@ -54,19 +53,6 @@ export function CoachEntryCard() {
           <ChevronRightIcon size={18} />
         </span>
       </Link>
-      <ul className="mt-3 flex flex-wrap gap-1.5">
-        {PROMPTS.map((p) => (
-          <li key={p}>
-            <Link
-              href="/coach"
-              data-testid="today-coach-prompt"
-              className="inline-block rounded-chip border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-accent hover:text-accent"
-            >
-              {p}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </Card>
+    </div>
   );
 }

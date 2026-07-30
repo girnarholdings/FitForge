@@ -20,11 +20,14 @@ export interface LandingHeroProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const CSS = `
 .ff-hero { position: relative; width: 100%; margin-inline: auto; aspect-ratio: 5 / 6; }
-.ff-hero__glow {
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(58% 42% at 50% 8%, rgba(228,184,77,0.18), transparent 68%),
-    radial-gradient(40% 30% at 78% 70%, rgba(255,138,77,0.10), transparent 70%);
+.ff-hero__ground {
+  /* The figure stands on something rather than floating in a glow: a machined platform edge —
+     one bright hairline over a dark ellipse, the same top-light every raised surface wears. The
+     radial ambience it replaces was the thesis's named ban (glow as decoration). */
+  position: absolute; left: 18%; right: 18%; bottom: 4%; height: 10px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border-top: 1px solid rgba(255, 235, 220, 0.14);
 }
 .ff-hero__figure { position: absolute; inset: 0; display: grid; place-items: center; }
 .ff-hero__figure svg { height: 92%; width: auto; opacity: 0.95; }
@@ -37,7 +40,7 @@ const CSS = `
     linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
     linear-gradient(160deg, rgba(228,184,77,0.55), rgba(228,184,77,0.08) 70%) border-box;
   box-shadow: 0 10px 28px -14px rgba(0,0,0,0.8);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   color: var(--foreground);
   will-change: transform;
 }
@@ -45,7 +48,7 @@ const CSS = `
 .ff-hero__card--macro { top: 40%; left: -2%; animation: ffFloatB 7s ease-in-out infinite; }
 .ff-hero__card--equip { bottom: 7%; right: 6%; animation: ffFloatA 6.5s ease-in-out infinite 0.4s; }
 .ff-hero__stat {
-  font-family: var(--font-space-grotesk), var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-big-shoulders), var(--font-archivo), system-ui, sans-serif;
   font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
 }
 .ff-hero__label { color: var(--muted-foreground); font-size: 11px; letter-spacing: 0.04em; }
@@ -105,21 +108,28 @@ function Figure() {
   );
 }
 
-function MacroRing() {
+function HeatBar() {
+  /* The app's ONE progress grammar, surviving its own front door: a heat bar, copper running
+     into ember at the leading edge — not a donut ring, which is the grammar the redesign
+     retired.
+
+     UNIQUE GRADIENT ID PER INSTANCE (React.useId): the marketing page mounts this hero twice —
+     one per responsive layout — and duplicated SVG ids resolve to the FIRST element in the
+     document. When that first instance sits in a display:none branch, Chromium refuses to paint
+     a gradient referenced from inside it, and the desktop chip rendered an empty track (the
+     finish review caught exactly this). */
+  const gid = React.useId();
   return (
-    <svg width="34" height="34" viewBox="0 0 36 36" aria-hidden="true">
-      <circle cx="18" cy="18" r="15" fill="none" stroke="var(--muted)" strokeWidth="4" />
-      <circle
-        cx="18"
-        cy="18"
-        r="15"
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeDasharray="72 94"
-        transform="rotate(-90 18 18)"
-      />
+    <svg width="44" height="10" viewBox="0 0 44 10" aria-hidden="true">
+      <rect x="0" y="2" width="44" height="6" rx="3" fill="var(--muted)" />
+      <rect x="0" y="2" width="30" height="6" rx="3" fill={`url(#${gid})`} />
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="var(--accent-press)" />
+          <stop offset="0.62" stopColor="var(--accent)" />
+          <stop offset="0.97" stopColor="var(--energy)" />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }
@@ -133,7 +143,7 @@ export function LandingHero({ width = 360, style, className, ...props }: Landing
       {...props}
     >
       <style>{CSS}</style>
-      <div className="ff-hero__glow" />
+      <div className="ff-hero__ground" />
       <div className="ff-hero__figure">
         <Figure />
       </div>
@@ -153,12 +163,12 @@ export function LandingHero({ width = 360, style, className, ...props }: Landing
         </div>
       </div>
 
-      {/* macro ring */}
+      {/* protein heat bar */}
       <div
         className="ff-hero__card ff-hero__card--macro"
         style={{ display: 'flex', alignItems: 'center', gap: 8 }}
       >
-        <MacroRing />
+        <HeatBar />
         <div>
           <div className="ff-hero__stat" style={{ fontSize: 16 }}>
             148g

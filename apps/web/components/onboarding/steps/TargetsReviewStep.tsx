@@ -81,9 +81,7 @@ export function TargetsReviewStep() {
     <div className="space-y-6">
       <div className="border-gradient-gold overflow-hidden rounded-card shadow-[var(--shadow-card)]">
         <div className="px-5 pb-4 pt-5" style={{ background: 'var(--gradient-ember-bg)' }}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-accent">
-            Your daily target
-          </p>
+          <p className="text-sm font-medium text-muted-foreground">Your daily target</p>
           <p className="mt-1 font-display text-4xl font-bold tabular-nums text-foreground">
             {/* Keyed on the value: the number physically arrives, and REARRIVES when edited —
                 the payoff moment of the whole questionnaire should not just be sitting there. */}
@@ -92,7 +90,7 @@ export function TargetsReviewStep() {
               initial={{ opacity: 0, scale: 0.8, y: 6 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={SPRING}
-              className="inline-block text-gradient-gold"
+              className="inline-block text-accent-soft"
             >
               {draft.kcal_target ?? '—'}
             </m.span>{' '}

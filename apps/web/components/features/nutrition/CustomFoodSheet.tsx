@@ -15,7 +15,7 @@
 import * as React from 'react';
 import { Button, Sheet } from '@/components/ui';
 import { saveMyFood } from '@/lib/food/custom';
-import { emojiForFood } from '@/lib/food/emoji';
+import { FoodGlyph } from '@/components/ui/foodIcons';
 import type { Food } from '@/lib/food/types';
 
 export interface CustomFoodResult {
@@ -61,7 +61,6 @@ export function CustomFoodSheet({
 
   if (!open) return null;
 
-  const preview = emojiForFood({ name, category: 'dish' });
 
   const done = () => {
     const trimmed = name.trim();
@@ -95,8 +94,13 @@ export function CustomFoodSheet({
           you.
         </p>
         <div className="flex items-center gap-2">
-          <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-muted text-xl">
-            {preview}
+          {/* The face updates live as they type — "chicken curry" earns the drumstick before
+              they finish the word. Same resolver every logged row uses. */}
+          <span
+            aria-hidden
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-accent-muted text-accent-soft"
+          >
+            <FoodGlyph food={{ name, category: 'dish' }} size={22} />
           </span>
           <input
             value={name}

@@ -161,15 +161,14 @@ export function PlanPreviewStep() {
         <>
           {/* Forged-plan summary — the "money moment" premium card (§P2-14). */}
           <Card premium className="p-5">
-            {/* The clipboard is the coach handing the programme over — the same glyph the Coach
-                screen now puts on a personalized answer, because this card is the same act. This
-                is the last screen before the plan becomes the athlete's plan and it was carrying
-                no object at all. Decorative; the eyebrow text is still the content. */}
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-accent">
-              <ClipboardIcon size={13} />
-              Your forged plan
+            {/* No eyebrow. The plan's NAME is the payoff of the whole questionnaire — it takes
+                the display voice at full size, with the coach's clipboard handed over beside it.
+                A label announcing "your forged plan" above it was the heading apologizing for
+                itself. */}
+            <p className="flex items-center gap-2 font-display text-2xl font-bold text-foreground">
+              <ClipboardIcon size={20} className="shrink-0 text-accent" />
+              {routine.name}
             </p>
-            <p className="mt-1 text-xl font-bold tracking-tight text-foreground">{routine.name}</p>
             <div className="mt-4 grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="font-display text-3xl font-semibold leading-none tabular-nums text-accent">

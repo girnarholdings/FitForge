@@ -1,8 +1,18 @@
 @import 'tailwindcss';
 
-/* FitForge "Forged Gold" tokens — DARK-FIRST. :root is the brand (dark);
-   prefers-color-scheme: light opts into the Ivory variant. Tailwind v4 @theme
-   maps vars to utilities (bg-surface, text-foreground, bg-accent, …). */
+/* FitForge "Forged Iron" tokens — DARK-FIRST. :root is the brand (dark);
+   light Ivory is opt-in via data-theme. Tailwind v4 @theme maps vars to
+   utilities (bg-surface, text-foreground, bg-accent, …).
+
+   THE MATERIAL RULE that every token below obeys: this is WARM IRON, not
+   blue-black. The previous neutrals were blue-tinted (#0b121a…#3e4a58), which
+   together with a metallic accent is the most saturated AI-dashboard look
+   there is. Iron off the forge is warm — every neutral now carries a whisker
+   of heat, at the same lightness so every contrast pairing still clears AA.
+   Copper is the ONLY accent; ember appears strictly as heat-state (the
+   leading edge of real progress), never as ambience. Depth is machined: a
+   1px top-light where a milled edge would catch light, plus true offset
+   shadows. Zero-offset halos ("glow") are banned from this file. */
 @theme {
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -37,32 +47,36 @@
   --radius-3xl: 1.5rem;
 
   /* TYPE SCALE above the body tier. 94% of strings sat at ≤15px; nothing was a headline. */
-  --text-display: 1.75rem;
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.02em;
-  --text-title: 1.25rem;
-  --text-title--line-height: 1.2;
-  --text-title--letter-spacing: -0.012em;
+  --text-display: 2rem;
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: 0.01em;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.12;
+  --text-title--letter-spacing: 0.012em;
 
   --shadow-card: var(--elev-card);
   --shadow-pop: var(--elev-pop);
-  --shadow-glow: var(--glow-gold);
+  --shadow-glow: var(--elev-ember);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: var(--font-space-grotesk), var(--font-sans);
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Big Shoulders is CONDENSED: it needs a size step more than Archivo would at the same rem to
+     hold the same optical presence, and it wants neutral-to-positive tracking — negative tracking
+     on an already-condensed gothic welds the letters shut. The display/title tokens below are
+     tuned for it. */
+  --font-display: var(--font-big-shoulders), var(--font-sans);
 }
 
 :root {
   color-scheme: dark;
   /* ── dark (brand default) ─────────────────────────── */
-  --surface: #0b121a;
-  --surface-2: #151d28;   /* lifted: elevation is FILL separation now, not a hairline */
-  --elevated: #202a36;
+  --surface: #131010;     /* iron black, warm — never blue */
+  --surface-2: #1d1815;   /* lifted: elevation is FILL separation now, not a hairline */
+  --elevated: #282019;
   --foreground: #f3ede5;
-  --muted: #1b232e;
-  --muted-foreground: #9ba3ae;
-  --border: #232c38;      /* a whisper: borders outline, surfaces separate */
-  --border-strong: #3e4a58;
+  --muted: #231d18;
+  --muted-foreground: #a89e93;
+  --border: #2c2520;      /* a whisper: borders outline, surfaces separate */
+  --border-strong: #4a4036;
   --accent: #c98963;
   --accent-hover: #d99b76;
   --accent-press: #b0714c;
@@ -80,14 +94,17 @@
   --elev-card: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 2px 6px -2px rgba(0, 0, 0, 0.65),
     0 12px 28px -16px rgba(0, 0, 0, 0.95);
   --elev-pop: 0 16px 48px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --glow-gold: 0 0 0 1px rgba(201, 137, 99, 0.30), 0 4px 24px -6px rgba(226, 112, 58, 0.32);
+  /* Heat under a raised piece — a TRUE offset shadow that happens to be warm, replacing the old
+     zero-offset copper halo (decoration, not depth). The 1px inset top-light is the machined
+     edge; the drops fall DOWN, as light demands. */
+  --elev-ember: inset 0 1px 0 rgba(255, 235, 220, 0.10), 0 3px 8px -2px rgba(0, 0, 0, 0.6),
+    0 10px 28px -10px rgba(226, 112, 58, 0.38);
 
   --gradient-gold: linear-gradient(135deg, #ecc0a4 0%, #c98963 45%, #8a5432 100%);
-  --gradient-gold-text: linear-gradient(100deg, #ecc0a4 10%, #c98963 55%, #b0714c 90%);
   --gradient-ember-bg: radial-gradient(60% 45% at 18% 0%, rgba(226, 112, 58, 0.13), transparent 70%);
-  --muscle-base: #1a222e;   /* unhighlighted muscle fill (muscle map) */
-  --muscle-line: #2c3543;   /* muscle separation strokes */
-  --body-outline: #3d4652;  /* silhouette outline */
+  --muscle-base: #241d17;   /* unhighlighted muscle fill (muscle map) */
+  --muscle-line: #372e26;   /* muscle separation strokes */
+  --body-outline: #4c4238;  /* silhouette outline */
 
   /* Knurling — the cross-hatch grip cut into the part of a bar you actually hold. Used ONLY on
      the middle band of a hero CTA (see `.ff-knurl`). Dark theme: the gold accent carries
@@ -120,9 +137,9 @@
     --info: #2668c5;
     --elev-card: 0 1px 2px rgba(20, 23, 31, 0.05), 0 8px 24px -10px rgba(20, 23, 31, 0.12);
     --elev-pop: 0 16px 48px -12px rgba(20, 23, 31, 0.25);
-    --glow-gold: 0 0 0 1px rgba(143, 84, 50, 0.25), 0 4px 20px -6px rgba(143, 84, 50, 0.3);
+    --elev-ember: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 2px 6px -2px rgba(20, 23, 31, 0.18),
+      0 10px 26px -10px rgba(216, 95, 30, 0.30);
     --gradient-gold: linear-gradient(135deg, #b0714c 0%, #a5643e 60%, #8f5432 100%);
-    --gradient-gold-text: linear-gradient(100deg, #a5643e, #8f5432);
     --gradient-ember-bg: radial-gradient(60% 45% at 18% 0%, rgba(226, 112, 58, 0.10), transparent 70%);
     --muscle-base: #e8e0d6;
     --muscle-line: #d2c6b8;
@@ -134,12 +151,8 @@
 }
 
 /* utility classes the primitives lean on */
-.text-gradient-gold {
-  background: var(--gradient-gold-text);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
+/* `.text-gradient-gold` is gone: gradient TEXT is decoration wearing emphasis's clothes (and the
+   single loudest AI tell in the audit). Emphasis is weight, size, or solid copper. */
 .border-gradient-gold {
   border: 1px solid transparent;
   background:
@@ -172,6 +185,14 @@
   --text-2xl: 1.375rem;     /* 24   → 22   */
   --text-display: 1.5rem;   /* 28   → 24   */
   --text-title: 1.125rem;   /* 20   → 18   */
+}
+
+/* THE HEAT FILL — progress rendered as heated stock. Any continuous progress fill may wear
+   this: the bar's body is copper and its leading ~15% runs into ember, the way a bar fresh from
+   the fire is hottest at the working end. Discrete pips and rings stay solid; heat is for the
+   bars that visibly grow. */
+.ff-heat {
+  background-image: linear-gradient(90deg, var(--accent-press), var(--accent) 62%, var(--energy) 97%);
 }
 
 /* Touch feedback for plain elements: compositor-only, zero JS, safe on 91-row lists where a
@@ -403,7 +424,7 @@ body {
   }
 }
 .ff-pop {
-  animation: ff-pop 300ms cubic-bezier(0.2, 1.35, 0.4, 1) 1 both;
+  animation: ff-pop 300ms cubic-bezier(0.16, 1, 0.3, 1) 1 both;
 }
 
 /* Rise-in, hold, drift-out — combo chips and milestone toasts. */
@@ -513,6 +534,18 @@ body {
 
 /* Blocked-action headshake — a full list refusing a sixth pick. Gated in JS as well
    (usePrefersReducedMotion), like every other ff-* class applied from a component. */
+/* Coals breathing: the Coach "thinking" indicator. Heat swells and dims; nothing jumps. */
+@keyframes ff-ember-breathe {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+.ff-ember-dot {
+  animation: ff-ember-breathe 1100ms cubic-bezier(0.37, 0, 0.63, 1) infinite both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ff-ember-dot { animation: none; opacity: 0.7; }
+}
+
 @keyframes ff-shake {
   0%,
   100% {

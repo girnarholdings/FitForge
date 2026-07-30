@@ -51,7 +51,9 @@ async function openCoach(page: Page, armed?: string[]): Promise<void> {
   // Generous mount wait: on a Firebase-configured build the coach route hydrates behind the
   // lazy KB bundle AND the firebase chunks, and under four parallel workers that occasionally
   // clears 10s — a load flake, not a product signal. Everything after this uses default timeouts.
-  await expect(page.getByTestId('coach-input')).toBeVisible({ timeout: 25000 });
+  // 40s, was 25s: the redesign's font swap added two chunks to the cold path and the flake
+  // reappeared under 4-worker load — same lazy-mount cause, same remedy, wider budget.
+  await expect(page.getByTestId('coach-input')).toBeVisible({ timeout: 40000 });
 }
 
 async function ask(page: Page, question: string): Promise<void> {

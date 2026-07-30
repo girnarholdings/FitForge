@@ -66,7 +66,11 @@ test.describe('onboarding', () => {
     await expect(page.getByTestId('today-subheading')).toContainText(
       String(today.getDate()),
     );
-    await expect(page.getByText(/Today.s workout|Rest day/)).toBeVisible();
+    /* The workout card no longer wears a "Today's workout" kicker — the day's NAME is the
+       heading and the CTA is the proof it is enterable. Rest days keep their card. */
+    await expect(
+      page.getByRole('button', { name: /Start workout|Quick workout/ }).or(page.getByText(/Rest day/)).first(),
+    ).toBeVisible();
 
     // Non-zero nutrition targets prove the shared macros rule ran.
     const state = await readDemoState(page);

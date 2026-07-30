@@ -1,61 +1,61 @@
 'use client';
 
 /**
- * The day's headline: "Remaining = Goal − Food" with the calorie + protein rings and per-macro
- * %-of-target bars. Presentational — totals are computed by the caller.
+ * The day's headline: "Remaining = Goal − Food", spoken in the forge's own grammar.
+ *
+ * This used to be two donut gauges over three percent bars — the stock macro-dashboard header,
+ * and the exact template the redesign exists to refuse (the finish review named it: "big number,
+ * small caps label" rings are the floor's refused default). The heat grammar replaces it: the
+ * calories left as a hero numeral in the display face, the day's energy as one HEAT BAR (stock
+ * heating toward the goal, ember at the leading edge), and the three macros as rows of the same
+ * material. One progress language, everywhere in the app.
+ *
+ * COPPER ONLY. Carbs used to be green; the world has one accent, so macros are told apart by
+ * label and value — protein carries the heat fill (it is the bar the athlete acts on), carbs the
+ * soft copper, fat the ember. Green survives only as a true success STATE elsewhere, never as an
+ * identity hue. Presentational — totals are computed by the caller.
  */
 import * as React from 'react';
-import { Card, MacroRing } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { Macros } from '@/lib/food/types';
 import type { NutritionTargets } from '@/components/features/_mock/data';
 
 export function DaySummary({ totals, targets }: { totals: Macros; targets: NutritionTargets }) {
   const remainingKcal = Math.round(targets.kcal_target - totals.kcal);
-  const remainingProtein = Math.round(targets.protein_g_target - totals.protein_g);
+  const kcalShare = Math.min(1, totals.kcal / Math.max(1, targets.kcal_target));
 
   return (
     <Card premium data-testid="day-summary">
-      <div className="flex items-center justify-center gap-5">
-        {/* THE SUBLABEL SAYS WHAT THE NUMBER IS, NOT WHAT THE RING IS. "protein left" inside a ring
-            captioned `Protein` underneath said the same word twice and needed ~81px of glyphs in a
-            76px opening — the crowding the athlete noticed. `left` is the part that isn't already
-            on screen. (MacroRing now also shrinks anything that would still overflow, so this is
-            a copy fix on top of a structural one, not instead of it.) */}
-        <MacroRing
-          value={totals.kcal}
-          target={targets.kcal_target}
-          size={116}
-          stroke={11}
-          color="var(--color-foreground)"
-          caption={remainingKcal.toLocaleString()}
-          sublabel={remainingKcal < 0 ? 'over' : 'kcal left'}
-          label="Calories"
-        />
-        <MacroRing
-          value={totals.protein_g}
-          target={targets.protein_g_target}
-          size={90}
-          stroke={9}
-          color="var(--color-accent)"
-          caption={`${Math.max(0, remainingProtein)}g`}
-          sublabel="left"
-          label="Protein"
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="tabular font-display text-4xl font-bold leading-none text-foreground">
+          {Math.abs(remainingKcal).toLocaleString()}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {remainingKcal < 0 ? 'kcal over' : 'kcal left'}{' '}
+          <span className="tabular">· of {targets.kcal_target.toLocaleString()}</span>
+        </p>
+      </div>
+      {/* The day's energy as heated stock: the consumed share fills copper-to-ember. Over target
+          the whole bar reads ember — the metal is past temperature, and that is the honest
+          signal. */}
+      <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+        <div
+          className={cn(
+            'h-full w-full origin-left rounded-full transition-transform duration-300',
+            remainingKcal < 0 ? 'bg-energy' : 'ff-heat',
+          )}
+          style={{ transform: `scaleX(${kcalShare})` }}
         />
       </div>
 
-      <dl className="mt-3.5 space-y-2">
-        <MacroRow
-          label="Protein"
-          value={totals.protein_g}
-          target={targets.protein_g_target}
-          color="var(--color-accent)"
-        />
+      <dl className="mt-4 space-y-2">
+        <MacroRow label="Protein" value={totals.protein_g} target={targets.protein_g_target} heat />
         <MacroRow
           label="Carbs"
           value={totals.carbs_g}
           target={targets.carbs_g_target}
-          color="var(--color-success)"
+          color="var(--color-accent-soft)"
         />
         <MacroRow
           label="Fat"
@@ -68,17 +68,19 @@ export function DaySummary({ totals, targets }: { totals: Macros; targets: Nutri
   );
 }
 
-
 function MacroRow({
   label,
   value,
   target,
   color,
+  heat = false,
 }: {
   label: string;
   value: number;
   target: number;
-  color: string;
+  color?: string;
+  /** Protein wears the full heat fill — it is the bar the athlete acts on. */
+  heat?: boolean;
 }) {
   const rawPct = Math.round((value / Math.max(1, target)) * 100);
   const pct = Math.min(100, rawPct);
@@ -96,8 +98,14 @@ function MacroRow({
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full w-full origin-left rounded-full transition-transform duration-300"
-          style={{ transform: `scaleX(${pct / 100})`, backgroundColor: over ? 'var(--color-energy)' : color }}
+          className={cn(
+            'h-full w-full origin-left rounded-full transition-transform duration-300',
+            heat && !over && 'ff-heat',
+          )}
+          style={{
+            transform: `scaleX(${pct / 100})`,
+            backgroundColor: over ? 'var(--color-energy)' : heat ? undefined : color,
+          }}
         />
       </div>
     </div>

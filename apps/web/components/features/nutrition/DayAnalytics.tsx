@@ -31,7 +31,7 @@ import * as React from 'react';
 import { Card, CardTitle } from '@/components/ui';
 import { CheckIcon, PlusIcon, TrendingUpIcon } from '@/components/ui/icons';
 import { FOODS } from '@/lib/food/index';
-import { emojiForFood } from '@/lib/food/emoji';
+import { FoodGlyph } from '@/components/ui/foodIcons';
 import { shortFoodName } from '@/lib/food/format';
 import { isProteinDense, planPortions, type FoodPortion } from '@/lib/food/portions';
 import type { Food, Macros } from '@/lib/food/types';
@@ -64,8 +64,11 @@ function PortionButton({
       aria-label={`Add ${portion.label} of ${portion.food.name} — ${portion.protein_g} grams of protein, ${portion.kcal} calories`}
       className="flex w-full items-center gap-2.5 rounded-field border border-dashed border-border-strong/70 px-2 py-1.5 text-left transition-colors hover:border-accent hover:bg-accent-muted"
     >
-      <span aria-hidden className="text-lg leading-none opacity-80">
-        {emojiForFood(portion.food)}
+      <span
+        aria-hidden
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-muted text-accent-soft"
+      >
+        <FoodGlyph food={portion.food} size={19} />
       </span>
       {/* TWO LINES, EACH WITH ONE JOB. Portion and protein on the first — those are the decision;
           the food's name and its calorie cost on the second. Everything on one line wrapped to
@@ -220,15 +223,15 @@ export function DayAnalytics({
                 nothing here is a second, hidden recommendation. */}
             {plan.plate.length > 1 && (
               <div className="mt-3 border-t border-border pt-2.5" data-testid="portion-plate">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Or all three across the day
-                </p>
+                <p className="text-xs font-semibold text-foreground">Or all three across the day</p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-foreground">
                   {plan.plate.map((o, i) => (
                     <React.Fragment key={o.food.id}>
                       {i > 0 && <span className="text-muted-foreground">+</span>}
-                      <span className="inline-flex items-center gap-1 rounded-chip bg-muted px-1.5 py-0.5">
-                        <span aria-hidden>{emojiForFood(o.food)}</span>
+                      <span className="inline-flex items-center gap-1.5 rounded-chip bg-muted px-2 py-1">
+                        <span aria-hidden className="text-accent-soft">
+                          <FoodGlyph food={o.food} size={14} />
+                        </span>
                         <span className="text-xs font-medium">{o.label}</span>
                       </span>
                     </React.Fragment>

@@ -138,14 +138,12 @@ export function RoutineList() {
 
           {/* Active split — what program the week is actually running (WS-5) */}
           <div
-            className="mt-3 rounded-xl border border-border bg-surface p-3"
+            className="mt-3 rounded-sm border border-border bg-surface p-3"
             data-testid="active-split"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Training split
-                </p>
+                <p className="text-xs font-medium text-muted-foreground">Training split</p>
                 <p
                   className="mt-0.5 truncate text-sm font-semibold text-foreground"
                   data-testid="active-split-name"

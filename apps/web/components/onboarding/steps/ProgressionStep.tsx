@@ -126,7 +126,7 @@ export function ProgressionStep() {
         className="mt-4 rounded-card border border-border bg-surface-2 p-3"
         data-testid="progression-preview"
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">
+        <p className="text-sm font-semibold text-foreground">
           Your first big lift, set by set
         </p>
         <ul className="mt-2 space-y-1">

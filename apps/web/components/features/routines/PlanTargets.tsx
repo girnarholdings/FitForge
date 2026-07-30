@@ -92,9 +92,7 @@ export function PlanTargets({
   return (
     <div className="mt-3 rounded-xl border border-border bg-surface p-3" data-testid="plan-targets">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          What this week hits
-        </p>
+        <p className="font-display text-sm font-bold text-foreground">What this week hits</p>
         <Link href="/progress" className="shrink-0 text-[11px] font-semibold text-accent">
           Full breakdown →
         </Link>

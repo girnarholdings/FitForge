@@ -1,22 +1,15 @@
 'use client';
 
 /**
- * Today (home tab, §2.3): today's workout card (active routine × weekday mapping), calorie/macro
+ * Today (home tab, §2.3): today's workout card (active routine × weekday mapping), nutrition heat
  * ring (v_daily_nutrition vs targets), weight, and date. A fresh demo user sees real first-run
  * empty states with clear guidance — nothing is pre-filled.
  */
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, CardTitle, Button, MacroRing, Sheet } from '@/components/ui';
-import {
-  PlusIcon,
-  ScaleIcon,
-  ShakerIcon,
-  ArrowRightIcon,
-  FlameSolidIcon,
-  HammerIcon,
-} from '@/components/ui/icons';
+import { Card, CardTitle, Button, Sheet } from '@/components/ui';
+import { ArrowRightIcon, FlameSolidIcon, HammerIcon } from '@/components/ui/icons';
 import { rankFor } from '@/components/features/shared/forgeRank';
 import { todaysRoutineDay } from '@/components/features/_mock/data';
 import {
@@ -134,12 +127,6 @@ export function TodayView() {
     year: 'numeric',
   });
 
-  const macros = [
-    { label: 'Protein', value: nutrition.protein_g, target: targets.protein_g_target, color: 'var(--color-accent)' },
-    { label: 'Carbs', value: nutrition.carbs_g, target: targets.carbs_g_target, color: 'var(--color-success)' },
-    { label: 'Fat', value: nutrition.fat_g, target: targets.fat_g_target, color: 'var(--color-energy)' },
-  ];
-
   return (
     /* `ff-dense` re-scales the whole type ramp for this screen (see globals.css) — Today stacks
        seven cards of numbers, and at the house scale they read zoomed-in on a 390px phone. The
@@ -173,20 +160,10 @@ export function TodayView() {
         hasContent={(iso) => (state.logsByDate[iso]?.length ?? 0) > 0}
       />
 
-      {/* Weekly-target streak + smith rank (§6 P1-11) */}
-      <StreakCard
-        streak={streak.streak}
-        daysThisWeek={streak.daysThisWeek}
-        target={streak.target}
-        metThisWeek={streak.metThisWeek}
-        strikes={sessions.length}
-      />
-
-      {/* Morning check-in — only for TODAY's training day: its offers edit today's session, and
-          editing a past or future day from here would be a lie about what the buttons do. */}
-      {day && onToday && <MorningCheckIn routine={routine} day={day} />}
-
-      {/* Today's workout */}
+      {/* THE WORKOUT ANCHORS THE SCREEN. It used to sit third, under the streak card and the
+          check-in — the athlete's actual job buried beneath its own garnish, which is the
+          identical-card-stack failure in one image. Order now follows the order of needs:
+          train, adapt, everything else. */}
       {day ? (
         // STEEL. The hero and the workout player's set card are the two structural surfaces that
         // anchor a screen; making them read as machined metal rather than paper is enough to shift
@@ -199,12 +176,13 @@ export function TodayView() {
             aria-hidden={restingToday || undefined}
           >
             <div className="px-5 pt-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
-                {onToday ? "Today's workout" : `${dayLabel(date)}'s workout`}
-              </p>
-              <h2 className="mt-1 font-display text-xl font-bold text-foreground">{day.name}</h2>
+              {/* No kicker. The day's name IS the headline — set at anchor scale in the display
+                  face — and whose day it is lives in the subline, where it is a fact rather than
+                  a label. */}
+              <h2 className="font-display text-2xl font-bold text-foreground">{day.name}</h2>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                {exerciseCountLabel(day.exercises.length)} · from {routine.name}
+                {onToday ? 'Today' : dayLabel(date)} · {exerciseCountLabel(day.exercises.length)} ·
+                from {routine.name}
               </p>
             </div>
             <div className="px-5 pt-4 pb-1">
@@ -275,102 +253,97 @@ export function TodayView() {
         )
       )}
 
+      {/* Morning check-in — directly under the session it adapts, and only for TODAY's training
+          day: its offers edit today's session, and editing a past or future day from here would
+          be a lie about what the buttons do. */}
+      {day && onToday && <MorningCheckIn routine={routine} day={day} />}
+
       {/* Even on a training day, "not today's session" is a real need — pulling tomorrow forward
-          is the whole reason this exists. Shown second so it never competes with the plan — and
+          is the whole reason this exists. Shown after the plan so it never competes with it — and
           not at all while a rest decision stands: the override sheet is the ONE sanctioned door
           back into training on a rest day, so a second unguarded door here would defeat it. */}
       {day && onToday && !restingToday && <QuickWorkoutCard />}
 
+      {/* Weekly-target streak + smith rank (§6 P1-11) — real data off the log, shown after the
+          work, because motivation garnish above the meal was the old screen's tell. */}
+      <StreakCard
+        streak={streak.streak}
+        daysThisWeek={streak.daysThisWeek}
+        target={streak.target}
+        metThisWeek={streak.metThisWeek}
+        strikes={sessions.length}
+      />
+
       {/* Ask your coach — the knowledge base is one tap from home (§KB). */}
       <CoachEntryCard />
 
-      {/* Nutrition ring */}
-      <Card className="shadow-[var(--shadow-card)]">
-        <div className="flex items-center justify-between">
-          <CardTitle>Nutrition</CardTitle>
-          {hasLogged && (
-            <Link href="/nutrition" className="text-sm font-semibold text-accent">
-              Log food
+      {/* THE LEDGER. Nutrition and body weight used to be two more full-width cards in the
+          stack — the dark-dashboard default this screen refuses. They are rows now: hairline
+          separations, one heat bar, one action each. The workout is the only thing on Today
+          that deserves a card's weight. */}
+      <section className="border-y border-border" data-testid="today-ledger">
+        <div className="py-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-foreground">Nutrition</p>
+            <Link
+              href="/nutrition"
+              className="text-sm font-semibold text-accent"
+            >
+              {hasLogged ? 'Log food' : ''}
             </Link>
+          </div>
+          {hasLogged ? (
+            <>
+              <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+                <div
+                  className={
+                    'h-full w-full origin-left rounded-full ' +
+                    (nutrition.kcal > targets.kcal_target ? 'bg-energy' : 'ff-heat')
+                  }
+                  style={{
+                    transform: `scaleX(${Math.min(1, nutrition.kcal / Math.max(1, targets.kcal_target))})`,
+                  }}
+                />
+              </div>
+              <p className="tabular mt-1.5 text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">
+                  {Math.round(nutrition.kcal).toLocaleString()}
+                </span>{' '}
+                / {targets.kcal_target.toLocaleString()} kcal ·{' '}
+                <span className="font-semibold text-foreground">
+                  {Math.round(nutrition.protein_g)}
+                </span>{' '}
+                / {targets.protein_g_target} g protein
+              </p>
+            </>
+          ) : (
+            <div className="mt-1 flex items-center justify-between gap-3">
+              <p className="min-w-0 text-sm text-muted-foreground">
+                Nothing logged yet today. Your target is{' '}
+                <span className="font-semibold text-foreground">{targets.kcal_target} kcal</span> ·{' '}
+                {targets.protein_g_target} g protein.
+              </p>
+              <Link href="/nutrition" className="shrink-0">
+                <Button variant="secondary" size="sm">
+                  Log your first meal
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
 
-        {hasLogged ? (
-          <div className="mt-3 flex items-center gap-5">
-            <MacroRing
-              value={nutrition.kcal}
-              target={targets.kcal_target}
-              size={128}
-              stroke={12}
-              caption={<>{Math.round(nutrition.kcal)}</>}
-              label={`of ${targets.kcal_target} kcal`}
-            />
-            <div className="flex-1 space-y-3">
-              {macros.map((m) => {
-                const pct = Math.min(100, Math.round((m.value / Math.max(1, m.target)) * 100));
-                return (
-                  <div key={m.label}>
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span className="font-medium text-foreground">{m.label}</span>
-                      <span className="tabular-nums text-muted-foreground">
-                        {Math.round(m.value)} / {m.target} g
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: m.color }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        <div className="flex items-center justify-between gap-3 border-t border-border py-3.5">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Body weight</p>
+            <p className="text-xs text-muted-foreground">Log weigh-ins to see your trend.</p>
           </div>
-        ) : (
-          <div className="mt-3 flex flex-col items-center gap-3 px-2 py-4 text-center">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-surface-2 text-accent shadow-[var(--shadow-card)]">
-              {/* The Nutrition TAB this card links to is a protein shaker; this was a knife and
-                  fork, so one destination had two icons. Restaurant cutlery is also the wrong
-                  register — the app logs macros, it does not book dinner. */}
-              <ShakerIcon size={24} />
-            </span>
-            <div>
-              <p className="font-semibold text-foreground">Nothing logged yet today</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Your target is <span className="font-semibold text-foreground">{targets.kcal_target} kcal</span> ·{' '}
-                {targets.protein_g_target}g protein. Log a meal to fill your ring.
-              </p>
-            </div>
-            <Link href="/nutrition" className="w-full">
-              <Button block variant="secondary">
-                <PlusIcon size={18} /> Log your first meal
-              </Button>
-            </Link>
-          </div>
-        )}
-      </Card>
-
-      {/* Body weight */}
-      <Card className="shadow-[var(--shadow-card)]">
-        <div className="flex items-center justify-between">
-          <CardTitle>Body weight</CardTitle>
-          <Link href="/progress" className="text-sm font-semibold text-accent">
-            Progress
-          </Link>
-        </div>
-        <div className="mt-3 flex items-center gap-4 px-1 py-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface-2 text-accent shadow-[var(--shadow-card)]">
-            <ScaleIcon size={22} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">Track your weight</p>
-            <p className="text-sm text-muted-foreground">Log weigh-ins to see your trend over time.</p>
-          </div>
-          <Link href="/progress">
+          <Link href="/progress" className="shrink-0">
             <Button variant="secondary" size="sm">
               Add <ArrowRightIcon size={16} />
             </Button>
           </Link>
         </div>
-      </Card>
+      </section>
 
       {/* THE OVERRIDE SHEET — the one sanctioned way from an accepted rest day back into
           training. Restates the morning's why, recommends the halved dose, lets the full session
@@ -442,25 +415,17 @@ function StreakCard({
   /** Total finished sessions — the currency of the smith-rank ladder. */
   strikes: number;
 }) {
-  const active = streak > 0 || daysThisWeek > 0;
   const standing = rankFor(strikes);
   return (
-    <Card premium className="shadow-[var(--shadow-card)]" data-testid="forge-card">
+    <Card className="shadow-[var(--shadow-card)]" data-testid="forge-card">
       <div className="flex items-center gap-4">
-        <span
-          className={
-            'grid h-12 w-12 shrink-0 place-items-center rounded-full ' +
-            (active ? 'bg-energy-muted text-energy' : 'bg-accent-muted text-accent-soft')
-          }
-        >
-          <FlameSolidIcon size={26} />
-        </span>
         <div className="min-w-0 flex-1">
           <p className="font-display text-lg font-bold tracking-tight">
             {streak > 0 ? (
-              <>
-                Week streak: <span className="text-gradient-gold">{streak}</span>
-              </>
+              <span className="inline-flex items-center gap-1.5">
+                <FlameSolidIcon size={16} className="text-energy" aria-hidden />
+                Week streak: <span className="text-accent-soft">{streak}</span>
+              </span>
             ) : (
               'Start your streak'
             )}
@@ -522,7 +487,7 @@ function StreakCard({
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#8a5432] via-[#c98963] to-[#ecc0a4] transition-[width] duration-500"
+              className="ff-heat h-full rounded-full transition-[width] duration-500"
               style={{ width: `${Math.round(standing.progress * 100)}%` }}
             />
           </div>

@@ -26,7 +26,7 @@ import type { MealSlot } from '@/components/features/_mock/data';
 import { MEAL_SLOTS } from './mealSlots';
 import { FoodPickerSheet } from './FoodPickerSheet';
 import { CustomFoodSheet, type CustomFoodResult } from './CustomFoodSheet';
-import { emojiForFood } from '@/lib/food/emoji';
+import { FoodGlyph } from '@/components/ui/foodIcons';
 
 const LEVEL_STYLES = {
   high: { dot: 'bg-success', text: 'text-success' },
@@ -321,8 +321,11 @@ function MatchedRow({
         onClick={onOpenPicker}
         className="mt-1 flex w-full items-center gap-2 text-left"
       >
-        <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-base">
-          {emojiForFood(food)}
+        <span
+          aria-hidden
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-muted text-accent-soft"
+        >
+          <FoodGlyph food={food} size={17} />
         </span>
         <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', styles.dot)} />
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">

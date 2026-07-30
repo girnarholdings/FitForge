@@ -9,7 +9,8 @@
  * USDA catalog, lazily fetched one shard at a time through the Cloudflare cache worker) is merged
  * in behind for the long tail.
  *
- * Every row wears a food emoji (lib/food/emoji.ts — deliberately not photos; see that file) and
+ * Every row wears a drawn food glyph (components/ui/foodIcons.tsx — deliberately not photos:
+ * photos would mean bundling thousands of images or hot-linking a CDN on every keystroke) and
  * carries protein alongside kcal, because "which of these five chickens" is usually a protein
  * question. And when nothing fits, the box itself offers to create the food rather than dead-
  * ending: the escape hatch lives where the failure happens.
@@ -21,7 +22,7 @@ import { searchFoods } from '@/lib/food/search';
 import { popularFoods } from '@/lib/food/search';
 import { searchTier2, catalogLabel } from '@/lib/food/tier2';
 import { searchMyFoods } from '@/lib/food/custom';
-import { emojiForFood } from '@/lib/food/emoji';
+import { FoodGlyph } from '@/components/ui/foodIcons';
 import type { Food } from '@/lib/food/types';
 import { CustomFoodSheet } from './CustomFoodSheet';
 
@@ -112,9 +113,9 @@ export function FoodPickerSheet({
                 <span className="flex w-full items-center gap-2.5">
                   <span
                     aria-hidden
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-muted text-base"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-muted text-accent-soft"
                   >
-                    {emojiForFood(f)}
+                    <FoodGlyph food={f} size={17} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">

@@ -74,7 +74,10 @@ export function QuickWorkoutCard({ restDay = false }: QuickWorkoutCardProps) {
   const [open, setOpen] = React.useState(false);
   return (
     <>
-      <Card className="shadow-[var(--shadow-card)]">
+      {/* A hairline section, not another card: the plan above is the only card this screen owes
+          the reader. The rest-day variant keeps a touch more presence — there, this IS the way
+          into training. */}
+      <div className={restDay ? 'rounded-sm border border-border bg-surface-2 p-4' : 'py-1'}>
         <div className="flex items-center gap-2.5">
           {/* An empty day is still a gym day in this app's world — an empty bench, not a blank
               card. Decorative; the title beside it is the accessible content.
@@ -112,7 +115,7 @@ export function QuickWorkoutCard({ restDay = false }: QuickWorkoutCardProps) {
               the action instead of repeating the noun. */}
           <BoltIcon size={18} /> {restDay ? 'Quick workout' : 'Pick a session'}
         </Button>
-      </Card>
+      </div>
 
       <QuickWorkoutSheet open={open} onClose={() => setOpen(false)} />
     </>

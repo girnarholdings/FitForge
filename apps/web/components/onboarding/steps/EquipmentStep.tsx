@@ -819,7 +819,7 @@ export function EquipmentStep() {
           )}
           <p className="relative text-center">
             <span
-              className="tabular text-gradient-gold block font-display text-[4.5rem] font-bold leading-none"
+              className="tabular text-accent-soft block font-display text-[4.5rem] font-bold leading-none"
               data-testid="equipment-finish-count"
             >
               <CountUp value={unlocked} animate={!reduced} duration={1200} start={0} />

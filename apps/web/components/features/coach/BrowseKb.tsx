@@ -110,7 +110,7 @@ export function BrowseKb({
 
       {grouped.map((group) => (
         <section key={group.slug} data-testid={`coach-group-${group.slug}`}>
-          <h2 className="font-display text-sm font-bold uppercase tracking-wide text-accent-soft">
+          <h2 className="font-display text-base font-bold text-foreground">
             {group.label}
           </h2>
           <p className="mb-2 text-xs text-muted-foreground">{group.blurb}</p>

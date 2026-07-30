@@ -807,9 +807,7 @@ export function SettingsView() {
           columns={1}
         />
         <div className="rounded-xl border border-border bg-surface px-3 py-2" data-testid="settings-progression-preview">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
-            A 4-set compound, set by set
-          </p>
+          <p className="text-sm font-semibold text-foreground">A 4-set compound, set by set</p>
           <p className="mt-1 text-sm tabular text-foreground" data-testid="settings-progression-shape">
             {/* `describeSetTarget` is the shared formatter, so a rep RANGE under straight sets and
                 a missing percentage on a bodyweight lift render identically everywhere. */}
@@ -1345,7 +1343,7 @@ export function SettingsView() {
 
 function GroupHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="px-1 pt-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+    <h2 className="px-1 pt-2 font-display text-lg font-bold text-foreground">
       {children}
     </h2>
   );
