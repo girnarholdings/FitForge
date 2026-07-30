@@ -120,6 +120,7 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
       source: 'rules',
       decision: v.action === 'proceed' ? 'accepted' : null,
       advice: adviceFor(c, v),
+      offeredReason: v.reason,
     });
     haptic();
   }
@@ -184,6 +185,7 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
       source: 'ai',
       decision: null,
       advice: finalAdvice,
+      offeredReason: r.result.reason,
     });
   }
 
@@ -285,9 +287,14 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
       );
     }
 
+    /**
+     * The answered state is still A VERDICT, not a scoreboard. The score alone ("Readiness 82")
+     * tells the athlete nothing about what the coach concluded — the owner called that out — so
+     * the card keeps the WHY in the voice that offered it, and the rest-of-day advice under it.
+     */
     const acted = entry.decision === 'accepted' && entry.offered !== 'proceed';
     return (
-      <Card className="!py-3 shadow-[var(--shadow-card)]" data-testid="morning-checkin">
+      <Card className="shadow-[var(--shadow-card)]" data-testid="morning-checkin">
         <div className="flex items-center gap-2.5">
           <span
             aria-hidden
@@ -305,6 +312,13 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
           </p>
           {redoButton}
         </div>
+        <p
+          className="mt-2 text-sm leading-snug text-muted-foreground"
+          data-testid="checkin-reason"
+        >
+          {entry.offeredReason ?? entry.verdict.reason}
+        </p>
+        {entry.advice && entry.advice.length > 0 && <AdviceList lines={entry.advice} compact />}
       </Card>
     );
   }

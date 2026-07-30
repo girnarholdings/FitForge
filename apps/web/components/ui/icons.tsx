@@ -624,26 +624,23 @@ export const CollarIcon = ({ open = false, ...p }: IconProps & { open?: boolean 
   </Svg>
 );
 
-/** Coach's whistle — the Coach tab. A person who tells you what to do, not a speech bubble. */
 /**
- * THE COACH — the brand mark's figure, redrawn as a 24-unit stroke icon.
+ * THE COACH — a flexed arm swinging the smith's hammer. Muscle and forge in one act.
  *
- * Not the LogoMark scaled down. That mark is six FILLED shapes tuned for 64 units; at 20px in the
- * nav its delts and arm merge into one gold lozenge. This is the same idea — built figure, raised
- * sledgehammer — rebuilt in the stroke vocabulary every other icon here uses, with the detail
- * count cut to what a 20px glyph can actually carry: shoulders, head, hammer. No waist taper, no
- * separate arm mass; the shoulder line does the work of saying "built".
+ * Three glyphs came and went here: a stick figure (mascot scribble at 18px), a bare Lucide-style
+ * claw hammer (generic — could badge any DIY app), and a family of "abs plate" merges that all
+ * proofed as household objects (a lidded bin, a waffle, a jam jar — a 6-pack grid inside a
+ * rounded box will always read as a grate first). What survived the proof sheet is the one
+ * fitness silhouette that stays legible at 16px — the flexed biceps — gripping the tool this app
+ * is named for. The head is a single thick butt-capped bar: at small sizes a hollow outline head
+ * collapses to a speck, a solid bar stays a hammer. Same family as the rank crest's sledge
+ * ({@link HammerIcon}); the coach is the one mid-swing.
  */
 export const CoachIcon = (p: IconProps) => (
   <Svg {...p}>
-    {/* THE HAMMER, not the stick figure. The old glyph was a little person with a raised arm —
-        mascot territory, unreadable scribble at 18px. (An intermediate draft added spark
-        crosses and promptly read as a magic wand — sparkles are their own slop.) This is the
-        classic smith's hammer, head-down mid-swing: the coach is the one who swings it on your
-        behalf. Same family as the rank crest's sledge ({@link HammerIcon}), different tool. */}
-    <path d="m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9" />
-    <path d="m18 15 4-4" />
-    <path d="m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5" />
+    <path d="M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1" />
+    <path d="m11.7 6.1 4.9-2.2" />
+    <path d="m16.9 1.7 2.4 5.2" strokeWidth={3.2} strokeLinecap="butt" />
   </Svg>
 );
 

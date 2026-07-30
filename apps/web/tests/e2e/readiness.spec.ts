@@ -59,6 +59,12 @@ test.describe('morning check-in', () => {
 
     // The card collapses to a summary; nothing about the plan changed.
     await expect(page.getByTestId('checkin-summary')).toContainText(/train as planned/i);
+    // But it stays A VERDICT, not a scoreboard: the answered card keeps the coach's why and the
+    // rest-of-day advice — the score alone tells the athlete nothing they can act on.
+    await expect(page.getByTestId('checkin-reason')).toContainText(/ready|train as planned/i);
+    await expect(
+      page.getByTestId('morning-checkin').getByTestId('day-advice'),
+    ).toContainText(/protein|sleep/i);
     const state = (await readDemoState(page)) as { quickSession?: unknown };
     expect(state.quickSession ?? null, 'a green day must not stage any session').toBeNull();
   });

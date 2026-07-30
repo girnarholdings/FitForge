@@ -36,6 +36,12 @@ export interface ReadinessEntry {
   adaptedDay?: RoutineDay | null;
   /** the day's holistic advice (nutrition/sleep/recovery), persisted so the recap can show it */
   advice?: AdviceLine[];
+  /**
+   * The WHY behind the offered action, in the voice that offered it — the AI's own sentence when
+   * the coach answered, the rules engine's otherwise. Persisted so the answered card keeps
+   * stating the day's opinion instead of decaying into a bare score.
+   */
+  offeredReason?: string;
 }
 
 interface ReadinessState {
