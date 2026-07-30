@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readDemoState, DEMO_STORAGE_KEY, WORKOUT_LOG_KEY, seedOnboarded } from './helpers';
+import { readDemoState, DEMO_STORAGE_KEY, WORKOUT_LOG_KEY, seedOnboarded, openSettings} from './helpers';
 
 /**
  * PRESCRIPTION FIDELITY — the numbers the app SAYS and the numbers the app LOGS are one number.
@@ -141,6 +141,7 @@ test.describe('prescription fidelity', () => {
     // "Switch to straight sets" flipped the headline and the target line to 4 × 6-10 while only
     // THREE set rows rendered, and left the counter reading 0/18 instead of 0/20.
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('radio', { name: /Beginner/ }).click();
     await page.getByRole('radio', { name: /Reverse pyramid/ }).click();
     const dayId = await firstDayId(page);

@@ -23,6 +23,7 @@ import {
   regenerateFromSettings,
   DEMO_STORAGE_KEY,
   WORKOUT_LOG_KEY,
+  openSettings
 } from './helpers';
 
 /** The exact payload from the review that used to be swallowed whole. */
@@ -52,6 +53,7 @@ test.describe('regression · malformed import', () => {
     expect(before).toBeTruthy();
 
     await page.goto('/settings');
+    await openSettings(page);
     await expect(page.getByTestId('settings-import')).toBeVisible();
     await page.setInputFiles('[data-testid="import-file"]', {
       name: 'malformed.json',
@@ -87,6 +89,7 @@ test.describe('regression · malformed import', () => {
       { key: DEMO_STORAGE_KEY, value: JSON.stringify(bareCompletedState()) },
     );
     await page.goto('/settings');
+    await openSettings(page);
     await page.setInputFiles('[data-testid="import-file"]', {
       name: 'notabackup.json',
       mimeType: 'application/json',
@@ -315,6 +318,7 @@ test.describe('regression · backup round trip (M4)', () => {
 
     // ── export through the real button ──
     await page.goto('/settings');
+    await openSettings(page);
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.getByTestId('settings-export').click(),
@@ -349,6 +353,7 @@ test.describe('regression · backup round trip (M4)', () => {
       { key: DEMO_STORAGE_KEY, value: JSON.stringify(bareCompletedState()) },
     );
     await page.goto('/settings');
+    await openSettings(page);
     await page.setInputFiles('[data-testid="import-file"]', {
       name: 'fitforge-backup.json',
       mimeType: 'application/json',

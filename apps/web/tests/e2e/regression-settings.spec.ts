@@ -8,7 +8,7 @@
  * a default-shaped fixture would have passed against the broken build.
  */
 import { test, expect } from '@playwright/test';
-import { resetDemo, seedDraft, readRoutine, expectRouteHealthy, KNEES_EXCLUSIONS } from './helpers';
+import { resetDemo, seedDraft, readRoutine, expectRouteHealthy, KNEES_EXCLUSIONS, openSettings} from './helpers';
 
 /** Deliberately unlike every fixture and every default. */
 const SEEDED = {
@@ -42,6 +42,7 @@ test.describe('regression · settings reflects the real profile', () => {
     await resetDemo(page);
     await seedDraft(page, SEEDED);
     await page.goto('/settings');
+    await openSettings(page);
   });
 
   test('M2a · every control shows the SEEDED answers, not fixture data', async ({ page }) => {

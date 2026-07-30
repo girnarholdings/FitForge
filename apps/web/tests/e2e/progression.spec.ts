@@ -6,6 +6,7 @@ import {
   readDemoState,
   WORKOUT_LOG_KEY,
   seedOnboarded,
+  openSettings
 } from './helpers';
 
 /**
@@ -180,6 +181,7 @@ test.describe('progression scheme · the workout player', () => {
 
     // Switch scheme in Settings…
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('radio', { name: /Reverse pyramid/ }).click();
     await expect(page.getByTestId('settings-progression-shape')).toContainText('90%');
 
@@ -198,6 +200,7 @@ test.describe('progression scheme · the workout player', () => {
     page,
   }) => {
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('radio', { name: /Reverse pyramid/ }).click();
     const dayId = await firstDayId(page);
     await page.goto(`/workout/${dayId}`);
@@ -243,6 +246,7 @@ test.describe('progression scheme · the workout player', () => {
     page,
   }) => {
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('radio', { name: /Reverse pyramid/ }).click();
     const dayId = await firstDayId(page);
     await page.goto(`/workout/${dayId}`);
@@ -260,6 +264,7 @@ test.describe('progression scheme · the workout player', () => {
     // A beginner who deliberately over-reaches must meet the warning when it matters, not weeks
     // earlier in onboarding.
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('radio', { name: /Beginner/ }).click();
     await page.getByRole('radio', { name: /Reverse pyramid/ }).click();
     const dayId = await firstDayId(page);
@@ -278,6 +283,7 @@ test.describe('progression scheme · the workout player', () => {
     // per week. A warm-up leaking into it would inflate every weekly goal, heat colour and target
     // bar in the app.
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('radio', { name: /Reverse pyramid/ }).click();
     const dayId = await firstDayId(page);
 
@@ -322,6 +328,7 @@ test.describe('progression scheme · settings', () => {
 
   test('the choice persists, and can be handed back to the recommendation', async ({ page }) => {
     await page.goto('/settings');
+    await openSettings(page);
     await expect(page.getByTestId('settings-progression-current')).toContainText(
       /recommendation/i,
     );
@@ -362,6 +369,7 @@ test.describe('progression scheme · settings', () => {
       window.localStorage.setItem(key, JSON.stringify(state));
     });
     await page.goto('/settings');
+    await openSettings(page);
 
     await expect(page.getByTestId('settings-progression-current')).toContainText(/recommendation/i);
     await expect(page.getByRole('radio', { name: /Ascending pyramid/ })).toHaveCount(0);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, seedOnboarded } from './helpers';
+import { resetDemo, seedOnboarded, openSettings} from './helpers';
 
 test.describe('settings', () => {
   test.beforeEach(async ({ page }) => {
@@ -10,7 +10,11 @@ test.describe('settings', () => {
 
   test('renders and lets you edit an onboarding answer', async ({ page }) => {
     await page.goto('/settings');
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await openSettings(page);
+    // The screen is a profile: identity and the training at a glance, with every control behind
+    // the Settings disclosure that `openSettings` just opened.
+    await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
+    await expect(page.getByTestId('profile-card')).toBeVisible();
 
     // Every §2.2 profile section is present.
     await expect(page.getByText('Primary goal')).toBeVisible();

@@ -632,6 +632,7 @@ export interface GeneratedRoutine {
 
 export async function regenerateFromSettings(page: Page): Promise<GeneratedRoutine> {
   await page.goto('/settings');
+  await openSettings(page);
   const button = page.getByTestId('settings-regenerate');
   await expect(button).toBeVisible();
   await button.click();
@@ -816,4 +817,19 @@ export async function signInFakeUser(
     timeout: 30000,
   });
   return true;
+}
+
+/**
+ * OPEN THE SETTINGS PANEL on the profile screen.
+ *
+ * `/settings` leads with the profile card and keeps every editable control behind one disclosure, so
+ * a spec that wants a control has to open it first — exactly as a person does. Idempotent: the button
+ * reports its own state through `aria-expanded`, so calling this twice is a no-op rather than a
+ * close, and calling it on an already-open panel is safe.
+ */
+export async function openSettings(page: Page): Promise<void> {
+  const toggle = page.getByTestId('settings-open');
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(page.getByTestId('settings-panel')).toBeVisible();
 }

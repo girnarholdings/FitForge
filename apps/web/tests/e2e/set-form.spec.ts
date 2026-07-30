@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readDemoState, pageOverflow, seedOnboarded, dismissViaScrim } from './helpers';
+import { readDemoState, pageOverflow, seedOnboarded, dismissViaScrim, openSettings} from './helpers';
 
 /**
  * THE SET-ENTRY FORM, and the glossary hanging off it.
@@ -201,6 +201,7 @@ test.describe('glossary', () => {
     // Reverse pyramid puts a "top set" on row 1 and back-offs under it — the two words the app
     // prints most and defined least — and it always ramps, so the warm-up card is on screen.
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('radio', { name: /Reverse pyramid/ }).click();
     await openPlayer(page);
 

@@ -7,6 +7,7 @@ import {
   pageOverflow,
   DEMO_STORAGE_KEY,
   dismissViaScrim,
+  openSettings
 } from './helpers';
 
 /**
@@ -182,6 +183,7 @@ test.describe('first-run tour', () => {
     expect(typeof (await readDemoState(page))?.tourSeenAt).toBe('string');
 
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByTestId('settings-replay-tour').click();
 
     await page.waitForURL(/\/today/);
@@ -226,6 +228,7 @@ test.describe('first-run tour', () => {
     delete legacy.tourSeenAt;
 
     await page.goto('/settings');
+    await openSettings(page);
     await page.setInputFiles('[data-testid="import-file"]', {
       name: 'fitforge-pre-tour-backup.json',
       mimeType: 'application/json',

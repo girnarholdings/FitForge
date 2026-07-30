@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, readDemoState, seedOnboarded } from './helpers';
+import { resetDemo, readDemoState, seedOnboarded, openSettings} from './helpers';
 
 test.describe('persistence', () => {
   test.beforeEach(async ({ page }) => {
@@ -25,6 +25,7 @@ test.describe('persistence', () => {
 
     // Start over via Settings → Erase Local Mode data (§5.1).
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByRole('button', { name: 'Erase Local Mode data' }).click();
     await page.getByRole('button', { name: 'Yes, erase everything' }).click();
 

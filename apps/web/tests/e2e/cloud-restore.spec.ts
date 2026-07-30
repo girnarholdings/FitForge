@@ -27,6 +27,7 @@ import {
   // by the next caller that reinvents it.
   firebaseApiKey,
   fakeGoogleSession,
+  openSettings
 } from './helpers';
 
 const GOOGLE_AUTH = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com/;
@@ -218,6 +219,7 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
      * the state under test is settled before the sheet can open.
      */
     await page.getByTestId('mobile-settings').click();
+    await openSettings(page);
     await page.waitForURL(/\/settings/);
     await expect(page.getByTestId('mode-chip')).toHaveAttribute('data-mode', 'google');
     await page.getByTestId('erase-local-data').click();
@@ -258,6 +260,7 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
       window.localStorage.setItem('fitforge.readiness.v1', JSON.stringify({ entries: [] }));
     });
     await page.goto('/settings');
+    await openSettings(page);
     const downloadP = page.waitForEvent('download');
     await page.getByTestId('settings-export').click();
     const download = await downloadP;

@@ -54,6 +54,11 @@ export function NutritionView() {
   const [date, setDate] = useSelectedDate();
   const { logs, setLogs } = useLogsForDate(date);
   const state = useDemoState();
+  /** Most recent logged weight, else what they told onboarding, else nothing. */
+  const bodyKg = React.useMemo(() => {
+    const latest = [...state.weights].sort((a, b) => a.date.localeCompare(b.date)).at(-1);
+    return latest?.kg ?? state.draft.weight_kg ?? null;
+  }, [state.weights, state.draft.weight_kg]);
 
   const [draft, setDraft] = React.useState<{ input: string; items: ParsedItem[] } | null>(null);
   const [draftSlot, setDraftSlot] = React.useState<MealSlot>('lunch');
@@ -224,6 +229,9 @@ export function NutritionView() {
           totals={totals}
           targets={targets}
           recents={recents}
+          /* Latest weigh-in first, the onboarding answer as a fallback: the per-meal protein figure
+             is 0.4 g/kg, and a stale number is still a far better basis than a flat default. */
+          bodyKg={bodyKg}
           onAddFood={(food, grams) => reviewSingleFood(food, defaultMealSlot(), grams)}
         />
       )}

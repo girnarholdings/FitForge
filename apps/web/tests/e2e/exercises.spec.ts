@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { resetDemo, seedOnboarded } from './helpers';
+import { resetDemo, seedOnboarded, openSettings} from './helpers';
 
 async function exerciseCount(page: import('@playwright/test').Page): Promise<number> {
   const text = await page.getByTestId('exercise-count').innerText();
@@ -175,8 +175,11 @@ test.describe('exercise library access, how-to, and aggregated targeting', () =>
 
     // Settings left the tab bar but is still one tap away via the mobile top-bar gear.
     await page.getByTestId('mobile-settings').click();
+    await openSettings(page);
     await page.waitForURL(/\/settings/);
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    // The gear lands on the PROFILE screen, whose settings live behind a disclosure.
+    await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
+    await expect(page.getByTestId('settings-panel')).toBeVisible();
   });
 
   test('exercise detail explains how to perform the movement with pose frames (WS-3)', async ({

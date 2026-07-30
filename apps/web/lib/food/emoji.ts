@@ -83,7 +83,10 @@ const BY_KEYWORD: Array<[RegExp, string]> = [
   [/butter\b|ghee|margarine/i, '🧈'],
   [/oil\b|olive/i, '🫒'],
   [/salt|spice|seasoning|sauce|ketchup|mustard|mayo/i, '🧂'],
-  [/protein (powder|shake)|whey|casein|creatine|supplement|vitamin/i, '💊'],
+  // A shaker, not a pill: whey is food, and a 💊 beside "1 scoop" reads as medication. Vitamins and
+  // creatine keep the pill — they genuinely are supplements rather than something you eat.
+  [/protein (powder|shake)|whey|casein|mass gainer/i, '🥤'],
+  [/creatine|supplement|vitamin/i, '💊'],
   [/popcorn/i, '🍿'],
   [/pretzel/i, '🥨'],
   [/dumpling|gyoza|momo/i, '🥟'],

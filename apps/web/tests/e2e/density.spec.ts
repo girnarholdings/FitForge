@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seedOnboarded, pageOverflow, signInFakeUser } from './helpers';
+import { seedOnboarded, pageOverflow, signInFakeUser, openSettings} from './helpers';
 
 /**
  * DENSITY — measured, because "too big" is a measurement.
@@ -146,13 +146,24 @@ test.describe('density', () => {
     const analytics = page.getByTestId('day-analytics');
     await expect(analytics).toBeVisible();
 
-    // The gaps list leads with grams owed, and carries no percentage at all.
-    const gaps = page.getByTestId('macro-gaps');
-    await expect(gaps).toContainText(/\d+ g to go|goal hit/);
-    expect(
-      (await gaps.innerText()).includes('%'),
-      'the gaps list must not mix a percentage into a grams-to-go statement',
-    ).toBe(false);
+    /**
+     * NO SECOND COPY OF THE SUMMARY. This card used to open with its own per-macro bars ("Protein
+     * 110 g to go") sitting directly under the summary's ("Protein 15 / 125 g · 12%") — the same
+     * three facts in the same shape, one subtraction apart. The duplicate is gone, and this is what
+     * keeps it gone: the analytics card may talk about protein (it is closing that gap) but must not
+     * restate carbs and fat progress, and must carry no "eaten / target" row of its own.
+     */
+    const analyticsText = await analytics.innerText();
+    expect(analyticsText, 'the card must not re-run the summary per-macro list').not.toMatch(
+      /\d+\s*\/\s*\d+\s*g/,
+    );
+    for (const macro of ['Carbs', 'Fat']) {
+      expect(analyticsText, `${macro} progress belongs to the summary card alone`).not.toContain(
+        macro,
+      );
+    }
+    // What it says instead: the gap as MEALS, which is the reframe.
+    await expect(page.getByTestId('meals-left')).toContainText(/\d+ more meals?/);
 
     /* Cross-check the one place both cards describe protein: the summary's percentage must equal
        eaten/target, which is what makes it safe to sit above a grams-to-go figure. Two eggs is
@@ -178,13 +189,31 @@ test.describe('density', () => {
     await page.getByTestId('review-confirm').click();
 
     const gap = page.getByTestId('close-gap');
-    await expect(gap).toContainText(/Suggestions/i);
     await expect(gap).toContainText(/not logged yet/i);
+    await expect(gap).toContainText(/tap to add/i);
     const suggestion = page.getByTestId('gap-suggestion').first();
-    await expect(suggestion).toContainText(/would add \d+ g protein/i);
     await expect(suggestion).toContainText(/Add/);
+
+    /**
+     * AND THE PORTION IS SOMETHING A PERSON WOULD EAT. The old row said "~150 g Whey protein
+     * powder — would add 111 g protein", i.e. five scoops, because the portion was scaled to close
+     * the whole remaining gap. Every row now leads with whole standard servings in the unit the food
+     * is sold in, so the label is countable ("1 breast (172 g)", "2 scoops (62 g)") and the protein
+     * it carries is a meal's worth, not a day's.
+     */
+    const rowText = await suggestion.innerText();
+    // The portion label is countable: a number, a unit, and the grams in parentheses.
+    expect(rowText, `portion label should read "N unit (N g)":\n${rowText}`).toMatch(
+      /\d+\s+[A-Za-z][^()\n]*\(\d+ g\)/,
+    );
+    // The protein column stands alone on its own line. It is a MEAL's worth — the old row's 111 g
+    // (five scoops of whey, scaled to close the whole day's gap) is what this number rules out.
+    const proteinLine = rowText.match(/^(\d+) g$/m);
+    expect(proteinLine, `expected a protein column in:\n${rowText}`).toBeTruthy();
+    expect(Number(proteinLine![1]), 'no single portion is a whole day of protein').toBeLessThan(70);
+
     // The accessible name says what tapping does, for anyone who never sees the pill.
-    await expect(suggestion).toHaveAttribute('aria-label', /^Add about/);
+    await expect(suggestion).toHaveAttribute('aria-label', /^Add \d+ /);
   });
 });
 
@@ -215,6 +244,7 @@ test.describe('settings · signed-in relevance', () => {
     test.skip(!signedIn, 'build has no Firebase project — there is no signed-in state to test');
 
     await page.getByTestId('mobile-settings').click();
+    await openSettings(page);
     await page.waitForURL(/\/settings/);
     await expect(page.getByTestId('account-signed-in')).toBeVisible();
 
@@ -235,6 +265,7 @@ test.describe('settings · signed-in relevance', () => {
   test('signed out, the Local Mode language and its erase button are untouched', async ({ page }) => {
     await seedOnboarded(page);
     await page.goto('/settings');
+    await openSettings(page);
     const body = page.locator('main');
     await expect(body).toContainText('Local Mode');
     await expect(body).toContainText('Nothing is uploaded');

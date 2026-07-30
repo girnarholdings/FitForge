@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { test, expect } from '@playwright/test';
-import { resetDemo, seedOnboarded } from './helpers';
+import { resetDemo, seedOnboarded, openSettings} from './helpers';
 
 test.describe('landing', () => {
   test.beforeEach(async ({ page }) => {
@@ -51,6 +51,7 @@ test.describe('landing', () => {
     // Produce a real backup from a real populated store, via the Settings export the copy points at.
     await seedOnboarded(page);
     await page.goto('/settings');
+    await openSettings(page);
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.getByTestId('settings-export').click(),
@@ -85,6 +86,7 @@ test.describe('landing', () => {
     // parked on `auth` when they exported resumes at the welcome screen instead.
     await seedOnboarded(page);
     await page.goto('/settings');
+    await openSettings(page);
     const [download] = await Promise.all([
       page.waitForEvent('download'),
       page.getByTestId('settings-export').click(),

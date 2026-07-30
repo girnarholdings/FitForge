@@ -1,21 +1,29 @@
 'use client';
 
 /**
- * DAY ANALYTICS — how to FINISH the day.
+ * DAY ANALYTICS — how to FINISH the day, IN FOOD.
  *
- * Editorially this card is the second half of a pair, and keeping the halves distinct is what
- * stops the screen contradicting itself:
+ * Editorially this card is the second half of a pair, and keeping the halves distinct is the whole
+ * job — twice now this card has drifted into restating its neighbour:
  *
- *   · `DaySummary` (above) answers **where am I?** — rings and per-macro progress against target.
- *   · this card answers **how do I finish?** — what is still owed, what to eat to close it, and
- *     where today's calories landed.
+ *   · `DaySummary` (above) answers **where am I?** — rings, and a bar per macro reading
+ *     "Protein 15 / 125 g · 12%".
+ *   · this card answers **what do I eat?** — real portions that close the gap, and where today's
+ *     calories landed.
  *
- * ONE MEANING PER UNIT. Every percentage rendered here, and in the summary above, is a percentage
- * of a GOAL. That rule is why the old stacked "energy split vs target split" bar was deleted
- * rather than relabelled: it expressed percentages of CONSUMED ENERGY, which can read as perfectly
- * on-plan while the athlete is 100 g of protein short — and it sat inches under a progress row
- * using the same word and the same `%` sign for the other meaning. See the block comment on the
- * gaps list.
+ * WHAT WAS REMOVED, AND WHY. This card used to open with a "Still to hit today" list: one bar per
+ * macro with "110 g to go". That is the summary's own bar with the subtraction done — the same three
+ * facts, in the same shape, a thumb-width apart. Numbers repeated in two places do not reinforce each
+ * other, they compete, and neither one earns the space. The gap is now stated ONCE, as the sentence
+ * that introduces the food.
+ *
+ * GRAMS ARE NOT AN INSTRUCTION. "110 g of protein to go" is a measurement; "3 more meals — one is a
+ * chicken breast, a pot of skyr and a scoop of whey" is something you can act on. The portions come
+ * from `lib/food/portions`, in the units the catalog itself names (scoops, breasts, pots), capped at
+ * what one meal can usefully carry — which is what stopped this card recommending 150 g of whey
+ * protein powder in one sitting.
+ *
+ * ONE MEANING PER UNIT still holds: every percentage on this screen is a percentage of a goal.
  *
  * Pure presentation + arithmetic on props; nothing here fetches or stores.
  */
@@ -24,95 +32,65 @@ import { Card, CardTitle } from '@/components/ui';
 import { CheckIcon, PlusIcon, TrendingUpIcon } from '@/components/ui/icons';
 import { FOODS } from '@/lib/food/index';
 import { emojiForFood } from '@/lib/food/emoji';
-import { formatGrams } from '@/lib/food/format';
+import { shortFoodName } from '@/lib/food/format';
+import { isProteinDense, planPortions, type FoodPortion } from '@/lib/food/portions';
 import type { Food, Macros } from '@/lib/food/types';
 import type { NutritionLog, NutritionTargets } from '@/components/features/_mock/data';
 import { MEAL_SLOTS } from './mealSlots';
 
-export interface GapSuggestion {
-  food: Food;
-  grams: number;
-  kcal: number;
-  protein_g: number;
-}
-
 /**
- * Turn "you still need N g protein" into 2–3 real portions.
+ * One tappable portion.
  *
- * Candidates = the user's own recents first (people repeat foods; a suggestion you already eat
- * is one you might actually log), then the catalog's most protein-dense foods (≥55 % of energy
- * from protein — chicken breast, skyr, whey territory). Portion = the grams that close the gap,
- * rounded to 10 g and capped at a plate-sized 350 g; anything whose closing portion busts the
- * remaining kcal budget by more than ~120 kcal is dropped, because "eat 600 kcal of cheese" is
- * not a path to this goal.
+ * The label leads with the UNIT ("1 scoop", "2 pots") because that is what the athlete measures
+ * with; the grams ride in parentheses for anyone who owns a scale. Protein sits in its own column
+ * because it is the currency this card deals in — the calorie cost is the fine print underneath.
+ *
+ * A "% of the gap" figure used to sit on the second line and was the only thing on the row still
+ * truncating at 390 px. It went: "how far does one portion get me" is already answered better by the
+ * meals sentence above and the combination below.
  */
-export function proteinGapSuggestions(
-  gapProtein: number,
-  kcalLeft: number,
-  recents: Food[],
-  limit = 3,
-): GapSuggestion[] {
-  if (gapProtein < 8) return [];
-  const dense = (f: Food) => {
-    const kcal = f.per_100g.kcal;
-    return kcal > 0 && (f.per_100g.protein_g * 4) / kcal >= 0.55 && f.per_100g.protein_g >= 10;
-  };
-  // Among the dense, EVERYDAY beats extreme: ranked by the search index's popularity prior first
-  // (chicken breast, skyr, whey), raw protein-per-100g second — otherwise the list leads with
-  // collagen peptides and gelatin, which are protein-dense the way a lab is food-adjacent.
-  const catalogDense = FOODS.filter((i) => dense(i.food))
-    .sort((a, b) => b.prior - a.prior || b.food.per_100g.protein_g - a.food.per_100g.protein_g)
-    .map((i) => i.food);
-  const candidates = [...recents.filter(dense), ...catalogDense];
-
-  const out: GapSuggestion[] = [];
-  const seen = new Set<string>();
-  for (const food of candidates) {
-    if (seen.has(food.id)) continue;
-    seen.add(food.id);
-    const grams = Math.min(350, Math.max(30, Math.round((gapProtein / food.per_100g.protein_g) * 10) * 10));
-    const kcal = Math.round((food.per_100g.kcal * grams) / 100);
-    const protein = Math.round((food.per_100g.protein_g * grams) / 100);
-    // Respect the calorie budget when there is one to respect.
-    if (kcalLeft > 0 && kcal > kcalLeft + 120) continue;
-    out.push({ food, grams, kcal, protein_g: protein });
-    if (out.length >= limit) break;
-  }
-  return out;
-}
-
-const MACRO_COLORS = {
-  p: 'var(--color-accent)',
-  c: 'var(--color-success)',
-  f: 'var(--color-energy)',
-} as const;
-
-/** One macro's standing: how much is left, and how far along its OWN target it is. */
-interface MacroGap {
-  key: 'p' | 'c' | 'f';
-  label: string;
-  eaten: number;
-  target: number;
-  /** grams still owed — 0 once the target is met */
-  left: number;
-  /** 0..1+ of this macro's target */
-  pct: number;
-}
-
-function macroGaps(totals: Macros, targets: NutritionTargets): MacroGap[] {
-  const rows: [MacroGap['key'], string, number, number][] = [
-    ['p', 'Protein', totals.protein_g, targets.protein_g_target],
-    ['c', 'Carbs', totals.carbs_g, targets.carbs_g_target],
-    ['f', 'Fat', totals.fat_g, targets.fat_g_target],
-  ];
-  return rows.map(([key, label, eaten, target]) => ({
-    key,
-    label,
-    eaten,
-    target,
-    left: Math.max(0, Math.round(target - eaten)),
-    pct: target > 0 ? eaten / target : 0,
-  }));
+function PortionButton({
+  portion,
+  onAdd,
+}: {
+  portion: FoodPortion;
+  onAdd: (food: Food, grams: number) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onAdd(portion.food, portion.grams)}
+      data-testid="gap-suggestion"
+      aria-label={`Add ${portion.label} of ${portion.food.name} — ${portion.protein_g} grams of protein, ${portion.kcal} calories`}
+      className="flex w-full items-center gap-2.5 rounded-field border border-dashed border-border-strong/70 px-2 py-1.5 text-left transition-colors hover:border-accent hover:bg-accent-muted"
+    >
+      <span aria-hidden className="text-lg leading-none opacity-80">
+        {emojiForFood(portion.food)}
+      </span>
+      {/* TWO LINES, EACH WITH ONE JOB. Portion and protein on the first — those are the decision;
+          the food's name and its calorie cost on the second. Everything on one line wrapped to
+          three at 390 px, which cost more vertical space than the extra line saves. */}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline gap-2">
+          <span className="tabular min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+            {portion.label}
+          </span>
+          <span className="tabular shrink-0 text-sm font-bold text-accent">
+            {portion.protein_g} g
+          </span>
+        </span>
+        <span className="tabular block truncate text-[11px] text-muted-foreground">
+          {shortFoodName(portion.food.name)} · {portion.kcal} kcal
+        </span>
+      </span>
+      <span
+        aria-hidden
+        className="flex shrink-0 items-center gap-1 rounded-chip bg-accent-muted px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-accent"
+      >
+        <PlusIcon size={12} /> Add
+      </span>
+    </button>
+  );
 }
 
 export function DayAnalytics({
@@ -120,21 +98,37 @@ export function DayAnalytics({
   totals,
   targets,
   recents,
+  bodyKg,
   onAddFood,
 }: {
   logs: NutritionLog[];
   totals: Macros;
   targets: NutritionTargets;
   recents: Food[];
+  /** Body weight, when the athlete has given one — sets the per-meal protein figure (0.4 g/kg). */
+  bodyKg?: number | null;
   /** open the normal confirm flow pre-filled to `grams` of `food` */
   onAddFood: (food: Food, grams: number) => void;
 }) {
-  const gaps = React.useMemo(() => macroGaps(totals, targets), [totals, targets]);
   const kcalLeft = Math.round(targets.kcal_target - totals.kcal);
   const proteinGap = Math.round(targets.protein_g_target - totals.protein_g);
-  const suggestions = React.useMemo(
-    () => proteinGapSuggestions(proteinGap, kcalLeft, recents),
-    [proteinGap, kcalLeft, recents],
+
+  /**
+   * Candidates: the athlete's OWN recent foods first — a portion of something you already eat is a
+   * portion you might actually eat — then the catalog's protein-dense rows in popularity order.
+   * Popularity first and protein-density second is deliberate: ranked purely by density the list
+   * opens with collagen peptides and gelatin, which are protein-dense the way a lab is food-adjacent.
+   */
+  const candidates = React.useMemo(() => {
+    const dense = FOODS.filter((i) => isProteinDense(i.food))
+      .sort((a, b) => b.prior - a.prior || b.food.per_100g.protein_g - a.food.per_100g.protein_g)
+      .map((i) => i.food);
+    return [...recents.filter(isProteinDense), ...dense];
+  }, [recents]);
+
+  const plan = React.useMemo(
+    () => planPortions(proteinGap, kcalLeft, candidates, { bodyKg }),
+    [proteinGap, kcalLeft, candidates, bodyKg],
   );
 
   const byMeal = React.useMemo(() => {
@@ -157,122 +151,98 @@ export function DayAnalytics({
     <Card className="shadow-[var(--shadow-card)]" data-testid="day-analytics">
       <div className="flex items-center gap-2 text-accent">
         <TrendingUpIcon size={18} />
-        <CardTitle>Today in numbers</CardTitle>
+        {/* The card is no longer a second read-out of the same numbers, so it no longer claims to be
+            one. "What's left to eat" says what it now does. */}
+        <CardTitle>What&rsquo;s left to eat</CardTitle>
       </div>
 
-      {/* 1 · WHAT IS STILL OWED, per macro.
-          This replaces a stacked "energy split vs target split" bar, which was actively
-          misleading and had to go. It showed the SHARE of calories coming from each macro
-          against the share the plan wants — so eating 20 g of protein and nothing else read as
-          "89% protein, plan says 26%", i.e. gloriously on-ratio while 105 g short of the actual
-          target. Worse, it sat directly under the summary card's "Protein 121/125 g · 97%", so
-          two numbers labelled Protein and written as percentages meant entirely different
-          things a thumb-width apart.
+      {/* 1 · THE GAP, STATED ONCE, IN MEALS.
+          A "Still to hit today" list used to live here — one bar per macro reading "110 g to go" —
+          directly under the summary card's own bars reading "Protein 15 / 125 g · 12%". Same three
+          facts, same shape, one subtraction apart. It went, and the gap is now the sentence that
+          introduces the food.
 
-          The rule now: EVERY percentage on this screen is a percentage of a goal. The hero
-          figure here is grams still owed, because that is the question this card exists to
-          answer and it is what the suggestions underneath act on. */}
-      <div className="mt-3" data-testid="macro-gaps">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Still to hit today
-        </p>
-        <ul className="space-y-1.5">
-          {gaps.map((g) => {
-            const hit = g.left === 0;
-            const width = Math.min(100, Math.max(g.eaten > 0 ? 3 : 0, g.pct * 100));
-            return (
-              <li key={g.key} className="flex items-center gap-2 text-xs">
-                <span className="w-14 shrink-0 font-medium text-foreground">{g.label}</span>
-                <span className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-                  <span
-                    className="block h-full origin-left rounded-full transition-transform duration-300"
-                    style={{
-                      transform: `scaleX(${width / 100})`,
-                      backgroundColor: hit ? 'var(--color-success)' : MACRO_COLORS[g.key],
-                    }}
-                  />
-                </span>
-                <span
-                  className="tabular w-[6.5rem] shrink-0 text-right"
-                  data-testid={`macro-gap-${g.key}`}
-                >
-                  {hit ? (
-                    <span className="font-semibold text-success">goal hit</span>
-                  ) : (
-                    <>
-                      <span className="font-semibold text-foreground">{g.left} g</span>
-                      <span className="text-muted-foreground"> to go</span>
-                    </>
-                  )}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {/* 2 · the shortest path to the goal */}
-      <div className="mt-4 rounded-field border border-border bg-surface p-3" data-testid="close-gap">
+          MEALS, NOT GRAMS, because grams are a measurement and meals are a plan. The per-meal figure
+          is 0.4 g/kg of body weight — maximal MPS stimulation sits nearer 0.25 g/kg/meal and 0.4 is
+          that plus two SD, the figure the distribution literature recommends when spreading
+          1.6–2.2 g/kg/day over three to four meals. Body weight unknown → a stated 35 g default. */}
+      <div className="mt-3 rounded-field border border-border bg-surface p-3" data-testid="close-gap">
         {proteinGap >= 8 ? (
           <>
-            {/* The gaps list directly above already says "112 g to go", so restating it verbatim
-                here was the same fact twice in two inches. This line's job is the BUDGET the
-                suggestions have to fit inside. */}
-            <p className="text-sm font-semibold text-foreground">
-              Closing the last <span className="tabular text-accent">{proteinGap} g protein</span>
-              {kcalLeft > 0 && (
-                <>
-                  {' '}
-                  with <span className="tabular">{kcalLeft.toLocaleString()}</span> kcal left to
-                  spend
-                </>
-              )}
+            <p className="text-sm text-foreground">
+              <span className="font-semibold">
+                <span className="tabular text-accent">{proteinGap} g protein</span> left
+              </span>{' '}
+              <span className="text-muted-foreground">
+                — about{' '}
+                <span className="tabular font-semibold text-foreground" data-testid="meals-left">
+                  {plan.meals} more {plan.meals === 1 ? 'meal' : 'meals'}
+                </span>{' '}
+                at ~{plan.perMeal} g each
+                {kcalLeft > 0 && (
+                  <>
+                    , inside <span className="tabular">{kcalLeft.toLocaleString()}</span> kcal
+                  </>
+                )}
+                .
+              </span>
             </p>
-            {suggestions.length > 0 && (
+
+            {plan.options.length > 0 && (
               <>
-                {/* THESE ARE SUGGESTIONS, NOT A LOG. Sitting in a nutrition screen whose every
-                    other list is "what you ate", three food rows with grams and macros read as
-                    already-eaten — the + was the only hint otherwise, and a small circular glyph
-                    is not a sentence. So: an explicit heading that says what the rows are and
-                    what tapping does, a DASHED outline (nothing else in the app's food lists is
-                    dashed — solid means logged), and a labelled Add pill rather than a bare
-                    icon. */}
+                {/* THESE ARE SUGGESTIONS, NOT A LOG. In a screen whose every other list is "what you
+                    ate", food rows with macros read as already-eaten — so: an explicit heading, a
+                    DASHED outline (solid means logged, everywhere in this app), and a labelled Add
+                    pill rather than a bare glyph.
+
+                    PORTIONS, NOT GRAMS. The old rows said "~150 g Whey protein powder" because the
+                    portion was computed to close the WHOLE gap: five scoops, presented as a
+                    suggestion. Each row is now whole standard servings named the way the food is
+                    sold — "1 scoop (31 g)", "1 breast (172 g)" — with the grams kept in parentheses
+                    for anyone who weighs their food. */}
                 <p className="mt-2.5 text-[11px] leading-snug text-muted-foreground">
-                  <span className="font-semibold text-foreground">Suggestions</span> — not logged
-                  yet. Tap one to add it and close the gap:
+                  <span className="font-semibold text-foreground">One portion of any of these</span>{' '}
+                  — not logged yet, tap to add:
                 </p>
                 <ul className="mt-1.5 space-y-1.5">
-                  {suggestions.map((s) => (
-                    <li key={s.food.id}>
-                      <button
-                        type="button"
-                        onClick={() => onAddFood(s.food, s.grams)}
-                        data-testid="gap-suggestion"
-                        aria-label={`Add about ${formatGrams(s.grams)} of ${s.food.name} — ${s.protein_g} grams of protein, ${s.kcal} calories`}
-                        className="flex w-full items-center gap-2.5 rounded-field border border-dashed border-border-strong/70 px-2 py-1.5 text-left transition-colors hover:border-accent hover:bg-accent-muted"
-                      >
-                        <span aria-hidden className="text-lg leading-none opacity-80">
-                          {emojiForFood(s.food)}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-foreground">
-                            ~{formatGrams(s.grams)} {s.food.name}
-                          </span>
-                          <span className="tabular block text-[11px] text-muted-foreground">
-                            would add {s.protein_g} g protein · {s.kcal} kcal
-                          </span>
-                        </span>
-                        <span
-                          aria-hidden
-                          className="flex shrink-0 items-center gap-1 rounded-chip bg-accent-muted px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-accent"
-                        >
-                          <PlusIcon size={12} /> Add
-                        </span>
-                      </button>
+                  {plan.options.map((o) => (
+                    <li key={o.food.id}>
+                      <PortionButton portion={o} onAdd={onAddFood} />
                     </li>
                   ))}
                 </ul>
               </>
+            )}
+
+            {/* 2 · THE WORKED COMBINATION. Individually none of the portions closes a 110 g gap, and
+                a list of options that each cover a third of it invites the obvious question — "so
+                what do I actually do?". This answers it in one line, out of the same rows above so
+                nothing here is a second, hidden recommendation. */}
+            {plan.plate.length > 1 && (
+              <div className="mt-3 border-t border-border pt-2.5" data-testid="portion-plate">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Or all three across the day
+                </p>
+                <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-foreground">
+                  {plan.plate.map((o, i) => (
+                    <React.Fragment key={o.food.id}>
+                      {i > 0 && <span className="text-muted-foreground">+</span>}
+                      <span className="inline-flex items-center gap-1 rounded-chip bg-muted px-1.5 py-0.5">
+                        <span aria-hidden>{emojiForFood(o.food)}</span>
+                        <span className="text-xs font-medium">{o.label}</span>
+                      </span>
+                    </React.Fragment>
+                  ))}
+                </p>
+                <p className="tabular mt-1.5 text-[11px] text-muted-foreground">
+                  ={' '}
+                  <span className="font-semibold text-accent" data-testid="plate-protein">
+                    {plan.plateProtein} g protein
+                  </span>{' '}
+                  · {plan.plateKcal.toLocaleString()} kcal
+                  {plan.plateProtein >= proteinGap ? ' — that closes it' : ` of the ${proteinGap} g`}
+                </p>
+              </div>
             )}
           </>
         ) : kcalLeft >= 0 ? (

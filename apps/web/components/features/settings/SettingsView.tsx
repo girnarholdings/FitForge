@@ -31,9 +31,9 @@ import {
   Sheet,
   type SelectableOption,
 } from '@/components/ui';
-import { StarIcon } from '@/components/ui/icons';
-import { AccountCard } from '@/components/auth/GoogleAuth';
-import { isAuthConfigured, signOutUser } from '@/lib/auth/firebase';
+import { StarIcon, ChevronDownIcon, ChevronUpIcon, SettingsIcon } from '@/components/ui/icons';
+import { ProfileCard } from './ProfileCard';
+import { signOutUser } from '@/lib/auth/firebase';
 import { eraseCloudCopy } from '@/lib/auth/sync';
 import { useAuth } from '@/lib/auth/useUser';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
@@ -113,6 +113,9 @@ import {
 } from '@/components/features/_mock/data';
 
 type Draft = Partial<OnboardingDraft>;
+
+/** Session-scoped, so the disclosure survives a reload without ever reaching a backup. */
+const SETTINGS_OPEN_KEY = 'fitforge.settingsPanelOpen';
 
 /** A small gold icon chip used for goal / location option cards. */
 function OptionBadge({ children }: { children: React.ReactNode }) {
@@ -343,8 +346,6 @@ function commitPatch(patch: Draft): void {
 
 export function SettingsView() {
   const router = useRouter();
-  /** Constant for a given build — an env-var read, not reactive state. */
-  const authConfigured = isAuthConfigured();
   const state = useDemoState();
   const answers = React.useMemo(() => resolveAnswers(state), [state]);
   const routine = state.routine;
@@ -362,6 +363,45 @@ export function SettingsView() {
     local: BackupSummary;
   } | null>(null);
   const [savedCount, setSavedCount] = React.useState(0);
+  /**
+   * THE SETTINGS DISCLOSURE, closed by default.
+   *
+   * Nineteen sections of controls were the first thing this screen showed, which made the two
+   * questions people actually arrive with — "am I signed in?" and "what plan am I on?" — the last
+   * things they could answer. The profile card answers those; everything editable now sits behind one
+   * button, and the button says how much is behind it.
+   */
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
+  /**
+   * The open/closed state survives a RELOAD, in `sessionStorage`.
+   *
+   * Deliberately not localStorage: every `fitforge.*` key there is swept into backups and the cloud
+   * bundle, and "was the settings panel open" is not something to carry between devices. A tab's
+   * lifetime is exactly the right lifetime for a disclosure — refresh mid-edit and you are still
+   * where you were; come back tomorrow and the screen greets you with your profile again.
+   *
+   * Read in an effect rather than a lazy initialiser because this screen is prerendered: a first
+   * client render that disagreed with the static HTML is a hydration mismatch.
+   */
+  React.useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(SETTINGS_OPEN_KEY) === '1') setSettingsOpen(true);
+    } catch {
+      /* private mode — the panel simply starts closed */
+    }
+  }, []);
+  const toggleSettings = React.useCallback(() => {
+    setSettingsOpen((open) => {
+      const next = !open;
+      try {
+        if (next) window.sessionStorage.setItem(SETTINGS_OPEN_KEY, '1');
+        else window.sessionStorage.removeItem(SETTINGS_OPEN_KEY);
+      } catch {
+        /* private mode */
+      }
+      return next;
+    });
+  }, []);
   const [planDirty, setPlanDirty] = React.useState(false);
   const [planStatus, setPlanStatus] = React.useState<string | null>(null);
   const [regenPrompt, setRegenPrompt] = React.useState(false);
@@ -605,12 +645,57 @@ export function SettingsView() {
 
   return (
     <div className="space-y-6 pb-4">
-      <h1 className="font-display text-display font-bold">Settings</h1>
-      <p className="-mt-4 text-xs text-muted-foreground" data-testid="settings-saved">
-        <span role="status" aria-live="polite">
-          {savedCount > 0 ? 'Saved to this browser.' : 'Every change saves to this browser as you make it.'}
-        </span>
-      </p>
+      {/* THE SCREEN IS A PROFILE NOW, and the title says so. It is still served at /settings — the
+          route is linked from the top bar, the tab bar and half the specs, and renaming a URL to
+          rename a heading would be a gratuitous break. */}
+      <h1 className="font-display text-display font-bold">Profile</h1>
+
+      <ProfileCard
+        displayName={answers.displayName}
+        goalLabel={GOAL_LABEL[answers.primaryGoal]}
+        routine={routine}
+        startedAt={state.completedAt}
+      />
+
+      {/* ONE BUTTON FOR EVERYTHING EDITABLE. Wired as a real disclosure — `aria-expanded` plus
+          `aria-controls` — so assistive tech gets the same "there is more behind this" that the
+          chevron gives everyone else. */}
+      <div>
+        <button
+          type="button"
+          onClick={toggleSettings}
+          aria-expanded={settingsOpen}
+          aria-controls="settings-panel"
+          data-testid="settings-open"
+          className="flex w-full items-center gap-3 rounded-card border border-border bg-surface-2 px-4 py-3 text-left transition-colors hover:border-accent"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-muted text-accent">
+            <SettingsIcon size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-foreground">Settings</span>
+            <span className="block text-[11px] text-muted-foreground">
+              Plan, goals, schedule, equipment, nutrition targets, your data
+            </span>
+          </span>
+          <span aria-hidden className="shrink-0 text-muted-foreground">
+            {settingsOpen ? <ChevronUpIcon size={18} /> : <ChevronDownIcon size={18} />}
+          </span>
+        </button>
+        <p className="mt-1.5 px-1 text-xs text-muted-foreground" data-testid="settings-saved">
+          <span role="status" aria-live="polite">
+            {savedCount > 0
+              ? 'Saved to this browser.'
+              : 'Every change saves to this browser as you make it.'}
+          </span>
+        </p>
+      </div>
+
+      {/* The panel is UNMOUNTED when closed rather than hidden: half of these sections do real work
+          on mount (plan coverage, progression previews, the equipment illustration set), and paying
+          for all of it to render behind a collapsed panel would be the opposite of the point. */}
+      {settingsOpen && (
+        <div id="settings-panel" className="space-y-6" data-testid="settings-panel">
 
       {/* ---------------------------------------------------------------- Your plan */}
       <GroupHeader>Your plan</GroupHeader>
@@ -966,7 +1051,9 @@ export function SettingsView() {
         </Button>
       </Section>
 
-      <Section title="Profile">
+      {/* "About you" rather than "Profile": the SCREEN is the profile now, and a section inside it
+          wearing the same name is both confusing to read and ambiguous to address. */}
+      <Section title="About you">
         <label className="flex flex-col gap-1">
           <FieldLabel>Display name</FieldLabel>
           <input
@@ -1030,21 +1117,10 @@ export function SettingsView() {
         </div>
       </Section>
 
-      {/* ---------------------------------------------------------------- Account */}
-      {/* Rendered only on builds with a Firebase project — see GoogleAuth.tsx. An account is
-          additive: Local Mode remains what the app reads, and this adds a copy that outlives the
-          device. */}
-      {authConfigured && (
-        <>
-          <GroupHeader>Account</GroupHeader>
-          <Section
-            title="Google account"
-            hint="Back your training up and pick it up on another device. Signing in also uses FitForge's faster AI model instead of the shared free tier."
-          >
-            <AccountCard />
-          </Section>
-        </>
-      )}
+      {/* THE ACCOUNT SECTION IS GONE FROM HERE — deliberately, not by oversight. `AccountCard` now
+          renders once, at the top of the screen, inside the profile card. Two of them on one page
+          means two places that can disagree about whether you are signed in, and two "Sign out"
+          buttons a scroll apart. Identity belongs with identity. */}
 
       {/* ---------------------------------------------------------------- data + device */}
       {/* THE HEADING FOLLOWS THE TRUTH. "Local Mode" is the name of the no-account experience, so
@@ -1153,6 +1229,9 @@ export function SettingsView() {
             </p>
           </div>
         </Section>
+      )}
+
+      </div>
       )}
 
       {/* Regenerate prompt — fired by equipment / protected-area edits (§2.3). */}

@@ -78,7 +78,7 @@ test.describe('nutrition', () => {
     await expect(page.getByText(/Egg, whole/i).first()).toBeVisible();
   });
 
-  test('a logged day gets the analytics layer: macro gaps, suggestions and one-tap fixes', async ({
+  test('a logged day gets the analytics layer: the gap in meals, real portions, one-tap fixes', async ({
     page,
   }) => {
     await seedOnboarded(page);
@@ -96,28 +96,39 @@ test.describe('nutrition', () => {
     await page.getByTestId('review-confirm').click();
     await expect(review).toBeHidden();
 
-    /* 1 · the analytics card appears, leading with what is STILL OWED per macro in grams.
-       (It used to lead with a share-of-calories bar against the plan's share, which could read
-       as on-plan while the athlete was 100 g of protein short — and it sat under a progress row
-       using `%` for the other meaning. The grams framing is the fix; `no-percent-of-energy`
-       below is what keeps it fixed.) */
+    /* 1 · the analytics card appears, and it does NOT restate the summary.
+       It used to open with its own per-macro bars ("Protein 110 g to go") under the summary's
+       ("Protein 15 / 125 g · 12%") — same facts, same shape, one subtraction apart. Its job now is
+       food: the gap expressed as MEALS, then real portions. */
     const analytics = page.getByTestId('day-analytics');
     await expect(analytics).toBeVisible();
-    const gapsList = page.getByTestId('macro-gaps');
-    for (const label of ['Protein', 'Carbs', 'Fat']) {
-      await expect(gapsList).toContainText(label);
-    }
-    await expect(gapsList).toContainText(/\d+ g to go|goal hit/);
+    await expect(analytics).toContainText(/left to eat/i);
+    await expect(page.getByTestId('meals-left')).toContainText(/\d+ more meals?/);
 
-    /* 2 · the gap to the protein goal, in grams, with real-portion suggestions. */
+    /* 2 · the gap to the protein goal, then portions in units a person owns. */
     const gap = page.getByTestId('close-gap');
     await expect(gap).toContainText(/\d+ g protein/);
     const gapBefore = parseInt((await gap.innerText()).match(/(\d+) g protein/)?.[1] ?? '0', 10);
     expect(gapBefore).toBeGreaterThan(0);
     const suggestion = page.getByTestId('gap-suggestion').first();
     await expect(suggestion).toBeVisible();
-    // "would add", not "+": the row is a recommendation, and the copy has to say so.
-    await expect(suggestion).toContainText(/would add \d+ g protein · \d+ kcal/);
+    // A countable standard serving — "1 breast (172 g)" — not a gram figure scaled to close the day.
+    await expect(suggestion).toContainText(/\d+\s+[A-Za-z][^()]*\(\d+ g\)/);
+
+    /* 2b · THE WORKED COMBINATION, when no single portion covers the gap: the arithmetic on screen
+       has to be the sum of the chips above it, or it is a different, hidden recommendation. */
+    const plate = page.getByTestId('portion-plate');
+    if (await plate.count()) {
+      const plateText = await plate.innerText();
+      expect(plateText).toMatch(/=\s*\d+ g protein/);
+      const plateProtein = Number(
+        (await page.getByTestId('plate-protein').innerText()).match(/(\d+)/)?.[1] ?? '0',
+      );
+      expect(plateProtein).toBeGreaterThan(0);
+      expect(plateProtein, 'the plate never claims more than the gap needs').toBeLessThanOrEqual(
+        gapBefore,
+      );
+    }
 
     // Element shot with the suggestion list on screen. Nudge the card below the sticky chrome
     // first — element screenshots composite any fixed overlay that intersects the box.

@@ -107,3 +107,19 @@ export function entryOrder(logged_at: string | undefined): number {
   const t = Date.parse(logged_at);
   return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
 }
+
+/**
+ * The everyday half of a catalog name.
+ *
+ * Catalog rows carry USDA-style qualifiers — "Chicken breast, grilled/roasted, skinless", "Yogurt,
+ * Greek, plain, nonfat" — which are exactly right in a search result and unreadable in a 390 px row
+ * next to a portion and two macros. The part before the first comma is the part people say out loud.
+ *
+ * Truncation is a LAST resort at 28 characters, because a hard cap on a name that happens to have no
+ * comma ("Cottage cheese low fat") beats letting the row wrap to three lines.
+ */
+export function shortFoodName(name: string): string {
+  const head = name.split(',')[0]!.trim();
+  const short = head.length > 0 ? head : name.trim();
+  return short.length > 28 ? `${short.slice(0, 27).trimEnd()}…` : short;
+}

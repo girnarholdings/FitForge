@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { test, expect } from '@playwright/test';
-import { readDemoState, seedOnboarded } from './helpers';
+import { readDemoState, seedOnboarded, openSettings} from './helpers';
 
 /**
  * EXPORT / IMPORT — the promise that Local Mode is not a trap.
@@ -57,6 +57,7 @@ async function exportBundle(page: import('@playwright/test').Page): Promise<stri
  */
 async function downloadBackup(page: import('@playwright/test').Page): Promise<string> {
   await page.goto('/settings');
+  await openSettings(page);
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByTestId('settings-export').click(),
@@ -132,6 +133,7 @@ test.describe('data portability', () => {
     // Driven through the actual file input rather than a store call: the failure that matters is
     // the one a user can cause, and it must surface a message rather than fail silently.
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByTestId('import-file').setInputFiles({
       name: 'not-a-backup.json',
       mimeType: 'application/json',
@@ -150,6 +152,7 @@ test.describe('data portability', () => {
     const before = await readDemoState(page);
 
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByTestId('import-file').setInputFiles({
       name: 'truncated.json',
       mimeType: 'application/json',
@@ -177,6 +180,7 @@ test.describe('data portability', () => {
     const before = await readDemoState(page);
 
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByTestId('import-file').setInputFiles({
       name: 'fitforge-backup.json',
       mimeType: 'application/json',
@@ -221,6 +225,7 @@ test.describe('data portability', () => {
     expect(deviceYesterday).toBeGreaterThan(0);
 
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByTestId('import-file').setInputFiles({
       name: 'fitforge-backup.json',
       mimeType: 'application/json',
@@ -254,6 +259,7 @@ test.describe('data portability', () => {
     expect(deviceToday).toBeGreaterThan(fileToday);
 
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByTestId('import-file').setInputFiles({
       name: 'fitforge-backup.json',
       mimeType: 'application/json',
@@ -278,6 +284,7 @@ test.describe('data portability', () => {
     ).toBe(true);
 
     await page.goto('/settings');
+    await openSettings(page);
     await page.getByTestId('erase-local-data').click();
     await page.getByRole('button', { name: /yes, erase everything/i }).click();
     // The cache deletion is fire-and-forget by design — `eraseAllLocalData` is synchronous and its
