@@ -540,6 +540,15 @@ function readNutritionLog(raw: unknown, path: string, issues: ShapeIssues): Nutr
     protein_g: Math.max(0, readNumber(raw.protein_g, `${path}.protein_g`, issues, 0)),
     carbs_g: Math.max(0, readNumber(raw.carbs_g, `${path}.carbs_g`, issues, 0)),
     fat_g: Math.max(0, readNumber(raw.fat_g, `${path}.fat_g`, issues, 0)),
+    /* OPTIONAL AND SILENT. Rows written before entry timestamps existed have none, and that is
+       not a defect worth an issue note — the UI simply shows no time for them rather than
+       inventing one. A junk value is dropped for the same reason. */
+    ...(typeof raw.logged_at === 'string' && !Number.isNaN(Date.parse(raw.logged_at))
+      ? { logged_at: raw.logged_at }
+      : {}),
+    ...(typeof raw.logged_tz === 'string' && raw.logged_tz.length <= 64
+      ? { logged_tz: raw.logged_tz }
+      : {}),
   };
 }
 
@@ -1004,6 +1013,21 @@ function isSyncDenied(key: string): boolean {
   return SYNC_DENYLIST_PREFIXES.some((p) => key.startsWith(p));
 }
 
+/**
+ * DEVICE-LOCAL BOOKKEEPING — excluded from every copy, a file export as much as the cloud bundle.
+ *
+ * These keys record THIS browser's relationship with the account: what it last pushed, and to
+ * whose account. A copy of them from another device is not merely useless, it is actively
+ * misleading — an imported device would inherit someone else's sync history and conclude it had
+ * already reconciled with an account it has never talked to, which is exactly the state the
+ * sign-in conflict prompt exists to catch.
+ */
+const DEVICE_LOCAL_PREFIXES: readonly string[] = ['fitforge.cloudPushed'];
+
+function isDeviceLocal(key: string): boolean {
+  return DEVICE_LOCAL_PREFIXES.some((p) => key.startsWith(p));
+}
+
 export interface LocalBackup {
   format: typeof BACKUP_FORMAT;
   version: typeof BACKUP_VERSION;
@@ -1038,6 +1062,7 @@ function readExtras(forSync = false): Record<string, string> {
   if (!isBrowser()) return extras;
   for (const key of localKeys()) {
     if (FIRST_CLASS_KEYS.includes(key)) continue;
+    if (isDeviceLocal(key)) continue;
     if (forSync && isSyncDenied(key)) continue;
     if (Object.keys(extras).length >= MAX_EXTRA_KEYS) break;
     try {
@@ -1068,6 +1093,128 @@ export function exportAllState(opts: { forSync?: boolean } = {}): string {
   return JSON.stringify(bundle, null, 2);
 }
 
+/* ══════════════════════════════════════════════════ importing: inspect, then choose ══════════
+ *
+ * Importing used to be a single irreversible verb: pick a file, and everything on the device was
+ * replaced. That is the right behaviour for restoring onto a fresh phone and the WRONG one
+ * everywhere else — most obviously for a signed-in athlete whose account already holds months of
+ * training, where a well-meant "import my old backup" silently destroyed the newer history (and
+ * then dutifully synced the loss to the cloud).
+ *
+ * So the flow is now inspect → choose → apply:
+ *   1. {@link inspectBackup} validates the file and reports WHAT IS IN IT beside what is here,
+ *      writing nothing. The UI shows both columns so the choice is made on facts.
+ *   2. {@link importAllState} takes a mode:
+ *        · `overwrite` — the old behaviour: this device becomes the file.
+ *        · `merge`     — keep the plan and profile in use HERE, and add every workout, food day
+ *                        and weigh-in from the file that this device does not already have.
+ *
+ * MERGE'S RULE, stated once so the UI can quote it: history is additive and unions cleanly (a
+ * session either happened or it did not, and its id says which). Singular settings — the routine,
+ * the profile, the targets — cannot be "half merged" into anything coherent, so merge keeps the
+ * ones in use and overwrite replaces them. Anything else would invent a configuration the athlete
+ * never chose.
+ */
+
+export type ImportMode = 'overwrite' | 'merge';
+
+/** What a file holds, and what this device holds, in the same shape — for a side-by-side choice. */
+export interface BackupSummary {
+  /** completed workout sessions */
+  sessions: number;
+  /** days that have at least one food row */
+  foodDays: number;
+  /** individual food rows */
+  foodEntries: number;
+  /** body-weight entries */
+  weighIns: number;
+  /** the plan's name, when there is one */
+  routineName: string | null;
+  /** ISO stamp the file was exported at (files only) */
+  exportedAt?: string | null;
+  /** newest workout in the set, so "older or newer than mine?" is answerable */
+  latestSession?: string | null;
+}
+
+function summarize(demo: DemoState, log: LogState): BackupSummary {
+  const dates = Object.keys(demo.logsByDate).filter((d) => (demo.logsByDate[d]?.length ?? 0) > 0);
+  const latest = log.sessions
+    .map((s) => s.finishedAt)
+    .filter((s) => typeof s === 'string')
+    .sort()
+    .at(-1);
+  return {
+    sessions: log.sessions.length,
+    foodDays: dates.length,
+    foodEntries: dates.reduce((n, d) => n + (demo.logsByDate[d]?.length ?? 0), 0),
+    weighIns: demo.weights.length,
+    routineName: demo.routine?.name ?? null,
+    latestSession: latest ?? null,
+  };
+}
+
+/** This device, summarised the same way a file is — the right-hand column of the choice. */
+export function localSummary(): BackupSummary {
+  return summarize(load(), readWorkoutLog());
+}
+
+/**
+ * Validate a backup and describe it, WITHOUT writing anything.
+ *
+ * Same validators as the import itself, so a file that inspects cleanly cannot fail to apply for
+ * a shape reason — the confirm step would otherwise be able to promise an import that then dies.
+ */
+export function inspectBackup(
+  raw: string,
+): { ok: true; summary: BackupSummary } | { ok: false; error: string } {
+  const parsed = parseBackup(raw);
+  if (!parsed.ok) return parsed;
+  return {
+    ok: true,
+    summary: {
+      ...summarize(parsed.demo, parsed.log ?? { version: 1, sessions: [] }),
+      exportedAt: parsed.exportedAt,
+    },
+  };
+}
+
+/** Union two session lists by id, newest-first order preserved from whichever side had them. */
+function mergeSessions(mine: LogState, theirs: LogState): LogState {
+  const seen = new Set(mine.sessions.map((s) => s.id));
+  const added = theirs.sessions.filter((s) => !seen.has(s.id));
+  return { version: 1, sessions: [...mine.sessions, ...added] };
+}
+
+/**
+ * Merge a file's demo state into this device's.
+ *
+ * History unions; settings stay local. `weights` dedupe by date (one weigh-in per day is the
+ * model everywhere else), food rows dedupe by id within their day.
+ */
+function mergeDemo(mine: DemoState, theirs: DemoState): DemoState {
+  const logsByDate: Record<string, NutritionLog[]> = { ...mine.logsByDate };
+  for (const [date, rows] of Object.entries(theirs.logsByDate)) {
+    const existing = logsByDate[date] ?? [];
+    const ids = new Set(existing.map((r) => r.id));
+    const added = rows.filter((r) => !ids.has(r.id));
+    if (existing.length === 0 && added.length === 0) continue;
+    logsByDate[date] = [...existing, ...added];
+  }
+
+  const byDate = new Map(mine.weights.map((w) => [w.date, w]));
+  for (const w of theirs.weights) if (!byDate.has(w.date)) byDate.set(w.date, w);
+  const weights = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+
+  return {
+    ...mine,
+    logsByDate,
+    weights,
+    // Calibrations are per-muscle numbers rather than one setting, so they union too — with the
+    // device's own value winning any clash, same as every other setting here.
+    volumeTargets: { ...theirs.volumeTargets, ...mine.volumeTargets },
+  };
+}
+
 /**
  * Restore every Local Mode key from a backup produced by {@link exportAllState}.
  *
@@ -1079,8 +1226,61 @@ export function exportAllState(opts: { forSync?: boolean } = {}): string {
  *
  * NOTHING is written unless every section validates. On failure the previous state is untouched
  * and a specific, user-actionable reason is returned.
+ *
+ * `mode` defaults to `overwrite` so every existing caller — the cloud restore included — keeps
+ * its current semantics; the merge path is opt-in from the import UI.
  */
-export function importAllState(raw: string): { ok: true } | { ok: false; error: string } {
+export function importAllState(
+  raw: string,
+  mode: ImportMode = 'overwrite',
+): { ok: true } | { ok: false; error: string } {
+  const parsed = parseBackup(raw);
+  if (!parsed.ok) return parsed;
+
+  /* -- commit ------------------------------------------------------------------------------- */
+  if (mode === 'merge') {
+    persist(mergeDemo(load(), parsed.demo));
+    if (parsed.log) replaceWorkoutLog(mergeSessions(readWorkoutLog(), parsed.log));
+    if (isBrowser()) {
+      for (const [key, value] of parsed.extras) {
+        // MERGE NEVER CLOBBERS A CACHE THIS DEVICE ALREADY HAS. These keys hold learned parser
+        // corrections, custom foods, model preferences — the local copy is the one in use.
+        try {
+          if (window.localStorage.getItem(key) === null) window.localStorage.setItem(key, value);
+        } catch {
+          /* quota — the important sections are already in */
+        }
+      }
+    }
+    return { ok: true };
+  }
+
+  persist(parsed.demo);
+  if (parsed.log) replaceWorkoutLog(parsed.log);
+  if (isBrowser()) {
+    for (const [key, value] of parsed.extras) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        /* quota — the important sections are already in */
+      }
+    }
+  }
+  return { ok: true };
+}
+
+/**
+ * Parse and validate a backup into its sections, touching no storage.
+ *
+ * Extracted so {@link inspectBackup} and {@link importAllState} cannot disagree about what a valid
+ * file is: the confirm dialog would otherwise be able to describe an import that then refuses to
+ * apply, which is the one thing a confirm step must never do.
+ */
+function parseBackup(
+  raw: string,
+):
+  | { ok: true; demo: DemoState; log: LogState | null; extras: [string, string][]; exportedAt: string | null }
+  | { ok: false; error: string } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -1111,7 +1311,7 @@ export function importAllState(raw: string): { ok: true } | { ok: false; error: 
     return { ok: false, error: `Backup is malformed — ${demoResult.error}. Nothing was changed.` };
   }
 
-  let nextLog: LogState | null = null;
+  let log: LogState | null = null;
   if (isBundle && parsed.workoutLog !== undefined) {
     const logResult = validateWorkoutLog(parsed.workoutLog);
     if (!logResult.ok) {
@@ -1120,10 +1320,10 @@ export function importAllState(raw: string): { ok: true } | { ok: false; error: 
         error: `Backup is malformed — workoutLog ${logResult.error}. Nothing was changed.`,
       };
     }
-    nextLog = logResult.value;
+    log = logResult.value;
   }
 
-  const nextExtras: [string, string][] = [];
+  const extras: [string, string][] = [];
   if (isBundle && parsed.extras !== undefined) {
     if (!isPlainObject(parsed.extras)) {
       return { ok: false, error: 'Backup is malformed — `extras` must be an object.' };
@@ -1136,24 +1336,18 @@ export function importAllState(raw: string): { ok: true } | { ok: false; error: 
       } catch {
         continue;
       }
-      nextExtras.push([key, value]);
-      if (nextExtras.length >= MAX_EXTRA_KEYS) break;
+      extras.push([key, value]);
+      if (extras.length >= MAX_EXTRA_KEYS) break;
     }
   }
 
-  /* -- commit ------------------------------------------------------------------------------- */
-  persist(demoResult.value);
-  if (nextLog) replaceWorkoutLog(nextLog);
-  if (isBrowser()) {
-    for (const [key, value] of nextExtras) {
-      try {
-        window.localStorage.setItem(key, value);
-      } catch {
-        /* quota — the important sections are already in */
-      }
-    }
-  }
-  return { ok: true };
+  return {
+    ok: true,
+    demo: demoResult.value,
+    log,
+    extras,
+    exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : null,
+  };
 }
 
 /**

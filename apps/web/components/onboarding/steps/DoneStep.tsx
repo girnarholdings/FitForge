@@ -5,6 +5,7 @@ import { Button } from '@/components/ui';
 import { ExportIcon, CheckIcon } from '@/components/ui/icons';
 import { StepArt } from '@/components/illustrations';
 import { exportAllState } from '@/lib/demo/store';
+import { localISO } from '@/components/features/_mock/data';
 import { useAuth } from '@/lib/auth/useUser';
 import { useOnboarding } from '../OnboardingProvider';
 
@@ -31,7 +32,8 @@ export function DoneStep() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fitforge-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    // The DEVICE's calendar day — a UTC stamp names the file after tomorrow for half the world.
+    a.download = `fitforge-backup-${localISO()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();

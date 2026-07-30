@@ -53,6 +53,7 @@ import {
   type NutritionProfile,
   type NutritionTargets,
   type Difficulty,
+  localISO,
 } from '@/components/features/_mock/data';
 import type { OnboardingDraft } from '@/components/onboarding/types';
 import { getState, update } from './store';
@@ -802,7 +803,7 @@ function generatePlan(draft: Partial<OnboardingDraft>): GeneratedPlan {
     goal,
     source: 'generated',
     is_active: true,
-    start_date: new Date().toISOString().slice(0, 10),
+    start_date: localISO(),
     days,
   };
 

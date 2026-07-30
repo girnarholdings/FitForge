@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from 'next/font/google';
 import { withBase } from '@/lib/utils';
 import { MotionProvider } from '@/components/ui/motion';
 import { CloudSyncDriver } from '@/components/auth/GoogleAuth';
+import { SyncConflictSheet } from '@/components/auth/SyncConflictSheet';
 import './globals.css';
 
 /*
@@ -105,7 +106,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <CloudSyncDriver />
         {/* One motion context for the whole app: the lazy DOM feature bundle plus the global
             reduced-motion contract, so no individual component has to remember either. */}
-        <MotionProvider>{children}</MotionProvider>
+        <MotionProvider>
+          {/* The merge-or-overwrite question raised by signing into an account that already holds
+              different training. App-wide because sign-in happens on the landing page as often as
+              in Settings, and INSIDE MotionProvider because it renders a Sheet. Nothing shows until
+              the reconcile actually finds two divergent histories. */}
+          <SyncConflictSheet />
+          {children}
+        </MotionProvider>
       </body>
     </html>
   );

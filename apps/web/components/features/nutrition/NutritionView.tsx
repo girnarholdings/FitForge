@@ -22,7 +22,14 @@ import { useDemoState, useNutritionTargets, useLogsForDate } from '@/lib/demo/us
 import { useSelectedDate, addDays, dayLabel, isToday } from '@/lib/demo/selectedDate';
 import { DateNav } from '@/components/features/shared/DateNav';
 import { foodById, FOOD_COUNT } from '@/lib/food/index';
-import { computeMacros, formatMacros, sumMacros } from '@/lib/food/format';
+import {
+  computeMacros,
+  entryOrder,
+  entryStamp,
+  formatEntryTime,
+  formatMacros,
+  sumMacros,
+} from '@/lib/food/format';
 import { resolvePortion, unitOptions } from '@/lib/food/measures';
 import { parseFoodText } from '@/lib/food/parse';
 import { learnedFoodIds } from '@/lib/food/learning';
@@ -71,6 +78,11 @@ export function NutritionView() {
       bucket.rows.push(l);
       bucket.kcal += l.kcal;
       bucket.protein_g += l.protein_g;
+    }
+    /* Chronological within the meal, so the list reads as the day happened. Rows with no entry
+       time (older data, a copied day) keep their stored order at the end — see `entryOrder`. */
+    for (const bucket of map.values()) {
+      bucket.rows.sort((a, b) => entryOrder(a.logged_at) - entryOrder(b.logged_at));
     }
     return map;
   }, [logs]);
@@ -140,6 +152,9 @@ export function NutritionView() {
 
   function commitDraft() {
     if (!draft) return;
+    // ONE STAMP FOR THE WHOLE CONFIRM. Every item in a sentence was entered in the same act, so
+    // "2 eggs and toast" should read as one 8:42 entry, not two timestamps a millisecond apart.
+    const stamp = entryStamp();
     const rows: NutritionLog[] = [];
     for (const item of draft.items) {
       if (!item.food || !item.portion) continue;
@@ -152,6 +167,7 @@ export function NutritionView() {
         custom_name: item.food.name,
         quantity_g: item.portion.grams,
         ...macros,
+        ...stamp,
       });
     }
     if (rows.length > 0) setLogs((prev) => [...prev, ...rows]);
@@ -161,7 +177,13 @@ export function NutritionView() {
   function copyPreviousDay() {
     const src = state.logsByDate[previousDay] ?? [];
     if (src.length === 0) return;
-    setLogs((prev) => [...prev, ...src.map((l) => ({ ...l, id: genLogId(), logged_on: date }))]);
+    // Copying yesterday is an entry made NOW — carrying yesterday's times over would claim the
+    // athlete logged this morning's breakfast at 7pm the day before.
+    const stamp = entryStamp();
+    setLogs((prev) => [
+      ...prev,
+      ...src.map((l) => ({ ...l, id: genLogId(), logged_on: date, ...stamp })),
+    ]);
   }
 
   function removeLog(id: string) {
@@ -306,8 +328,24 @@ export function NutritionView() {
                         {emojiForFood(food ?? { name: l.custom_name ?? '', category: 'dish' })}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {l.custom_name ?? 'Food'}
+                        <p className="flex items-baseline gap-1.5 truncate text-sm font-medium text-foreground">
+                          <span className="truncate">{l.custom_name ?? 'Food'}</span>
+                          {/* WHEN IT WENT IN, beside the name rather than buried in the macro
+                              line: "did I already log lunch?" is answered by a time, and reading
+                              it should not cost a second glance. Absent on rows written before
+                              entry timestamps existed — no time is shown rather than a made-up
+                              one. */}
+                          {formatEntryTime(l.logged_at) && (
+                            <span
+                              /* No `uppercase`: `formatEntryTime` already decides the casing
+                                 ("8:42 am"), and a CSS transform on top would silently win, leaving
+                                 the formatter's own lowercasing as dead code. One place decides. */
+                              className="tabular shrink-0 text-[10px] font-semibold tracking-wide text-muted-foreground"
+                              data-testid="log-entry-time"
+                            >
+                              {formatEntryTime(l.logged_at)}
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {l.quantity_g != null ? `${Math.round(l.quantity_g)} g · ` : ''}

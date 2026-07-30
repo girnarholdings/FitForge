@@ -157,6 +157,32 @@ The bundle is the whole Local Mode state — plan, workout log, meals, preferenc
 It is written back through the same validator that guards file imports, so a corrupt or hostile
 document is rejected rather than partially applied.
 
+### What happens when the device and the account disagree
+
+Sign-in reconciles once, and the rule lives in one pure function — `apps/web/lib/auth/reconcileRule.ts`
+— so it can be read and tested without standing up a fake Firestore:
+
+| this browser | the account | what happens |
+| --- | --- | --- |
+| anything | no document yet | **push** — this device becomes the account's copy |
+| no finished onboarding | has a copy | **pull** — the new-device case |
+| has training, has pushed to *this* uid before | newer than our last push | **pull**, silently — a sibling device moved our shared history forward |
+| has training, has pushed to *this* uid before | not newer | **push** |
+| has training, has **never** pushed to this uid | has a readable copy | **ask** — two unrelated histories, so nothing is written on either side until the athlete chooses |
+
+That last row is the one worth knowing about. It covers a second athlete signing in on a shared
+laptop, and signing in on a device restored from somebody else's export. The app shows both copies
+side by side (workouts, food days, food entries, weigh-ins, plan) and offers three verbs: **merge**
+(a union — nothing is deleted), **use my account's copy**, or **keep this device's data**. While the
+question is open the debounced mirror is latched off, so the account copy cannot be overwritten by
+the very device that is still being asked about it.
+
+"Has this device pushed to this uid before" is remembered in two `fitforge.cloudPushed*` keys, which
+are excluded from both the cloud bundle and file exports — they describe the device, not the
+training, and an imported copy of them would let a device inherit sync history it never had.
+
+**Settings → Import data** asks the same merge-or-overwrite question, for the same reason.
+
 **Free-tier headroom.** Spark allows 50k document reads, 20k writes and 1 GiB stored per day.
 This design costs **one read per sign-in** and **one write per ~4 seconds of active editing**
 (changes are debounced), so a heavy user costs a few dozen writes a day. A thousand daily active

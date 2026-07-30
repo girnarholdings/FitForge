@@ -12,7 +12,7 @@
  * export, and it is covered by erase-everything like every other `fitforge.*` key.
  */
 import * as React from 'react';
-import type { RoutineDay } from '@/components/features/_mock/data';
+import { localISO, type RoutineDay } from '@/components/features/_mock/data';
 import type { CheckIn, ReadinessVerdict, AdaptAction } from './engine';
 import type { AdviceLine } from './advice';
 
@@ -76,8 +76,9 @@ function save(next: ReadinessState): void {
   for (const l of listeners) l();
 }
 
+/** The LOCAL calendar day — a check-in belongs to the morning the athlete is having, not to UTC's. */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localISO();
 }
 
 export function readinessEntries(): ReadinessEntry[] {

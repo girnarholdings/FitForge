@@ -231,6 +231,8 @@ test.describe('first-run tour', () => {
       mimeType: 'application/json',
       buffer: Buffer.from(JSON.stringify(legacy)),
     });
+    // The confirm step: a pre-tour file is a full restore, so overwrite.
+    await page.getByTestId('import-overwrite').click();
 
     // A successful import navigates to /today; a rejected one stays put and renders the reason.
     await page.waitForURL(/\/today/);

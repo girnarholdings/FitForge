@@ -30,6 +30,7 @@ import type { MuscleSlug } from '@/components/illustrations';
 import { m, AnimatePresence, SPRING } from '@/components/ui/motion';
 import {
   mockExerciseBySlug,
+  todayISO,
   type ProgressPhoto,
   type PhotoPose,
 } from '@/components/features/_mock/data';
@@ -43,9 +44,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'photos', label: 'Photos' },
 ];
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+/* Re-exported from the mock plane rather than redefined: a second private copy of "what day is
+   it" is how the UTC bug survived in three files at once. */
 
 /**
  * An empty tab, drawn rather than iconed wherever a real gym object exists for it.

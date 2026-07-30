@@ -12,11 +12,17 @@
  * hostile document from the network gets the same treatment as a hostile file from disk.
  *
  * ─── the conflict rule, stated plainly ──────────────────────────────────────────────────────
- * One document per user, last-write-wins, with one guard that matters: this device only ADOPTS
- * the cloud copy when the cloud is genuinely newer than what this device last pushed, or when
- * this browser has no training data of its own. Anything else pushes. That deliberately favours
- * "the data in front of you", because the failure people cannot forgive is opening the app after
- * a workout and finding the sets gone.
+ * One document per user, last-write-wins, with two guards that matter.
+ *
+ *   1. This device only ADOPTS the cloud copy when the cloud is genuinely newer than what this
+ *      device last pushed, or when this browser has no training data of its own. Anything else
+ *      pushes. That deliberately favours "the data in front of you", because the failure people
+ *      cannot forgive is opening the app after a workout and finding the sets gone.
+ *
+ *   2. When both sides hold real training and this browser has never pushed to THIS account, no
+ *      timestamp is a fair tie-break — the two histories are unrelated. Sync stops and ASKS
+ *      (merge / take the account's copy / keep this device's), writing nothing to either side
+ *      until it is answered. See {@link SyncConflict}.
  *
  * ─── it is never load-bearing ───────────────────────────────────────────────────────────────
  * Every function resolves to a status and never throws. Offline, rules misconfigured, quota
@@ -24,12 +30,30 @@
  * localStorage copy remains the one the UI reads. Sync is a convenience laid on top, not the
  * source of truth.
  */
-import { exportAllState, importAllState, isOnboarded, subscribe } from '@/lib/demo/store';
+import {
+  exportAllState,
+  importAllState,
+  inspectBackup,
+  isOnboarded,
+  localSummary,
+  subscribe,
+  type BackupSummary,
+  type ImportMode,
+} from '@/lib/demo/store';
 import { subscribeWorkoutLog } from '@/components/features/shared/workoutLog';
+import { decideReconcile } from './reconcileRule';
 import { isAuthConfigured, getDb } from './firebase';
 
 /** When this device last pushed, so "is the cloud newer than us?" has an answer. */
 const LAST_PUSH_KEY = 'fitforge.cloudPushedAt.v1';
+/**
+ * WHOSE account that push went to. Without it, a browser that had synced with one account looked
+ * identical to one that had synced with the account now signing in — so a second athlete signing
+ * in on a shared device (or an athlete signing in after restoring someone else's export) inherited
+ * a sync history it never had, and the reconcile silently picked a winner. Both keys are excluded
+ * from backups and from the cloud bundle: they describe this device, not the training.
+ */
+const LAST_PUSH_UID_KEY = 'fitforge.cloudPushedUid.v1';
 /**
  * Firestore's hard limit is 1 MiB per document. Stopping short of it with a real message beats a
  * write that fails at the edge every few seconds for a user who cannot see why.
@@ -115,9 +139,17 @@ function lastPushedAt(): number {
     return 0;
   }
 }
-function markPushed(at: number) {
+function lastPushedUid(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_PUSH_UID_KEY);
+  } catch {
+    return null;
+  }
+}
+function markPushed(at: number, uid: string) {
   try {
     window.localStorage.setItem(LAST_PUSH_KEY, String(at));
+    window.localStorage.setItem(LAST_PUSH_UID_KEY, uid);
   } catch {
     /* private mode — sync still works, it just re-pulls more eagerly */
   }
@@ -145,9 +177,79 @@ async function docRefFor(uid: string) {
  */
 let cloudWritesDisabled = false;
 
+/* ═══════════════════════════════════════════════════ the sign-in conflict prompt ══════════════
+ *
+ * Two sets of real training and one account: this browser's, and the one already in the account.
+ * The old rule resolved that by timestamp and told nobody. It is the same irreversible decision
+ * the file importer used to make, and it deserves the same treatment — show both, then ask.
+ *
+ * While a conflict is unanswered NOTHING is written on either side: the cloud document stays as it
+ * is (the mirror is latched off) and this browser keeps showing its own data, which is the copy the
+ * athlete can see and would miss.
+ */
+export interface SyncConflict {
+  uid: string;
+  /** the cloud bundle, held verbatim so whichever choice is made reads the same bytes */
+  bundle: string;
+  cloudAt: number;
+  cloud: BackupSummary;
+  local: BackupSummary;
+}
+
+/** How to settle it: fold both together, take the account's copy, or keep this device's. */
+export type ConflictResolution = 'merge' | 'cloud' | 'local';
+
+let conflict: SyncConflict | null = null;
+const conflictListeners = new Set<() => void>();
+
+export function subscribeConflict(l: () => void): () => void {
+  conflictListeners.add(l);
+  return () => conflictListeners.delete(l);
+}
+export function getSyncConflict(): SyncConflict | null {
+  return conflict;
+}
+function setConflict(next: SyncConflict | null) {
+  conflict = next;
+  for (const l of conflictListeners) l();
+}
+
+/**
+ * Apply the athlete's answer. Every branch ends with the two sides agreeing and the marker
+ * recorded, so the next sign-in on this device is an ordinary silent reconcile.
+ */
+export async function resolveSyncConflict(choice: ConflictResolution): Promise<boolean> {
+  const pending = conflict;
+  if (!pending) return false;
+  setStatus({ state: 'syncing' });
+
+  if (choice !== 'local') {
+    const mode: ImportMode = choice === 'merge' ? 'merge' : 'overwrite';
+    const result = importAllState(pending.bundle, mode);
+    if (!result.ok) {
+      setStatus({ state: 'error', detail: `Cloud copy could not be read: ${result.error}` });
+      return false;
+    }
+    patchRestore({ pulled: true });
+  }
+
+  // Clearing the conflict un-latches pushes — so it happens BEFORE the upload, and after the
+  // import, which means the bytes going up are the post-decision state in every branch.
+  setConflict(null);
+  if (choice === 'cloud') {
+    // Nothing changed relative to the account, so record agreement instead of re-uploading it.
+    markPushed(pending.cloudAt, pending.uid);
+    setStatus({ state: 'synced', at: pending.cloudAt, direction: 'pull' });
+    return true;
+  }
+  return pushToCloud(pending.uid);
+}
+
 /** Upload this device's state. Resolves false when it could not be written. */
 export async function pushToCloud(uid: string): Promise<boolean> {
-  if (!isAuthConfigured() || cloudWritesDisabled) return false;
+  // An unanswered conflict blocks every upload, the debounced mirror included: its 4-second timer
+  // would otherwise overwrite the account copy the athlete is still being asked about.
+  if (!isAuthConfigured() || cloudWritesDisabled || conflict !== null) return false;
   try {
     const ref = await docRefFor(uid);
     if (!ref) return false;
@@ -162,7 +264,7 @@ export async function pushToCloud(uid: string): Promise<boolean> {
     const { setDoc } = await import('firebase/firestore');
     const at = Date.now();
     await setDoc(ref, { bundle, updatedAt: at, schema: 2 });
-    markPushed(at);
+    markPushed(at, uid);
     setStatus({ state: 'synced', at, direction: 'push' });
     return true;
   } catch (err) {
@@ -190,7 +292,7 @@ export async function pullFromCloud(uid: string): Promise<boolean> {
       return false;
     }
     const at = typeof data.updatedAt === 'number' ? data.updatedAt : Date.now();
-    markPushed(at);
+    markPushed(at, uid);
     setStatus({ state: 'synced', at, direction: 'pull' });
     // The account's data is now in this browser. Anything still showing a "you look new" flow —
     // onboarding, most obviously — should stand down.
@@ -237,9 +339,12 @@ export async function eraseCloudCopy(uid: string): Promise<boolean> {
     }
     try {
       window.localStorage.removeItem(LAST_PUSH_KEY);
+      window.localStorage.removeItem(LAST_PUSH_UID_KEY);
     } catch {
       /* private mode */
     }
+    // Nothing left to reconcile against, so a question about the old document is moot.
+    setConflict(null);
     setStatus({ state: 'idle' });
     return true;
   } catch (err) {
@@ -256,6 +361,7 @@ export async function eraseCloudCopy(uid: string): Promise<boolean> {
 export async function syncOnSignIn(uid: string): Promise<void> {
   if (!isAuthConfigured()) return;
   cloudWritesDisabled = false; // a fresh, deliberate sign-in re-arms cloud writes
+  setConflict(null); // a new reconcile supersedes any question left over from the last one
   setStatus({ state: 'syncing' });
   patchRestore({ phase: 'restoring' });
   try {
@@ -264,18 +370,37 @@ export async function syncOnSignIn(uid: string): Promise<void> {
     const { getDoc } = await import('firebase/firestore');
     const snap = await getDoc(ref);
 
-    if (!snap.exists()) {
-      // First sign-in on this account: this device's data becomes the account's data.
-      await pushToCloud(uid);
+    const data = (snap.exists() ? snap.data() : {}) as { updatedAt?: unknown; bundle?: unknown };
+    const bundle = typeof data.bundle === 'string' ? data.bundle : null;
+    // "Readable" means the document would actually survive the importer — an unreadable one is
+    // nothing to adopt and nothing to ask about, so the check belongs in the facts, not after them.
+    const inspected = bundle ? inspectBackup(bundle) : null;
+
+    const action = decideReconcile({
+      uid,
+      cloudExists: snap.exists(),
+      cloudHasBundle: inspected?.ok === true,
+      cloudAt: typeof data.updatedAt === 'number' ? data.updatedAt : 0,
+      localIsEmpty: !isOnboarded(),
+      lastPushedAt: lastPushedAt(),
+      lastPushedUid: lastPushedUid(),
+    });
+
+    if (action === 'ask' && bundle && inspected?.ok) {
+      const cloudAt = typeof data.updatedAt === 'number' ? data.updatedAt : 0;
+      setConflict({
+        uid,
+        bundle,
+        cloudAt,
+        // The document has no `exportedAt` of its own — `updatedAt` IS when this copy was saved.
+        cloud: { ...inspected.summary, exportedAt: new Date(cloudAt || Date.now()).toISOString() },
+        local: localSummary(),
+      });
+      setStatus({ state: 'idle' });
       return;
     }
 
-    const data = snap.data() as { updatedAt?: unknown };
-    const cloudAt = typeof data.updatedAt === 'number' ? data.updatedAt : 0;
-    // A browser with no finished onboarding has nothing to lose and everything to gain — this is
-    // the new-device case, and it is the one where pulling is unambiguously right.
-    const localIsEmpty = !isOnboarded();
-    if (localIsEmpty || cloudAt > lastPushedAt()) await pullFromCloud(uid);
+    if (action === 'pull') await pullFromCloud(uid);
     else await pushToCloud(uid);
   } catch (err) {
     setStatus({ state: 'error', detail: describe(err) });

@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { readDemoState, seedOnboarded } from './helpers';
 
@@ -44,6 +45,29 @@ async function exportBundle(page: import('@playwright/test').Page): Promise<stri
     }
     return JSON.stringify(out);
   });
+}
+
+/**
+ * A REAL backup file, produced by the real button.
+ *
+ * `exportBundle` above dumps raw localStorage keys, which is fine for "does this string mention
+ * yesterday" but is NOT a backup — feeding it back through the importer would be rejected, and a
+ * test that asserts on a rejection it caused itself proves nothing. Anything that then gets
+ * IMPORTED has to come from here.
+ */
+async function downloadBackup(page: import('@playwright/test').Page): Promise<string> {
+  await page.goto('/settings');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('settings-export').click(),
+  ]);
+  return fs.readFileSync(await download.path(), 'utf8');
+}
+
+/** Food rows the bundle holds for a given day. */
+function foodCount(bundleText: string, day: string): number {
+  const bundle = JSON.parse(bundleText) as { demo: { logsByDate: Record<string, unknown[]> } };
+  return bundle.demo.logsByDate[day]?.length ?? 0;
 }
 
 test.describe('data portability', () => {
@@ -134,6 +158,115 @@ test.describe('data portability', () => {
 
     await expect(page.getByTestId('settings-import-error')).toBeVisible();
     expect(await readDemoState(page), 'a partial write is worse than no write').toEqual(before);
+  });
+
+  test('import ASKS first, and shows both copies before it writes anything', async ({ page }) => {
+    /**
+     * THE FIX THIS PINS. Import used to be one irreversible verb: pick a file, and whatever was on
+     * the device was gone. Now the file is inspected, both sides are put on screen, and nothing is
+     * written until the athlete picks a verb.
+     */
+    await page.goto('/nutrition');
+    await logFood(page, '2 eggs');
+    const fileText = await downloadBackup(page);
+
+    // A second day of food AFTER the export, so the file and the device genuinely differ.
+    await page.goto('/nutrition');
+    await page.getByTestId('date-prev').click();
+    await logFood(page, '2 eggs');
+    const before = await readDemoState(page);
+
+    await page.goto('/settings');
+    await page.getByTestId('import-file').setInputFiles({
+      name: 'fitforge-backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(fileText),
+    });
+
+    // ── the confirm step ──
+    const sheet = page.getByRole('dialog');
+    await expect(sheet).toBeVisible();
+    await expect(page.getByTestId('import-summary-file')).toContainText(/Food days/);
+    await expect(page.getByTestId('import-summary-local')).toContainText(/Food days/);
+    await expect(page.getByTestId('import-merge')).toBeVisible();
+    await expect(page.getByTestId('import-overwrite')).toBeVisible();
+
+    // Nothing has been written while the question is open — the whole point.
+    expect(await readDemoState(page), 'staging an import must not touch state').toEqual(before);
+
+    // Cancelling is a true no-op.
+    await page.getByTestId('import-cancel').click();
+    await expect(sheet).toBeHidden();
+    expect(await readDemoState(page)).toEqual(before);
+  });
+
+  test('merge keeps what is on the device and adds what the file has', async ({ page }) => {
+    const today = isoOffset(0);
+    const yesterday = isoOffset(-1);
+
+    // The FILE: today has food, yesterday does not.
+    await page.goto('/nutrition');
+    await logFood(page, '2 eggs');
+    const fileText = await downloadBackup(page);
+    const fileToday = foodCount(fileText, today);
+    expect(fileToday).toBeGreaterThan(0);
+
+    // The DEVICE: yesterday has food that the file has never heard of.
+    await page.goto('/nutrition');
+    await page.getByTestId('date-prev').click();
+    await logFood(page, '3 eggs');
+    const deviceYesterday = ((await readDemoState(page)) as {
+      logsByDate: Record<string, unknown[]>;
+    }).logsByDate[yesterday]?.length ?? 0;
+    expect(deviceYesterday).toBeGreaterThan(0);
+
+    await page.goto('/settings');
+    await page.getByTestId('import-file').setInputFiles({
+      name: 'fitforge-backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(fileText),
+    });
+    await page.getByTestId('import-merge').click();
+    await page.waitForURL(/\/today/);
+
+    const after = (await readDemoState(page)) as { logsByDate: Record<string, unknown[]> };
+    expect(
+      after.logsByDate[yesterday]?.length ?? 0,
+      'merge must not drop the day only this device had',
+    ).toBe(deviceYesterday);
+    expect(after.logsByDate[today]?.length ?? 0, "merge must add the file's day").toBeGreaterThanOrEqual(
+      fileToday,
+    );
+  });
+
+  test('overwrite really does replace this device', async ({ page }) => {
+    const today = isoOffset(0);
+
+    // Export BEFORE logging, so the file's copy of today is provably shorter than the device's.
+    const fileText = await downloadBackup(page);
+    const fileToday = foodCount(fileText, today);
+
+    await page.goto('/nutrition');
+    await logFood(page, '2 eggs');
+    const deviceToday = ((await readDemoState(page)) as {
+      logsByDate: Record<string, unknown[]>;
+    }).logsByDate[today]?.length ?? 0;
+    expect(deviceToday).toBeGreaterThan(fileToday);
+
+    await page.goto('/settings');
+    await page.getByTestId('import-file').setInputFiles({
+      name: 'fitforge-backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(fileText),
+    });
+    await page.getByTestId('import-overwrite').click();
+    await page.waitForURL(/\/today/);
+
+    const after = (await readDemoState(page)) as { logsByDate: Record<string, unknown[]> };
+    expect(
+      after.logsByDate[today]?.length ?? 0,
+      "overwrite must leave the file's copy of the day, not the device's",
+    ).toBe(fileToday);
   });
 
   test('erasing clears the tier-2 cache, not just localStorage', async ({ page }) => {

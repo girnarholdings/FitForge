@@ -140,7 +140,13 @@ test.describe('regression · corrupted store resilience', () => {
   });
 
   const NOW = '2026-07-20T18:30:00.000Z';
-  const today = () => new Date().toISOString().slice(0, 10);
+  // The app keys days by the LOCAL calendar date, so a UTC read here would build a store the app
+  // never looks at — the case would "pass" without exercising anything.
+  const today = () => {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
 
   /**
    * Each case is a shape that crashed a real route before the hardening. They are written as RAW
@@ -348,6 +354,9 @@ test.describe('regression · backup round trip (M4)', () => {
       mimeType: 'application/json',
       buffer: Buffer.from(backupText),
     });
+    // Import ASKS before it writes now, and this is the restore-onto-a-blank-device case, so the
+    // answer is overwrite. The confirm step is asserted properly in portability.spec.
+    await page.getByTestId('import-overwrite').click();
     await page.waitForURL(/\/today/);
 
     const after = await countSessions();

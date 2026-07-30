@@ -10,8 +10,20 @@ import { resetDemo, readDemoState, DEMO_STORAGE_KEY, seedOnboarded } from './hel
  * honest "no match" surface, real search over the 509-food catalog, and copy-yesterday.
  */
 
-const yesterdayISO = () => new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/**
+ * LOCAL calendar days, the same way the app computes them.
+ *
+ * These used to be `toISOString().slice(0, 10)`, i.e. UTC. That passes in a UTC CI box and lies
+ * everywhere else: run the suite from Mumbai after 5:30am or from California before 5pm and the
+ * spec's "today" is a different day from the app's, so it asserts against a key the app never
+ * wrote. The app reads local calendar fields (`localISO`), so the spec must too.
+ */
+const localISO = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const yesterdayISO = () => localISO(new Date(Date.now() - 86400000));
+const todayISO = () => localISO(new Date());
 
 test.describe('nutrition', () => {
   test.beforeEach(async ({ page }) => {
@@ -233,6 +245,78 @@ test.describe('nutrition', () => {
     await expect(review.getByText(/Bread, sourdough/i)).toBeVisible();
   });
 
+  test('every entry records WHEN it was logged, and the day lists them in that order', async ({
+    page,
+  }) => {
+    /**
+     * `logged_on` is the day the food counts toward; `logged_at` is the moment the athlete recorded
+     * it. Keeping both is what lets Nutrition say "you logged breakfast at 8:42" — and it is the
+     * difference between food entered as it was eaten and a whole day backfilled at midnight.
+     */
+    await seedOnboarded(page);
+    await page.goto('/nutrition');
+
+    await page.getByTestId('nutrition-composer').fill('2 eggs');
+    await page.getByTestId('composer-submit').click();
+    await page.getByTestId('review-confirm').click();
+
+    // On screen, beside the food: a real local clock time.
+    const stamp = page.getByTestId('log-entry-time').first();
+    await expect(stamp).toBeVisible();
+    await expect(stamp).toHaveText(/^\d{1,2}:\d{2}(\s?[ap]m)?$/i);
+
+    // In storage: a full device timestamp WITH an offset, plus the zone it was made in. The offset
+    // is what keeps the time honest after the athlete flies somewhere else.
+    const rows = await page.evaluate(
+      ({ key, day }) => {
+        const raw = window.localStorage.getItem(key);
+        const state = raw ? (JSON.parse(raw) as { logsByDate: Record<string, { logged_at?: string; logged_tz?: string; logged_on: string }[]> }) : null;
+        return state?.logsByDate[day] ?? [];
+      },
+      { key: DEMO_STORAGE_KEY, day: todayISO() },
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.logged_on, 'the day it counts toward is the LOCAL day').toBe(todayISO());
+      expect(row.logged_at, 'every new row carries the moment it was entered').toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/,
+      );
+      expect(row.logged_at?.slice(0, 10)).toBe(todayISO());
+      expect(typeof row.logged_tz).toBe('string');
+    }
+
+    // A row logged BEFORE this feature existed has no stamp, and must render as absent rather than
+    // as a fabricated midnight. Same day, one unstamped row appended.
+    await page.evaluate(
+      ({ key, day }) => {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return;
+        const state = JSON.parse(raw) as { logsByDate: Record<string, unknown[]> };
+        state.logsByDate[day] = [
+          ...(state.logsByDate[day] ?? []),
+          {
+            id: 'nl-legacy-1',
+            logged_on: day,
+            meal_slot: 'breakfast',
+            food_id: 'salmon',
+            custom_name: 'Legacy row',
+            quantity_g: 100,
+            kcal: 200,
+            protein_g: 20,
+            carbs_g: 0,
+            fat_g: 13,
+          },
+        ];
+        window.localStorage.setItem(key, JSON.stringify(state));
+      },
+      { key: DEMO_STORAGE_KEY, day: todayISO() },
+    );
+    await page.reload();
+    await expect(page.getByText('Legacy row').first()).toBeVisible();
+    // The stamped rows still show a time; the legacy one shows none — so the count is unchanged.
+    await expect(page.getByTestId('log-entry-time')).toHaveCount(rows.length);
+  });
+
   test('copy-yesterday re-logs the previous day’s meals into today and persists', async ({
     page,
   }) => {
@@ -272,8 +356,19 @@ test.describe('nutrition', () => {
     await expect(page.getByText('Atlantic Salmon, cooked').first()).toBeVisible();
 
     const state = await readDemoState(page);
-    const logsByDate = (state as { logsByDate: Record<string, unknown[]> }).logsByDate;
+    const logsByDate = (state as {
+      logsByDate: Record<string, { logged_at?: string; logged_on: string }[]>;
+    }).logsByDate;
     expect(logsByDate[todayISO()]?.length ?? 0).toBeGreaterThan(0);
+
+    // Copying yesterday is an entry made NOW. The seeded source row had no stamp at all, so the
+    // copies must be stamped fresh rather than inheriting (or faking) yesterday's time.
+    for (const row of logsByDate[todayISO()] ?? []) {
+      expect(row.logged_on).toBe(todayISO());
+      expect(row.logged_at?.slice(0, 10), 'a copied row is stamped today, not yesterday').toBe(
+        todayISO(),
+      );
+    }
 
     await page.reload();
     await expect(page.getByText('Atlantic Salmon, cooked').first()).toBeVisible();

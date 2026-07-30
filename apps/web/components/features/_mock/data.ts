@@ -153,6 +153,7 @@ export interface Routine {
  */
 export interface NutritionLog {
   id: string;
+  /** the LOCAL calendar day this food belongs to (`YYYY-MM-DD`) */
   logged_on: string;
   meal_slot: MealSlot;
   food_id: string | null;
@@ -162,6 +163,19 @@ export interface NutritionLog {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  /**
+   * WHEN THE ENTRY WAS MADE, as a full device timestamp (ISO 8601 with offset, e.g.
+   * `2026-07-30T08:42:11+05:30`). Distinct from `logged_on` on purpose: that is the day the food
+   * counts toward, this is the moment the athlete recorded it — which is what makes "you logged
+   * breakfast at 8:42" possible, and what tells the difference between food entered as it was
+   * eaten and a whole day backfilled at midnight.
+   *
+   * Optional because every row written before this existed has no honest value for it, and
+   * inventing one (the day's midnight, say) would be fabricating data the app never had.
+   */
+  logged_at?: string;
+  /** IANA zone of the device at entry time, so a timestamp survives the user changing timezone. */
+  logged_tz?: string;
 }
 /** Mirror of §5.2 `v_daily_nutrition`. */
 export interface DailyNutrition {
@@ -747,8 +761,41 @@ export const MOCK_MEASUREMENTS = [
 export const MOCK_STREAK = 5;
 
 /* ------------------------------------------------------------------------- date helpers */
+
+/**
+ * `YYYY-MM-DD` for a `Date` IN THE DEVICE'S OWN TIMEZONE.
+ *
+ * This used to be `toISOString().slice(0, 10)`, which is UTC, and that is a real bug rather than a
+ * pedantic one: everything in the app hangs off `todayISO()` — which day Today shows, which day
+ * food is filed under, which entry the morning check-in belongs to. In UTC+5:30 the app rolled
+ * over to "tomorrow" at 5:30am and, more visibly, still called it Wednesday for the first five and
+ * a half hours of Thursday. Anywhere west of Greenwich it flips the other way and files the
+ * evening's dinner onto tomorrow.
+ *
+ * A calendar day is a LOCAL idea — it is the day on the wall clock of the person logging — so it
+ * is read from the local getters. `lib/demo/selectedDate` already did this correctly for every
+ * date it derived; it just anchored them all to a UTC "today".
+ */
+export function localISO(d: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return localISO();
+}
+
+/**
+ * The device's IANA zone (e.g. "Asia/Kolkata"), recorded alongside timestamps so a log can still
+ * be explained after the user travels. Falls back to the empty string on the rare engine without
+ * `resolvedOptions`; callers treat that as "unknown", never as UTC.
+ */
+export function deviceTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+  } catch {
+    return '';
+  }
 }
 
 /** Map JS `Date.getDay()` (0=Sun … 6=Sat) → blueprint weekday (0=Mon … 6=Sun). */

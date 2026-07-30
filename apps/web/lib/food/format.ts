@@ -62,3 +62,48 @@ export function confidenceHint(level: ConfidenceLevel): string {
   if (level === 'medium') return 'Best guess — tap to change';
   return 'Not sure — tap to fix';
 }
+
+/* ── entry timestamps ─────────────────────────────────────────────────────────
+   A food row carries TWO different times and conflating them loses information:
+   `logged_on` is the day the food counts toward, `logged_at` is the moment it was recorded. The
+   pair is what distinguishes "logged as I ate it" from "backfilled the whole day at midnight",
+   and it is what lets the day view say when breakfast actually went in. */
+
+/** The fields to spread onto a new log row: a full local timestamp with offset, plus the zone. */
+export function entryStamp(now: Date = new Date()): { logged_at: string; logged_tz: string } {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const off = -now.getTimezoneOffset(); // JS reports the inverse of the ISO sign
+  const sign = off >= 0 ? '+' : '-';
+  const abs = Math.abs(off);
+  const stamp =
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+    `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}` +
+    `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  let tz = '';
+  try {
+    tz = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';
+  } catch {
+    /* engine without resolvedOptions — the offset in the stamp still carries the truth */
+  }
+  return { logged_at: stamp, logged_tz: tz };
+}
+
+/** "8:42 am" in the reader's locale, or null when the row predates entry timestamps. */
+export function formatEntryTime(logged_at: string | undefined): string | null {
+  if (!logged_at) return null;
+  const t = new Date(logged_at);
+  if (Number.isNaN(t.getTime())) return null;
+  return t
+    .toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    .replace(/\s?([AP])M/i, (_, m: string) => ` ${m.toLowerCase()}m`);
+}
+
+/**
+ * Sort key for a row within its day: entry time when known, else Infinity so undated rows (older
+ * data, or a copied day) settle at the end rather than jumping to 1970 and above real entries.
+ */
+export function entryOrder(logged_at: string | undefined): number {
+  if (!logged_at) return Number.POSITIVE_INFINITY;
+  const t = Date.parse(logged_at);
+  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+}

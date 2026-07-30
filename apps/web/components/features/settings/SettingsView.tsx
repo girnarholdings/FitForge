@@ -38,6 +38,7 @@ import { eraseCloudCopy } from '@/lib/auth/sync';
 import { useAuth } from '@/lib/auth/useUser';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
 import { ProgressionEvidenceNote } from '@/components/features/shared/ProgressionEvidence';
+import { SummaryColumn } from '@/components/features/shared/BackupSummary';
 import {
   BarbellIcon,
   DumbbellIcon,
@@ -58,11 +59,15 @@ import {
   getState,
   exportAllState,
   importAllState,
+  inspectBackup,
+  localSummary,
   eraseAllLocalData,
   setProgressionScheme,
   resolveProgressionScheme,
   resetTour,
   type DemoState,
+  type ImportMode,
+  type BackupSummary,
 } from '@/lib/demo/store';
 import { useDemoState } from '@/lib/demo/useDemo';
 import {
@@ -101,6 +106,7 @@ import {
 import type { OnboardingDraft, DraftMovementExclusion } from '@/components/onboarding/types';
 import {
   WEEKDAY_LABELS,
+  localISO,
   type Profile,
   type NutritionProfile,
   type NutritionTargets,
@@ -345,6 +351,16 @@ export function SettingsView() {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [importError, setImportError] = React.useState<string | null>(null);
+  /**
+   * A validated, NOT-YET-APPLIED backup. Holding the raw text (rather than the parsed bundle)
+   * keeps one parser in charge: `inspectBackup` and `importAllState` read the same string, so the
+   * numbers shown in the confirm sheet are the numbers that get written.
+   */
+  const [pendingImport, setPendingImport] = React.useState<{
+    text: string;
+    summary: BackupSummary;
+    local: BackupSummary;
+  } | null>(null);
   const [savedCount, setSavedCount] = React.useState(0);
   const [planDirty, setPlanDirty] = React.useState(false);
   const [planStatus, setPlanStatus] = React.useState<string | null>(null);
@@ -403,16 +419,38 @@ export function SettingsView() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fitforge-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `fitforge-backup-${localISO()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
   }
 
-  /** Restore from a user-selected backup. Nothing is written unless every section validates. */
-  async function importData(file: File) {
-    const result = importAllState(await file.text());
+  /**
+   * STEP 1 OF THE IMPORT: read and validate the file, then ASK. Nothing is written here.
+   *
+   * Import used to be one irreversible verb — pick a file, lose whatever was on the device. That
+   * is right for restoring onto a fresh phone and wrong everywhere else, and it was worst for a
+   * signed-in athlete: an old backup silently replaced newer history and then synced the loss up
+   * to the account. So the file is inspected first and the athlete chooses on the numbers.
+   */
+  async function stageImport(file: File) {
+    const text = await file.text();
+    const result = inspectBackup(text);
+    if (!result.ok) {
+      setImportError(result.error);
+      setPendingImport(null);
+      return;
+    }
+    setImportError(null);
+    setPendingImport({ text, summary: result.summary, local: localSummary() });
+  }
+
+  /** STEP 2: apply, with the mode the athlete picked. */
+  function applyImport(mode: ImportMode) {
+    if (!pendingImport) return;
+    const result = importAllState(pendingImport.text, mode);
+    setPendingImport(null);
     if (result.ok) {
       setImportError(null);
       router.push('/today');
@@ -1067,7 +1105,7 @@ export function SettingsView() {
             data-testid="import-file"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) void importData(file);
+              if (file) void stageImport(file);
               e.target.value = '';
             }}
           />
@@ -1131,6 +1169,65 @@ export function SettingsView() {
             Keep my current plan
           </Button>
         </div>
+      </Sheet>
+
+      {/* IMPORT CONFIRM — the file's numbers beside this device's, then a choice of verb.
+          Merge is offered first because it is the recoverable one: overwrite is the only action on
+          this screen that can silently destroy history the athlete never exported. */}
+      <Sheet
+        open={pendingImport !== null}
+        onClose={() => setPendingImport(null)}
+        title="Import this backup?"
+      >
+        {pendingImport && (
+          <>
+            <div className="grid grid-cols-2 gap-2" data-testid="import-compare">
+              <SummaryColumn
+                label="The file"
+                summary={pendingImport.summary}
+                stampPrefix="Exported"
+                testid="import-summary-file"
+              />
+              <SummaryColumn
+                label="This device"
+                summary={pendingImport.local}
+                testid="import-summary-local"
+              />
+            </div>
+            <div className="mt-4 flex flex-col gap-2">
+              <Button block onClick={() => applyImport('merge')} data-testid="import-merge">
+                Merge into my data
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Keeps everything on this device — including your current plan and profile — and adds
+                every workout, food entry and weigh-in from the file that this device is missing.
+              </p>
+              <Button
+                variant="danger"
+                block
+                onClick={() => applyImport('overwrite')}
+                data-testid="import-overwrite"
+              >
+                Overwrite with the file
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Replaces your profile, plan, food logs and training history on this device with the
+                file&apos;s copy. Anything here that is not in the file is lost.
+              </p>
+              {/* Signed in, the consequence does not stop at this browser. Saying so here is the
+                  "linking step" — the mirror will carry whichever choice is made up to the account. */}
+              {user && (
+                <p className="text-xs font-medium text-foreground" data-testid="import-sync-note">
+                  You are signed in, so the result syncs to your Google account and reaches your
+                  other devices.
+                </p>
+              )}
+              <Button variant="ghost" block onClick={() => setPendingImport(null)} data-testid="import-cancel">
+                Cancel
+              </Button>
+            </div>
+          </>
+        )}
       </Sheet>
 
       {/* Erase confirm — for a signed-in user this ALSO deletes the account's cloud copy. */}
