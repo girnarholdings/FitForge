@@ -17,71 +17,23 @@
  * trapped waiting, and both are visible from the routing alone.
  */
 import { test, expect, type Page } from '@playwright/test';
-import { seedOnboarded, resetDemo, readDemoState, DEMO_STORAGE_KEY } from './helpers';
+import {
+  seedOnboarded,
+  resetDemo,
+  readDemoState,
+  DEMO_STORAGE_KEY,
+  // The fake-session machinery moved to helpers.ts once a second spec needed it — one copy, so a
+  // lesson learned here (wait on the app's own signal; never race a `goto`) cannot be un-learned
+  // by the next caller that reinvents it.
+  firebaseApiKey,
+  fakeGoogleSession,
+} from './helpers';
 
 const GOOGLE_AUTH = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com/;
 const FIRESTORE = /firestore\.googleapis\.com/;
 /** Auth + Firestore in one matcher — see the erase test for why a single handler matters. */
 const GOOGLE_ALL =
   /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com|firestore\.googleapis\.com/;
-
-/**
- * Memoised per worker + retried: under a parallel suite the static server occasionally drops a
- * chunk fetch, and one miss used to read as "this build has no Firebase project" — which is how
- * the two compliance tests flaked in CI while every sibling in this file passed. The key is a
- * build constant, so caching it is not just faster, it is more correct.
- */
-let cachedApiKey: string | null = null;
-async function apiKeyFromBundle(page: Page): Promise<string | null> {
-  if (cachedApiKey) return cachedApiKey;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    for (const path of ['/today/', '/settings/']) {
-      const res = await page.request.get(path).catch(() => null);
-      if (!res?.ok()) continue;
-      const html = await res.text();
-      for (const m of html.matchAll(/\/_next\/[A-Za-z0-9/._-]+\.js/g)) {
-        const chunk = await page.request.get(m[0]).catch(() => null);
-        if (!chunk?.ok()) continue;
-        const key = (await chunk.text()).match(/AIza[0-9A-Za-z_-]{35}/);
-        if (key) {
-          cachedApiKey = key[0];
-          return cachedApiKey;
-        }
-      }
-    }
-  }
-  return null;
-}
-
-function session(apiKey: string) {
-  return {
-    uid: 'restore-uid-1',
-    email: 'lifter@example.com',
-    displayName: 'Kai',
-    photoURL: null,
-    emailVerified: true,
-    isAnonymous: false,
-    providerData: [
-      {
-        providerId: 'google.com',
-        uid: 'g-1',
-        displayName: 'Kai',
-        email: 'lifter@example.com',
-        phoneNumber: null,
-        photoURL: null,
-      },
-    ],
-    stsTokenManager: {
-      refreshToken: 'spec-refresh',
-      accessToken: 'spec-access',
-      expirationTime: 4102444800000,
-    },
-    createdAt: '1700000000000',
-    lastLoginAt: '1700000000000',
-    apiKey,
-    appName: '[DEFAULT]',
-  };
-}
 
 /**
  * A browser that is signed in and has NEVER completed onboarding — the second-device case, and
@@ -93,7 +45,7 @@ async function signedInEmptyBrowser(
 ): Promise<{ firestoreHits: string[] }> {
   // Reach the origin first so localStorage is writable, then clear it completely.
   await resetDemo(page);
-  const apiKey = await apiKeyFromBundle(page);
+  const apiKey = await firebaseApiKey(page);
   expect(apiKey, 'this build has a Firebase project').toBeTruthy();
 
   // Auth stays offline so the restored session survives revalidation (see shell-account.spec).
@@ -113,7 +65,7 @@ async function signedInEmptyBrowser(
       window.localStorage.clear();
       window.localStorage.setItem(key, JSON.stringify(value));
     },
-    { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: session(apiKey!) },
+    { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: fakeGoogleSession(apiKey!, 'restore-uid-1') },
   );
   return { firestoreHits };
 }
@@ -164,7 +116,7 @@ test.describe('cloud mirror · a finished workout reaches the account', () => {
      * did not do before.
      */
     await seedOnboarded(page);
-    const apiKey = await apiKeyFromBundle(page);
+    const apiKey = await firebaseApiKey(page);
     expect(apiKey, 'this build has a Firebase project').toBeTruthy();
     await page.context().route(GOOGLE_AUTH, (r) => r.abort());
 
@@ -176,7 +128,7 @@ test.describe('cloud mirror · a finished workout reaches the account', () => {
 
     await page.evaluate(
       ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
-      { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: session(apiKey!) },
+      { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: fakeGoogleSession(apiKey!, 'restore-uid-1') },
     );
 
     const state = await readDemoState(page);
@@ -226,7 +178,7 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
      * went to the wire, (b) the failure was surfaced, (c) local data survived untouched.
      */
     await seedOnboarded(page);
-    const apiKey = await apiKeyFromBundle(page);
+    const apiKey = await firebaseApiKey(page);
     expect(apiKey, 'this build has a Firebase project').toBeTruthy();
 
     /**
@@ -244,7 +196,7 @@ test.describe('cloud erasure + health-key denylist (compliance phase 1)', () => 
 
     await page.evaluate(
       ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
-      { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: session(apiKey!) },
+      { key: `firebase:authUser:${apiKey}:[DEFAULT]`, value: fakeGoogleSession(apiKey!, 'restore-uid-1') },
     );
 
     /**

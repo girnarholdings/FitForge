@@ -704,3 +704,116 @@ export async function expectRouteHealthy(page: Page, path: string): Promise<void
   expect(r.applicationError, `${path} showed the "Application error" screen`).toBe(false);
   expect(r.renderedNaN, `${path} rendered NaN`).toBe(false);
 }
+
+/* ══════════════════════════════════════════════════ faking a signed-in session ═══════════════
+ *
+ * Google sign-in cannot be driven from a spec — the popup is a third-party page — so a signed-in
+ * browser is faked the only way the SDK allows: write the persistence key it reads at start-up, then
+ * let the app restore from it with the auth hosts blocked so nothing revalidates the fake token.
+ *
+ * THIS LIVES HERE BECAUSE THE NAIVE VERSION IS RACY, and every spec that rolled its own hit the
+ * same wall: seed, `goto('/settings')`, assert. A `goto` is a full reload that restarts the async
+ * restore, so the assertion races it — and when it loses, the page shows the (momentarily correct)
+ * signed-out copy and the failure reads like a product bug. cloud-restore.spec worked that out the
+ * hard way over two CI failures; `signInFakeUser` is that lesson as one function.
+ */
+
+/**
+ * The build's Firebase web API key, scraped from the served bundle and CACHED for the run.
+ *
+ * Cached because it is a build constant and the scan is several chunk fetches: under parallel
+ * workers a single miss used to read as "this build has no Firebase project", skipping the very
+ * tests that were meant to guard it. Retried for the same reason.
+ */
+let cachedFirebaseApiKey: string | null = null;
+export async function firebaseApiKey(page: Page): Promise<string | null> {
+  if (cachedFirebaseApiKey) return cachedFirebaseApiKey;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    for (const route of ['/today/', '/settings/']) {
+      const res = await page.request.get(route).catch(() => null);
+      if (!res?.ok()) continue;
+      const html = await res.text();
+      for (const m of html.matchAll(/\/_next\/[A-Za-z0-9/._-]+\.js/g)) {
+        const chunk = await page.request.get(m[0]).catch(() => null);
+        if (!chunk?.ok()) continue;
+        const key = (await chunk.text()).match(/AIza[0-9A-Za-z_-]{35}/);
+        if (key) {
+          cachedFirebaseApiKey = key[0];
+          return cachedFirebaseApiKey;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** The shape Firebase Auth persists for a signed-in Google user. */
+export function fakeGoogleSession(apiKey: string, uid: string, email = 'lifter@example.com') {
+  return {
+    uid,
+    email,
+    displayName: 'Kai',
+    photoURL: null,
+    emailVerified: true,
+    isAnonymous: false,
+    providerData: [
+      {
+        providerId: 'google.com',
+        uid: 'g-1',
+        displayName: 'Kai',
+        email,
+        phoneNumber: null,
+        photoURL: null,
+      },
+    ],
+    stsTokenManager: {
+      refreshToken: 'spec-refresh',
+      accessToken: 'spec-access',
+      // Far future: an expired token would send the SDK to the network, which is blocked.
+      expirationTime: 4102444800000,
+    },
+    createdAt: '1700000000000',
+    lastLoginAt: '1700000000000',
+    apiKey,
+    appName: '[DEFAULT]',
+  };
+}
+
+/** Every Google host the app can reach — blocked so a fake session is never revalidated away. */
+export const GOOGLE_HOSTS =
+  /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com|firestore\.googleapis\.com/;
+
+/**
+ * Sign in as `uid` and DON'T RETURN UNTIL THE APP AGREES.
+ *
+ * The wait is on the app's own signal — the mode chip flipping to `google` — rather than on a
+ * timeout, and it happens on `/today` because that is one client-side navigation away from anywhere
+ * a spec wants to assert. Callers should then walk to their screen by tapping a link, so the
+ * already-restored user stays in memory instead of being re-resolved by another reload.
+ *
+ * Returns false when the build has no Firebase project, so callers can `test.skip` honestly rather
+ * than assert against a state that cannot exist.
+ */
+export async function signInFakeUser(
+  page: Page,
+  uid: string,
+  opts: { email?: string } = {},
+): Promise<boolean> {
+  const apiKey = await firebaseApiKey(page);
+  if (!apiKey) return false;
+
+  await page.context().route(GOOGLE_HOSTS, (r) => r.abort());
+  await page.evaluate(
+    ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
+    {
+      key: `firebase:authUser:${apiKey}:[DEFAULT]`,
+      value: fakeGoogleSession(apiKey, uid, opts.email),
+    },
+  );
+
+  await page.goto('/today');
+  await expect(page.getByTestId('mode-chip')).toHaveAttribute('data-mode', 'google', {
+    timeout: 30000,
+  });
+  return true;
+}

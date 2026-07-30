@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seedOnboarded, pageOverflow } from './helpers';
+import { seedOnboarded, pageOverflow, signInFakeUser } from './helpers';
 
 /**
  * DENSITY — measured, because "too big" is a measurement.
@@ -192,55 +192,31 @@ test.describe('settings · signed-in relevance', () => {
   test('a signed-in athlete is not told their data is browser-only, and cannot "sign out" into an erase', async ({
     page,
   }) => {
+    // The session restore is a real async round trip through the SDK, and it happens before the
+    // first assertion rather than inside it — so the budget has to cover both, not just the wait.
+    test.setTimeout(90_000);
     /**
      * Signed in, the old screen said three untrue or dangerous things: a "Local Mode" heading over
      * their data, "Nothing is uploaded" (it is — that is the point of the account), and a second
      * "Sign out" button that actually erased the browser, one screen below the Account card's real
      * sign-out. Same word, opposite consequences.
      */
+    /**
+     * SIGN IN THROUGH THE SHARED HELPER, which does not return until the app confirms the restore.
+     *
+     * This test used to seed the persistence key and then `goto('/settings')` — a full reload, which
+     * restarts the async session restore, so the first assertion raced it. When the race was lost
+     * the page showed its (momentarily correct) signed-out copy and the failure read like a product
+     * bug; it flaked locally and then in CI. The helper waits on the app's own signal and Settings is
+     * reached by tapping the in-app link, so the signed-in state is settled before anything is read.
+     */
     await seedOnboarded(page);
-    const apiKey = await page.evaluate(async () => {
-      const html = await (await fetch('/today/')).text();
-      for (const m of html.matchAll(/\/_next\/[A-Za-z0-9/._-]+\.js/g)) {
-        const js = await (await fetch(m[0])).text();
-        const key = js.match(/AIza[0-9A-Za-z_-]{35}/);
-        if (key) return key[0];
-      }
-      return null;
-    });
-    test.skip(!apiKey, 'build has no Firebase project — there is no signed-in state to test');
+    const signedIn = await signInFakeUser(page, 'settings-uid-1');
+    test.skip(!signedIn, 'build has no Firebase project — there is no signed-in state to test');
 
-    await page.context().route(
-      /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|apis\.google\.com|firestore\.googleapis\.com/,
-      (r) => r.abort(),
-    );
-    await page.evaluate(
-      ({ key, value }) => window.localStorage.setItem(key, JSON.stringify(value)),
-      {
-        key: `firebase:authUser:${apiKey}:[DEFAULT]`,
-        value: {
-          uid: 'settings-uid-1',
-          email: 'lifter@example.com',
-          displayName: 'Kai',
-          emailVerified: true,
-          isAnonymous: false,
-          providerData: [{ providerId: 'google.com', uid: 'g-1', email: 'lifter@example.com' }],
-          stsTokenManager: {
-            refreshToken: 'spec-refresh',
-            accessToken: 'spec-access',
-            expirationTime: 4102444800000,
-          },
-          createdAt: '1700000000000',
-          lastLoginAt: '1700000000000',
-          apiKey,
-          appName: '[DEFAULT]',
-        },
-      },
-    );
-
-    await page.goto('/settings');
-    // Wait for the restored session before reading copy that depends on it.
-    await expect(page.getByTestId('account-signed-in')).toBeVisible({ timeout: 30000 });
+    await page.getByTestId('mobile-settings').click();
+    await page.waitForURL(/\/settings/);
+    await expect(page.getByTestId('account-signed-in')).toBeVisible();
 
     const body = page.locator('main');
     await expect(body).toContainText('Your data');
