@@ -248,10 +248,13 @@ export async function askCoach(req: CoachRequest, external?: AbortSignal): Promi
 
     cacheAnswer(question, req.profile, answer, req.intent);
     return { status: 'ok', answer };
-  } catch (err) {
+  } catch {
     if (timedOut) return { status: 'timeout' };
     if (external?.aborted) return { status: 'error', detail: 'cancelled' };
-    return { status: 'error', detail: String(err).slice(0, 160) };
+    // A stable token, not String(err): the exception text (a SyntaxError plus a fragment of the
+    // garbled payload) is developer data, and callers render `detail` into user-facing copy.
+    // The worker's own {error} body stays the one pass-through path — it is authored as copy.
+    return { status: 'error', detail: 'unreachable' };
   } finally {
     clearTimeout(timer);
     external?.removeEventListener('abort', onExternalAbort);
@@ -334,10 +337,13 @@ export async function askAdapt(
         model: body.model,
       },
     };
-  } catch (err) {
+  } catch {
     if (timedOut) return { status: 'timeout' };
     if (external?.aborted) return { status: 'error', detail: 'cancelled' };
-    return { status: 'error', detail: String(err).slice(0, 160) };
+    // A stable token, not String(err): the exception text (a SyntaxError plus a fragment of the
+    // garbled payload) is developer data, and callers render `detail` into user-facing copy.
+    // The worker's own {error} body stays the one pass-through path — it is authored as copy.
+    return { status: 'error', detail: 'unreachable' };
   } finally {
     clearTimeout(timer);
     external?.removeEventListener('abort', onExternalAbort);

@@ -69,7 +69,11 @@ test.describe('onboarding', () => {
     /* The workout card no longer wears a "Today's workout" kicker — the day's NAME is the
        heading and the CTA is the proof it is enterable. Rest days keep their card. */
     await expect(
-      page.getByRole('button', { name: /Start workout|Quick workout/ }).or(page.getByText(/Rest day/)).first(),
+      page
+        .getByRole('link', { name: /Start workout/ })
+        .or(page.getByRole('button', { name: /Quick workout/ }))
+        .or(page.getByText(/Rest day/))
+        .first(),
     ).toBeVisible();
 
     // Non-zero nutrition targets prove the shared macros rule ran.

@@ -56,6 +56,9 @@ export function DateNav({
       data-testid={dir === -1 ? 'date-prev' : 'date-next'}
       className={cn(
         'grid shrink-0 place-items-center rounded-full text-muted-foreground transition-[color,transform] duration-150 active:scale-90 hover:text-foreground',
+        // The visible circle stays small so the strip fits a 390px row; a transparent ::before
+        // pads the TARGET to ≥44px, same treatment as the top-bar circles (WCAG 2.5.8).
+        'relative touch-manipulation before:absolute before:-inset-1 before:content-[""]',
         compact ? 'h-9 w-9' : 'h-10 w-10 border border-border hover:border-border-strong',
       )}
     >

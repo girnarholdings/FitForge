@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { m, SPRING, PRESS } from './motion';
 
@@ -119,3 +120,50 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     </m.button>
   );
 });
+
+const MotionLink = m.create(Link);
+
+/**
+ * A navigation styled as a Button. Interactive content inside an <a> is invalid HTML, and the
+ * old `<Link><Button/></Link>` pattern produced exactly that: two tab stops per CTA and a double
+ * announcement ("Start workout, link" then "Start workout, button") for screen readers. This is
+ * ONE element — a real <a> wearing the button's full dress, including the press spring.
+ */
+export function ButtonLink({
+  variant = 'primary',
+  size = 'md',
+  block,
+  glow,
+  texture,
+  className,
+  children,
+  ...rest
+}: Omit<React.ComponentProps<typeof Link>, MotionCollidingProps> & {
+  variant?: Variant;
+  size?: Size;
+  block?: boolean;
+  glow?: boolean;
+  texture?: boolean;
+}) {
+  return (
+    <MotionLink
+      whileTap={PRESS}
+      transition={SPRING.press}
+      className={cn(
+        'inline-flex select-none items-center justify-center gap-2 font-medium',
+        'transition-[opacity,background-color,box-shadow,border-color] duration-150 ease-out',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+        'touch-manipulation',
+        VARIANTS[variant],
+        SIZES[size],
+        glow && 'shadow-[var(--shadow-glow)] hover:shadow-[var(--shadow-glow)]',
+        texture && 'ff-knurl',
+        block && 'w-full',
+        className,
+      )}
+      {...rest}
+    >
+      {children}
+    </MotionLink>
+  );
+}

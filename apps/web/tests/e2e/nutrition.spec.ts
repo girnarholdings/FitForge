@@ -78,6 +78,88 @@ test.describe('nutrition', () => {
     await expect(page.getByText(/Egg, whole/i).first()).toBeVisible();
   });
 
+  test('a double-tap on "Log N items" commits each item exactly once', async ({ page }) => {
+    /**
+     * The confirm button stays live through the sheet's exit animation, and a double-tap's
+     * second dispatch can even land in the same tick as the first — before any `disabled`
+     * re-render. Either path used to write every reviewed row twice.
+     */
+    await seedOnboarded(page);
+    await page.goto('/nutrition');
+
+    const readLogCount = async () => {
+      const state = await readDemoState(page);
+      return ((state as { logsByDate: Record<string, unknown[]> }).logsByDate[todayISO()] ?? [])
+        .length;
+    };
+
+    await page.getByTestId('nutrition-composer').fill('2 eggs and a slice of toast with butter');
+    await page.getByTestId('composer-submit').click();
+    const review = page.getByTestId('review-sheet');
+    await expect(review).toBeVisible();
+    await expect(review.getByTestId('review-row')).toHaveCount(3);
+
+    // A real double-tap: the second click dispatches against the still-mounted, exiting sheet.
+    await page.getByTestId('review-confirm').dblclick();
+    await expect(review).toBeHidden();
+    await expect.poll(readLogCount, { message: '3 reviewed items persisted exactly once' }).toBe(3);
+
+    // A SAME-TICK double dispatch — the browser can deliver both clicks before React re-renders,
+    // which is why the guard is a ref latch rather than a disabled prop.
+    await page.getByTestId('nutrition-composer').fill('banana');
+    await page.getByTestId('composer-submit').click();
+    await expect(review).toBeVisible();
+    await page.getByTestId('review-confirm').evaluate((el) => {
+      (el as HTMLElement).click();
+      (el as HTMLElement).click();
+    });
+    await expect(review).toBeHidden();
+    await expect.poll(readLogCount, { message: 'same-tick double dispatch logged once' }).toBe(4);
+
+    // Logging the same food again moments later is a NEW activation and must go through — the
+    // guard latches one tap, it never dedupes data.
+    await page.getByTestId('nutrition-composer').fill('banana');
+    await page.getByTestId('composer-submit').click();
+    await expect(review).toBeVisible();
+    await page.getByTestId('review-confirm').click();
+    await expect(review).toBeHidden();
+    await expect.poll(readLogCount, { message: 'a deliberate re-log still goes through' }).toBe(5);
+  });
+
+  test('a double-tap on send keeps the parsed meal — logged once, never discarded', async ({
+    page,
+  }) => {
+    /**
+     * The first tap parses the sentence, clears the input and mounts the confirm sheet; the
+     * second tap of the same gesture then landed on the freshly-mounted scrim, dismissing the
+     * draft — nothing logged, input already empty, the meal silently gone.
+     */
+    await seedOnboarded(page);
+    await page.goto('/nutrition');
+
+    const composer = page.getByTestId('nutrition-composer');
+    await composer.fill('2 eggs');
+    await page.getByTestId('composer-submit').dblclick();
+
+    // The sheet survives the gesture with the parsed meal intact…
+    const review = page.getByTestId('review-sheet');
+    await expect(review).toBeVisible();
+    await expect(review.getByTestId('review-row')).toHaveCount(1);
+    // …and the input cleared exactly once the parse accepted it — the draft lives in the sheet.
+    await expect(composer).toHaveValue('');
+
+    await page.getByTestId('review-confirm').click();
+    await expect(review).toBeHidden();
+
+    await expect
+      .poll(async () => {
+        const state = await readDemoState(page);
+        return ((state as { logsByDate: Record<string, unknown[]> }).logsByDate[todayISO()] ?? [])
+          .length;
+      })
+      .toBe(1);
+  });
+
   test('a logged day gets the analytics layer: the gap in meals, real portions, one-tap fixes', async ({
     page,
   }) => {

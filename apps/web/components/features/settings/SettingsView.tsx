@@ -70,6 +70,7 @@ import {
   type BackupSummary,
 } from '@/lib/demo/store';
 import { useDemoState } from '@/lib/demo/useDemo';
+import { useStorageFull } from '@/lib/storage/safeWrite';
 import {
   routineForDraft,
   targetsForDraft,
@@ -407,6 +408,10 @@ export function SettingsView() {
   const [regenPrompt, setRegenPrompt] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const { user } = useAuth();
+  /* "Saved to this browser." below is a claim about DISK, so it must follow the storage-health
+   * flag: at quota the writes are not landing, and this line would otherwise keep vouching for
+   * them. */
+  const storageFull = useStorageFull();
   const [eraseBusy, setEraseBusy] = React.useState(false);
   const [eraseError, setEraseError] = React.useState<string | null>(null);
   /**
@@ -683,10 +688,12 @@ export function SettingsView() {
           </span>
         </button>
         <p className="mt-1.5 px-1 text-xs text-muted-foreground" data-testid="settings-saved">
-          <span role="status" aria-live="polite">
-            {savedCount > 0
-              ? 'Saved to this browser.'
-              : 'Every change saves to this browser as you make it.'}
+          <span role="status" aria-live="polite" className={storageFull ? 'text-danger' : undefined}>
+            {storageFull
+              ? 'Storage is full — changes are not saving to this browser.'
+              : savedCount > 0
+                ? 'Saved to this browser.'
+                : 'Every change saves to this browser as you make it.'}
           </span>
         </p>
       </div>

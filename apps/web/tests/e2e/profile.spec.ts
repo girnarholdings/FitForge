@@ -126,7 +126,9 @@ test.describe('profile screen', () => {
     await page.goto('/today');
     // The ledger's Add action promises weight logging; dumping the athlete on Trends to hunt for
     // a second tap breaks that promise.
-    await page.getByRole('button', { name: /^Add/ }).click();
+    // A LINK, not a button: navigation CTAs stopped nesting <button> inside <a> (invalid HTML,
+    // double tab stops) — the control is one real anchor wearing the button's dress now.
+    await page.getByRole('link', { name: /^Add/ }).click();
     // The static host serves directories, so the URL lands with a trailing slash.
     await page.waitForURL(/\/progress\/?\?tab=weight/);
     await expect(page.getByTestId('progress-tab-weight')).toHaveAttribute('aria-pressed', 'true');

@@ -27,10 +27,23 @@ export function Composer({
 }) {
   const [text, setText] = React.useState('');
   const inputRef = React.useRef<HTMLInputElement>(null);
+  // A double-tap's second dispatch can arrive in the same tick, before the cleared input has
+  // re-rendered the send button disabled — a state flag or `disabled` alone would let the same
+  // sentence through twice. A ref latch blocks re-entry immediately; editing re-arms it, so a
+  // deliberate second meal moments later still goes through.
+  const sentRef = React.useRef(false);
+
+  function edit(value: string) {
+    sentRef.current = false;
+    setText(value);
+  }
 
   function submit(value: string) {
     const trimmed = value.trim();
-    if (!trimmed) return;
+    if (!trimmed || sentRef.current) return;
+    sentRef.current = true;
+    // Clear only after the parse has accepted the sentence: if `onSubmit` throws, the typed
+    // meal must still be in the field, not silently gone.
     onSubmit(trimmed);
     setText('');
   }
@@ -55,7 +68,7 @@ export function Composer({
                   key={e}
                   type="button"
                   onClick={() => {
-                    setText(e);
+                    edit(e);
                     inputRef.current?.focus();
                   }}
                   className="shrink-0 rounded-chip border border-border bg-surface-2 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
@@ -88,7 +101,7 @@ export function Composer({
               ref={inputRef}
               type="text"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => edit(e.target.value)}
               data-testid="nutrition-composer"
               aria-label="What did you eat?"
               placeholder="What did you eat?"

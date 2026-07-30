@@ -92,9 +92,18 @@ export function LineChart({
     return <div className={cn('text-sm text-muted-foreground', className)}>Not enough data yet.</div>;
   }
   const values = data.map((d) => d.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (max === min) {
+    /* A flat series — two identical weigh-ins is the normal case, not an edge — must read as a
+       level line through the middle of the plot. Without the pad it maps to the plot FLOOR with
+       three identical axis labels overprinted, which reads as an empty chart. (TrendLine already
+       pads; this keeps the two charts telling the same story.) */
+    const pad = Math.max(1, Math.abs(max) * 0.05);
+    min -= pad;
+    max += pad;
+  }
+  const span = max - min;
   const plotW = width - padL - padR;
   const plotH = height - padT - padB;
   const stepX = plotW / (data.length - 1);

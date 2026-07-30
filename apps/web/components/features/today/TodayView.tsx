@@ -8,20 +8,20 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, CardTitle, Button, Sheet } from '@/components/ui';
+import { Card, CardTitle, Button, ButtonLink, Sheet } from '@/components/ui';
 import { ArrowRightIcon, FlameSolidIcon, HammerIcon } from '@/components/ui/icons';
 import { rankFor } from '@/components/features/shared/forgeRank';
 import { todaysRoutineDay } from '@/components/features/_mock/data';
 import {
   useActiveRoutine,
   useNutritionTargets,
-  useProfileName,
   useLogsForDate,
   useDemoState,
 } from '@/lib/demo/useDemo';
 import {
   useSelectedDate,
   dayLabel,
+  dayOffset,
   isToday,
   isFuture,
   isPast,
@@ -48,7 +48,6 @@ export function TodayView() {
   const day = todaysRoutineDay(routine, viewing);
   const onToday = isToday(date);
   const targets = useNutritionTargets();
-  const displayName = useProfileName();
   const state = useDemoState();
   const sessions = useWorkoutSessions();
   const router = useRouter();
@@ -127,6 +126,15 @@ export function TodayView() {
     year: 'numeric',
   });
 
+  /* The greeting must be TRUE on both ends: "back" waits for a first logged session, and only a
+     name the athlete actually gave is used — greeting the fallback persona ("Welcome back,
+     Athlete" on a first-ever visit) is the exact copy DESIGN.md records as this header's
+     anti-pattern. */
+  const givenName = state.profile?.display_name?.trim() ?? '';
+  const greeting = givenName
+    ? `${sessions.length > 0 ? 'Welcome back' : 'Welcome'}, ${givenName}`
+    : '';
+
   return (
     /* `ff-dense` re-scales the whole type ramp for this screen (see globals.css) — Today stacks
        seven cards of numbers, and at the house scale they read zoomed-in on a 390px phone. The
@@ -144,12 +152,18 @@ export function TodayView() {
         >
           {weekdayFull}
         </h1>
-        <p className="text-sm text-muted-foreground" data-testid="today-subheading">
+        {/* break-words: the greeting carries a user-chosen name, and an unbreakable 60-char name
+            must wrap inside the column rather than drag the whole page sideways. */}
+        <p
+          className="min-w-0 break-words text-sm text-muted-foreground"
+          data-testid="today-subheading"
+        >
           {fullDate}
-          {/* The relative word only when it adds something. Printing "· Today" under today's date
-              is noise; printing it under a date three days back is the whole point. */}
-          {!onToday && <> · {dayLabel(date)}</>}
-          {onToday && displayName ? ` · Welcome back, ${displayName}` : ''}
+          {/* The relative word only when there IS one. Beyond ±1 day, dayLabel falls back to the
+              calendar date — which this line just printed, so appending it would state the same
+              fact twice. */}
+          {!onToday && Math.abs(dayOffset(date)) <= 1 && <> · {dayLabel(date)}</>}
+          {onToday && greeting ? ` · ${greeting}` : ''}
         </p>
       </header>
 
@@ -222,11 +236,9 @@ export function TodayView() {
                   </Button>
                 </div>
               ) : (
-                <Link href={`/workout/${day.id}`} className="block">
-                  <Button size="lg" block glow texture>
-                    Start workout
-                  </Button>
-                </Link>
+                <ButtonLink href={`/workout/${day.id}`} size="lg" block glow texture>
+                  Start workout
+                </ButtonLink>
               )
             ) : (
               <p
@@ -247,7 +259,9 @@ export function TodayView() {
           <Card className="shadow-[var(--shadow-card)]" data-testid="rest-day-other">
             <CardTitle>Rest day</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              No session scheduled for {dayLabel(date).toLowerCase()}.
+              {/* Only the relative words survive lowercasing — "sat, aug 1" is a mangled date. */}
+              No session scheduled for{' '}
+              {Math.abs(dayOffset(date)) <= 1 ? dayLabel(date).toLowerCase() : dayLabel(date)}.
             </p>
           </Card>
         )
@@ -285,12 +299,13 @@ export function TodayView() {
         <div className="py-3.5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-foreground">Nutrition</p>
-            <Link
-              href="/nutrition"
-              className="text-sm font-semibold text-accent"
-            >
-              {hasLogged ? 'Log food' : ''}
-            </Link>
+            {/* Rendered only when it has a job: an empty link is still a tab stop, and a screen
+                reader announces a nameless "link" pointing nowhere the user can predict. */}
+            {hasLogged && (
+              <Link href="/nutrition" className="text-sm font-semibold text-accent">
+                Log food
+              </Link>
+            )}
           </div>
           {hasLogged ? (
             <>
@@ -323,11 +338,9 @@ export function TodayView() {
                 <span className="font-semibold text-foreground">{targets.kcal_target} kcal</span> ·{' '}
                 {targets.protein_g_target} g protein.
               </p>
-              <Link href="/nutrition" className="shrink-0">
-                <Button variant="secondary" size="sm">
-                  Log your first meal
-                </Button>
-              </Link>
+              <ButtonLink href="/nutrition" variant="secondary" className="shrink-0">
+                Log your first meal
+              </ButtonLink>
             </div>
           )}
         </div>
@@ -335,14 +348,33 @@ export function TodayView() {
         <div className="flex items-center justify-between gap-3 border-t border-border py-3.5">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">Body weight</p>
-            <p className="text-xs text-muted-foreground">Log weigh-ins to see your trend.</p>
+            {/* The row keeps its promise: once weigh-ins exist, this line IS the trend — latest
+                weight and the drift across the log — not an instruction to start. */}
+            {state.weights.length > 0 ? (
+              <p className="tabular text-xs text-muted-foreground" data-testid="ledger-weight">
+                <span className="font-semibold text-foreground">
+                  {state.weights[state.weights.length - 1]!.kg} kg
+                </span>
+                {state.weights.length > 1 && (
+                  <>
+                    {' '}
+                    ·{' '}
+                    {(() => {
+                      const d =
+                        state.weights[state.weights.length - 1]!.kg - state.weights[0]!.kg;
+                      return `${d >= 0 ? '+' : ''}${d.toFixed(1)} kg over ${state.weights.length} entries`;
+                    })()}
+                  </>
+                )}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Log weigh-ins to see your trend.</p>
+            )}
           </div>
           {/* Straight to the WEIGHT tab — "Add" that lands on Trends is a broken promise. */}
-          <Link href="/progress?tab=weight" className="shrink-0">
-            <Button variant="secondary" size="sm">
-              Add <ArrowRightIcon size={16} />
-            </Button>
-          </Link>
+          <ButtonLink href="/progress?tab=weight" variant="secondary" className="shrink-0">
+            Add <ArrowRightIcon size={16} />
+          </ButtonLink>
         </div>
       </section>
 

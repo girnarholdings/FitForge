@@ -16,6 +16,7 @@
 import * as React from 'react';
 import type { MuscleSlug } from '@/components/illustrations';
 import type { Mechanics } from '@/components/features/_mock/data';
+import { safeSetItem } from '@/lib/storage/safeWrite';
 
 export const WORKOUT_LOG_KEY = 'fitforge.workoutlog.v1';
 
@@ -271,11 +272,9 @@ function load(): LogState {
 
 function writeStorage(next: LogState) {
   if (!isBrowser()) return;
-  try {
-    window.localStorage.setItem(WORKOUT_LOG_KEY, JSON.stringify(next));
-  } catch {
-    /* quota / private mode — keep in-memory only */
-  }
+  // safeSetItem: a finished session that silently fails to persist is the worst data loss in the
+  // app — the storage-full banner must fire here exactly as it does for food logs.
+  safeSetItem(WORKOUT_LOG_KEY, JSON.stringify(next));
 }
 
 function persist(next: LogState) {

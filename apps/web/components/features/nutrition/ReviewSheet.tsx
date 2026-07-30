@@ -59,6 +59,37 @@ export function ReviewSheet({
   const [customFor, setCustomFor] = React.useState<string | null>(null);
   const [editFor, setEditFor] = React.useState<string | null>(null);
 
+  // ONE CONFIRM PER OPENING. The sheet stays mounted through its exit animation, so a
+  // double-tap's second dispatch lands on a still-live button and would commit every row twice
+  // — and `disabled` alone re-renders a tick too late to stop two dispatches in the same tick.
+  const confirmedRef = React.useRef(false);
+  // Stamped during render, not in an effect: the scrim can receive the double-tap's second
+  // click before effects have run, and the guard below needs the stamp already in place.
+  const openedAtRef = React.useRef(0);
+  const wasOpenRef = React.useRef(false);
+  if (open && !wasOpenRef.current) {
+    confirmedRef.current = false;
+    openedAtRef.current = performance.now();
+  }
+  wasOpenRef.current = open;
+
+  function confirmOnce() {
+    if (confirmedRef.current) return;
+    confirmedRef.current = true;
+    onConfirm();
+  }
+
+  /**
+   * The second tap of a double-tap on the composer's send lands on this sheet's scrim the
+   * instant it mounts — dismissing the meal the first tap just parsed, with the composer
+   * already cleared. A dismissal inside the double-tap window cannot be intentional (the sheet
+   * has not finished sliding in), so it is ignored rather than allowed to discard the draft.
+   */
+  function closeSettled() {
+    if (performance.now() - openedAtRef.current < 350) return;
+    onClose();
+  }
+
   const matched = items.filter((i) => i.food && i.portion);
   const totals = sumMacros(
     matched.map((i) => computeMacros(i.food as Food, i.portion?.grams ?? 0)),
@@ -131,7 +162,7 @@ export function ReviewSheet({
 
   return (
     <>
-      <Sheet open={open} onClose={onClose} title="Does this look right?">
+      <Sheet open={open} onClose={closeSettled} title="Does this look right?">
         <div data-testid="review-sheet" className="flex max-h-[68dvh] flex-col">
           <p className="-mt-2 mb-3 line-clamp-2 shrink-0 text-sm text-muted-foreground">
             You said “<span className="text-foreground">{input}</span>” · tap anything to fix it.
@@ -211,7 +242,7 @@ export function ReviewSheet({
               glow
               data-testid="review-confirm"
               disabled={matched.length === 0}
-              onClick={onConfirm}
+              onClick={confirmOnce}
             >
               <CheckIcon size={18} />
               Log {matched.length} item{matched.length === 1 ? '' : 's'} · {Math.round(totals.kcal)}{' '}
@@ -449,16 +480,25 @@ function UnmatchedRow({
 }) {
   const configured = isCoachConfigured();
   const [ai, setAi] = React.useState<AiPhase>({ phase: 'idle' });
+  // The `disabled` prop renders a tick too late to stop a double-tap's second dispatch, and
+  // each run costs three model samples — two concurrent runs would also race on `setAi`.
+  const estimatingRef = React.useRef(false);
 
   async function estimate() {
+    if (estimatingRef.current) return;
+    estimatingRef.current = true;
     setAi({ phase: 'pending' });
-    const r = await askMacroEstimate(item.sourceText);
-    if (r.status === 'ok') setAi({ phase: 'done', est: r.estimate });
-    else if (r.status === 'not-food')
-      setAi({ phase: 'failed', why: 'The AI does not think this is a food.' });
-    else if (r.status === 'timeout')
-      setAi({ phase: 'failed', why: 'The AI took too long — try again.' });
-    else setAi({ phase: 'failed', why: 'The AI service could not be reached.' });
+    try {
+      const r = await askMacroEstimate(item.sourceText);
+      if (r.status === 'ok') setAi({ phase: 'done', est: r.estimate });
+      else if (r.status === 'not-food')
+        setAi({ phase: 'failed', why: 'The AI does not think this is a food.' });
+      else if (r.status === 'timeout')
+        setAi({ phase: 'failed', why: 'The AI took too long — try again.' });
+      else setAi({ phase: 'failed', why: 'The AI service could not be reached.' });
+    } finally {
+      estimatingRef.current = false;
+    }
   }
 
   return (

@@ -3,7 +3,7 @@
  * WS-5 imports UI ONLY from here: Button, Card, Chip, SelectableCardGrid, Stepper,
  * SearchInput, ProgressBar, Sheet, MacroRing.
  */
-export { Button } from './Button';
+export { Button, ButtonLink } from './Button';
 export type { ButtonProps } from './Button';
 
 export { Card, CardTitle, CardDescription } from './Card';
@@ -35,6 +35,8 @@ export type { ProgressBarProps } from './ProgressBar';
 
 export { Sheet } from './Sheet';
 export type { SheetProps } from './Sheet';
+
+export { StorageFullBanner } from './StorageFullBanner';
 
 export { MacroRing } from './MacroRing';
 export type { MacroRingProps } from './MacroRing';

@@ -69,7 +69,9 @@ export function ProfileCard({
   const authConfigured = isAuthConfigured();
 
   const name = user?.name ?? (displayName.trim() || 'Local Mode athlete');
-  const initial = (displayName.trim() || user?.email || 'F').slice(0, 1).toUpperCase();
+  /* Array.from: code points, not code units — an emoji-leading name must not render its avatar
+     initial as a lone surrogate (�). */
+  const initial = (Array.from(displayName.trim() || user?.email || 'F')[0] ?? 'F').toUpperCase();
 
   return (
     <Card premium className="space-y-3" data-testid="profile-card">

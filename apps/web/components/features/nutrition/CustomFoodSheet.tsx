@@ -102,10 +102,13 @@ export function CustomFoodSheet({
           >
             <FoodGlyph food={{ name, category: 'dish' }} size={22} />
           </span>
+          {/* maxLength mirrors the store's 80-point cap (lib/food/custom.ts clampName) — the
+              limit is enforced where the user can see it, not silently at save time. */}
           <input
             value={name}
             aria-label="Food name"
             placeholder="What is it? e.g. Mum's dal"
+            maxLength={80}
             onChange={(e) => setName(e.target.value)}
             className="h-11 w-full rounded-xl border border-border bg-surface px-3 text-base outline-none focus:border-accent"
           />

@@ -392,6 +392,7 @@ function ProfileMenu({
 }) {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
 
   // Route changes close the menu — following a menu item must not leave it hanging open.
   React.useEffect(() => setOpen(false), [pathname]);
@@ -402,7 +403,12 @@ function ProfileMenu({
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        // Escape must hand focus back to the trigger — otherwise a keyboard user is dropped at
+        // the top of the document and has to walk the whole bar again.
+        buttonRef.current?.focus();
+      }
     };
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
@@ -412,12 +418,50 @@ function ProfileMenu({
     };
   }, [open]);
 
-  const initial = (displayName.trim() || user?.email || '').slice(0, 1).toUpperCase();
+  /**
+   * The KEYBOARD HALF of the menu pattern this button advertises. aria-haspopup="menu" is a
+   * promise (APG): arrows move through items, Home/End jump, Tab leaves and closes. Announcing
+   * the pattern while implementing only pointer taps is worse than a plain disclosure — the
+   * screen-reader user is told the keys work and then they don't.
+   */
+  const items = () =>
+    Array.from(rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+  const focusItem = (index: number) => {
+    const list = items();
+    if (list.length === 0) return;
+    list[((index % list.length) + list.length) % list.length]?.focus();
+  };
+  const onMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (!open) return;
+    const list = items();
+    const at = list.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusItem(at + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusItem(at <= 0 ? list.length - 1 : at - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      focusItem(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      focusItem(list.length - 1);
+    } else if (e.key === 'Tab') {
+      setOpen(false); // Tab exits a menu; leaving it open behind the moved focus orphans it.
+    }
+  };
+
+  /* Array.from splits on CODE POINTS where slice(0,1) splits on code units — a name that starts
+     with an emoji or any astral-plane character would otherwise render its avatar initial as a
+     lone surrogate: the � replacement glyph. */
+  const initial = (Array.from(displayName.trim() || user?.email || '')[0] ?? '').toUpperCase();
   const onSettings = /^\/settings(\/|$)/.test(pathname);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative" onKeyDown={onMenuKeyDown}>
       <button
+        ref={buttonRef}
         type="button"
         aria-label="Profile"
         aria-haspopup="menu"
@@ -425,6 +469,15 @@ function ProfileMenu({
         data-testid="mobile-settings"
         aria-current={onSettings ? 'page' : undefined}
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => {
+          // ArrowDown on the closed trigger opens the menu with the first item focused — the
+          // APG entry gesture pointer users never see.
+          if (e.key === 'ArrowDown' && !open) {
+            e.preventDefault();
+            setOpen(true);
+            requestAnimationFrame(() => focusItem(0));
+          }
+        }}
         className={cn(
           'relative touch-manipulation before:absolute before:-inset-1 before:content-[""]',
           'grid h-9 w-9 place-items-center overflow-hidden rounded-full border transition-colors',
@@ -450,12 +503,15 @@ function ProfileMenu({
           data-testid="profile-menu"
           className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-60 rounded-sm border border-border bg-surface-2 p-1.5 shadow-[var(--shadow-pop)]"
         >
-          {/* Identity first: who this device thinks you are, and where the data lives. */}
+          {/* Identity first: who this device thinks you are, and where the data lives. The email
+              WRAPS instead of truncating — the domain is the part that distinguishes two Google
+              accounts, and an ellipsis was hiding exactly that half. break-all because an email
+              is one unbreakable token to the line-breaker. */}
           <div className="px-2.5 py-2">
-            <p className="truncate text-sm font-semibold text-foreground">
+            <p className="break-words text-sm font-semibold text-foreground">
               {user?.name ?? (displayName.trim() || 'Local Mode athlete')}
             </p>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="break-all text-xs text-muted-foreground">
               {user ? (user.email ?? 'Synced to Google') : 'Local Mode — this browser'}
             </p>
           </div>
@@ -712,8 +768,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="px-4 py-4">
           <div className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">
+            {/* Array.from: code points, not code units — an emoji-leading name must not render
+                its initial as a lone surrogate (�). */}
             <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-sm font-bold text-accent-foreground">
-              {(name || 'A').slice(0, 1).toUpperCase()}
+              {(Array.from(name)[0] ?? 'A').toUpperCase()}
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">
@@ -823,7 +881,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {signedIn ? (
           <p className="text-sm text-muted-foreground" data-testid="mode-sheet-google">
             Your plan, logs and meals are saved in this browser and backed up to{' '}
-            <span className="text-foreground">{user.email ?? 'your Google account'}</span>, so you
+            {/* break-all: an email is one unbreakable token; without it a long address is
+                hard-clipped mid-word at the sheet edge — which displays a WRONG address in the
+                sentence whose whole job is naming where the data went. */}
+            <span className="break-all text-foreground">{user.email ?? 'your Google account'}</span>
+            , so you
             can pick them up on another device. Backing up happens on its own — the sync button
             beside this chip is there when you want to push or pull right now. Manage the account in{' '}
             <Link href="/settings" className="font-semibold text-accent hover:underline">

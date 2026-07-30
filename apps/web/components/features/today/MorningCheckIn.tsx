@@ -339,9 +339,9 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
             Thirty seconds — today&rsquo;s plan adapts to how you slept.
           </p>
         </div>
+        {/* md, not sm: a first-run primary action — the ≥44px target floor applies to it. */}
         <Button
           variant="secondary"
-          size="sm"
           className="shrink-0"
           data-testid="checkin-open"
           onClick={() => setOpen(true)}

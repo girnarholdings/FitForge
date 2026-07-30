@@ -179,7 +179,13 @@ export function NutritionView() {
     setDraft(null);
   }
 
+  const copiedAtRef = React.useRef(0);
   function copyPreviousDay() {
+    // One gesture, one copy: a double-tap's second dispatch lands milliseconds later and would
+    // silently duplicate the whole previous day. A deliberate re-copy comes seconds later and
+    // passes — this guards the gesture, it does not dedupe data.
+    if (Date.now() - copiedAtRef.current < 400) return;
+    copiedAtRef.current = Date.now();
     const src = state.logsByDate[previousDay] ?? [];
     if (src.length === 0) return;
     // Copying yesterday is an entry made NOW — carrying yesterday's times over would claim the

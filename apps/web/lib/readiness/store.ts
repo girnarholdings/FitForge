@@ -13,6 +13,7 @@
  */
 import * as React from 'react';
 import { localISO, type RoutineDay } from '@/components/features/_mock/data';
+import { safeSetItem } from '@/lib/storage/safeWrite';
 import type { CheckIn, ReadinessVerdict, AdaptAction } from './engine';
 import type { AdviceLine } from './advice';
 
@@ -72,13 +73,10 @@ function load(): ReadinessState {
 
 function save(next: ReadinessState): void {
   cache = next;
-  if (isBrowser()) {
-    try {
-      window.localStorage.setItem(READINESS_KEY, JSON.stringify(next));
-    } catch {
-      /* private mode — the in-memory copy still serves this session */
-    }
-  }
+  // A check-in that fails to land must be SAID, not swallowed: `safeSetItem` raises the shared
+  // storage-health flag (lib/storage/safeWrite) that drives the app-wide "storage is full"
+  // banner. The in-memory copy still serves this session either way.
+  if (isBrowser()) safeSetItem(READINESS_KEY, JSON.stringify(next));
   for (const l of listeners) l();
 }
 

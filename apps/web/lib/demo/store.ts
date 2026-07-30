@@ -48,6 +48,7 @@ import {
   type LogState,
   type ShapeIssues,
 } from '@/components/features/shared/workoutLog';
+import { safeSetItem } from '@/lib/storage/safeWrite';
 
 export const DEMO_STORAGE_KEY = 'fitforge.demo.v1';
 export const DEMO_USER_ID = 'demo-user';
@@ -890,11 +891,11 @@ function load(): DemoState {
 
 function writeStorage(next: DemoState) {
   if (!isBrowser()) return;
-  try {
-    window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    /* quota / private mode — keep in-memory only */
-  }
+  /* A write that does not land is DATA LOSS, not noise: the UI has already confirmed the food
+   * row / weigh-in it was carrying. `safeSetItem` raises the shared storage-health flag (see
+   * `lib/storage/safeWrite`), which drives the app-wide "storage is full" banner. The in-memory
+   * copy still serves this session either way. */
+  safeSetItem(DEMO_STORAGE_KEY, JSON.stringify(next));
 }
 
 function persist(next: DemoState) {
@@ -1007,6 +1008,10 @@ const SYNC_DENYLIST_PREFIXES: readonly string[] = [
   'fitforge.health.',
   'fitforge.cycle.',
   'fitforge.readiness.',
+  // The in-progress workout snapshot is device-local by nature: it restores only into the exact
+  // day and rows it was captured from, so on any other device it is at best inert and at worst
+  // a stale resume prompt for a session someone finished elsewhere.
+  'fitforge.activeSession.',
 ];
 
 function isSyncDenied(key: string): boolean {
@@ -1237,36 +1242,80 @@ export function importAllState(
   const parsed = parseBackup(raw);
   if (!parsed.ok) return parsed;
 
-  /* -- commit ------------------------------------------------------------------------------- */
-  if (mode === 'merge') {
-    persist(mergeDemo(load(), parsed.demo));
-    if (parsed.log) replaceWorkoutLog(mergeSessions(readWorkoutLog(), parsed.log));
-    if (isBrowser()) {
-      for (const [key, value] of parsed.extras) {
-        // MERGE NEVER CLOBBERS A CACHE THIS DEVICE ALREADY HAS. These keys hold learned parser
-        // corrections, custom foods, model preferences — the local copy is the one in use.
-        try {
-          if (window.localStorage.getItem(key) === null) window.localStorage.setItem(key, value);
-        } catch {
-          /* quota — the important sections are already in */
-        }
-      }
-    }
-    return { ok: true };
-  }
+  /* -- stage ---------------------------------------------------------------------------------
+   * Every byte the commit will write, computed BEFORE storage is touched. A quota failure
+   * halfway through streamed writes is exactly the half-imported state `parseBackup` exists to
+   * prevent — so the writes go down as one verified batch, or not at all. */
+  const merge = mode === 'merge';
+  const demo = merge ? mergeDemo(load(), parsed.demo) : parsed.demo;
+  const log = parsed.log
+    ? merge
+      ? mergeSessions(readWorkoutLog(), parsed.log)
+      : parsed.log
+    : null;
 
-  persist(parsed.demo);
-  if (parsed.log) replaceWorkoutLog(parsed.log);
+  const writes: [string, string][] = [[DEMO_STORAGE_KEY, JSON.stringify(demo)]];
+  if (log) writes.push([WORKOUT_LOG_KEY, JSON.stringify(log)]);
   if (isBrowser()) {
     for (const [key, value] of parsed.extras) {
-      try {
-        window.localStorage.setItem(key, value);
-      } catch {
-        /* quota — the important sections are already in */
-      }
+      // MERGE NEVER CLOBBERS A CACHE THIS DEVICE ALREADY HAS. These keys hold learned parser
+      // corrections, custom foods, model preferences — the local copy is the one in use.
+      if (merge && window.localStorage.getItem(key) !== null) continue;
+      writes.push([key, value]);
     }
   }
+
+  /* -- commit, verified ---------------------------------------------------------------------
+   * Success may only be claimed once every key is PROVEN on disk: "imported" followed by a
+   * reload that reverts is the one thing this flow must never do. On failure storage is rolled
+   * back and the in-memory stores were never touched, so "Nothing was changed" is literally true. */
+  if (!commitVerified(writes)) {
+    return {
+      ok: false,
+      error:
+        "This browser's storage is full — the backup could not be saved. Nothing was changed. " +
+        'Free up space and try again.',
+    };
+  }
+
+  // Storage already holds the imported bytes; these bring the in-memory caches and their
+  // subscribers in line (their re-writes replace same-or-smaller values, which fit by definition).
+  persist(demo);
+  if (log) replaceWorkoutLog(log);
   return { ok: true };
+}
+
+/**
+ * Write every pair and prove each landed, or leave storage exactly as found.
+ *
+ * `setItem` throwing is the loud failure; the read-back catches the quiet one (an implementation
+ * that accepts the call and drops the value). Rollback restores the snapshot taken before the
+ * first write — each restored value occupied that same key moments earlier, so restoring cannot
+ * need more room than the import that just failed.
+ */
+function commitVerified(writes: readonly [string, string][]): boolean {
+  if (!isBrowser()) return true;
+  const prior = new Map<string, string | null>();
+  for (const [key] of writes) {
+    if (!prior.has(key)) prior.set(key, window.localStorage.getItem(key));
+  }
+  try {
+    for (const [key, value] of writes) {
+      window.localStorage.setItem(key, value);
+      if (window.localStorage.getItem(key) !== value) throw new Error('write did not persist');
+    }
+    return true;
+  } catch {
+    for (const [key, value] of prior) {
+      try {
+        if (value === null) window.localStorage.removeItem(key);
+        else window.localStorage.setItem(key, value);
+      } catch {
+        /* a key whose write threw still holds its prior value — setItem is atomic per key */
+      }
+    }
+    return false;
+  }
 }
 
 /**

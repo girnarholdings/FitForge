@@ -278,13 +278,24 @@ export function CoachView() {
         });
         return;
       }
-      patchTurn(turnId, {
-        kind: 'unavailable',
-        headline: 'The coach is unavailable',
-        detail: `The AI service could not be reached (${
-          result.status === 'error' ? result.detail : result.status
-        }). Here is the closest guidance from the guide instead.`,
-      });
+      {
+        /* Internal failure tokens become plain sentences; only the worker's own {error} body —
+           authored as product copy — passes through verbatim. Raw exception text never reaches
+           this card (see lib/kb/client.ts). */
+        const raw = result.status === 'error' ? result.detail : result.status;
+        const PLAIN: Record<string, string> = {
+          unreachable: 'the connection failed',
+          empty_response: 'it sent back an empty reply',
+          cancelled: 'the request was cancelled',
+        };
+        const reason =
+          PLAIN[raw] ?? (/^HTTP \d+$/.test(raw) ? `it answered with an error (${raw})` : raw);
+        patchTurn(turnId, {
+          kind: 'unavailable',
+          headline: 'The coach is unavailable',
+          detail: `The AI service could not be reached — ${reason}. Here is the closest guidance from the guide instead.`,
+        });
+      }
     },
     [patchTurn],
   );
@@ -725,9 +736,11 @@ function EmptyAsk({
 function QuestionBubble({ text }: { text: string }) {
   return (
     <div className="flex justify-end">
+      {/* break-words: the text is the user's own — one long unbroken token must wrap inside the
+          bubble, not drag the whole thread wider than the phone. */}
       <p
         data-testid="coach-question"
-        className="max-w-[85%] rounded-card rounded-br-md bg-accent-muted px-3.5 py-2.5 text-sm font-medium text-accent"
+        className="max-w-[85%] break-words rounded-card rounded-br-md bg-accent-muted px-3.5 py-2.5 text-sm font-medium text-accent"
       >
         {text}
       </p>

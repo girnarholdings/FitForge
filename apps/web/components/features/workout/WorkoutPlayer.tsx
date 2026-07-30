@@ -92,6 +92,11 @@ import {
   type PersonalRecord,
 } from '@/components/features/shared/workoutLog';
 import { rankFor } from '@/components/features/shared/forgeRank';
+import {
+  activeSessionFor,
+  clearActiveSession,
+  saveActiveSession,
+} from '@/lib/workout/activeSession';
 import { Confetti, usePrefersReducedMotion, type BurstSpec } from '@/components/ui/Confetti';
 
 /** What the summary needs to tell the strike/rank story, frozen at finish time. */
@@ -331,7 +336,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   const [cautionOpen, setCautionOpen] = React.useState(false);
   const [index, setIndex] = React.useState(0);
   const [finished, setFinished] = React.useState(false);
-  const [startedAt] = React.useState(() => Date.now());
+  const [startedAt, setStartedAt] = React.useState(() => Date.now());
   const [finishedSession, setFinishedSession] = React.useState<WorkoutSession | null>(null);
   const [prs, setPrs] = React.useState<PersonalRecord[]>([]);
   /** Strike count + ladder standing at the moment the session landed — see finishWorkout. */
@@ -423,6 +428,81 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
     );
   }, [reconcileKey, day, scheme, experience]);
 
+  /* ══════════════════════════════════════════ SURVIVE THE RELOAD (`fitforge.activeSession.v1`)
+   *
+   * Everything above lives in React state, so until this pair of effects existed a reload, an
+   * accidental Back or a Safari tab eviction between sets destroyed every logged set with no way
+   * back. The contract (see `lib/workout/activeSession`):
+   *
+   *   · SAVE on every mutation — but only once the athlete has actually TOUCHED the session
+   *     (`sessionDirty`). Opening the player to look at the day and leaving writes nothing, so
+   *     browsing can never manufacture a phantom in-progress workout.
+   *   · RESTORE on mount, gated on the DAY ID and joined per row by `RoutineExercise.id`. A
+   *     snapshot from a different day is never merged in — it just sits until the athlete's next
+   *     real session supersedes it or the TTL expires it. One athlete, one live session: starting
+   *     to log a different day IS abandoning the old one, so no resume-vs-discard dialog.
+   *   · CLEAR on finish — the workout log owns the sets from that moment.
+   */
+  const sessionDirty = React.useRef(false);
+  const sessionRestored = React.useRef(false);
+  /** finishWorkout's re-entry latch — a ref, because state commits a render too late (see there). */
+  const finishGuard = React.useRef(false);
+
+  React.useEffect(() => {
+    if (sessionRestored.current || !day) return;
+    sessionRestored.current = true;
+    const saved = activeSessionFor(day.id);
+    if (!saved) return;
+    const byRow = new Map(saved.exercises.map((e) => [e.rowId, e]));
+    // A snapshot none of whose rows exist any more (plan regenerated under the same day id) has
+    // nothing to restore into; leave it to be superseded rather than resurrecting orphan sets.
+    if (!exercises.some((ex) => byRow.has(ex.routineExercise.id))) return;
+    sessionDirty.current = true;
+    setExercises((prev) =>
+      prev.map((ex) => {
+        const s = byRow.get(ex.routineExercise.id);
+        if (!s || s.sets.length === 0) return ex;
+        return {
+          ...ex,
+          // The swap survives the reload too — the athlete is standing at the substitute machine.
+          exerciseId: s.exerciseId,
+          exerciseName: s.exerciseName,
+          sets: s.sets.map((t) => ({ ...t })),
+          // Clamped to the ramp built for THIS mount, so a snapshot can never desync the tick
+          // list from the steps on screen (the 4-ticks-against-3-steps bug the reconcile fixed).
+          warmups: ex.warmups.map((_, i) => s.warmups[i] ?? false),
+          warmupAck: s.warmupAck,
+        };
+      }),
+    );
+    setIndex(Math.max(0, Math.min(exercises.length - 1, saved.exerciseIndex)));
+    // The original start time, so the summary's elapsed minutes span the real session.
+    setStartedAt(saved.startedAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, against the mount-built state
+  }, [day]);
+
+  React.useEffect(() => {
+    if (!day || finished || !sessionDirty.current) return;
+    saveActiveSession({
+      dayId: day.id,
+      startedAt,
+      exerciseIndex: index,
+      exercises: exercises.map((ex) => ({
+        rowId: ex.routineExercise.id,
+        exerciseId: ex.exerciseId,
+        exerciseName: ex.exerciseName,
+        sets: ex.sets.map((s) => ({
+          reps: s.reps,
+          weight_kg: s.weight_kg,
+          rpe: s.rpe,
+          done: s.done,
+        })),
+        warmups: [...ex.warmups],
+        warmupAck: ex.warmupAck,
+      })),
+    });
+  }, [exercises, index, day, startedAt, finished]);
+
   if (!day) {
     return (
       <PlayerFallback
@@ -468,6 +548,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
    * gets to rewrite it.
    */
   function updateSet(exIdx: number, setIdx: number, patch: Partial<SetEntry>) {
+    sessionDirty.current = true;
     setExercises((prev) =>
       prev.map((ex, i) => {
         if (i !== exIdx) return ex;
@@ -525,6 +606,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
    * countdown over the screen between them would turn a two-minute warm-up into a six-minute one.
    */
   function toggleWarmup(stepIdx: number) {
+    sessionDirty.current = true;
     setExercises((prev) =>
       prev.map((ex, i) =>
         i === index
@@ -535,12 +617,14 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   }
 
   function ackWarmup() {
+    sessionDirty.current = true;
     setExercises((prev) =>
       prev.map((ex, i) => (i === index ? { ...ex, warmupAck: true } : ex)),
     );
   }
 
   function addSet() {
+    sessionDirty.current = true;
     setExercises((prev) =>
       prev.map((ex, i) => {
         if (i !== index) return ex;
@@ -576,6 +660,7 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   }
 
   function onSwap(sub: SubstituteRow) {
+    sessionDirty.current = true;
     setExercises((prev) =>
       prev.map((ex, i) =>
         i === index ? { ...ex, exerciseId: sub.exercise_id, exerciseName: sub.name } : ex,
@@ -584,6 +669,12 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
   }
 
   function finishWorkout() {
+    /* IDEMPOTENT, VIA THE REF. Two click dispatches in one task (a double-tap, a dispatched
+     * synthetic click) both read `finished === false` — state commits a render too late to stop
+     * the second one — and each would `logSession` its own copy of the day. The ref flips
+     * synchronously, so re-entry is a no-op and exactly one session can ever be persisted. */
+    if (finishGuard.current) return;
+    finishGuard.current = true;
     // Persist the session (completed sets only) so heatmap / PRs / streaks pick it up.
     const loggedExercises: LoggedExercise[] = exercises.map((e) => {
       const full = mockExerciseById(e.exerciseId);
@@ -623,6 +714,11 @@ export function WorkoutPlayer({ sessionId }: { sessionId: string }) {
     // the athlete ever tapped its X. Without this, someone who simply ignored the card would meet
     // it again on session two — and a "read this once" card that shows twice is worse than none.
     dismissExplainer(FIRST_SET_EXPLAINER_ID);
+    // The workout log owns these sets from here; a surviving scratch copy would offer to "resume"
+    // a session that is already history. Dirty flips off too, so the save effect cannot re-write
+    // the key on the renders that follow.
+    sessionDirty.current = false;
+    clearActiveSession();
     setFinishedSession(session);
     setPrs(beaten);
     setFinished(true);

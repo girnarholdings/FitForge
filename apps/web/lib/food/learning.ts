@@ -7,6 +7,8 @@
  * localStorage under `fitforge.foodAliases.v1`, so the same words resolve correctly next time.
  * Purely local, no server, and it degrades to a no-op in private mode / on the server.
  */
+import { safeSetItem } from '@/lib/storage/safeWrite';
+
 const KEY = 'fitforge.foodAliases.v1';
 const MAX_ALIASES = 300;
 
@@ -34,12 +36,10 @@ function read(): AliasFile {
 }
 
 function write(next: AliasFile): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* quota / private mode */
-  }
+  // Learning is a nicety, but a failing write here still means the browser is out of room — the
+  // shared storage-health flag (lib/storage/safeWrite) carries that fact to the one surface
+  // that reports it. SSR-safe: safeSetItem is a no-op without a window.
+  safeSetItem(KEY, JSON.stringify(next));
 }
 
 /** All learned phrase → food id pairs. */

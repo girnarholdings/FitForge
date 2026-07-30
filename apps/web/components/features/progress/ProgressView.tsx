@@ -420,13 +420,10 @@ function MeasurementsTab() {
       // A dartboard for "measure your arms and waist" meant nothing. TapeIcon was authored for
       // exactly this row and had never been connected to anything.
       icon={<TapeIcon size={26} />}
-      title="No measurements yet"
-      body="Track chest, waist, arms and more to see how your body composition changes — not just the scale."
-      action={
-        <Button variant="secondary" className="mt-1" disabled>
-          Coming soon
-        </Button>
-      }
+      title="Measurements aren't built yet"
+      // The honest sentence instead of a permanently disabled "Coming soon" button: an empty
+      // state that invites tracking and then offers a dead control promises what it can't do.
+      body="Girth tracking — chest, waist, arms — is planned but not in the app yet. Body weight and progress photos cover composition for now."
     />
   );
 }
@@ -513,7 +510,7 @@ function PhotosTab() {
         <EmptyState
           icon={<PlusIcon size={26} />}
           title="No progress photos yet"
-          body="Add front, side and back photos over time to see visual change. Photos stay on your device in demo mode."
+          body="Add front, side and back photos over time to see visual change. In Local Mode, photos stay on this device."
           action={
             <Button className="mt-1" onClick={() => setUploadOpen(true)}>
               <PlusIcon size={18} /> Add a photo

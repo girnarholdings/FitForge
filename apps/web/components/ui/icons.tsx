@@ -638,9 +638,16 @@ export const CollarIcon = ({ open = false, ...p }: IconProps & { open?: boolean 
  */
 export const CoachIcon = (p: IconProps) => (
   <Svg {...p}>
-    <path d="M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1" />
+    {/* PEAKED, not domed. The first pass borrowed the stock rounded biceps curve and the owner
+        called it soft — so the dome is replaced with an angular peak, the head is a heavier slab,
+        and two parallel definition cuts across the forearm mass do what cuts do on a physique.
+        The cuts sit in the muscle's center: at 16px they merge into one, which still reads as
+        definition rather than noise. */}
+    <path d="M12.409 13.017 15.4 11.3l3.9 1L22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1" />
     <path d="m11.7 6.1 4.9-2.2" />
-    <path d="m16.9 1.7 2.4 5.2" strokeWidth={3.2} strokeLinecap="butt" />
+    <path d="m16.7 1.5 2.6 5.6" strokeWidth={3.4} strokeLinecap="butt" />
+    <path d="m13.6 16.2 3.6-2.3" />
+    <path d="m11 18.3 3.6-2.3" />
   </Svg>
 );
 

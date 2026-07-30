@@ -30,17 +30,19 @@ test.describe('today', () => {
     const targetLabel = await page.getByText(/Your target is \d+ kcal/).innerText();
     const kcalTarget = parseInt((targetLabel.match(/(\d+)\s*kcal/) ?? ['', '0'])[1], 10);
     expect(kcalTarget).toBeGreaterThan(0);
-    await expect(page.getByRole('button', { name: /Log your first meal/i })).toBeVisible();
+    // Role LINK: navigation CTAs are single real anchors now, not buttons nested in anchors.
+    await expect(page.getByRole('link', { name: /Log your first meal/i })).toBeVisible();
 
     // A CTA into a workout exists whether today is a training or rest day. DATE-DEPENDENT ON
     // PURPOSE: which branch renders depends on the weekday the suite runs on, so both real labels
     // are accepted. ("Start a freestyle workout" was the rest-day CTA before the quick-workout
     // picker replaced it; the stale alternative kept this green only on training days, and the
     // first rest-day run caught it.)
-    const startBtn = page.getByRole('button', {
-      name: /Start workout|Quick workout/,
-    });
-    await expect(startBtn).toBeVisible();
+    // "Start workout" navigates (a link); the rest-day "Quick workout" opens a picker (a button).
+    const startBtn = page
+      .getByRole('link', { name: /Start workout/ })
+      .or(page.getByRole('button', { name: /Quick workout/ }));
+    await expect(startBtn.first()).toBeVisible();
 
     // The smith-rank ladder, fresh-user state: rank Spark, zero strikes, first rung 3 away.
     // The crest and the progress line are real data off the workout log, not decoration — a

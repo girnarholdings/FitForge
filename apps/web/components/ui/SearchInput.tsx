@@ -46,6 +46,7 @@ export function SearchInput<T>({
   const [active, setActive] = React.useState(0);
   const abortRef = React.useRef<AbortController | null>(null);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showRecents = query.trim().length < minChars;
   const items = showRecents ? recents : results;
@@ -128,8 +129,16 @@ export function SearchInput<T>({
             setQuery(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onFocus={() => {
+            // A pending blur-close must die on refocus: without this, blur-then-refocus inside
+            // the 120ms window (e.g. a dialog moving initial focus, then the user typing) lets
+            // the stale timer close the list while the input is focused — and nothing reopens it.
+            if (blurTimer.current) clearTimeout(blurTimer.current);
+            setOpen(true);
+          }}
+          onBlur={() => {
+            blurTimer.current = setTimeout(() => setOpen(false), 120);
+          }}
           onKeyDown={onKeyDown}
           className="h-12 w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
         />

@@ -248,6 +248,6 @@ test.describe('morning check-in', () => {
     await page.goto('/today');
     await expect(page.getByTestId('checkin-summary')).toContainText(/kept the plan/i);
     await expect(page.getByTestId('rest-parked')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Start workout' })).toBeVisible();
   });
 });
