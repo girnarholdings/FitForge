@@ -38,6 +38,7 @@ export function ReviewSheet({
   open,
   input,
   items,
+  via,
   slot,
   recents,
   onSlotChange,
@@ -48,6 +49,8 @@ export function ReviewSheet({
   open: boolean;
   input: string;
   items: ParsedItem[];
+  /** who produced these rows — stated in the sheet, so an AI fallback is never silent */
+  via?: { kind: 'ai'; model?: string } | { kind: 'offline' };
   slot: MealSlot;
   recents: Food[];
   onSlotChange: (slot: MealSlot) => void;
@@ -58,6 +61,7 @@ export function ReviewSheet({
   const [pickerFor, setPickerFor] = React.useState<string | null>(null);
   const [customFor, setCustomFor] = React.useState<string | null>(null);
   const [editFor, setEditFor] = React.useState<string | null>(null);
+  const models = useCoachModels();
 
   // ONE CONFIRM PER OPENING. The sheet stays mounted through its exit animation, so a
   // double-tap's second dispatch lands on a still-live button and would commit every row twice
@@ -164,9 +168,30 @@ export function ReviewSheet({
     <>
       <Sheet open={open} onClose={closeSettled} title="Does this look right?">
         <div data-testid="review-sheet" className="flex max-h-[68dvh] flex-col">
-          <p className="-mt-2 mb-3 line-clamp-2 shrink-0 text-sm text-muted-foreground">
+          <p className="-mt-2 mb-1 line-clamp-2 shrink-0 text-sm text-muted-foreground">
             You said “<span className="text-foreground">{input}</span>” · tap anything to fix it.
           </p>
+          {/* PROVENANCE, one quiet line. Who read the sentence matters to whether you trust the
+              rows: the trainer states which model, and a fallback to the on-device catalog is
+              said out loud rather than silently serving different-quality guesses. */}
+          {via && (
+            <p
+              className="mb-3 shrink-0 text-[11px] text-muted-foreground"
+              data-testid="review-via"
+              data-kind={via.kind}
+            >
+              {via.kind === 'ai' ? (
+                <>
+                  <SparkleIcon size={11} className="mr-1 inline-block align-[-1px] text-accent" />
+                  Read by your AI trainer
+                  {via.model ? ` · ${labelForModel(models, via.model) ?? via.model}` : ''} — three
+                  samples per item.
+                </>
+              ) : (
+                'Matched offline from the food catalog.'
+              )}
+            </p>
+          )}
 
           {/* WHICH MODEL WILL ESTIMATE. Only when something actually needs estimating — with every
               item matched there is no AI in this flow and a model dropdown would be noise. One

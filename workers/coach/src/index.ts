@@ -1069,6 +1069,137 @@ async function estimateMacros(
   };
 }
 
+/* ═══════════════════════════════════════════ meal: AI-first whole-sentence parsing ══ */
+
+const MAX_MEAL_CHARS = 240;
+const MEAL_SPLIT_TEMPERATURE = 0.2;
+const MEAL_MAX_TOKENS = 320;
+const MEAL_MAX_ITEMS = 6;
+
+/**
+ * The meal splitter prompt. ONE low-temperature call that turns a typed sentence into discrete
+ * items — the consensus estimator then prices each item with its own three samples, so the
+ * structure decision (what was eaten, how it was cooked) and the numbers decision (what it
+ * costs) are made by different calls with different disciplines.
+ *
+ * THE PREPARATION RULE is the whole reason this task exists. The offline matcher can only match
+ * words, so "steak and eggs" landed on "Egg, whole, raw/boiled" — a database row, not a
+ * breakfast. A model reading the sentence knows the eggs next to a steak arrive fried or
+ * scrambled, and that context has to be stated as a rule or free models revert to the most
+ * generic entry just like the database did.
+ */
+const MEAL_SYSTEM =
+  'You split a meal description into its food items. Output ONLY one minified JSON object — no ' +
+  'prose, no markdown, no code fence. Schema: {"items":[{"food":"<specific name including its ' +
+  'likely preparation>","qty":<number>,"unit":"<the unit word they used, or null>","grams":' +
+  '<estimated TOTAL grams for this item as eaten>}]}. Rules: 1 to ' + String(MEAL_MAX_ITEMS) +
+  ' items. "food" must name the preparation the dish context implies — eggs beside a steak are ' +
+  'fried or scrambled, not raw or boiled; chicken with rice is grilled or roasted; toast is ' +
+  'toasted bread. Never add foods the text does not imply. qty is the stated count or 1; unit ' +
+  'is their own word ("egg","slice","cup","oz") or null; grams must be realistic for the ' +
+  'quantity (one large egg ~50, a 6 oz steak ~170). If the input is not about food or drink, ' +
+  'output exactly {"error":"not_food"}.';
+
+interface MealSplitItem {
+  food: string;
+  qty: number;
+  unit: string | null;
+  grams: number;
+}
+
+/** Hard shape gate for the splitter's answer — anything suspect fails the whole split. */
+function validateMealSplit(raw: unknown): MealSplitItem[] | 'not_food' | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  if (r.error === 'not_food') return 'not_food';
+  if (!Array.isArray(r.items) || r.items.length === 0) return null;
+  const out: MealSplitItem[] = [];
+  for (const row of r.items.slice(0, MEAL_MAX_ITEMS)) {
+    if (!row || typeof row !== 'object') return null;
+    const i = row as Record<string, unknown>;
+    const food = typeof i.food === 'string' ? i.food.trim().slice(0, 60) : '';
+    const qty = Number(i.qty);
+    const grams = Number(i.grams);
+    if (food.length < 2) return null;
+    if (!Number.isFinite(qty) || qty <= 0 || qty > 50) return null;
+    if (!Number.isFinite(grams) || grams < 5 || grams > 3000) return null;
+    out.push({
+      food,
+      qty: Math.round(qty * 100) / 100,
+      unit: typeof i.unit === 'string' && i.unit.trim() ? i.unit.trim().slice(0, 16) : null,
+      grams: Math.round(grams),
+    });
+  }
+  return out.length > 0 ? out : null;
+}
+
+/**
+ * Split once, then price every item through the SAME consensus loop the single-food estimator
+ * uses (three samples, median, range, thermodynamic gate). Items whose estimate fails come back
+ * with an `error` marker instead of numbers — the client falls back to its offline catalog for
+ * exactly those rows rather than losing the whole meal.
+ */
+async function parseMeal(
+  env: Env,
+  text: string,
+  preferred?: ModelChoice,
+  signedIn = false,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const split = await generateOnce(
+    env,
+    MEAL_SYSTEM,
+    `Meal: ${text}`,
+    { temperature: MEAL_SPLIT_TEMPERATURE, maxTokens: MEAL_MAX_TOKENS },
+    preferred,
+    signedIn,
+  );
+  if (!split.ok) return { status: split.status, body: { error: 'ai_unavailable', detail: split.detail } };
+
+  const parsed = validateMealSplit(extractJson(split.answer));
+  if (parsed === 'not_food')
+    return {
+      status: 422,
+      body: { error: 'not_food', detail: `"${text}" does not look like a meal.` },
+    };
+  if (!parsed) return { status: 502, body: { error: 'unusable_answer' } };
+
+  const estimates = await Promise.all(
+    parsed.map((it) =>
+      estimateMacros(
+        env,
+        it.food,
+        `${it.qty}${it.unit ? ` ${it.unit}` : ''} (~${it.grams} g total)`,
+        preferred,
+        signedIn,
+      ).catch(() => ({ status: 503, body: { error: 'ai_unavailable' } as Record<string, unknown> })),
+    ),
+  );
+
+  const items = parsed.map((it, i) => {
+    const est = estimates[i]!;
+    if (est.status !== 200) return { ...it, error: String(est.body.error ?? 'estimate_failed') };
+    const b = est.body;
+    return {
+      ...it,
+      per: b.per,
+      kcal: b.kcal,
+      protein_g: b.protein_g,
+      carbs_g: b.carbs_g,
+      fat_g: b.fat_g,
+      confidence: b.confidence,
+      assumptions: b.assumptions,
+      samples: b.samples,
+    };
+  });
+
+  // A meal where nothing could be priced is a failure, not a result — the client's offline
+  // parser will do a better job than a list of error rows.
+  if (!items.some((i) => !('error' in i)))
+    return { status: 503, body: { error: 'ai_unavailable', detail: 'no item could be estimated' } };
+
+  return { status: 200, body: { items, provider: split.provider, model: split.model } };
+}
+
 /* ═══════════════════════════════════════════════════════════════════ HTTP handler ══ */
 
 function corsHeaders(origin: string | null, env: Env): Record<string, string> {
@@ -1298,7 +1429,7 @@ export default {
            * pays is nobody's business, and a count answers the only question a probe has.
            */
           pro: { models: modelCatalog(env).filter((m) => m.requiresPro).length, allowlist: proUids(env).length },
-          tasks: ['chat', 'macros', 'adapt'],
+          tasks: ['chat', 'macros', 'adapt', 'meal'],
         },
         200,
         cors,
@@ -1353,6 +1484,20 @@ export default {
           preferred,
           signedIn,
         );
+        return json(r.body, r.status, cors);
+      } catch (err) {
+        return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);
+      }
+    }
+
+    /* ── task: meal (AI-first sentence parsing) ────────────────────────────────────── */
+    if ((body as { task?: unknown }).task === 'meal') {
+      const text = String((body as { text?: unknown }).text ?? '')
+        .trim()
+        .slice(0, MAX_MEAL_CHARS);
+      if (!text) return json({ error: 'missing_text' }, 400, cors);
+      try {
+        const r = await parseMeal(env, text, preferred, signedIn);
         return json(r.body, r.status, cors);
       } catch (err) {
         return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);

@@ -32,6 +32,8 @@ import {
 } from '@/lib/food/format';
 import { resolvePortion, unitOptions } from '@/lib/food/measures';
 import { parseFoodText } from '@/lib/food/parse';
+import { aiParseEnabled, askMealParse, itemsFromAiMeal } from '@/lib/food/aiParse';
+import { isCoachConfigured } from '@/lib/kb/client';
 import { learnedFoodIds } from '@/lib/food/learning';
 import { popularFoods } from '@/lib/food/search';
 import type { Food, ParsedItem } from '@/lib/food/types';
@@ -60,7 +62,12 @@ export function NutritionView() {
     return latest?.kg ?? state.draft.weight_kg ?? null;
   }, [state.weights, state.draft.weight_kg]);
 
-  const [draft, setDraft] = React.useState<{ input: string; items: ParsedItem[] } | null>(null);
+  const [draft, setDraft] = React.useState<{
+    input: string;
+    items: ParsedItem[];
+    /** who produced these rows — the review sheet states it, so a fallback is never silent */
+    via: { kind: 'ai'; model?: string } | { kind: 'offline' };
+  } | null>(null);
   const [draftSlot, setDraftSlot] = React.useState<MealSlot>('lunch');
   const [pickerSlot, setPickerSlot] = React.useState<MealSlot | null>(null);
   const [editing, setEditing] = React.useState<NutritionLog | null>(null);
@@ -116,12 +123,42 @@ export function NutritionView() {
 
   /* --------------------------------------------------------------------------- actions */
 
+  /**
+   * AI FIRST, CATALOG AS THE FLOOR. When the toggle is on and a coach worker is reachable, the
+   * sentence goes to the `meal` task — one model call reads it whole (so the eggs next to a
+   * steak come back "scrambled", not the database's "raw/boiled" row) and each item is priced
+   * by the same three-sample consensus the single-food estimator uses. The offline parse is
+   * computed FIRST and kept: it carries the meal-slot detection either way, it replaces any AI
+   * item that failed its estimate, and it IS the result whenever the AI is off, unconfigured,
+   * offline, over its token budget, or simply wrong about the whole sentence being food.
+   */
   const parseAndReview = React.useCallback(
-    (text: string) => {
+    async (text: string) => {
       const boostIds = [...historyIds, ...learnedFoodIds()];
-      const result = parseFoodText(text, { boostIds });
-      setDraftSlot(result.mealSlot ?? defaultMealSlot());
-      setDraft({ input: text, items: result.items });
+      const offline = parseFoodText(text, { boostIds });
+      const openOffline = () => {
+        setDraftSlot(offline.mealSlot ?? defaultMealSlot());
+        setDraft({ input: text, items: offline.items, via: { kind: 'offline' } });
+      };
+
+      const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+      if (!aiParseEnabled() || !isCoachConfigured() || !online) {
+        openOffline();
+        return;
+      }
+
+      const r = await askMealParse(text);
+      if (r.status !== 'ok') {
+        openOffline();
+        return;
+      }
+      const items = itemsFromAiMeal(r.meal);
+      if (items.length === 0 || items.every((i) => i.food == null)) {
+        openOffline();
+        return;
+      }
+      setDraftSlot(offline.mealSlot ?? defaultMealSlot());
+      setDraft({ input: text, items, via: { kind: 'ai', model: r.meal.model } });
     },
     [historyIds],
   );
@@ -152,6 +189,8 @@ export function NutritionView() {
           child: false,
         },
       ],
+      // A deliberate catalog pick has no parse to attribute — "offline" keeps the sheet quiet.
+      via: { kind: 'offline' },
     });
   }
 
@@ -421,6 +460,7 @@ export function NutritionView() {
         open={draft != null}
         input={draft?.input ?? ''}
         items={draft?.items ?? []}
+        via={draft?.via}
         slot={draftSlot}
         recents={recents}
         onSlotChange={setDraftSlot}

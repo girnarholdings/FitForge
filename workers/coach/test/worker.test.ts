@@ -978,11 +978,93 @@ test('an empty food is rejected without spending an inference', async () => {
   assert.equal(calls.length, 0);
 });
 
-test('the health check advertises all three tasks', async () => {
+test('the health check advertises all four tasks', async () => {
   const env = stubEnv();
   const res = await worker.fetch(new Request('https://worker.test/', { method: 'GET' }), env);
   const body = (await res.json()) as { tasks: string[] };
-  assert.deepEqual(body.tasks, ['chat', 'macros', 'adapt']);
+  assert.deepEqual(body.tasks, ['chat', 'macros', 'adapt', 'meal']);
+});
+
+/* ── the meal task: AI-first sentence parsing ─────────────────────────────────────────────── */
+
+/**
+ * The meal task makes TWO KINDS of calls — one splitter, then three estimator samples per item —
+ * and they need different answers, so this stub routes on the system prompt instead of returning
+ * one canned string.
+ */
+function mealStubEnv(
+  splitResponse: string,
+  estimateResponse: string,
+): Env & { calls: { model: string; input: Record<string, unknown> }[] } {
+  const calls: { model: string; input: Record<string, unknown> }[] = [];
+  return {
+    calls,
+    ALLOWED_ORIGINS: `${ORIGIN},http://localhost:3000`,
+    AI: {
+      run: async (model: string, input: Record<string, unknown>) => {
+        calls.push({ model, input });
+        const messages = input.messages as { role: string; content: string }[] | undefined;
+        const system = messages?.find((m) => m.role === 'system')?.content ?? '';
+        return { response: system.includes('split a meal') ? splitResponse : estimateResponse };
+      },
+    },
+  } as Env & { calls: { model: string; input: Record<string, unknown> }[] };
+}
+
+const SPLIT_OK = JSON.stringify({
+  items: [
+    { food: 'Steak, sirloin, grilled', qty: 1, unit: 'steak', grams: 170 },
+    { food: 'Eggs, scrambled', qty: 2, unit: 'egg', grams: 100 },
+  ],
+});
+const ESTIMATE_OK = JSON.stringify({
+  per: 'as stated',
+  kcal: 300,
+  protein_g: 25,
+  carbs_g: 2,
+  fat_g: 20,
+  assumptions: ['cooked in a little butter'],
+});
+
+test('meal: a sentence splits into prepared items, each priced by the consensus loop', async () => {
+  const env = mealStubEnv(SPLIT_OK, ESTIMATE_OK);
+  const res = await worker.fetch(post({ task: 'meal', text: 'steak and eggs' }), env);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as {
+    items: { food: string; grams: number; kcal?: { value: number }; samples?: number }[];
+  };
+  assert.equal(body.items.length, 2);
+  // THE PREPARATION RULE, observable: the eggs item names a cooking method, not a raw database row.
+  assert.match(body.items[1]!.food, /scrambled/i);
+  assert.equal(body.items[0]!.grams, 170);
+  assert.ok(body.items.every((i) => i.kcal && i.kcal.value > 0 && i.samples === 3));
+  // 1 splitter call + 3 estimator samples per item.
+  assert.equal(env.calls.length, 1 + 2 * 3);
+});
+
+test('meal: a non-food sentence is a 422, not an estimate', async () => {
+  const env = mealStubEnv(JSON.stringify({ error: 'not_food' }), ESTIMATE_OK);
+  const res = await worker.fetch(post({ task: 'meal', text: 'my tax return' }), env);
+  assert.equal(res.status, 422);
+  const body = (await res.json()) as { error: string };
+  assert.equal(body.error, 'not_food');
+  // The splitter answered "not food"; no estimator samples were spent on it.
+  assert.equal(env.calls.length, 1);
+});
+
+test('meal: empty text is rejected without spending an inference', async () => {
+  const env = mealStubEnv(SPLIT_OK, ESTIMATE_OK);
+  const res = await worker.fetch(post({ task: 'meal', text: '   ' }), env);
+  assert.equal(res.status, 400);
+  assert.equal(env.calls.length, 0);
+});
+
+test('meal: when no item can be priced the task fails whole, so the client falls back offline', async () => {
+  const env = mealStubEnv(SPLIT_OK, 'the model rambled instead of answering with JSON');
+  const res = await worker.fetch(post({ task: 'meal', text: 'steak and eggs' }), env);
+  assert.equal(res.status, 503);
+  const body = (await res.json()) as { error: string };
+  assert.equal(body.error, 'ai_unavailable');
 });
 
 test('a binding that returns response as a PARSED OBJECT still estimates', async () => {
