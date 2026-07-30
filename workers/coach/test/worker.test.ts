@@ -78,6 +78,45 @@ test('GET is a health check that names the resolved model', async () => {
   assert.ok(body.model.startsWith('@cf/'), 'health check should report the model it would use');
 });
 
+test('the health read-out counts the Pro allowlist without publishing it', async () => {
+  /**
+   * The read-out exists because "I set PRO_USERS" and "the deployed worker sees PRO_USERS" are
+   * different claims, and the second was unobservable from outside — an advertised Pro model with an
+   * empty allowlist looks exactly like a working one until a subscriber taps it and gets Mistral.
+   *
+   * The count must come from the same parser the gate uses (blanks and stray whitespace dropped),
+   * and the uids must never appear in the response.
+   */
+  const env = stubEnv();
+  env.FIREBASE_PROJECT_ID = 'fitforge-test';
+  env.DEEPSEEK_API_KEY = 'sk-test';
+  env.PRO_USERS = ' uid-a , ,uid-b,  ';
+
+  const res = await worker.fetch(
+    new Request('https://worker.test/', { method: 'GET', headers: { Origin: ORIGIN } }),
+    env,
+  );
+  const text = await res.text();
+  const body = JSON.parse(text) as { pro: { models: number; allowlist: number } };
+
+  assert.equal(body.pro.allowlist, 2, 'blanks and whitespace are not entitled users');
+  assert.equal(body.pro.models, 1, 'the DeepSeek entry is the one gated on Pro');
+  assert.ok(!text.includes('uid-a'), 'the health response must never publish who is entitled');
+  assert.ok(!text.includes('uid-b'));
+});
+
+test('no Pro configuration reports zero rather than omitting the field', async () => {
+  // A missing field is indistinguishable from an old deployment; an explicit zero is a fact the probe
+  // can act on ("advertised model, nobody entitled" is worth failing a run over).
+  const env = stubEnv();
+  const res = await worker.fetch(
+    new Request('https://worker.test/', { method: 'GET', headers: { Origin: ORIGIN } }),
+    env,
+  );
+  const body = (await res.json()) as { pro: { models: number; allowlist: number } };
+  assert.deepEqual(body.pro, { models: 0, allowlist: 0 });
+});
+
 test('an unsupported method is refused', async () => {
   const env = stubEnv();
   const res = await worker.fetch(

@@ -198,6 +198,47 @@ jobs:
           fi
           echo "::notice::Gate holds — an anonymous request for ${id} was served by ${got}"
 
+      # THE PRO TIER, reported rather than assumed.
+      #
+      # Two things must be true for a subscriber to actually get DeepSeek, and the picker's existence
+      # only proves the first:
+      #
+      #   1. DEEPSEEK_API_KEY is visible to the deployed worker — the catalog carries a `deepseek`
+      #      entry only when the key is non-empty AND sign-ins can be verified.
+      #   2. PRO_USERS reached the worker with at least one uid on it. This is the one that fails
+      #      quietly: it is a plain var in wrangler.toml, so a deploy from a stale checkout — or a
+      #      value only ever typed into the Cloudflare dashboard — leaves an advertised Pro model
+      #      nobody can unlock, and the symptom is a paying user silently served Mistral.
+      #
+      # Counts only; the worker deliberately does not publish who is entitled. A worker predating the
+      # `pro` field reports nothing, which is a warning rather than a failure.
+      - name: The Pro tier is wired end to end
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          health=$(curl -sS -m 20 "$ENDPOINT")
+          deepseek=$(printf '%s' "$health" | jq -r '[.models // [] | .[] | select(.provider == "deepseek")] | length')
+          allowlist=$(printf '%s' "$health" | jq -r '.pro.allowlist // "absent"')
+
+          if [ "$deepseek" = "0" ]; then
+            echo "::warning::No DeepSeek model in the catalog — DEEPSEEK_API_KEY is not visible to this worker (or FIREBASE_PROJECT_ID is unset, which makes a pro gate unusable). Set it with 'cd workers/coach && npx wrangler secret put DEEPSEEK_API_KEY'; 'wrangler deploy' does NOT carry secrets."
+          else
+            echo "::notice::DEEPSEEK_API_KEY is live on this worker — the Pro model is in the catalog"
+          fi
+
+          case "$allowlist" in
+            absent)
+              echo "::warning::This worker predates the pro read-out, so the PRO_USERS allowlist cannot be checked from outside. Redeploy the current workers/coach ('npx wrangler deploy') and re-run this probe." ;;
+            0)
+              if [ "$deepseek" != "0" ]; then
+                echo "::error::The Pro model is advertised but PRO_USERS is EMPTY on the deployed worker — nobody can unlock it, and a subscriber tapping it is served Mistral instead. PRO_USERS is a var in workers/coach/wrangler.toml: deploy from a checkout that has it, or set it as a secret ('npx wrangler secret put PRO_USERS')."
+                exit 1
+              fi
+              echo "::notice::No Pro tier on this worker (no DeepSeek key, empty allowlist) — a valid configuration." ;;
+            *)
+              echo "::notice::PRO_USERS reached the worker — ${allowlist} uid(s) entitled to the Pro model" ;;
+          esac
+
       # Only reached when the above passed, so a green run means the whole chain works.
       - name: Report success
         run: echo "::notice::Coach worker is answering end to end"

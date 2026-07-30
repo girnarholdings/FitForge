@@ -64,10 +64,22 @@ export interface Env {
   PRO_USERS?: string;
 }
 
+/**
+ * The Pro allowlist, parsed: trimmed, blanks dropped. ONE reader, so the health read-out and the
+ * gate can never disagree about how many people are entitled — a diagnostic that counts differently
+ * from the check it describes is worse than no diagnostic.
+ */
+function proUids(env: Env): string[] {
+  if (!env.PRO_USERS) return [];
+  return env.PRO_USERS.split(',')
+    .map((u) => u.trim())
+    .filter((u) => u.length > 0);
+}
+
 /** Is this verified uid on the Pro allowlist? Whitespace-tolerant, case-sensitive (uids are). */
 function isProUser(env: Env, uid: string | null): boolean {
-  if (!uid || !env.PRO_USERS) return false;
-  return env.PRO_USERS.split(',').some((u) => u.trim() === uid);
+  if (!uid) return false;
+  return proUids(env).includes(uid);
 }
 
 /* ══════════════════════════════════════════════════════════════════ generation caps ══ */
@@ -1272,6 +1284,20 @@ export default {
           models: modelCatalog(env),
           /** Whether this worker can verify sign-ins at all (an unset project id gates nothing open). */
           auth: env.FIREBASE_PROJECT_ID ? 'firebase' : 'none',
+          /**
+           * THE PRO TIER, as this worker actually has it — COUNTS ONLY, never the uids.
+           *
+           * "I set PRO_USERS" and "the deployed worker can see PRO_USERS" are different claims, and
+           * the gap between them is unobservable from outside without this: the pro model is
+           * advertised on the strength of the DeepSeek key alone, so an empty allowlist looks
+           * identical to a working one until a paying user taps it and gets Mistral. It is a plain
+           * var in wrangler.toml, which means a `wrangler deploy` from a stale checkout — or a value
+           * only ever typed into the dashboard — silently drops it.
+           *
+           * The uids stay out. A uid is an identifier rather than a credential, but publishing who
+           * pays is nobody's business, and a count answers the only question a probe has.
+           */
+          pro: { models: modelCatalog(env).filter((m) => m.requiresPro).length, allowlist: proUids(env).length },
           tasks: ['chat', 'macros', 'adapt'],
         },
         200,

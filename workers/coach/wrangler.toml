@@ -76,7 +76,16 @@ FIREBASE_PROJECT_ID = "fitforge-007"
 #
 # PRO_USERS — comma-separated Firebase uids with a Pro subscription. This allowlist IS the
 # subscription record until a billing system exists. Find a uid in Firebase console → Auth.
-PRO_USERS = "rVFC3tkOgtVs8DGrq0LFMJVKoxx2, uid2"
+#
+# A VAR, WHICH MEANS THE DEPLOY CARRIES IT — and equally, that a `wrangler deploy` from a checkout
+# without the uid REMOVES it, and a value typed only into the Cloudflare dashboard is wiped by the
+# next deploy. The health endpoint reports `pro.allowlist` (a count, never the uids) so the probe
+# workflow can tell "advertised Pro model" from "Pro model nobody can unlock".
+#
+# A uid is an identifier, not a credential — publishing one grants nothing, since using it still
+# requires signing in as that account. But if you would rather not publish who pays, this reads off
+# `env` identically as a secret: npx wrangler secret put PRO_USERS
+PRO_USERS = "rVFC3tkOgtVs8DGrq0LFMJVKoxx2"
 #
 # DEEPSEEK_MODEL — optional override; safe to commit. Current IDs (the old deepseek-chat /
 # deepseek-reasoner aliases were RETIRED on 2026-07-24 and now return errors):
