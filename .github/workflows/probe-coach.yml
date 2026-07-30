@@ -146,6 +146,42 @@ jobs:
             and (.confidence | IN("high","medium","low"))
           ' > /dev/null || { echo "::error::macros response failed the contract check"; exit 1; }
 
+      # The meal task: one splitter call, then the consensus estimator per item. The probe sends
+      # the sentence from the owner's bug report, and the assertion is the CONTRACT (items parse,
+      # every priced item's kcal median sits inside its own range) plus the reason the task
+      # exists: the eggs must come back with a preparation, not the catalog's raw/boiled default.
+      # A worker that predates the task gets a redeploy reminder, not a failure.
+      - name: POST a meal parse
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          health=$(curl -sS -m 20 "$ENDPOINT")
+          if ! printf '%s' "$health" | jq -e '(.tasks // []) | index("meal")' > /dev/null; then
+            echo "::warning::This worker predates the meal task — AI-first nutrition entry falls back to the offline catalog until 'cd workers/coach && npx wrangler deploy' ships it."
+            exit 0
+          fi
+          body=$(curl -sS -m 90 -w '\n%{http_code}' -X POST "$ENDPOINT" \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://girnarholdings.github.io' \
+            -d '{"task":"meal","text":"steak and eggs"}' || echo "CURL_FAILED")
+          code=$(printf '%s' "$body" | tail -1)
+          payload=$(printf '%s' "$body" | sed '$d')
+          echo "::notice::meal ${code} — $(printf '%s' "$payload" | tr '\n' ' ' | cut -c1-700)"
+          [ "$code" = "200" ] || { echo "::error::meal task failed with ${code}"; exit 1; }
+          printf '%s' "$payload" | jq -e '
+            (.items | length >= 1)
+            and ([.items[] | select(has("error") | not)] | length >= 1)
+            and ([.items[] | select(has("error") | not)] | all(
+              (.kcal.value >= .kcal.low) and (.kcal.value <= .kcal.high) and (.kcal.value > 20)
+            ))
+          ' > /dev/null || { echo "::error::meal response failed the contract check"; exit 1; }
+          eggs=$(printf '%s' "$payload" | jq -r '[.items[].food | select(test("egg"; "i"))] | first // ""')
+          if [ -n "$eggs" ] && printf '%s' "$eggs" | grep -qiE 'raw|boiled'; then
+            echo "::warning::The eggs came back as \"${eggs}\" — the preparation rule is not biting; the split prompt may need strengthening."
+          elif [ -n "$eggs" ]; then
+            echo "::notice::Preparation rule holds — the eggs parsed as \"${eggs}\""
+          fi
+
       # The custom domain's CORS standing — a WARNING, not a failure, because it measures the
       # deploy-state transition (has `wrangler deploy` shipped the new ALLOWED_ORIGINS yet?)
       # rather than the worker's health. The check is the preflight the browser would send from
