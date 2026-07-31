@@ -88,6 +88,11 @@
   --danger: #ff6b70;
   --success: #3ecf8e;
   --info: #7cb4ff;
+  /* MACRO SERIES. Protein wears the copper heat (it is the bar the athlete acts on), fat the
+     ember — both hot metals. Carbs read as STEEL: a cool desaturated blue-grey, the one hue of
+     the triad that cannot be mistaken for the other two at a glance. Still metal, still this
+     world — a data-series distinction, not a second UI accent. */
+  --macro-carbs: #8ba7bd;
 
   /* The inset top-light is the layer that actually reads on a near-black page; the old 28px
      blur produced a measured 2-RGB-point smudge — pure paint cost. */
@@ -135,6 +140,7 @@
     --danger: #d92d33;
     --success: #0f8a4c;
     --info: #2668c5;
+    --macro-carbs: #4d7391; /* steel, deepened for AA on ivory */
     --elev-card: 0 1px 2px rgba(20, 23, 31, 0.05), 0 8px 24px -10px rgba(20, 23, 31, 0.12);
     --elev-pop: 0 16px 48px -12px rgba(20, 23, 31, 0.25);
     --elev-ember: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 2px 6px -2px rgba(20, 23, 31, 0.18),

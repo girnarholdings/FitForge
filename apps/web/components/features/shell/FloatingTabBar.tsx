@@ -62,6 +62,40 @@ export function FloatingTabBar({
   const [scrubbing, setScrubbing] = React.useState(false);
   const [preview, setPreview] = React.useState<number | null>(null);
 
+  /**
+   * MINI ON SCROLL. Reading direction is the intent signal: scrolling DOWN means the athlete is
+   * consuming the page, so the bar folds to icons and lets its surface go translucent — the
+   * content underneath reads through and the frame feels taller. Any upward scroll, or being
+   * near the top, restores the full bar instantly (up-scroll is how you reach for navigation).
+   *
+   * Plain ALPHA, never backdrop-blur: the whole reason this bar exists is that blur re-samples
+   * the backdrop every scrolled frame (see the file header). A translucent quad composites for
+   * free, so the mini state keeps the scroll-cost property that built the pill.
+   */
+  const [mini, setMini] = React.useState(false);
+  React.useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const dy = y - lastY;
+        lastY = y;
+        ticking = false;
+        if (y < 64) setMini(false);
+        else if (dy > 4) setMini(true);
+        else if (dy < -4) setMini(false);
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  // A tab tap changes routes without a scroll event — the new page starts at the top, and a bar
+  // still hiding from the previous page's scroll would greet it half-dressed.
+  React.useEffect(() => setMini(false), [activeIndex]);
+
   const clearHold = () => {
     if (holdTimer.current) clearTimeout(holdTimer.current);
     holdTimer.current = null;
@@ -124,7 +158,13 @@ export function FloatingTabBar({
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 md:hidden"
       data-testid="tab-bar"
     >
-      <div className="mx-auto w-full max-w-[26rem] px-3 pb-[calc(0.3125rem+env(safe-area-inset-bottom))]">
+      <div
+        className={cn(
+          'mx-auto w-full px-3 pb-[calc(0.3125rem+env(safe-area-inset-bottom))]',
+          'transition-[max-width] duration-300 ease-out',
+          mini ? 'max-w-[19rem]' : 'max-w-[26rem]',
+        )}
+      >
         {/*
           COACH, ABOVE THE BAR RATHER THAN IN IT.
           The five tabs are the app's structure and Coach is not a sixth destination of the same
@@ -142,7 +182,14 @@ export function FloatingTabBar({
             thumb aiming for Progress. 3 rather than the original 4 because the row it clears is
             now 9px shorter — the optical separation is what mattered, not the absolute figure. */}
         {coach && (
-          <div className="mb-3 flex justify-end pr-1">
+          <div
+            className={cn(
+              // The badge follows the bar's retreat: smaller and quieter while reading, back to
+              // full presence the moment the athlete scrolls up toward the controls.
+              'mb-3 flex origin-bottom-right justify-end pr-1 transition-[transform,opacity] duration-300',
+              mini && 'scale-90 opacity-70',
+            )}
+          >
             {/* THE AI COACH WEARS A REAL BADGE, not a themed circle. A conic gold ring (an actual
                 border, not a border-color), a gold glow, and a sparkle dot — the one control in
                 the frame that is allowed to be loud, because it is the one that answers back.
@@ -193,18 +240,24 @@ export function FloatingTabBar({
             e.stopPropagation();
           }}
           className={cn(
-            'pointer-events-auto flex items-stretch justify-around rounded-chip border border-border',
-            // OPAQUE. See the file header — this is the one property that matters for scroll cost.
-            'bg-surface-2 shadow-[var(--shadow-pop)]',
-            'transition-transform duration-150',
+            'pointer-events-auto flex items-stretch justify-around rounded-chip border',
+            // OPAQUE at rest (see the file header — that is the scroll-cost property); mini lets
+            // the fill go translucent via plain alpha, which composites for free. No blur, ever.
+            'shadow-[var(--shadow-pop)]',
+            'transition-[transform,background-color,border-color] duration-300',
+            mini ? 'border-border/60' : 'border-border bg-surface-2',
             scrubbing && 'scale-[1.02]',
           )}
           style={{
             // Only while scrubbing, so a normal vertical swipe that begins on the bar still
             // scrolls the page.
             touchAction: scrubbing ? 'none' : 'manipulation',
+            ...(mini
+              ? { backgroundColor: 'color-mix(in srgb, var(--surface-2) 78%, transparent)' }
+              : {}),
           }}
           data-scrubbing={scrubbing ? 'true' : undefined}
+          data-mini={mini ? 'true' : undefined}
         >
           {items.map((item, i) => {
             const active = i === activeIndex;
@@ -224,8 +277,11 @@ export function FloatingTabBar({
                     // icon pill instead of 32, and a 9px label. Each tab is still ~68px wide on a
                     // 390px screen, so every one of the five clears 44px to a finger — the row is
                     // shorter, not the targets.
-                    'group flex select-none flex-col items-center gap-0.5 px-0.5 py-1.5 text-[9px] font-semibold leading-none',
-                    'transition-colors duration-150',
+                    // MINI trades the label for height (py-2: 28px pill + 16px pad = exactly the
+                    // 44px floor) — the row loses 7px and its text, never its targets.
+                    'group flex select-none flex-col items-center px-0.5 text-[9px] font-semibold leading-none',
+                    'transition-[color,padding] duration-300',
+                    mini ? 'gap-0 py-2' : 'gap-0.5 py-1.5',
                     highlighted ? 'text-accent' : 'text-muted-foreground',
                   )}
                 >
@@ -257,7 +313,16 @@ export function FloatingTabBar({
                       </span>
                     )}
                   </span>
-                  <span className="max-w-full truncate">{item.label}</span>
+                  {/* Collapsed, not display:none — the name stays in the accessibility tree, so
+                      a screen reader's tab is still "Nutrition" while sighted users read icons. */}
+                  <span
+                    className={cn(
+                      'max-w-full truncate overflow-hidden transition-[max-height,opacity] duration-300',
+                      mini ? 'max-h-0 opacity-0' : 'max-h-3 opacity-100',
+                    )}
+                  >
+                    {item.label}
+                  </span>
                 </Link>
               </li>
             );

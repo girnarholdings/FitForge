@@ -10,10 +10,11 @@
  * heating toward the goal, ember at the leading edge), and the three macros as rows of the same
  * material. One progress language, everywhere in the app.
  *
- * COPPER ONLY. Carbs used to be green; the world has one accent, so macros are told apart by
- * label and value — protein carries the heat fill (it is the bar the athlete acts on), carbs the
- * soft copper, fat the ember. Green survives only as a true success STATE elsewhere, never as an
- * identity hue. Presentational — totals are computed by the caller.
+ * THREE METALS. The UI accent stays copper alone, but a data SERIES needs hues a glance can
+ * separate, and soft-copper carbs sat a few percent from protein's heat bar (owner-reported).
+ * The triad now: protein = copper heat (the bar the athlete acts on), carbs = steel
+ * (--macro-carbs, the one cool hue), fat = ember. Green stays a success STATE elsewhere, never
+ * an identity hue. Presentational — totals are computed by the caller.
  */
 import * as React from 'react';
 import { Card } from '@/components/ui';
@@ -49,13 +50,17 @@ export function DaySummary({ totals, targets }: { totals: Macros; targets: Nutri
         />
       </div>
 
+      {/* THREE METALS, three unmistakable hues. Carbs used to wear soft copper — a few percent
+          away from protein's heat bar, which the owner rightly called indistinguishable. The
+          triad is now copper heat (protein), STEEL (carbs — the cool one), ember (fat), each
+          named again by a dot on its label so the mapping survives a glance. */}
       <dl className="mt-4 space-y-2">
         <MacroRow label="Protein" value={totals.protein_g} target={targets.protein_g_target} heat />
         <MacroRow
           label="Carbs"
           value={totals.carbs_g}
           target={targets.carbs_g_target}
-          color="var(--color-accent-soft)"
+          color="var(--macro-carbs)"
         />
         <MacroRow
           label="Fat"
@@ -88,7 +93,14 @@ function MacroRow({
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-between text-xs">
-        <span className="font-medium text-foreground">{label}</span>
+        <span className="flex items-center gap-1.5 font-medium text-foreground">
+          <span
+            aria-hidden
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: heat ? 'var(--color-accent)' : color }}
+          />
+          {label}
+        </span>
         <span className="tabular text-muted-foreground">
           {Math.round(value)} / {target} g
           <span className={cn('ml-1.5 font-semibold', over ? 'text-energy' : 'text-foreground')}>
