@@ -106,7 +106,11 @@ final class StorageMirror {
     /// Called on the main queue after the write that bumped the generation has completed.
     var onGenerationChange: ((Int) -> Void)?
 
-    private let queue = DispatchQueue(label: "com.fitforge.storage-mirror", qos: .utility)
+    // .default, not .utility: these writes are the durability promise behind the whole mirror,
+    // and utility-QoS queues can be starved for whole seconds on a loaded device — exactly the
+    // window in which a crash would eat the athlete's last set. First observed as a CI failure
+    // where the debounce timer had not fired 600ms after the write on a busy simulator.
+    private let queue = DispatchQueue(label: "com.fitforge.storage-mirror", qos: .default)
     private let directory: URL
     private var debounced: [String: DispatchWorkItem] = [:]
     private var pendingValues: [String: String] = [:]

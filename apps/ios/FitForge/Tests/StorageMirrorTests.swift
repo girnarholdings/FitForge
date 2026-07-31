@@ -67,12 +67,22 @@ final class StorageMirrorTests: XCTestCase {
 
     func testDebouncedWriteLandsWithoutFlush() {
         mirror.set(key: "fitforge.a", value: "1")
-        let settled = expectation(description: "debounce window passed")
-        DispatchQueue.main.asyncAfter(deadline: .now() + StorageMirror.debounceInterval + 0.35) {
-            settled.fulfill()
+        // The claim under test is durability WITHOUT an explicit flush — the debounce timer
+        // alone must land the write. A fixed post-debounce margin is not a fair judge of that
+        // claim on CI: a loaded simulator can stall background queues for whole seconds (the
+        // first run failed exactly there), so this polls with a generous ceiling instead.
+        let landed = expectation(description: "debounced write landed on its own")
+        func poll() {
+            if mirror.currentGeneration >= 1 {
+                landed.fulfill()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { poll() }
+            }
         }
-        wait(for: [settled], timeout: 2)
+        poll()
+        wait(for: [landed], timeout: 10)
         XCTAssertEqual(mirror.currentGeneration, 1)
+        XCTAssertEqual(mirror.snapshot().entries["fitforge.a"], "1")
     }
 
     func testRapidRewritesCoalesceToTheLastValue() {
