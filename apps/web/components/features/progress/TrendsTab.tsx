@@ -42,8 +42,16 @@ import { fmtPct, fmtSets } from '@/components/features/shared/volumeMath';
 import { useActiveRoutine, useDemoState, useWeights } from '@/lib/demo/useDemo';
 import { CalendarIcon, SparkIcon, MedalIcon, ScaleIcon } from '@/components/ui/icons';
 import { EquipmentIllustration } from '@/components/illustrations/equipment';
+import { overnight, rhrSeries } from '@/lib/health/selectors';
+import { useHealthData } from '@/lib/health/store';
+import { isoDaysAgo, sleepHM } from '@/lib/health/format';
 
 const WEEKS = 12;
+
+/** How far back the Apple Health trend lines look. Two months ≈ the 90-day first-sync backfill. */
+const HEALTH_TREND_DAYS = 60;
+/** Under a week of readings a "trend" is noise wearing a line — the cards stay unrendered. */
+const MIN_HEALTH_POINTS = 7;
 
 /* ------------------------------------------------------------------------------- trend pill */
 
@@ -109,8 +117,19 @@ export function TrendsTab({ onGoToWeight }: { onGoToWeight?: () => void }) {
     [buckets, sessions, ctx, targetDays, weights],
   );
 
+  // Apple Health series read here, before the training-history early return: the overnight data
+  // exists independently of the training log, so a new lifter with a month of watch data still
+  // gets their sleep and resting-HR lines under the (honest) training empty state.
+  const health = useOvernightSeries();
+
   if (!summary.hasData) {
-    return <TrendsEmptyState targetDays={targetDays} routineName={routine.name} />;
+    return (
+      <div className="space-y-4">
+        <TrendsEmptyState targetDays={targetDays} routineName={routine.name} />
+        <SleepTrendCard data={health.sleep} />
+        <RestingHrTrendCard data={health.rhr} />
+      </div>
+    );
   }
 
   return (
@@ -121,6 +140,8 @@ export function TrendsTab({ onGoToWeight }: { onGoToWeight?: () => void }) {
       <GroupBalanceCard buckets={buckets} />
       <StrengthCard sessions={sessions} />
       <BodyWeightCard weights={weights} onGoToWeight={onGoToWeight} />
+      <SleepTrendCard data={health.sleep} />
+      <RestingHrTrendCard data={health.rhr} />
     </div>
   );
 }
@@ -556,6 +577,120 @@ function BodyWeightCard({
           )}
         </>
       )}
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------- Apple Health (shell) */
+
+/**
+ * Nightly sleep and resting-HR series for the last {@link HEALTH_TREND_DAYS} days, one point per
+ * day the selector layer has data for. `overnight()` per day is the contracted read path — the
+ * selectors are the ONLY way dashboards touch health data — and days without data are simply
+ * absent (missing data is silence, never zeroes). Empty everywhere outside the iOS shell.
+ */
+function useOvernightSeries(): { sleep: SeriesPoint[]; rhr: SeriesPoint[] } {
+  // The subscription: a sync batch landing while Progress is open re-derives both series.
+  const healthData = useHealthData();
+  // Mounted gate: the selectors read device storage and this page is prerendered — the first
+  // client render must match the static HTML (no cards), or hydration tears the tab.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  return React.useMemo(() => {
+    const sleep: SeriesPoint[] = [];
+    const rhr: SeriesPoint[] = [];
+    if (!mounted) return { sleep, rhr };
+    for (let daysAgo = HEALTH_TREND_DAYS - 1; daysAgo >= 0; daysAgo--) {
+      const iso = isoDaysAgo(daysAgo);
+      const ov = overnight(iso);
+      if (!ov) continue;
+      const label = iso.slice(5);
+      sleep.push({
+        label,
+        value: Math.round(ov.sleepHours * 100) / 100,
+        display: `${sleepHM(ov.sleepHours)} asleep`,
+      });
+    }
+    // RHR comes from its own daily series, NOT via overnight(): that selector is gated on a
+    // sleep session, and an RHR-only day (watch worn all day, slept without it) still belongs
+    // in the trend.
+    for (const p of rhrSeries(HEALTH_TREND_DAYS)) {
+      rhr.push({
+        label: p.date.slice(5),
+        value: Math.round(p.value),
+        display: `${Math.round(p.value)} bpm`,
+      });
+    }
+    return { sleep, rhr };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- healthData is the subscription tick
+  }, [mounted, healthData]);
+}
+
+/** Sleep per night — the existing TrendLine grammar, nothing new. Unrendered under 7 nights. */
+function SleepTrendCard({ data }: { data: SeriesPoint[] }) {
+  const [sel, setSel] = React.useState<number | null>(null);
+  if (data.length < MIN_HEALTH_POINTS) return null;
+  const point = sel != null ? data[sel] : null;
+  return (
+    <Card className="shadow-[var(--shadow-card)]" data-testid="chart-sleep">
+      <CardTitle>Sleep</CardTitle>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Time asleep per night, from Apple Health. Last {HEALTH_TREND_DAYS} days.
+      </p>
+      <p className="mt-2 h-5 text-sm font-semibold text-foreground" aria-live="polite">
+        {point ? (
+          <>
+            <span className="text-muted-foreground">{point.label}: </span>
+            <span className="tabular">{point.display}</span>
+          </>
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">
+            {data.length} nights · tap a point for the value
+          </span>
+        )}
+      </p>
+      <TrendLine
+        data={data}
+        selected={sel}
+        onSelect={setSel}
+        ariaLabel="Sleep per night"
+        testId="sleep-chart"
+      />
+    </Card>
+  );
+}
+
+/** Resting HR per day — same grammar. Lower is calmer; the chart says nothing, on purpose. */
+function RestingHrTrendCard({ data }: { data: SeriesPoint[] }) {
+  const [sel, setSel] = React.useState<number | null>(null);
+  if (data.length < MIN_HEALTH_POINTS) return null;
+  const point = sel != null ? data[sel] : null;
+  return (
+    <Card className="shadow-[var(--shadow-card)]" data-testid="chart-resting-hr">
+      <CardTitle>Resting heart rate</CardTitle>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        One reading per day, from Apple Health. Day-to-day wobble is normal — the shape over weeks
+        is the signal.
+      </p>
+      <p className="mt-2 h-5 text-sm font-semibold text-foreground" aria-live="polite">
+        {point ? (
+          <>
+            <span className="text-muted-foreground">{point.label}: </span>
+            <span className="tabular">{point.display}</span>
+          </>
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">
+            {data.length} days · tap a point for the value
+          </span>
+        )}
+      </p>
+      <TrendLine
+        data={data}
+        selected={sel}
+        onSelect={setSel}
+        ariaLabel="Resting heart rate per day"
+        testId="resting-hr-chart"
+      />
     </Card>
   );
 }

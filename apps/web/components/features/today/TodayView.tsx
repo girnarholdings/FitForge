@@ -34,6 +34,9 @@ import { setQuickSession } from '@/lib/demo/store';
 import { buildAdaptedDay } from '@/lib/readiness/dayEdits';
 import { patchEntry, todayISO, useReadinessEntries } from '@/lib/readiness/store';
 import { CoachEntryCard } from '@/components/features/coach/CoachEntryCard';
+import { overnight } from '@/lib/health/selectors';
+import { useHealthData } from '@/lib/health/store';
+import { sleepHM } from '@/lib/health/format';
 import { MorningCheckIn } from './MorningCheckIn';
 import { QuickWorkoutCard } from './QuickWorkoutCard';
 import { FirstRunTour } from './FirstRunTour';
@@ -272,6 +275,10 @@ export function TodayView() {
           be a lie about what the buttons do. */}
       {day && onToday && <MorningCheckIn routine={routine} day={day} />}
 
+      {/* The "Overnight" fact line — under the check-in row, only on days Apple Health has data
+          for. No data = no row (the contract bans dashes: missing data is silence, not zeroes). */}
+      <OvernightRow date={date} />
+
       {/* Even on a training day, "not today's session" is a real need — pulling tomorrow forward
           is the whole reason this exists. Shown after the plan so it never competes with it — and
           not at all while a rest decision stands: the override sheet is the ONE sanctioned door
@@ -425,6 +432,50 @@ export function TodayView() {
           </div>
         </div>
       </Sheet>
+    </div>
+  );
+}
+
+/**
+ * THE OVERNIGHT LEDGER ROW (iOS shell contract, surface 1 of 3).
+ *
+ * One hairline row in the today-ledger grammar, stating last night as a fact: sleep as H:MM, and
+ * resting HR against the personal baseline when BOTH exist — below 14 days of history the RHR
+ * clause is omitted entirely (Law 5: no verdicts from single readings; the row never explains
+ * itself with dashes). It is a fact line, not a control: deliberately non-interactive in v1,
+ * because there is nothing to open that would not be an invented recovery score.
+ */
+function OvernightRow({ date }: { date: string }) {
+  // Subscription first, selector second: `useHealthData` re-renders this row when a sync batch
+  // lands, and `overnight` stays the only door to the data (contract: dashboards read selectors).
+  const healthData = useHealthData();
+  // Mounted gate: `overnight` reads device storage, and this page is prerendered — the first
+  // client render must agree with the static HTML (no row) or hydration tears the ledger.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- healthData is the subscription tick
+  const ov = React.useMemo(() => (mounted ? overnight(date) : null), [mounted, healthData, date]);
+
+  // Null = no sleep session for this morning = no row at all (the selector guarantees
+  // `sleepHours` on a non-null reading, so the line always leads with "Slept …").
+  if (!ov) return null;
+  // The RHR clause needs the reading AND the ≥14-day baseline; below that window it is omitted
+  // whole — half a sentence of dashes is exactly what the contract bans.
+  const hasRhr = ov.rhr != null && ov.rhrBaseline != null;
+  return (
+    <div className="border-y border-border py-3" data-testid="overnight-row">
+      <p className="text-sm font-semibold text-foreground">Overnight</p>
+      <p className="tabular text-xs text-muted-foreground">
+        Slept <span className="font-semibold text-foreground">{sleepHM(ov.sleepHours)}</span>
+        {hasRhr && (
+          <>
+            {' '}
+            · resting HR{' '}
+            <span className="font-semibold text-foreground">{Math.round(ov.rhr!)}</span> (usual{' '}
+            {Math.round(ov.rhrBaseline!)})
+          </>
+        )}
+      </p>
     </div>
   );
 }

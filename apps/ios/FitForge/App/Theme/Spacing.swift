@@ -2,8 +2,8 @@ import SwiftUI
 
 // MARK: - Spacing, radius & layout tokens
 //
-// A 4-pt base scale. Screens target ≤430 pt wide iPhones; the bottom-anchored
-// CTA and generous touch targets follow the thumb-first principle (§1.3).
+// 4-pt base scale. Radius follows the web's ONE RADIUS FAMILY (globals.css): 12 / 16 / 20 /
+// 24 — small tiles / fields+buttons / large tiles / cards+sheets.
 
 public enum Spacing {
     public static let xs: CGFloat = 4
@@ -21,20 +21,21 @@ public enum Spacing {
 }
 
 public enum Radius {
-    public static let s: CGFloat = 8
-    public static let m: CGFloat = 14
-    public static let l: CGFloat = 20
+    public static let sm: CGFloat = 12
+    public static let field: CGFloat = 16
+    public static let lg: CGFloat = 20
+    public static let card: CGFloat = 24
     public static let pill: CGFloat = 999
 }
 
 public extension View {
-    /// Standard card container: elevated surface, rounded, subtle border.
+    /// Standard card container: lifted fill (elevation is fill separation), whisper border.
     func ffCard(padding: CGFloat = Spacing.l) -> some View {
         self.padding(padding)
-            .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+            .background(Palette.surface2, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
-                    .strokeBorder(Palette.separator, lineWidth: 1)
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .strokeBorder(Palette.border, lineWidth: 1)
             )
     }
 

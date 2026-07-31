@@ -32,6 +32,23 @@ export interface CheckIn {
   unwell: boolean;
   /** optional free text — the hand-off to the AI trainer path */
   note?: string;
+
+  /* ── Apple Health observations (iOS shell contract) — ALL OPTIONAL, all silent when absent.
+   *
+   * These ride the check-in as extra evidence, never as replacements: soreness/energy/stress stay
+   * manual forever, and a user-entered `sleepHours` always outranks the observed one. Each field
+   * is only ever set when the selector layer had a real baseline to compare against (RHR needs
+   * ≥14 days, HRV ≥30 — Law 5: no verdicts from single readings). `undefined` means "we don't
+   * know", and the engine treats it exactly like the feature not existing. */
+
+  /** last night as Apple Health measured it; used only when `sleepHours` is null */
+  observedSleepHours?: number;
+  /** this morning's resting HR minus the personal baseline, in bpm (positive = elevated) */
+  rhrDeltaBpm?: number;
+  /** HRV vs the personal baseline, in percent (negative = below baseline) */
+  hrvDeltaPct?: number;
+  /** a workout logged OUTSIDE FitForge yesterday — context for the reason, never a deduction */
+  externalWorkoutYesterday?: boolean;
 }
 
 export type ReadinessBand = 'green' | 'yellow' | 'red';
@@ -55,9 +72,11 @@ export interface ReadinessVerdict {
  */
 function deductions(c: CheckIn): { points: number; why: string }[] {
   const out: { points: number; why: string }[] = [];
-  if (c.sleepHours != null) {
-    if (c.sleepHours < 5.5) out.push({ points: 30, why: `~${c.sleepHours}h of sleep` });
-    else if (c.sleepHours < 7) out.push({ points: 12, why: `${c.sleepHours}h of sleep` });
+  // The user's answer always wins; the observed hours only fill in when they didn't say.
+  const sleep = c.sleepHours ?? c.observedSleepHours ?? null;
+  if (sleep != null) {
+    if (sleep < 5.5) out.push({ points: 30, why: `~${sleep}h of sleep` });
+    else if (sleep < 7) out.push({ points: 12, why: `${sleep}h of sleep` });
   }
   if (c.soreness === 5) out.push({ points: 25, why: 'very sore' });
   else if (c.soreness === 4) out.push({ points: 14, why: 'quite sore' });
@@ -65,6 +84,16 @@ function deductions(c: CheckIn): { points: number; why: string }[] {
   else if (c.energy === 2) out.push({ points: 14, why: 'low energy' });
   if (c.stress === 5) out.push({ points: 18, why: 'maxed-out stress' });
   else if (c.stress === 4) out.push({ points: 10, why: 'high stress' });
+  /* Health deltas — deliberately smaller than any manual answer, because a wearable reading is
+   * weaker evidence than the athlete's own report. `!= null` is the whole of Law 5 here: no
+   * baseline means the field was never set, and an unset field must be indistinguishable from
+   * the feature not existing. */
+  if (c.rhrDeltaBpm != null && c.rhrDeltaBpm >= 5) {
+    out.push({ points: 11, why: `resting HR is up ${Math.round(c.rhrDeltaBpm)} over your usual` });
+  }
+  if (c.hrvDeltaPct != null && c.hrvDeltaPct <= -20) {
+    out.push({ points: 8, why: 'HRV well below your baseline' });
+  }
   return out;
 }
 
@@ -87,6 +116,12 @@ export function assessReadiness(c: CheckIn): ReadinessVerdict {
     .slice(0, 2)
     .map((d) => d.why)
     .join(' and ');
+  /* Yesterday's outside-FitForge session is CONTEXT, never points: a logged run is not evidence
+   * of a bad morning, but on a morning that already reads rough it belongs in the why. Green
+   * days stay word-for-word identical — fire rarely means saying nothing extra on a good day. */
+  const external = c.externalWorkoutYesterday
+    ? ' Yesterday also had a workout logged outside FitForge — that fatigue counts too.'
+    : '';
 
   if (score >= 70) {
     return { band: 'green', score, action: 'proceed', reason: 'You look ready — train as planned.', safety: false };
@@ -99,7 +134,7 @@ export function assessReadiness(c: CheckIn): ReadinessVerdict {
       band: 'yellow',
       score,
       action: technique ? 'technique' : 'reduce',
-      reason: `Rough morning — ${why}. ${
+      reason: `Rough morning — ${why}.${external} ${
         technique
           ? 'Keep the movements, drop the load: a light technique day.'
           : 'Do today’s session at half the sets — showing up matters more than the dose.'
@@ -111,7 +146,7 @@ export function assessReadiness(c: CheckIn): ReadinessVerdict {
     band: 'red',
     score,
     action: 'rest',
-    reason: `Today reads like a recovery day — ${why}. One rest day costs nothing; training through this usually does.`,
+    reason: `Today reads like a recovery day — ${why}.${external} One rest day costs nothing; training through this usually does.`,
     safety: false,
   };
 }

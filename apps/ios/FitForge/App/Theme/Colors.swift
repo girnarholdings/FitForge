@@ -1,35 +1,41 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
-// MARK: - Color tokens
+// MARK: - Forged Iron color tokens
 //
-// Neutral surface + one accent, dark-mode-first (BLUEPRINT §1.3 "mobile-first").
-// Colors are defined programmatically so the app needs no asset catalog to
-// compile; swap to a `Color("…")` asset set later if a designer wants finer
-// control. Each token adapts to light/dark via `UIColor` dynamic providers.
+// Mirrored from apps/web/app/globals.css — the web app OWNS the palette; this file only
+// re-states it for the few native surfaces (consent, health status, offline interstitial).
+// Dark values come from :root (the brand default: warm iron, never blue-black; copper is the
+// only accent, ember strictly heat-state), light values from :root[data-theme='light'].
+// Native follows the OS appearance because the shell cannot see the web app's data-theme
+// choice; the dark values are the brand default either way.
 
 public enum Palette {
-    /// Brand accent — a confident energetic orange.
-    public static let accent = Color(hex: 0xFF6B35)
-    public static let accentSoft = Color(hex: 0xFF6B35).opacity(0.16)
+    // Surfaces — elevation is fill separation, borders only outline.
+    public static let surface = adaptive(light: 0xF7F2ED, dark: 0x131010)
+    public static let surface2 = adaptive(light: 0xFFFFFF, dark: 0x1D1815)
+    public static let elevated = adaptive(light: 0xFFFFFF, dark: 0x282019)
 
-    public static let success = Color(hex: 0x30D158)
-    public static let warning = Color(hex: 0xFFD60A)
-    public static let danger = Color(hex: 0xFF453A)
+    public static let foreground = adaptive(light: 0x14171F, dark: 0xF3EDE5)
+    public static let mutedForeground = adaptive(light: 0x5B6372, dark: 0xA89E93)
 
-    // Macro ring colors
-    public static let protein = Color(hex: 0xFF6B35)
-    public static let carbs = Color(hex: 0x0A84FF)
-    public static let fat = Color(hex: 0xFFD60A)
+    public static let border = adaptive(light: 0xE6DDD3, dark: 0x2C2520)
+    public static let borderStrong = adaptive(light: 0xCEC0B2, dark: 0x4A4036)
 
-    // Adaptive surfaces
-    public static let background = adaptive(light: 0xF7F7F9, dark: 0x0B0B0F)
-    public static let surface = adaptive(light: 0xFFFFFF, dark: 0x17171C)
-    public static let surfaceElevated = adaptive(light: 0xFFFFFF, dark: 0x1F1F26)
-    public static let separator = adaptive(light: 0xE3E3E8, dark: 0x2C2C33)
+    // Copper accent (bronze on light for AA) + its pressed state and ink.
+    public static let accent = adaptive(light: 0x8F5432, dark: 0xC98963)
+    public static let accentPress = adaptive(light: 0x74421F, dark: 0xB0714C)
+    public static let accentForeground = adaptive(light: 0xFFFFFF, dark: 0x1C0F08)
+    public static let accentMuted = adaptive(light: 0xF4E3D6, dark: 0x2B1D14)
 
-    public static let textPrimary = adaptive(light: 0x111114, dark: 0xF5F5F7)
-    public static let textSecondary = adaptive(light: 0x6B6B72, dark: 0x9A9AA2)
-    public static let textOnAccent = Color.white
+    // Ember: heat-state only (the leading edge of real progress), never ambience.
+    public static let energy = adaptive(light: 0xD85F1E, dark: 0xE2703A)
+
+    public static let danger = adaptive(light: 0xD92D33, dark: 0xFF6B70)
+    public static let success = adaptive(light: 0x0F8A4C, dark: 0x3ECF8E)
+    public static let info = adaptive(light: 0x2668C5, dark: 0x7CB4FF)
 
     private static func adaptive(light: UInt32, dark: UInt32) -> Color {
         #if canImport(UIKit)
@@ -37,7 +43,7 @@ public enum Palette {
             trait.userInterfaceStyle == .dark ? UIColor(rgb: dark) : UIColor(rgb: light)
         })
         #else
-        Color(hex: light)
+        Color(hex: dark)
         #endif
     }
 }
@@ -53,8 +59,7 @@ public extension Color {
 }
 
 #if canImport(UIKit)
-import UIKit
-extension UIColor {
+public extension UIColor {
     convenience init(rgb: UInt32) {
         self.init(red: CGFloat((rgb >> 16) & 0xFF) / 255,
                   green: CGFloat((rgb >> 8) & 0xFF) / 255,

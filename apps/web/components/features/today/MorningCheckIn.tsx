@@ -42,6 +42,9 @@ import {
   useReadinessEntries,
 } from '@/lib/readiness/store';
 import { askAdapt, isCoachConfigured } from '@/lib/kb/client';
+import { externalWorkoutOn, overnight } from '@/lib/health/selectors';
+import { addDays } from '@/lib/demo/selectedDate';
+import { useHealthData } from '@/lib/health/store';
 
 const SLEEP_CHOICES = [
   { label: '< 5h', hours: 4.5 },
@@ -85,6 +88,38 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
   const [unwell, setUnwell] = React.useState(false);
   const [verdict, setVerdict] = React.useState<ReadinessVerdict | null>(null);
 
+  /* ── Apple Health (iOS shell contract) ──
+   * Last night, as the selector layer read it. `useHealthData` is the subscription — a sync
+   * batch landing mid-morning re-derives the prefill — and `overnight` stays the ONLY door to
+   * the data. Null outside the shell (or before any data), and null means ZERO visual change. */
+  const healthData = useHealthData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- healthData is the subscription tick
+  const ov = React.useMemo(() => overnight(today), [healthData, today]);
+  const observedSleep = ov?.sleepHours ?? null;
+  /** True while the selected sleep chip is Apple Health's suggestion, not the user's own tap. */
+  const [sleepFromHealth, setSleepFromHealth] = React.useState(false);
+  /** Once the user touches the sleep row, the prefill never overrides them again. */
+  const sleepTouched = React.useRef(false);
+
+  React.useEffect(() => {
+    if (observedSleep == null || sleepTouched.current || sleepHours != null) return;
+    // Nearest chip, not an exact value: the row stays five choices, Health just picks one of them.
+    const nearest = SLEEP_CHOICES.reduce((best, s) =>
+      Math.abs(s.hours - observedSleep) < Math.abs(best.hours - observedSleep) ? s : best,
+    );
+    setSleepHours(nearest.hours);
+    setSleepFromHealth(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run on data arrival only
+  }, [observedSleep]);
+
+  function pickSleep(hours: number) {
+    // The user's pick is theirs: correcting (or re-confirming) removes the "from Apple Health"
+    // claim, because the tag asserts provenance and the provenance just changed.
+    sleepTouched.current = true;
+    setSleepFromHealth(false);
+    setSleepHours(sleepHours === hours ? null : hours);
+  }
+
   /* the AI path */
   const aiAvailable = isCoachConfigured();
   const [feeling, setFeeling] = React.useState('');
@@ -105,6 +140,15 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
     stress,
     unwell,
     note: feeling.trim() || undefined,
+    /* Observed extras ride along only when they exist — an absent reading stays `undefined`, and
+     * the engine treats undefined as the feature not existing (Law 5: no baseline, no verdict).
+     * The RHR delta is only computable when BOTH the morning reading and the ≥14-day baseline
+     * came back; `hrvPct` is already baseline-relative or null from the selector. */
+    observedSleepHours: observedSleep ?? undefined,
+    rhrDeltaBpm: ov && ov.rhr != null && ov.rhrBaseline != null ? ov.rhr - ov.rhrBaseline : undefined,
+    hrvDeltaPct: ov?.hrvPct ?? undefined,
+    // Context only, never points: a Watch-logged session yesterday explains a rough morning.
+    externalWorkoutYesterday: externalWorkoutOn(addDays(today, -1)) || undefined,
   });
 
   function submit() {
@@ -353,13 +397,25 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
       <Sheet open={open} onClose={() => setOpen(false)} title="How are you feeling?">
         {!verdict && !aiOffer && (
           <div className="space-y-4">
-            <ChoiceRow label="Sleep last night">
+            <ChoiceRow
+              label="Sleep last night"
+              tag={
+                sleepFromHealth ? (
+                  <span
+                    className="rounded-chip bg-accent-muted px-1.5 py-0.5 text-[10px] font-semibold text-accent"
+                    data-testid="sleep-health-tag"
+                  >
+                    from Apple Health
+                  </span>
+                ) : undefined
+              }
+            >
               {SLEEP_CHOICES.map((s) => (
                 <Chip
                   key={s.label}
                   selected={sleepHours === s.hours}
                   className="!px-3 !py-1.5 text-xs"
-                  onClick={() => setSleepHours(sleepHours === s.hours ? null : s.hours)}
+                  onClick={() => pickSleep(s.hours)}
                 >
                   {s.label}
                 </Chip>
@@ -464,11 +520,21 @@ export function MorningCheckIn({ routine, day }: { routine: Routine; day: Routin
 
 /* ─────────────────────────────────────────────────────────────────────────── pieces ── */
 
-function ChoiceRow({ label, children }: { label: string; children: React.ReactNode }) {
+function ChoiceRow({
+  label,
+  tag,
+  children,
+}: {
+  label: string;
+  /** small provenance chip next to the label — e.g. "from Apple Health" on a prefilled row */
+  tag?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div>
-      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
+        {tag && <span className="normal-case tracking-normal">{tag}</span>}
       </p>
       <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>

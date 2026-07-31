@@ -3,9 +3,8 @@ import SwiftUI
 import UIKit
 #endif
 
-/// Lightweight haptic helper. Onboarding fires `.selection` on every chip /
-/// card tap and `.success` on step completion (BLUEPRINT §2.2 "haptics on
-/// selection"). No-ops on platforms without UIKit so previews stay pure.
+/// Lightweight haptic helper: `.selection` on taps, `.success` on completed flows.
+/// No-ops on platforms without UIKit so previews stay pure.
 public enum Haptics {
     public static func selection() {
         #if canImport(UIKit)
@@ -25,7 +24,8 @@ public enum Haptics {
         #endif
     }
 
-    public enum ImpactStyle { case light, medium, heavy, rigid, soft
+    public enum ImpactStyle {
+        case light, medium, heavy, rigid, soft
         #if canImport(UIKit)
         var uiStyle: UIImpactFeedbackGenerator.FeedbackStyle {
             switch self {
@@ -39,7 +39,8 @@ public enum Haptics {
         #endif
     }
 
-    public enum NotificationType { case success, warning, error
+    public enum NotificationType {
+        case success, warning, error
         #if canImport(UIKit)
         var uiType: UINotificationFeedbackGenerator.FeedbackType {
             switch self {

@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-000b-4000-8000-00000000000b",
+  "type": "health/syncComplete",
+  "payload": {
+    "staleSince": "2026-07-27"
+  }
+}

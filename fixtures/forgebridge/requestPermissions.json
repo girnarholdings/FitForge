@@ -1,0 +1,16 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-0003-4000-8000-000000000003",
+  "type": "health/requestPermissions",
+  "payload": {
+    "types": [
+      "sleep",
+      "restingHeartRate",
+      "hrvSdnn",
+      "bodyMass",
+      "steps",
+      "activeEnergy",
+      "workouts"
+    ]
+  }
+}

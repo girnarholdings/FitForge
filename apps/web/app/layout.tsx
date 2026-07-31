@@ -4,6 +4,7 @@ import { withBase } from '@/lib/utils';
 import { MotionProvider } from '@/components/ui/motion';
 import { CloudSyncDriver } from '@/components/auth/GoogleAuth';
 import { SyncConflictSheet } from '@/components/auth/SyncConflictSheet';
+import { ShellBridgeDriver } from '@/lib/native/ShellBridgeDriver';
 import './globals.css';
 
 /*
@@ -142,6 +143,10 @@ verdict, and DESIGN.md
           renders nothing, and is inert on builds with no Firebase project.
         */}
         <CloudSyncDriver />
+        {/* The iOS-shell handshake (ForgeBridge v1) — at the root for the same reason as
+            CloudSyncDriver: the shell wraps EVERY route, so detection and health sync must not
+            wait for the app shell to mount. Renders nothing; inert in a plain browser. */}
+        <ShellBridgeDriver />
         {/* One motion context for the whole app: the lazy DOM feature bundle plus the global
             reduced-motion contract, so no individual component has to remember either. */}
         <MotionProvider>

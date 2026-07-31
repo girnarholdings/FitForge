@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-0005-4000-8000-000000000005",
+  "type": "health/requestSync",
+  "payload": {
+    "haveUpTo": {
+      "sleep": "2026-07-30",
+      "restingHeartRate": null,
+      "steps": "2026-07-29"
+    }
+  }
+}

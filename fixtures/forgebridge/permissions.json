@@ -1,0 +1,19 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-0004-4000-8000-000000000004",
+  "type": "health/permissions",
+  "payload": {
+    "perMetric": {
+      "sleep": {
+        "requested": true,
+        "determined": true,
+        "yieldedData": true
+      },
+      "restingHeartRate": {
+        "requested": true,
+        "determined": true,
+        "yieldedData": false
+      }
+    }
+  }
+}

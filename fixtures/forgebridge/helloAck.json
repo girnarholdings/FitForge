@@ -1,0 +1,14 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-0002-4000-8000-000000000002",
+  "type": "bridge/helloAck",
+  "payload": {
+    "shellVersion": "1.0.0",
+    "bridgeVersion": 1,
+    "capabilities": [
+      "health",
+      "storageMirror",
+      "backupExport"
+    ]
+  }
+}

@@ -33,6 +33,7 @@ import {
 } from '@/components/ui';
 import { StarIcon, ChevronDownIcon, ChevronUpIcon, SettingsIcon } from '@/components/ui/icons';
 import { ProfileCard } from './ProfileCard';
+import { AppleHealthCard } from './AppleHealthCard';
 import { signOutUser } from '@/lib/auth/firebase';
 import { eraseCloudCopy } from '@/lib/auth/sync';
 import { useAuth } from '@/lib/auth/useUser';
@@ -661,6 +662,11 @@ export function SettingsView() {
         routine={routine}
         startedAt={state.completedAt}
       />
+
+      {/* Apple Health — a sibling of the profile card, and ONLY inside the iOS shell: the card
+          states the health connection, and in a browser there is no connection to state. The
+          component itself returns null outside the shell, so the browser screen is unchanged. */}
+      <AppleHealthCard />
 
       {/* ONE BUTTON FOR EVERYTHING EDITABLE. Wired as a real disclosure — `aria-expanded` plus
           `aria-controls` — so assistive tech gets the same "there is more behind this" that the

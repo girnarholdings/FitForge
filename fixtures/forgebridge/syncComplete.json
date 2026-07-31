@@ -1,0 +1,6 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-000a-4000-8000-00000000000a",
+  "type": "health/syncComplete",
+  "payload": {}
+}

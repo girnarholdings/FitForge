@@ -1,0 +1,21 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-0006-4000-8000-000000000006",
+  "type": "health/batch",
+  "payload": {
+    "batchId": "b-0001",
+    "metric": "restingHeartRate",
+    "points": [
+      {
+        "date": "2026-07-29",
+        "value": 51.0,
+        "unit": "count/min"
+      },
+      {
+        "date": "2026-07-30",
+        "value": 54.0,
+        "unit": "count/min"
+      }
+    ]
+  }
+}

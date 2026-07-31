@@ -1,0 +1,159 @@
+# iOS shell — prove the SwiftUI shell actually compiles and its DecodingTests round-trip the
+# shared ForgeBridge fixtures (contract: docs/IOS-SHELL-CONTRACT.md, "Project + CI").
+#
+# THE PROJECT FILE IS NOT COMMITTED, BY DESIGN. apps/ios/project.yml (XcodeGen) is the
+# reviewable source of truth; the .xcodeproj is generated on the Mac and here, fresh, every run.
+# That is why this workflow starts by generating the project instead of assuming one exists —
+# and why a missing project.yml is a hard, loudly-explained failure, not a skip.
+#
+# WHY fixtures/forgebridge/** is in the path filter: those JSON files are the ForgeBridge v1
+# contract, exercised by BOTH the web unit tests and the Swift DecodingTests. A fixture edit
+# that only ran web CI could drift the Swift side silently — the whole point of shared fixtures
+# is that a change to them re-proves both decoders.
+name: iOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/ios/**"
+      - "fixtures/forgebridge/**"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "apps/ios/**"
+      - "fixtures/forgebridge/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: ios · generate + build + test
+    # macos-15 — ASSUMPTION: the runner image's DEFAULT Xcode (16.x, iOS 18.x simulators) is
+    # used as-is. The project spec targets iOS 17.0 / Swift 5.9, both comfortably inside any
+    # Xcode 16 toolchain, so nothing here selects a version: no xcode-select, no DEVELOPER_DIR.
+    # Pinning one would mean chasing image updates forever for zero benefit — only reach for
+    # DEVELOPER_DIR if the project ever needs a toolchain the image default cannot provide.
+    runs-on: macos-15
+    # A wedged simulator or a hung xcodebuild should die in minutes, not eat a 6-hour macOS
+    # runner slot (10x the Linux minute rate). A healthy run is well under 15.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # ── Fail fast: the project source must exist ─────────────────────────────────────────
+      # The iOS project has NO committed .xcodeproj — apps/ios/project.yml is the only project
+      # definition there is. If it is gone, nothing below can possibly work, and the failure
+      # should say that in one line instead of five steps later as an inscrutable xcodebuild
+      # "project not found".
+      - name: Check the project source of truth exists
+        run: |
+          if [ ! -f apps/ios/project.yml ]; then
+            echo "::error file=apps/ios/project.yml::apps/ios/project.yml is missing. It is the project SOURCE OF TRUTH — the .xcodeproj is uncommitted by design and generated from it (cd apps/ios && xcodegen generate). Restore project.yml; do not commit a .xcodeproj in its place."
+            exit 1
+          fi
+
+      # ── XcodeGen, via Homebrew ───────────────────────────────────────────────────────────
+      # NOT cached, deliberately. xcodegen ships as a prebuilt bottle a few MB in size and
+      # installs in seconds; caching it would mean tarring and restoring Homebrew state that
+      # costs more wall-clock than the install it saves. HOMEBREW_NO_AUTO_UPDATE skips the one
+      # genuinely slow part (a full brew metadata update this job does not need).
+      - name: Install XcodeGen
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install xcodegen
+
+      # xcpretty is a nicety, never a gate: if the gem will not install we build with raw
+      # xcodebuild output rather than fail a compile check over log formatting.
+      - name: Install xcpretty (best-effort log formatter)
+        run: |
+          gem install xcpretty --no-document \
+            || sudo gem install xcpretty --no-document \
+            || echo "::notice::xcpretty unavailable — continuing with raw xcodebuild output"
+
+      # ── Generate the project ─────────────────────────────────────────────────────────────
+      - name: Generate FitForge.xcodeproj (xcodegen)
+        working-directory: apps/ios
+        run: |
+          if ! xcodegen generate; then
+            echo "::error file=apps/ios/project.yml::xcodegen generate failed — apps/ios/project.yml does not describe a valid project. Fix the spec (it is the source of truth; the .xcodeproj is never committed) and re-run 'cd apps/ios && xcodegen generate' locally to reproduce."
+            exit 1
+          fi
+          echo "::notice::project generated — FitForge.xcodeproj built from apps/ios/project.yml"
+
+      # ── Build the app for the simulator ──────────────────────────────────────────────────
+      # generic/platform=iOS Simulator: compiles for the simulator SDK without booting (or even
+      # naming) a device, which is all a compile-proof needs and immune to Apple renaming the
+      # device lineup under the runner image.
+      #
+      # set -o pipefail IS NOT OPTIONAL. This repo has been burned by masked pipelines before:
+      # a formatter at the end of a pipe returns ITS exit code, so without pipefail a failed
+      # xcodebuild piped into a happy xcpretty reports green. pipefail makes the pipe fail if
+      # ANY member fails. Same rule on the test step below.
+      - name: Build the app (FitForge scheme, simulator)
+        working-directory: apps/ios
+        run: |
+          set -o pipefail
+          FMT=cat; command -v xcpretty >/dev/null && FMT=xcpretty
+          if ! xcodebuild build \
+              -project FitForge.xcodeproj \
+              -scheme FitForge \
+              -destination 'generic/platform=iOS Simulator' \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+              2>&1 | tee build.log | "$FMT"; then
+            echo "::error::The iOS app failed to compile for the simulator. Reproduce locally with: cd apps/ios && xcodegen generate && xcodebuild build -scheme FitForge -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO. First errors are in the log above (search for 'error:')."
+            exit 1
+          fi
+          echo "::notice::app compiles — FitForge built for the iOS Simulator (unsigned)"
+
+      # ── Run the unit tests on a booted simulator ─────────────────────────────────────────
+      # Tests need a CONCRETE device, not the generic destination. The name is resolved from
+      # what this image actually ships instead of hard-coding "iPhone 16": runner images gain
+      # and lose device models with every Xcode bump, and a hard-coded name is exactly the kind
+      # of failure that has nothing to do with the code under test.
+      - name: Run FitForgeTests (DecodingTests round-trip fixtures/forgebridge)
+        working-directory: apps/ios
+        run: |
+          set -o pipefail
+          SIM=$(xcrun simctl list devices available | grep -Eo 'iPhone [^(]+' | head -1 | sed 's/ *$//')
+          if [ -z "$SIM" ]; then
+            echo "::error::No available iPhone simulator on this runner image — the macos-15 image has changed. List what exists with 'xcrun simctl list devices available' in a debug run and adjust the destination."
+            exit 1
+          fi
+          echo "Using simulator: ${SIM}"
+          FMT=cat; command -v xcpretty >/dev/null && FMT=xcpretty
+          if ! xcodebuild test \
+              -project FitForge.xcodeproj \
+              -scheme FitForge \
+              -destination "platform=iOS Simulator,name=${SIM}" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+              2>&1 | tee test.log | "$FMT"; then
+            echo "::error::FitForgeTests failed. If DecodingTests failed, the Swift ForgeBridge decoders have drifted from fixtures/forgebridge/*.json — fix apps/ios/FitForge/Bridge/ForgeBridgeMessages.swift (or the fixtures, in lockstep with apps/web/lib/native/forgeBridge.ts; the fixtures are the shared contract, so never change one side alone). Failed cases are listed above."
+            exit 1
+          fi
+          # The green-run receipt: total executed, and the DecodingTests count called out —
+          # those are the fixture round-trip, the reason this job guards fixtures/forgebridge.
+          total=$(grep -Eo 'Executed [0-9]+ tests?' test.log | tail -1 | grep -Eo '[0-9]+' || echo "0")
+          decoding=$(grep -Ec "Test Case .*DecodingTests.* passed" test.log || true)
+          echo "::notice::${total} unit tests passed on ${SIM} — ${decoding} DecodingTests round-tripped the shared fixtures/forgebridge JSON"
+
+      # Raw logs (pre-xcpretty), because the formatted stream is exactly what you cannot debug
+      # a toolchain problem from.
+      - name: Upload xcodebuild logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: xcodebuild-logs
+          path: |
+            apps/ios/build.log
+            apps/ios/test.log
+          retention-days: 7
+          if-no-files-found: ignore

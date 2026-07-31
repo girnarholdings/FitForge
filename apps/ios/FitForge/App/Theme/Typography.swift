@@ -2,30 +2,30 @@ import SwiftUI
 
 // MARK: - Typography scale
 //
-// Built on the system font with Dynamic Type support (rounded design for a
-// friendly, modern feel). Use these instead of ad-hoc `.font(...)` so text
-// stays consistent across screens.
+// System font with Dynamic Type. The web app sets the brand's type (Archivo body, Big
+// Shoulders display); bundling those here would be weight the shell's three native screens
+// cannot justify (zero-dependency law), so the system face at the same scale stands in.
+// Use these instead of ad-hoc `.font(...)` so the native screens stay consistent.
 
 public extension Font {
-    static let ffLargeTitle = Font.system(.largeTitle, design: .rounded).weight(.bold)
-    static let ffTitle = Font.system(.title, design: .rounded).weight(.bold)
-    static let ffTitle2 = Font.system(.title2, design: .rounded).weight(.semibold)
-    static let ffTitle3 = Font.system(.title3, design: .rounded).weight(.semibold)
-    static let ffHeadline = Font.system(.headline, design: .rounded)
-    static let ffBody = Font.system(.body, design: .rounded)
-    static let ffCallout = Font.system(.callout, design: .rounded)
-    static let ffSubheadline = Font.system(.subheadline, design: .rounded)
-    static let ffFootnote = Font.system(.footnote, design: .rounded)
-    static let ffCaption = Font.system(.caption, design: .rounded)
-    /// Tabular monospaced digits for timers and set numbers.
-    static let ffMonoLarge = Font.system(size: 56, weight: .bold, design: .rounded).monospacedDigit()
-    static let ffMono = Font.system(.body, design: .rounded).monospacedDigit()
+    static let ffLargeTitle = Font.system(.largeTitle).weight(.bold)
+    static let ffTitle = Font.system(.title).weight(.bold)
+    static let ffTitle2 = Font.system(.title2).weight(.semibold)
+    static let ffTitle3 = Font.system(.title3).weight(.semibold)
+    static let ffHeadline = Font.system(.headline)
+    static let ffBody = Font.system(.body)
+    static let ffCallout = Font.system(.callout)
+    static let ffSubheadline = Font.system(.subheadline)
+    static let ffFootnote = Font.system(.footnote)
+    static let ffCaption = Font.system(.caption)
+    /// Tabular monospaced digits for anything numeric that updates in place.
+    static let ffMono = Font.system(.body).monospacedDigit()
 }
 
 public extension Text {
     func ffSectionHeader() -> some View {
         self.font(.ffFootnote.weight(.semibold))
-            .foregroundStyle(Palette.textSecondary)
+            .foregroundStyle(Palette.mutedForeground)
             .textCase(.uppercase)
             .kerning(0.5)
     }

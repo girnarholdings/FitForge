@@ -1,0 +1,9 @@
+{
+  "v": 1,
+  "id": "a1b2c3d4-000c-4000-8000-00000000000c",
+  "type": "bridge/unsupported",
+  "payload": {
+    "forId": "a1b2c3d4-00ff-4000-8000-0000000000ff",
+    "type": "health/futureThing"
+  }
+}
