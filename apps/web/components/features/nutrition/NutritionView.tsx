@@ -42,6 +42,7 @@ import { MEAL_SLOTS } from './mealSlots';
 import { Composer } from './Composer';
 import { DayAnalytics } from './DayAnalytics';
 import { DaySummary } from './DaySummary';
+import { DietPlanCard } from './DietPlanCard';
 import { FoodPickerSheet } from './FoodPickerSheet';
 import { ReviewSheet } from './ReviewSheet';
 
@@ -280,6 +281,12 @@ export function NutritionView() {
           onAddFood={(food, grams) => reviewSingleFood(food, defaultMealSlot(), grams)}
         />
       )}
+
+      {/* THE DIET PLAN (AI-Mode) — renders only when `useDietPlan()` has a plan, so every other
+          user's Nutrition screen is unchanged. "Log this meal" appends rows through the same
+          `setLogs` path the review sheet commits through — the plan writes to the ledger, it
+          never IS the ledger. */}
+      <DietPlanCard date={date} onLog={(rows) => setLogs((prev) => [...prev, ...rows])} />
 
       {/* The headline input. Fixed to the thumb zone on phones, in-flow on desktop. */}
       <Composer onSubmit={parseAndReview} showExamples={logs.length === 0} />

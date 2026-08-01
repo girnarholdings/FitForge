@@ -3,10 +3,14 @@
 /**
  * Derive the Coach worker's `profile` payload from the Local Mode store.
  *
- * SCOPE, deliberately narrow: TRAINING CONTEXT ONLY. The display name, sex, birthdate, height,
- * weight and every food log stay in the browser — the model does not need them to answer "how
- * many sets should I do?", so they are never put on the wire. The shape mirrors
- * `workers/coach/src/index.ts` `ChatRequest['profile']` field for field.
+ * SCOPE, deliberately narrow: TRAINING CONTEXT plus, when one exists, the DIET-PLAN SUMMARY
+ * (AIMODE-CONTRACT "coach tie-in"). The display name, sex, birthdate, height, weight and every
+ * food log stay in the browser — the model does not need them to answer "how many sets should I
+ * do?", so they are never put on the wire. The diet summary is different in kind from a food
+ * log: it is the app's own PLANNED output (recipe names with their published macros), not a
+ * record of what the user ate — and without it "what should I eat tonight" gets an invented
+ * answer instead of one grounded in THE plan. The shape mirrors `workers/coach/src/index.ts`
+ * `ChatRequest['profile']` field for field.
  *
  * Everything is optional: a user who skipped onboarding still gets a valid (empty) payload, and
  * the worker omits empty slots from the system prompt.
@@ -15,6 +19,8 @@ import * as React from 'react';
 import { getSplit } from '@fitforge/shared/rules';
 import type { DemoState } from '@/lib/demo/store';
 import { useDemoState } from '@/lib/demo/useDemo';
+import { useDietPlan } from '@/lib/diet/store';
+import { RECIPES, type Recipe } from '@/lib/diet/recipes';
 import type { CoachProfile } from './types';
 
 const GOAL_LABEL: Record<string, string> = {
@@ -105,10 +111,75 @@ export function deriveCoachProfile(state: DemoState): CoachProfile {
   return out;
 }
 
+/* ---------------------------------------------------------------------- diet-plan summary */
+
+/**
+ * Hard cap on the diet line (research §7 wants the profile compact — never the whole week).
+ * Worst realistic case (4 meals, long recipe names, both targets) lands near 400 chars; the cap
+ * is a fence, not a target.
+ */
+const MAX_DIET_SUMMARY_CHARS = 600;
+
+/** Structural view of the persisted `fitforge.diet.v1` record `useDietPlan()` returns. */
+interface DietRecordLike {
+  plan?: { days?: { meals?: { slot: string; recipeId: string; servings?: number }[] }[] } | null;
+  stance?: string | null;
+}
+
+/**
+ * One compact line: stance, TODAY's planned meals as `slot: Name (kcal, protein)`, day targets.
+ * Today = blueprint weekday modulo plan length — the same rule the Nutrition plan card renders
+ * by, so the coach and the screen always describe the same meals. Returns null when there is no
+ * plan, so the field simply stays off the wire for non-AI-Mode users.
+ *
+ * v1 fence: this is READ-ONLY grounding. The coach may discuss and suggest; nothing it says is
+ * ever applied to the plan — the Swap UI (through `applySwap`) is the plan's only writer.
+ */
+export function dietSummary(
+  diet: DietRecordLike | null | undefined,
+  targets: { kcal?: number | null; protein?: number | null },
+): string | null {
+  const days = diet?.plan?.days;
+  if (!days || days.length === 0) return null;
+  const today = days[((new Date().getDay() + 6) % 7) % days.length];
+  const meals = (today?.meals ?? [])
+    .map((m) => {
+      const r = RECIPES.find((rec: Recipe) => rec.id === m.recipeId);
+      if (!r) return null;
+      const s = m.servings && m.servings > 0 ? m.servings : 1;
+      return `${m.slot}: ${r.name} (${Math.round(r.per_serving.kcal * s)} kcal, ${Math.round(
+        r.per_serving.protein_g * s,
+      )}g protein)`;
+    })
+    .filter((line): line is string => line != null)
+    .slice(0, 4);
+  if (meals.length === 0) return null;
+
+  const targetBits = [
+    targets.kcal ? `${Math.round(targets.kcal)} kcal` : null,
+    targets.protein ? `${Math.round(targets.protein)}g protein` : null,
+  ].filter(Boolean);
+  const tail = targetBits.length > 0 ? `; day target ${targetBits.join(', ')}` : '';
+
+  return `${diet?.stance ?? 'maintain'} plan — today: ${meals.join('; ')}${tail}`.slice(
+    0,
+    MAX_DIET_SUMMARY_CHARS,
+  );
+}
+
 /** Reactive binding for the Coach surface. */
 export function useCoachProfile(): CoachProfile {
   const state = useDemoState();
-  return React.useMemo(() => deriveCoachProfile(state), [state]);
+  const diet = useDietPlan();
+  return React.useMemo(() => {
+    const out = deriveCoachProfile(state);
+    const summary = dietSummary(diet, {
+      kcal: state.targets?.kcal_target ?? state.nutritionProfile?.kcal_target ?? null,
+      protein: state.targets?.protein_g_target ?? state.nutritionProfile?.protein_g_target ?? null,
+    });
+    if (summary) out.diet = summary;
+    return out;
+  }, [state, diet]);
 }
 
 /**
@@ -132,5 +203,7 @@ export function profileFacts(p: CoachProfile): string[] {
   if (p.kcal_target) facts.push(`${p.kcal_target} kcal`);
   if (p.protein_target) facts.push(`${p.protein_target}g protein`);
   if (p.exclusions?.length) facts.push(`${p.exclusions.length} exclusion${p.exclusions.length > 1 ? 's' : ''}`);
+  // The summary itself is a sentence, not a chip — the chip only makes the grounding VISIBLE.
+  if (p.diet) facts.push('diet plan');
   return facts;
 }
