@@ -1385,7 +1385,7 @@ test('bodyscan: happy path returns contract buckets — and NEVER the image byte
   // The fallback answered, so its self-reported 0.9 must NOT come back as full confidence.
   assert.notEqual(body.confidence.weight, 'high', 'fallback confidences are capped to a soft guess');
   assert.equal(body.provider, 'workers-ai');
-  assert.equal(body.model, '@cf/meta/llama-3.2-11b-vision-instruct', 'the fallback is the VISION model, not the text chain');
+  assert.equal(body.model, '@cf/meta/llama-4-scout-17b-16e-instruct', 'the fallback is the VISION model, not the text chain');
   assert.ok(Array.isArray(body.notes));
   // THE PRIVACY ASSERTION: no fragment of any photo may ride back in the response.
   for (const marker of ['FRONTBYTES', 'BACKBYTES', 'LEFTBYTES', 'RIGHTBYTES'])

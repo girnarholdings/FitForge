@@ -1446,8 +1446,13 @@ const BODYSCAN_IMAGE_PREFIX = 'data:image/jpeg;base64,';
  * The vision fallback — SEPARATE from the text chain above, because none of those models
  * accept image input, so a scan cannot walk that chain: it is this model or a 503. It is
  * noticeably weaker than the primary, which is why its confidences are capped below.
+ *
+ * Llama 4 Scout, not 3.2-11b-vision: the older model READ the photos fine but could not hold
+ * the JSON-only contract — production answers came back as markdown bullet lists with every
+ * field semantically correct and structurally unusable, 502 after 502. Scout follows the
+ * output contract.
  */
-const WORKERS_AI_VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+const WORKERS_AI_VISION_MODEL = '@cf/meta/llama-4-scout-17b-16e-instruct';
 /** On the fallback, cap raw confidences so every chip renders as a soft guess on the confirm screen. */
 const BODYSCAN_FALLBACK_CONFIDENCE_CAP = 0.5;
 /**
@@ -1866,7 +1871,9 @@ async function bodyScan(
       text:
         (contextBits.length ? `Context: ${contextBits.join(', ')}. ` : '') +
         shots.map((s, i) => `Photo ${i + 1} is ${SHOT_LABELS[s]}`).join(', ') +
-        '.',
+        // The last words the model reads. The weaker fallback demonstrably drifts into
+        // markdown without this — and it costs nothing on models that would comply anyway.
+        '. Answer with ONLY the JSON object — no markdown, no bullets, no prose.',
     },
     ...images.map((url) => ({ type: 'image_url' as const, image_url: { url } })),
   ];
