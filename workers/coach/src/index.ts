@@ -1789,6 +1789,13 @@ async function generateVision(
       if (detail.includes('5016')) {
         try {
           await env.AI!.run(WORKERS_AI_VISION_MODEL, { prompt: 'agree' });
+        } catch {
+          // The acknowledgement ITSELF comes back 5016-coded — "Thank you for agreeing to
+          // this model's terms. You may now use the model." — i.e. the agree call "fails" by
+          // design. There is nothing to read in that failure; whether the gate actually
+          // opened is answered by the retry below and nothing else.
+        }
+        try {
           return await runVisionModel();
         } catch (err2) {
           return {

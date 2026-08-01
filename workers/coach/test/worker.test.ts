@@ -1588,7 +1588,13 @@ test('bodyscan: the 5016 license gate self-heals — submit "agree" once, then r
     AI: {
       run: async (model: string, input: Record<string, unknown>) => {
         calls.push({ model, input });
-        if (input.prompt === 'agree') return { response: 'ok' };
+        // Cloudflare's real behavior, learned from production: the acknowledgement call
+        // ITSELF throws a 5016-coded "thank you" — it must be treated as the gate opening,
+        // never as a failure.
+        if (input.prompt === 'agree')
+          throw new Error(
+            "5016: Thank you for agreeing to this model's terms. You may now use the model.",
+          );
         if (!refused) {
           refused = true;
           throw new Error(
