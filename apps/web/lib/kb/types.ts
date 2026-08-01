@@ -104,6 +104,14 @@ export interface CoachProfile {
   kcal_target?: number;
   protein_target?: number;
   exclusions?: string[];
+  /**
+   * Compact diet-plan summary — stance, today's planned meals (name + kcal + protein), day
+   * targets. Present only when an AI-Mode diet plan exists; built and clamped (≤600 chars) in
+   * `lib/kb/profile.ts` so "what should I eat tonight"-shaped questions ground in THE plan
+   * rather than a model's invention. The worker only ever READS this: coach-proposed diet edits
+   * are out of v1 scope — the Swap UI is the sole writer of the plan.
+   */
+  diet?: string;
 }
 
 /** One retrieved note attached as grounding. Matches the worker's `snippets` contract. */
