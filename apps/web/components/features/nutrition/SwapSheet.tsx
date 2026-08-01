@@ -17,9 +17,10 @@ import { FoodGlyph } from '@/components/ui/foodIcons';
 import type { MealSlotName } from '@/lib/food/types';
 import { applySwap } from '@/lib/diet/store';
 import { swapCandidates } from '@/lib/diet/swaps';
+import type { DietPlan } from '@/lib/diet/plan';
 import type { Recipe } from '@/lib/diet/recipes';
 import { mealSlotLabel } from './mealSlots';
-import { scaledMacros, swapDeltaLine, type PlanShape } from './planShared';
+import { scaledMacros, swapDeltaLine } from './planShared';
 
 export function SwapSheet({
   open,
@@ -32,7 +33,9 @@ export function SwapSheet({
   onBrowse,
 }: {
   open: boolean;
-  plan: PlanShape;
+  // The engine's full DietPlan, not the display-only PlanShape: swapCandidates reads the
+  // plan's own prefs/weight to enforce dietary compatibility and the protein floor.
+  plan: DietPlan;
   day: number;
   slot: MealSlotName;
   /** The dish being swapped out — the reference every delta is signed against. */
