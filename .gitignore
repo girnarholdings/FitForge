@@ -116,3 +116,6 @@ apps/web/playwright-report/
 # fdc.nal.usda.gov, which CI has and a dev machine may not. Never committed: it is ~40 MB and
 # would be stale the moment USDA publishes. The app degrades to the tier-1 core without it.
 apps/web/public/food/
+
+# Agent worktrees — transient isolated working copies, never project content
+.claude/worktrees/
