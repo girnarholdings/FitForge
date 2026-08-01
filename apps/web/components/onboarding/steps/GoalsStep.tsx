@@ -46,14 +46,24 @@ function joinGoals(goals: GoalType[]): string {
  * `goals[]` is the answer of record; `primary_goal` / `secondary_goal` stay in sync as goals[0] /
  * goals[1] so generation, macros, split scoring and Settings keep working unchanged.
  */
+/**
+ * The AI-Mode cap (docs/AIMODE-CONTRACT.md: "ranked top-3 goals"). Three, because the diet
+ * engine's stance mapping reads the ranked top-3 and nothing past it — letting a fourth be
+ * tapped would collect an answer nothing uses. Old School keeps its uncapped multi-select.
+ */
+const AI_GOAL_CAP = 3;
+
 export function GoalsStep() {
   const { draft, patch } = useOnboarding();
+  const aiMode = !!draft.ai_mode;
 
   // Tolerate a draft saved before this step became multi-select.
   const goals = React.useMemo<GoalType[]>(() => {
     if (draft.goals?.length) return draft.goals;
     return [draft.primary_goal, draft.secondary_goal].filter(Boolean) as GoalType[];
   }, [draft.goals, draft.primary_goal, draft.secondary_goal]);
+
+  const atCap = aiMode && goals.length >= AI_GOAL_CAP;
 
   const commit = (next: GoalType[]) => {
     patch({
@@ -64,7 +74,14 @@ export function GoalsStep() {
   };
 
   const toggle = (value: GoalType) => {
-    commit(goals.includes(value) ? goals.filter((g) => g !== value) : [...goals, value]);
+    if (goals.includes(value)) {
+      commit(goals.filter((g) => g !== value));
+      return;
+    }
+    // At the AI cap an extra tap is IGNORED, never silently evicting an earlier pick — order is
+    // rank here, and reshuffling someone's ranking behind their back is worse than a no-op.
+    if (atCap) return;
+    commit([...goals, value]);
   };
 
   return (
@@ -93,10 +110,18 @@ export function GoalsStep() {
         </div>
       )}
 
-      <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
-        Pick as many as you like — the first one you tap leads your programming, and the rest
-        adjust the split we recommend.
-      </p>
+      {aiMode ? (
+        <p className="mt-3 text-[11px] leading-snug text-muted-foreground" data-testid="goals-ai-cap">
+          {atCap
+            ? 'That’s your three — untap one to swap it. The first leads your programming.'
+            : 'Up to three, in order — the first one you tap leads your programming, and the rest adjust the split we recommend.'}
+        </p>
+      ) : (
+        <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+          Pick as many as you like — the first one you tap leads your programming, and the rest
+          adjust the split we recommend.
+        </p>
+      )}
 
       <div className="flex-1" />
       <OnboardingFooter step="goals" canContinue={goals.length > 0} />

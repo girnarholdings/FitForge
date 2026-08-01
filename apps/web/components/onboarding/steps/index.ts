@@ -15,6 +15,8 @@ import { NutritionPrefsStep } from './NutritionPrefsStep';
 import { TargetsReviewStep } from './TargetsReviewStep';
 import { PlanPreviewStep } from './PlanPreviewStep';
 import { DoneStep } from './DoneStep';
+import { AiPhotosStep } from './AiPhotosStep';
+import { AiConfirmStep } from './AiConfirmStep';
 
 /** Registry mapping each §2.2 step id to its screen component. */
 export const STEP_COMPONENTS: Record<OnboardingStep, ComponentType> = {
@@ -33,4 +35,7 @@ export const STEP_COMPONENTS: Record<OnboardingStep, ComponentType> = {
   targets_review: TargetsReviewStep,
   plan_preview: PlanPreviewStep,
   done: DoneStep,
+  // AI-Mode fork (docs/AIMODE-CONTRACT.md): photos → confirm, then back into goals/plan_preview.
+  ai_photos: AiPhotosStep,
+  ai_confirm: AiConfirmStep,
 };

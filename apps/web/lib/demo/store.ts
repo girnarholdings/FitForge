@@ -181,6 +181,11 @@ const ONBOARDING_STEP_VALUES = allowed<OnboardingStep>({
   targets_review: true,
   plan_preview: true,
   done: true,
+  // AI-Mode fork screens — accepted as resume pointers so closing the app mid-scan resumes on
+  // the AI path instead of being "repaired" back to welcome. (The photos themselves are never
+  // persisted anywhere — contract Law 4 — so a resume shows empty capture slots, which is right.)
+  ai_photos: true,
+  ai_confirm: true,
 });
 const GOAL_VALUES = allowed<Profile['primary_goal']>({
   strength: true,

@@ -9,6 +9,13 @@ import type {
   ExclusionReason,
 } from '@fitforge/shared/types';
 import type { BodyArea } from '@fitforge/shared/types';
+import type {
+  AiAgeBucket,
+  AiBodyFatBand,
+  AiBuild,
+  AiDietBase,
+  AiDietAvoid,
+} from '@fitforge/shared/schemas';
 
 /** Lightweight display record kept alongside ids so chips can render names without a re-fetch. */
 export interface NamedRef {
@@ -137,6 +144,39 @@ export interface OnboardingDraft {
   carbs_g_target: number | null;
   fat_g_target: number | null;
   targets_source: 'suggested' | 'custom';
+
+  // ═══════════════════════════════════════ AI-Mode fork (docs/AIMODE-CONTRACT.md, W3) ═══════
+  /**
+   * Which door the athlete took at the welcome fork. False/absent = Old School — every draft
+   * written before the fork existed reads as Old School, so nothing changes for anyone (Law 1).
+   * Steers next/prev (`nextStepInMode`) and the goals cap; flipped back to false by every
+   * "Continue with Old School" exit.
+   */
+  ai_mode: boolean;
+
+  /**
+   * The USER-CONFIRMED buckets from ai_confirm — the answer of record for AI Mode, and the only
+   * scan-derived thing that is ever persisted (contract §F1: never the photos, never the model's
+   * raw pre-confirmation guesses). Buckets, never numbers (Law 2): the numeric draft fields
+   * above (`weight_kg`, `height_cm`, `birthdate`) carry the bucket MIDPOINTS so the existing
+   * deterministic generators run unchanged, but no UI copy ever renders those numbers.
+   */
+  ai_age_bucket: AiAgeBucket | null;
+  /** 10 kg band id, e.g. '70-80' ('under-50' / 'over-120' at the ends) */
+  ai_weight_band: string | null;
+  ai_body_fat_band: AiBodyFatBand | null;
+  /** the scan's build word — feeds the experience pre-fill and stance detection, changeable */
+  ai_build: AiBuild | null;
+  /** 5 cm height band id, e.g. '170-175' — `height_cm` holds its midpoint */
+  ai_height_band: string | null;
+
+  /**
+   * DietPrefs for the W2 diet engine, in the contract's exact vocabulary (base + avoid are HARD
+   * filters there). `diet_type`/`allergies` above are kept in sync where the vocabularies map,
+   * so the existing catalog filtering keeps working on an AI-Mode draft too.
+   */
+  diet_base: AiDietBase | null;
+  diet_avoid: AiDietAvoid[];
 }
 
 export function emptyDraft(): OnboardingDraft {
@@ -174,5 +214,13 @@ export function emptyDraft(): OnboardingDraft {
     carbs_g_target: null,
     fat_g_target: null,
     targets_source: 'suggested',
+    ai_mode: false,
+    ai_age_bucket: null,
+    ai_weight_band: null,
+    ai_body_fat_band: null,
+    ai_build: null,
+    ai_height_band: null,
+    diet_base: null,
+    diet_avoid: [],
   };
 }

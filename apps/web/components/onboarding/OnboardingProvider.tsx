@@ -3,9 +3,10 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
-import { nextStep as computeNext, prevStep as computePrev } from '@/lib/onboarding/steps';
-import { ensureSession, saveDraft, loadDraft, DEMO_USER_ID } from '@/lib/demo/store';
+import { nextStepInMode, prevStepInMode } from '@/lib/onboarding/steps';
+import { ensureSession, saveDraft, loadDraft, getState, DEMO_USER_ID } from '@/lib/demo/store';
 import { finalizeOnboarding } from '@/lib/demo/generate';
+import { runDietGenerationForDraft } from './dietGeneration';
 import { emptyDraft, type OnboardingDraft } from './types';
 
 interface OnboardingContextValue {
@@ -85,9 +86,13 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
     [router],
   );
 
+  // The AI-Mode fork walks its own, shorter chain; Old School (ai_mode falsy — including every
+  // draft written before the fork existed) resolves to exactly the classic index-based order.
+  const aiMode = !!draft.ai_mode;
+
   const goBack = React.useCallback(
-    (step: OnboardingStep) => router.push(`/onboarding/${computePrev(step)}`),
-    [router],
+    (step: OnboardingStep) => router.push(`/onboarding/${prevStepInMode(step, aiMode)}`),
+    [router, aiMode],
   );
 
   const commitAndNext = React.useCallback(
@@ -95,7 +100,7 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
       setSaving(true);
       setError(null);
       try {
-        const next = computeNext(step);
+        const next = nextStepInMode(step, aiMode);
         ensureSession();
         saveDraft(draft, next);
         router.push(`/onboarding/${next}`);
@@ -105,7 +110,7 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
         setSaving(false);
       }
     },
-    [draft, router],
+    [draft, router, aiMode],
   );
 
   const finish = React.useCallback(async () => {
@@ -114,13 +119,17 @@ export function OnboardingProvider({ initialDraft, children }: OnboardingProvide
     try {
       ensureSession();
       finalizeOnboarding(draft);
+      // AI Mode completion also forges the 7-day diet plan (contract: "generatePlan +
+      // generateDietPlan both run"). Behind its own never-throw boundary, AFTER the training
+      // plan is persisted: a missing/failing diet engine must not keep anyone off Today.
+      if (aiMode) await runDietGenerationForDraft(draft, getState().targets);
       router.push('/today');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not finish onboarding.');
     } finally {
       setSaving(false);
     }
-  }, [draft, router]);
+  }, [draft, router, aiMode]);
 
   const value = React.useMemo<OnboardingContextValue>(
     () => ({

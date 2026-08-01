@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ProgressBar } from '@/components/ui';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import { StepArt } from '@/components/illustrations';
-import { STEP_META, wizardProgress } from '@/lib/onboarding/steps';
+import { STEP_META, wizardProgressInMode } from '@/lib/onboarding/steps';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
 import { getRestoreState, subscribeRestore } from '@/lib/auth/sync';
 import { useOnboarding } from './OnboardingProvider';
@@ -25,7 +25,11 @@ import { STEP_COMPONENTS } from './steps';
  */
 export function OnboardingShell({ step }: { step: OnboardingStep }) {
   const meta = STEP_META[step];
-  const { goBack } = useOnboarding();
+  const { goBack, draft } = useOnboarding();
+  // The AI-Mode fork reuses some wizard screens (goals, plan preview) with its own subtitle and
+  // its own, shorter progress count. Old School (ai_mode falsy) resolves to the exact old values.
+  const aiMode = !!draft.ai_mode;
+  const subtitle = aiMode && meta.aiSubtitle ? meta.aiSubtitle : meta.subtitle;
   const StepBody = STEP_COMPONENTS[step];
   const [dock, setDock] = React.useState<HTMLDivElement | null>(null);
   const router = useRouter();
@@ -60,7 +64,7 @@ export function OnboardingShell({ step }: { step: OnboardingStep }) {
     );
   }
 
-  const { current, total } = wizardProgress(step);
+  const { current, total } = wizardProgressInMode(step, aiMode);
 
   return (
     <OnboardingDockContext.Provider value={dock}>
@@ -84,9 +88,9 @@ export function OnboardingShell({ step }: { step: OnboardingStep }) {
           <h1 className="flex-none font-display text-[clamp(1.375rem,5.6vw,1.75rem)] font-bold leading-[1.15] tracking-tight text-foreground">
             {meta.title}
           </h1>
-          {meta.subtitle && (
+          {subtitle && (
             <p className="mt-1.5 flex-none text-[0.8125rem] leading-snug text-muted-foreground">
-              {meta.subtitle}
+              {subtitle}
             </p>
           )}
           <div className="flex flex-1 flex-col pt-4">

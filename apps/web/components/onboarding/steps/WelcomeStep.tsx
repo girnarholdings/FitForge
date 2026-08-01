@@ -3,7 +3,15 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
-import { SparkleIcon, CheckIcon, ExportIcon, ImportIcon } from '@/components/ui/icons';
+import {
+  SparkleIcon,
+  CheckIcon,
+  ExportIcon,
+  ImportIcon,
+  ClipboardIcon,
+  BodyIcon,
+} from '@/components/ui/icons';
+import { cn } from '@/lib/utils';
 import { LogoLockup } from '@/components/illustrations';
 import { ensureSession, importAllState, patchDraft } from '@/lib/demo/store';
 import { useAuth } from '@/lib/auth/useUser';
@@ -32,7 +40,7 @@ import { useOnboarding } from '../OnboardingProvider';
  *   previously had to finish a full onboarding to reach.
  */
 export function WelcomeStep() {
-  const { goTo, patch } = useOnboarding();
+  const { goTo, patch, draft } = useOnboarding();
   const router = useRouter();
   const { status, user } = useAuth();
   const signedIn = status === 'signed-in' && !!user;
@@ -41,6 +49,14 @@ export function WelcomeStep() {
   const [touched, setTouched] = React.useState(false);
   const [importError, setImportError] = React.useState<string | null>(null);
   const fileRef = React.useRef<HTMLInputElement>(null);
+  /**
+   * THE MODE FORK (docs/AIMODE-CONTRACT.md "Onboarding fork"): Old School — the classic
+   * questionnaire, byte-identical — or AI Mode, which starts with four photos. Old School is the
+   * DEFAULT: "Get started" with nothing tapped behaves exactly as it did before the fork
+   * existed, which is what keeps every pre-fork spec and every muscle memory intact (Law 1).
+   */
+  const [mode, setMode] = React.useState<'classic' | 'ai'>('classic');
+  const [modeTouched, setModeTouched] = React.useState(false);
 
   // Pre-fill from the Google profile, but never overwrite what someone has typed. Keyed on
   // `touched` rather than on the field being empty, so deliberately clearing it is respected too:
@@ -49,15 +65,23 @@ export function WelcomeStep() {
     if (!touched && user?.name) setName(user.name);
   }, [touched, user?.name]);
 
+  // A resumed AI-Mode draft re-selects its card — but never over an explicit tap this visit.
+  React.useEffect(() => {
+    if (!modeTouched && draft.ai_mode) setMode('ai');
+  }, [modeTouched, draft.ai_mode]);
+
   const start = () => {
     const trimmed = name.trim();
     const value = trimmed ? trimmed : null;
-    patch({ display_name: value });
-    patchDraft({ display_name: value });
+    // ai_mode is written EXPLICITLY on both paths: someone who tried AI Mode, came back and
+    // picked Old School must not be left with a stale flag steering the wizard's chain.
+    const ai = mode === 'ai';
+    patch({ display_name: value, ai_mode: ai });
+    patchDraft({ display_name: value, ai_mode: ai });
     // Seeding the local session used to be the `auth` step's CTA. It still has to happen — the
     // (app) route gate reads a session-less visitor as a stranger and bounces them back here.
     ensureSession();
-    goTo('goals');
+    goTo(ai ? 'ai_photos' : 'goals');
   };
 
   const restore = async (file: File) => {
@@ -101,6 +125,39 @@ export function WelcomeStep() {
             className="mt-1.5 h-12 w-full rounded-[var(--radius-field)] border border-border bg-surface-2 px-4 text-base text-foreground outline-none transition-colors focus:border-accent"
           />
         </label>
+
+        {/* THE FORK. Two doors, one decision; the questionnaire is preselected so the CTA below
+            needs no new thinking from anyone who just wants to start. The AI card's subtitle is
+            deliberately blunt about what it involves (photos) and what happens to them (read
+            once, never stored) — a privacy claim made BEFORE the camera screen, not after. */}
+        <div
+          role="radiogroup"
+          aria-label="How do you want to set up?"
+          className="mt-4 grid flex-none gap-2"
+        >
+          <ModeCard
+            selected={mode === 'classic'}
+            onSelect={() => {
+              setModeTouched(true);
+              setMode('classic');
+            }}
+            icon={<ClipboardIcon size={18} />}
+            title="Old School"
+            description="Answer the questionnaire — goals, gear, schedule. About two minutes."
+            testId="welcome-mode-classic"
+          />
+          <ModeCard
+            selected={mode === 'ai'}
+            onSelect={() => {
+              setModeTouched(true);
+              setMode('ai');
+            }}
+            icon={<BodyIcon size={18} />}
+            title="AI Mode"
+            description="Four photos, face hidden. Read once to guess your ranges — you confirm every one, and the photos are never stored."
+            testId="welcome-mode-ai"
+          />
+        </div>
 
         {signedIn ? (
           <p
@@ -177,5 +234,66 @@ export function WelcomeStep() {
         </Button>
       </div>
     </>
+  );
+}
+
+/**
+ * One door of the fork. A radio-semantics row rather than a full Card: the welcome screen's one
+ * anchor is the name question, and two more 24px-radius cards would out-shout it (One Anchor
+ * Rule). ≥44px tall, house focus ring, `.ff-press` — the standard tappable contract.
+ */
+function ModeCard({
+  selected,
+  onSelect,
+  icon,
+  title,
+  description,
+  testId,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  testId: string;
+}) {
+  return (
+    <div
+      role="radio"
+      aria-checked={selected}
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      data-testid={testId}
+      className={cn(
+        'ff-press flex cursor-pointer items-start gap-2.5 rounded-2xl border bg-surface-2 p-3 text-left transition-colors',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
+        selected ? 'border-accent' : 'border-border hover:border-border-strong',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          'grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors',
+          selected ? 'bg-accent-muted text-accent' : 'bg-muted text-muted-foreground',
+        )}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          {title}
+          {selected && <CheckIcon size={14} aria-hidden className="text-accent" />}
+        </span>
+        <span className="mt-0.5 block text-[11.5px] leading-snug text-muted-foreground">
+          {description}
+        </span>
+      </span>
+    </div>
   );
 }

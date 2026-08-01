@@ -29,6 +29,7 @@ import {
 } from '@/components/features/_mock/data';
 import { useOnboarding } from '../OnboardingProvider';
 import { OnboardingFooter } from '../OnboardingFooter';
+import { runDietGenerationForDraft } from '../dietGeneration';
 
 interface SubHit {
   exercise_id: string;
@@ -115,9 +116,14 @@ export function PlanPreviewStep() {
     setSwap(null);
   };
 
-  const startPlan = () => {
+  const startPlan = async () => {
     // ensure everything is persisted, then head to Today.
     if (!getState().completedAt) finalizeOnboarding(draft);
+    // AI-MODE COMPLETION also forges the 7-day diet plan (contract: "existing generatePlan +
+    // generateDietPlan both run; land on Today"). One call into the never-throw diet boundary,
+    // AFTER the training plan is safe in the store — a missing or failing diet engine changes
+    // nothing about landing on Today. Old School never enters this branch.
+    if (draft.ai_mode) await runDietGenerationForDraft(draft, getState().targets);
     router.push('/today');
   };
 

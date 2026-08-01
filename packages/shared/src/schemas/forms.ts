@@ -53,9 +53,47 @@ export const ONBOARDING_STEPS = [
   'targets_review',
   'plan_preview',
   'done',
+  // AI-MODE FORK (docs/AIMODE-CONTRACT.md). These two are APPENDED, not inserted where they run:
+  // the wizard's next/prev helpers are index-based over this array, so a step slotted between two
+  // classic steps would silently reroute the classic flow — and "Old School untouched" is Law 1.
+  // AI Mode walks its own chain (welcome → ai_photos → ai_confirm → goals → plan_preview → done)
+  // via the mode-aware helpers in apps/web/lib/onboarding/steps.ts.
+  'ai_photos',
+  'ai_confirm',
 ] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 export const onboardingStepSchema = z.enum(ONBOARDING_STEPS);
+
+/* -------------------------------------------------------------- AI-Mode bucket vocabularies */
+
+/**
+ * The bucket enums the worker's `bodyscan` task answers in and the ai_confirm screen renders.
+ * Buckets are the ONLY resolution AI Mode ever speaks in — UI copy and stored data alike
+ * (contract Law 2: "buckets, never numbers"). Midpoints feed the deterministic math internally.
+ */
+export const AI_AGE_BUCKETS = ['18-25', '26-35', '36-45', '46-55', '56+'] as const;
+export type AiAgeBucket = (typeof AI_AGE_BUCKETS)[number];
+
+export const AI_BODY_FAT_BANDS = ['<12', '12-18', '18-25', '25-32', '32+'] as const;
+export type AiBodyFatBand = (typeof AI_BODY_FAT_BANDS)[number];
+
+/** Plain words, not somatotype pseudoscience (RESEARCH-VISION §D design notes). */
+export const AI_BUILDS = ['lean', 'athletic', 'muscular', 'higher-fat', 'average'] as const;
+export type AiBuild = (typeof AI_BUILDS)[number];
+
+/** DietPrefs.base — the four bases the diet engine treats as HARD filters (contract, W2 scope). */
+export const AI_DIET_BASES = ['omnivore', 'pescatarian', 'vegetarian', 'vegan'] as const;
+export type AiDietBase = (typeof AI_DIET_BASES)[number];
+
+/** DietPrefs.avoid — additive hard filters on top of the base (contract, W2 scope). */
+export const AI_DIET_AVOID = [
+  'dairy_free',
+  'gluten_free',
+  'halal_friendly',
+  'nut_free',
+  'shellfish_free',
+] as const;
+export type AiDietAvoid = (typeof AI_DIET_AVOID)[number];
 
 /* -------------------------------------------------------------- step 2 · goals */
 
@@ -182,6 +220,33 @@ export const targetsReviewStepSchema = z.object({
 });
 export type TargetsReviewStep = z.infer<typeof targetsReviewStepSchema>;
 
+/* -------------------------------------------------------------- AI-Mode step · ai_confirm */
+
+/**
+ * What the ai_confirm screen commits to the draft. The bucket strings are the answer of record
+ * (only USER-CONFIRMED buckets are ever stored — never the model's raw pre-confirmation guesses,
+ * contract §F1); the numeric fields are the bucket MIDPOINTS, written so the existing
+ * deterministic generators (Mifflin-St Jeor targets, plan generation) run unchanged on an
+ * AI-Mode draft (Law 2: coarseness is inside Mifflin's own error).
+ */
+export const aiConfirmStepSchema = z.object({
+  ai_age_bucket: z.enum(AI_AGE_BUCKETS),
+  /** a 10 kg band id, e.g. "70-80" ("under-50" / "over-120" at the ends) */
+  ai_weight_band: z.string().min(1),
+  ai_body_fat_band: z.enum(AI_BODY_FAT_BANDS),
+  ai_build: z.enum(AI_BUILDS).nullish(),
+  sex: z.enum(SEX_TYPES),
+  /** bucket midpoints — see the Law 2 note above */
+  weight_kg: z.number().min(25).max(400),
+  height_cm: z.number().min(60).max(260),
+  birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'birthdate must be YYYY-MM-DD'),
+  experience_level: z.enum(EXPERIENCE_LEVELS),
+  training_location: z.enum(TRAINING_LOCATIONS),
+  diet_base: z.enum(AI_DIET_BASES),
+  diet_avoid: z.array(z.enum(AI_DIET_AVOID)).default([]),
+});
+export type AiConfirmStep = z.infer<typeof aiConfirmStepSchema>;
+
 /* -------------------------------------------------------------- meal_slot helper (§2.3 log food) */
 
 export const mealSlotSchema = z.enum(MEAL_SLOTS);
@@ -198,4 +263,7 @@ export const onboardingStepSchemas = {
   body_metrics: bodyMetricsStepSchema,
   nutrition_prefs: nutritionPrefsStepSchema,
   targets_review: targetsReviewStepSchema,
+  // ai_photos is deliberately absent: it persists NOTHING (photos live in component memory only —
+  // contract Law 4). ai_confirm validates the confirmed buckets + midpoints it writes.
+  ai_confirm: aiConfirmStepSchema,
 } as const;
