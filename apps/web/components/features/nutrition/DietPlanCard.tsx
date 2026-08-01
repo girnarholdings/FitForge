@@ -33,7 +33,6 @@ import {
   recipeById,
   scaledMacros,
   servingGrams,
-  type DietPlanRecord,
   type PlanMeal,
 } from './planShared';
 import { SwapSheet } from './SwapSheet';
@@ -55,7 +54,9 @@ export function DietPlanCard({
   onLog: (rows: NutritionLog[]) => void;
 }) {
   // The whole stored record: plan + prefs + stance travel together (store contract, W2).
-  const diet = useDietPlan() as DietPlanRecord | null;
+  // The store's own entry type — the structural mirror in planShared was scaffolding for the
+  // parallel build and is display-only now; the engine's real types flow from here down.
+  const diet = useDietPlan();
   const [swapSlot, setSwapSlot] = React.useState<MealSlotName | null>(null);
   const [catalogOpen, setCatalogOpen] = React.useState(false);
 
