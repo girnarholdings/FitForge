@@ -312,8 +312,18 @@ function normalizeHistory(raw: unknown): HistoryMessage[] {
   return out;
 }
 
+/**
+ * One part of a multimodal user message. Text-only tasks keep passing a plain string; the
+ * bodyscan task passes an array of parts so photos ride inside the same chat-completions
+ * request every other task already uses. The object form of `image_url` is the one every
+ * SDK emits, so it is the one sent.
+ */
+export type UserContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
+
 /** The messages array: system, the conversation so far, then what was just asked. */
-function messagesFor(system: string, user: string, history: HistoryMessage[]) {
+function messagesFor(system: string, user: string | UserContentPart[], history: HistoryMessage[]) {
   return [
     { role: 'system' as const, content: system },
     ...history,
@@ -461,7 +471,9 @@ function modelFor(env: Env): string {
 async function askMistral(
   env: Env,
   system: string,
-  user: string,
+  // A plain string for text tasks; content PARTS (text + images) for the bodyscan task. The
+  // endpoint and envelope are identical either way — images ride inside the user message.
+  user: string | UserContentPart[],
   opts: GenOpts,
   history: HistoryMessage[] = [],
 ): Promise<{ ok: true; answer: string } | { ok: false; status: number; detail: string }> {
@@ -1391,6 +1403,398 @@ function validateAdapt(parsed: unknown, ctx: AdaptContextWire): AdaptResult | nu
   return { action: action as AdaptAction, swaps, reason, confidence, ...(advice ? { advice } : {}) };
 }
 
+/* ═══════════════════════════════════ bodyscan: vision bucket estimation (AI Mode) ══ */
+
+/**
+ * BODYSCAN — four body photos in, coarse fitness BUCKETS out, to pre-fill the AI-Mode
+ * confirm screen. The confirm screen IS the error correction: every estimate is shown as
+ * "estimated — tap to change" before it touches anything, which is why one low-temperature
+ * sample is enough where macros needs a three-sample consensus.
+ *
+ * PRIVACY IS THE DESIGN CONSTRAINT, not a footnote. The photos transit this worker once and
+ * are gone: no KV, no R2, no logging of body content, and — enforced below — no error path
+ * ever quotes a payload fragment back, because a data-URI fragment IS image bytes.
+ */
+const BODYSCAN_MAX_TOKENS = 500; // the schema answer is ~250 tokens; headroom, not a leash
+const BODYSCAN_TEMPERATURE = 0.2; // near-greedy — the confirm screen is the consensus mechanism
+/** Exactly front / back / side / side. The model needs all angles in ONE call to triangulate. */
+const BODYSCAN_IMAGE_COUNT = 4;
+/**
+ * Per-image budget for the data URI, in characters (1 char = 1 byte on the wire). The client
+ * preps ~150 KB JPEGs (~200 KB after base64), so 2 MB is an order of magnitude of headroom —
+ * only a misbehaving client hits it, and it is refused before any inference is spent.
+ */
+const BODYSCAN_MAX_IMAGE_CHARS = 2 * 1024 * 1024;
+/** The client always re-encodes to JPEG (the re-encode is what strips EXIF), so only JPEG data URIs are legitimate. */
+const BODYSCAN_IMAGE_PREFIX = 'data:image/jpeg;base64,';
+/**
+ * The vision fallback — SEPARATE from the text chain above, because none of those models
+ * accept image input, so a scan cannot walk that chain: it is this model or a 503. It is
+ * noticeably weaker than the primary, which is why its confidences are capped below.
+ */
+const WORKERS_AI_VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+/** On the fallback, cap raw confidences so every chip renders as a soft guess on the confirm screen. */
+const BODYSCAN_FALLBACK_CONFIDENCE_CAP = 0.5;
+
+/**
+ * The scan prompt (docs/RESEARCH-VISION.md §D, verbatim). Same construction as the other JSON
+ * tasks: labeled blocks, numbered RULES, the refusal path spelled out, output contract last —
+ * and, as everywhere else in this worker, the schema in the prompt is trust-but-parse: the
+ * validator below is what actually holds.
+ */
+const BODYSCAN_SYSTEM = `You are the body-scan estimator inside FitForge, a fitness app. The user has
+uploaded photos of themselves (front, back, and both sides) to speed up fitness
+onboarding. Faces are usually hidden or cropped — that is intentional, for
+privacy. Your ONLY job is to estimate coarse fitness buckets from the photos.
+The user reviews and corrects every estimate on the next screen, so honest
+uncertainty beats confident precision.
+
+CONTEXT YOU MAY RECEIVE
+The user message may state height, biological sex (user-declared), and which
+photo is which angle. Use height and sex to calibrate the weight and body-fat
+bands. Never infer or output sex, gender, ethnicity, or identity from photos.
+
+ESTIMATE EXACTLY THESE FIELDS
+- age_bucket: "18-25" | "26-35" | "36-45" | "46-55" | "56+".
+  Never a specific age. With the face hidden, body-only age cues are weak;
+  confidence above 0.5 is rare here and that is expected.
+- weight_range_kg: "under-50" | "50-60" | "60-70" | "70-80" | "80-90" |
+  "90-100" | "100-110" | "110-120" | "over-120".
+- body_fat_band: "under-10" | "10-14" | "15-19" | "20-24" | "25-29" |
+  "30-39" | "40-plus" (percent). Visual body-fat reading is roughly ±5
+  points at best - pick the single most likely band and let confidence
+  carry the doubt.
+- build: "slim" | "average" | "athletic" | "muscular" | "stocky" | "round".
+
+RULES
+1. Output JSON only, exactly matching OUTPUT SCHEMA. No text outside the JSON.
+2. Every estimate carries a confidence from 0.0 to 1.0. Use 0.8+ only when all
+   four photos are sharp, clothing is fitted, and the full body is visible.
+   0.5 means a coin flip between adjacent buckets. Below 0.3 means guessing.
+3. NEVER output a specific age or weight number, medical claims, diagnoses,
+   health-risk statements, or advice of any kind. Buckets only.
+4. NEVER comment on attractiveness or use judgmental language. "notes" is at
+   most one neutral sentence about estimate quality, e.g. "Loose clothing
+   makes the weight and body-fat bands less certain."
+5. REFUSE - set status "refused", set refusal_reason, omit estimates - when:
+   no real person is visible ("no_person"); more than one person
+   ("multiple_people"); the person appears to be under 18
+   ("possible_minor" - if in doubt, refuse); content is sexually explicit
+   ("explicit_content"); the images are not full-body photos of the user -
+   a face-only shot, a screenshot, a drawing, a magazine or celebrity photo
+   ("not_a_body_photo"); or everything is too dark, blurry, or cropped to
+   read ("image_quality").
+6. A hidden, cropped, or covered face is NORMAL. Never refuse for it and do
+   not reduce any confidence except age_bucket because of it. If a
+   recognizable face IS visible, set flags.face_visible true so the app can
+   remind the user they can retake without it.
+7. If one photo is unusable but the rest are readable, estimate from the
+   usable ones, mark it false in photos_ok, and lower confidences.
+
+OUTPUT SCHEMA
+{
+  "status": "ok" | "refused",
+  "refusal_reason": null | "no_person" | "multiple_people" | "possible_minor"
+                  | "explicit_content" | "not_a_body_photo" | "image_quality",
+  "photos_ok": [boolean, boolean, boolean, boolean],
+  "estimates": {
+    "age_bucket":      { "value": string, "confidence": number },
+    "weight_range_kg": { "value": string, "confidence": number },
+    "body_fat_band":   { "value": string, "confidence": number },
+    "build":           { "value": string, "confidence": number }
+  } | null,
+  "flags": { "face_visible": boolean, "clothing_loose": boolean },
+  "notes": string
+}`;
+
+/**
+ * THE TRANSLATION TABLES. The model speaks the PROMPT's enums; the response speaks the
+ * CONTRACT's (docs/AIMODE-CONTRACT.md "Worker bodyscan task"). These maps are exhaustive on
+ * purpose: any answer using any other word is off-enum, fails validation, and becomes a 502 —
+ * un-validated model output never reaches the client.
+ */
+
+/** Prompt and contract agree on the age buckets, so this is a membership check, not a map. */
+const SCAN_AGE_BUCKETS = ['18-25', '26-35', '36-45', '46-55', '56+'] as const;
+type ScanAgeBucket = (typeof SCAN_AGE_BUCKETS)[number];
+
+/**
+ * Prompt weight range → the contract's numeric 10 kg band. The open-ended ends are closed to
+ * a 10 kg band too, because the confirm screen renders "low–high kg" chips and the midpoint
+ * feeds the deterministic math downstream — an unbounded band has no midpoint.
+ */
+const SCAN_WEIGHT_BANDS: Record<string, { low: number; high: number }> = {
+  'under-50': { low: 40, high: 50 },
+  '50-60': { low: 50, high: 60 },
+  '60-70': { low: 60, high: 70 },
+  '70-80': { low: 70, high: 80 },
+  '80-90': { low: 80, high: 90 },
+  '90-100': { low: 90, high: 100 },
+  '100-110': { low: 100, high: 110 },
+  '110-120': { low: 110, high: 120 },
+  'over-120': { low: 120, high: 130 },
+};
+
+type ScanBodyFatBand = '<12' | '12-18' | '18-25' | '25-32' | '32+';
+/** Prompt band → contract band, each routed by where its midpoint lands. */
+const SCAN_BODY_FAT_BANDS: Record<string, ScanBodyFatBand> = {
+  'under-10': '<12',
+  '10-14': '12-18',
+  '15-19': '12-18',
+  '20-24': '18-25',
+  '25-29': '25-32',
+  '30-39': '32+',
+  '40-plus': '32+',
+};
+
+type ScanBuild = 'lean' | 'athletic' | 'muscular' | 'higher-fat' | 'average';
+/** Prompt build word → contract build bucket. */
+const SCAN_BUILDS: Record<string, ScanBuild> = {
+  slim: 'lean',
+  average: 'average',
+  athletic: 'athletic',
+  muscular: 'muscular',
+  stocky: 'higher-fat',
+  round: 'higher-fat',
+};
+
+type ScanRefusalReason = 'not_person' | 'possible_minor' | 'inappropriate' | 'unreadable';
+/**
+ * Prompt refusal reason → contract reason. Everything that means "this is not a usable photo
+ * of one adult's body" folds into the coarser client-facing enum; `possible_minor` survives
+ * verbatim because the client treats it specially (no retake loop — straight to Old School).
+ */
+const SCAN_REFUSAL_REASONS: Record<string, ScanRefusalReason> = {
+  no_person: 'not_person',
+  multiple_people: 'not_person',
+  not_a_body_photo: 'not_person',
+  possible_minor: 'possible_minor',
+  explicit_content: 'inappropriate',
+  image_quality: 'unreadable',
+};
+
+type ScanConfidenceTier = 'high' | 'medium' | 'low';
+
+/**
+ * The prompt's 0..1 confidence, folded to the contract's three tiers. Thresholds follow the
+ * prompt's own calibration language: 0.5 is "a coin flip between adjacent buckets" (a medium,
+ * usable pre-fill), below 0.3 is "guessing" (render as a soft guess). `cap` exists for the
+ * weaker fallback model, whose self-reported certainty is not worth the same trust.
+ */
+function scanConfidenceTier(raw: number, cap: number): ScanConfidenceTier {
+  const c = Math.min(Math.max(0, Math.min(1, raw)), cap);
+  return c >= 0.65 ? 'high' : c >= 0.3 ? 'medium' : 'low';
+}
+
+interface ScanField {
+  value: string;
+  confidence: number;
+}
+
+type BodyScanOutcome =
+  | {
+      kind: 'ok';
+      age: ScanField;
+      weight: ScanField;
+      bodyFat: ScanField;
+      build: ScanField;
+      note: string;
+    }
+  | { kind: 'refused'; reason: ScanRefusalReason };
+
+/**
+ * HARD GATE on the model's answer. Refusals must carry a reason the prompt defined; estimates
+ * must use exactly the prompt's bucket words. Anything else — a numeric age, an invented band,
+ * prose where an enum belongs — returns null and surfaces as 502 unusable_answer, because a
+ * wrong bucket silently pre-filled is worse than an honest failure the client can route past.
+ */
+function validateBodyScan(raw: unknown): BodyScanOutcome | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+
+  if (r.status === 'refused') {
+    const reason =
+      typeof r.refusal_reason === 'string' ? SCAN_REFUSAL_REASONS[r.refusal_reason] : undefined;
+    return reason ? { kind: 'refused', reason } : null;
+  }
+  if (r.status !== 'ok') return null;
+
+  const est = r.estimates;
+  if (!est || typeof est !== 'object') return null;
+  const field = (key: string): ScanField | null => {
+    const f = (est as Record<string, unknown>)[key];
+    if (!f || typeof f !== 'object') return null;
+    const { value, confidence } = f as Record<string, unknown>;
+    if (typeof value !== 'string') return null;
+    return {
+      value,
+      confidence:
+        typeof confidence === 'number' && Number.isFinite(confidence)
+          ? Math.max(0, Math.min(1, confidence))
+          : 0,
+    };
+  };
+
+  const age = field('age_bucket');
+  const weight = field('weight_range_kg');
+  const bodyFat = field('body_fat_band');
+  const build = field('build');
+  if (!age || !weight || !bodyFat || !build) return null;
+  if (!(SCAN_AGE_BUCKETS as readonly string[]).includes(age.value)) return null;
+  if (!SCAN_WEIGHT_BANDS[weight.value]) return null;
+  if (!SCAN_BODY_FAT_BANDS[bodyFat.value]) return null;
+  if (!SCAN_BUILDS[build.value]) return null;
+
+  // One neutral sentence at most, clamped — and short enough that nothing bulky (least of all
+  // image data) could ride back to the client inside it.
+  const note = typeof r.notes === 'string' ? r.notes.trim().slice(0, 200) : '';
+  return { kind: 'ok', age, weight, bodyFat, build, note };
+}
+
+/**
+ * One VISION generation, with the same policy spine as {@link generateOnce}: Mistral primary
+ * behind the same company-key gate, Workers AI fallback — but the fallback is the single
+ * vision model, never the text chain, because a model that cannot see the photos cannot
+ * produce anything but fiction about them.
+ *
+ * A `preferred` model is respected only as policy, not as a model id: vision requires a
+ * vision-capable model, and every pickable Workers AI entry is text-only. So a mistral pick
+ * runs the normal primary (already the vision default), while a workers-ai pick keeps its
+ * real meaning — "do not spend the paid key" — and lands on the vision fallback instead of
+ * the picked text model. A text-only preferred model falls through to the vision default.
+ */
+async function generateVision(
+  env: Env,
+  system: string,
+  user: UserContentPart[],
+  opts: GenOpts,
+  preferred?: ModelChoice,
+  signedIn = false,
+): Promise<
+  | { ok: true; answer: string; provider: 'mistral' | 'workers-ai'; model: string }
+  | { ok: false; status: number; detail: string }
+> {
+  const askVisionFallback = async () => {
+    try {
+      const result = (await env.AI!.run(WORKERS_AI_VISION_MODEL, {
+        messages: messagesFor(system, user, []),
+        max_tokens: opts.maxTokens,
+        temperature: opts.temperature,
+      })) as { response?: unknown };
+      const raw = result?.response;
+      const answer = typeof raw === 'string' ? raw : raw == null ? '' : JSON.stringify(raw);
+      return { ok: true as const, answer, provider: 'workers-ai' as const, model: WORKERS_AI_VISION_MODEL };
+    } catch (err) {
+      return {
+        ok: false as const,
+        status: 503,
+        detail: String(err instanceof Error ? err.message : err).slice(0, 160),
+      };
+    }
+  };
+
+  const provider = providerFor(env);
+  if (provider === 'none') {
+    return {
+      ok: false,
+      status: 500,
+      detail:
+        'No AI backend configured. Add the Workers AI binding named AI, or set the ' +
+        'MISTRAL_API_KEY secret on this worker.',
+    };
+  }
+
+  // The company-key gate, verbatim from generateOnce: a signed-out request on a gated worker
+  // is served by the free tier on every path, the default one included.
+  const mayUseMistral = signedIn || !gateActive(env);
+  const forceWorkersAi = (preferred?.provider === 'workers-ai' || !mayUseMistral) && !!env.AI;
+
+  if (provider === 'mistral' && !forceWorkersAi) {
+    const r = await askMistral(env, system, user, opts);
+    if (r.ok) return { ok: true, answer: r.answer, provider: 'mistral', model: modelFor(env) };
+    if (env.AI) {
+      const fallback = await askVisionFallback();
+      if (fallback.ok) return fallback;
+      return { ok: false, status: r.status, detail: `${r.detail} — and Workers AI: ${fallback.detail}` };
+    }
+    return r;
+  }
+
+  if (!env.AI) {
+    return { ok: false, status: 503, detail: 'No vision-capable backend is available to this request.' };
+  }
+  return askVisionFallback();
+}
+
+/**
+ * The bodyscan task body: build the multimodal message, run the vision policy, hard-validate,
+ * translate to the contract's shape. Declared height/sex are passed as CONTEXT for the model
+ * to use, never to infer — weight-from-photo without a height anchor is astrology.
+ */
+async function bodyScan(
+  env: Env,
+  images: string[],
+  heightCm: number | undefined,
+  sex: 'male' | 'female' | 'other' | undefined,
+  preferred?: ModelChoice,
+  signedIn = false,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const contextBits = [
+    heightCm ? `height ${Math.round(heightCm)} cm` : null,
+    sex ? `sex ${sex} (user-declared)` : null,
+  ].filter(Boolean);
+  const user: UserContentPart[] = [
+    {
+      type: 'text',
+      text:
+        (contextBits.length ? `Context: ${contextBits.join(', ')}. ` : '') +
+        'Photo 1 is front, photo 2 back, photo 3 left side, photo 4 right side.',
+    },
+    ...images.map((url) => ({ type: 'image_url' as const, image_url: { url } })),
+  ];
+
+  const r = await generateVision(
+    env,
+    BODYSCAN_SYSTEM,
+    user,
+    { temperature: BODYSCAN_TEMPERATURE, maxTokens: BODYSCAN_MAX_TOKENS },
+    preferred,
+    signedIn,
+  );
+  if (!r.ok) {
+    // An upstream error body can echo fragments of what it was sent. Scrub anything that
+    // looks like image data before the detail leaves this worker — never echo payload bytes.
+    const detail = r.detail.replace(/data:image[^\s"'`]*/gi, '[image]');
+    return { status: r.status, body: { error: 'ai_unavailable', detail } };
+  }
+
+  const outcome = validateBodyScan(extractJson(r.answer));
+  if (!outcome) return { status: 502, body: { error: 'unusable_answer' } };
+  if (outcome.kind === 'refused')
+    // The safety path succeeding, not a 5xx: the client maps each reason to its own copy and
+    // offers the Old School flow.
+    return { status: 422, body: { error: 'refused', reason: outcome.reason } };
+
+  const cap = r.provider === 'workers-ai' ? BODYSCAN_FALLBACK_CONFIDENCE_CAP : 1;
+  return {
+    status: 200,
+    body: {
+      ageBucket: outcome.age.value as ScanAgeBucket,
+      weightBandKg: SCAN_WEIGHT_BANDS[outcome.weight.value]!,
+      bodyFatBand: SCAN_BODY_FAT_BANDS[outcome.bodyFat.value]!,
+      build: SCAN_BUILDS[outcome.build.value]!,
+      confidence: {
+        age: scanConfidenceTier(outcome.age.confidence, cap),
+        weight: scanConfidenceTier(outcome.weight.confidence, cap),
+        bodyFat: scanConfidenceTier(outcome.bodyFat.confidence, cap),
+      },
+      notes: outcome.note ? [outcome.note] : [],
+      provider: r.provider,
+      model: r.model,
+    },
+  };
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const origin = request.headers.get('Origin');
@@ -1429,7 +1833,7 @@ export default {
            * pays is nobody's business, and a count answers the only question a probe has.
            */
           pro: { models: modelCatalog(env).filter((m) => m.requiresPro).length, allowlist: proUids(env).length },
-          tasks: ['chat', 'macros', 'adapt', 'meal'],
+          tasks: ['chat', 'macros', 'adapt', 'meal', 'bodyscan'],
         },
         200,
         cors,
@@ -1500,6 +1904,49 @@ export default {
         const r = await parseMeal(env, text, preferred, signedIn);
         return json(r.body, r.status, cors);
       } catch (err) {
+        return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);
+      }
+    }
+
+    /* ── task: bodyscan (AI-Mode photo estimates) ──────────────────────────────────── */
+    if ((body as { task?: unknown }).task === 'bodyscan') {
+      const images = (body as { images?: unknown }).images;
+      // Caps are enforced BEFORE any inference is spent, and no rejection ever quotes the
+      // offending value — an index is diagnostic enough, and a data-URI fragment is image bytes.
+      if (!Array.isArray(images) || images.length !== BODYSCAN_IMAGE_COUNT)
+        return json(
+          {
+            error: 'bad_image_count',
+            detail: `images must be exactly ${BODYSCAN_IMAGE_COUNT} data URIs (front, back, left side, right side)`,
+          },
+          400,
+          cors,
+        );
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (typeof img !== 'string' || !img.startsWith(BODYSCAN_IMAGE_PREFIX))
+          return json(
+            { error: 'bad_image_type', detail: `image ${i + 1} is not a data:image/jpeg;base64 URI` },
+            400,
+            cors,
+          );
+        if (img.length > BODYSCAN_MAX_IMAGE_CHARS)
+          return json({ error: 'imgs_too_large', detail: `image ${i + 1} exceeds 2 MB` }, 400, cors);
+      }
+      // Declared context, clamped to plausible values; anything else is silently omitted —
+      // the scan still works without it, just with wider uncertainty.
+      const rawHeight = (body as { heightCm?: unknown }).heightCm;
+      const heightCm =
+        typeof rawHeight === 'number' && Number.isFinite(rawHeight) && rawHeight >= 100 && rawHeight <= 250
+          ? rawHeight
+          : undefined;
+      const rawSex = (body as { sex?: unknown }).sex;
+      const sex = rawSex === 'male' || rawSex === 'female' || rawSex === 'other' ? rawSex : undefined;
+      try {
+        const r = await bodyScan(env, images as string[], heightCm, sex, preferred, signedIn);
+        return json(r.body, r.status, cors);
+      } catch (err) {
+        // String(err) only — never anything derived from the request body, i.e. never image bytes.
         return json({ error: 'ai_unavailable', detail: String(err).slice(0, 200) }, 503, cors);
       }
     }
