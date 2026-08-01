@@ -160,10 +160,21 @@ jobs:
             echo "::warning::This worker predates the meal task — AI-first nutrition entry falls back to the offline catalog until 'cd workers/coach && npx wrangler deploy' ships it."
             exit 0
           fi
-          body=$(curl -sS -m 90 -w '\n%{http_code}' -X POST "$ENDPOINT" \
+          # 180s, with one retry on timeout: the split-then-price pipeline is 1 splitter call
+          # plus 3 consensus samples per item, and at busy hours the first attempt has now
+          # twice blown a 90s cap for reasons that were gone minutes later. A probe that cries
+          # outage on provider slowness buries the failures it exists to catch.
+          body=$(curl -sS -m 180 -w '\n%{http_code}' -X POST "$ENDPOINT" \
             -H 'Content-Type: application/json' \
             -H 'Origin: https://girnarholdings.github.io' \
             -d '{"task":"meal","text":"steak and eggs"}' || echo "CURL_FAILED")
+          if printf '%s' "$body" | grep -q 'CURL_FAILED'; then
+            echo "::warning::meal attempt 1 timed out — retrying once"
+            body=$(curl -sS -m 180 -w '\n%{http_code}' -X POST "$ENDPOINT" \
+              -H 'Content-Type: application/json' \
+              -H 'Origin: https://girnarholdings.github.io' \
+              -d '{"task":"meal","text":"steak and eggs"}' || echo "CURL_FAILED")
+          fi
           code=$(printf '%s' "$body" | tail -1)
           payload=$(printf '%s' "$body" | sed '$d')
           echo "::notice::meal ${code} — $(printf '%s' "$payload" | tr '\n' ' ' | cut -c1-700)"
