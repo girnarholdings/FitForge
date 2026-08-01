@@ -1,0 +1,54 @@
+name: Deploy the Coach worker
+
+# Deploys workers/coach to Cloudflare on every push that touches it, so the LIVE worker can
+# never lag main — the drift this closes is real: the bodyscan task sat undeployed until a
+# manual `wrangler deploy`, and the web app degraded gracefully but silently around it.
+#
+# Auth is the CLOUDFLARE_API_TOKEN repository secret (Workers Scripts:Edit scope). Everything
+# else the deploy carries — vars, bindings, the model chain — comes from wrangler.toml, the
+# committed source of truth. Worker SECRETS (MISTRAL_API_KEY, DEEPSEEK_API_KEY) live on the
+# worker itself and survive deploys untouched.
+#
+# Tests gate the deploy: a red suite means the live worker keeps the last green build.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/coach/**'
+      - '.github/workflows/deploy-worker.yml'
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test and deploy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/coach
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/coach/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy
