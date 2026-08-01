@@ -1,0 +1,3478 @@
+'use client';
+
+/**
+ * THE RECIPE CORPUS — the validated 100-recipe library the diet engine plans from.
+ *
+ * Data is copied VERBATIM from fixtures/recipes.v1.json (the frozen, validated corpus — see the
+ * "Freeze the validated 100-recipe corpus" commit). Do not hand-edit entries here: the fixture is
+ * the source of truth, and this module must stay byte-equivalent to it. Regenerate rather than
+ * patch.
+ *
+ * WHAT THE TAGS MEAN (they carry the §3 preference model):
+ *   · Base diet rides ON the tag list: a recipe tagged `vegan` is servable to everyone; tagged
+ *     `vegetarian` (without vegan) to vegetarians and up; `pescatarian` to pescatarians and
+ *     omnivores; no base tag = omnivore-only. {@link baseDietOf} derives the most permissive class.
+ *   · `dairy_free` / `gluten_free` / `halal_friendly` are curated exclusion tags — a recipe
+ *     WITHOUT the tag is treated as unsafe for that filter (absence = excluded, never "probably
+ *     fine").
+ *   · `nut_free` / `shellfish_free` are NOT tagged in the corpus; {@link satisfiesPrefs} derives
+ *     them from the ingredient lists. Both are preference filters over listed ingredients — never
+ *     allergy-safety guarantees, and UI copy must say so.
+ */
+import type { MealSlotName } from '@/lib/food/types';
+
+export interface Recipe {
+  id: string;
+  name: string;
+  slot: MealSlotName;
+  cuisine: string;
+  per_serving: { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+  serving_label: string;
+  tags: string[];
+  effort: 'quick' | 'standard' | 'project';
+  ingredients: string[];
+  method: string[];
+  swap_group: string;
+}
+
+/** One base diet per recipe — the MOST permissive class it fits (§3 subset lattice). */
+export type RecipeBaseDiet = 'omnivore' | 'pescatarian' | 'vegetarian' | 'vegan';
+
+export const RECIPES: Recipe[] = [
+  {
+    "id": "masala-scrambled-eggs-toast",
+    "name": "Masala Scrambled Eggs on Toast",
+    "slot": "breakfast",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 405,
+      "protein_g": 26,
+      "carbs_g": 33,
+      "fat_g": 19
+    },
+    "serving_label": "1 plate (~320 g)",
+    "tags": [
+      "vegetarian",
+      "budget",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "3 eggs",
+      "2 slices wholemeal bread, toasted",
+      "1/2 small onion, finely chopped",
+      "1 small tomato, chopped",
+      "1 green chilli, minced",
+      "1/4 tsp turmeric",
+      "1 tsp butter",
+      "fresh coriander"
+    ],
+    "method": [
+      "Soften onion and chilli in butter 2 min; add tomato and turmeric, cook 1 min.",
+      "Whisk eggs with a pinch of salt; scramble gently over low heat until just set.",
+      "Pile onto toast and finish with coriander."
+    ],
+    "swap_group": "eggs-breakfast"
+  },
+  {
+    "id": "spinach-feta-omelette",
+    "name": "Spinach & Feta Omelette",
+    "slot": "breakfast",
+    "cuisine": "greek",
+    "per_serving": {
+      "kcal": 330,
+      "protein_g": 26,
+      "carbs_g": 5,
+      "fat_g": 23
+    },
+    "serving_label": "1 omelette (~250 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "3 eggs",
+      "40 g feta, crumbled",
+      "80 g baby spinach",
+      "1 tsp olive oil",
+      "black pepper, dill"
+    ],
+    "method": [
+      "Wilt spinach in the oil; push aside.",
+      "Pour in beaten eggs, cook until nearly set.",
+      "Scatter feta and spinach, fold, cook 30 s more."
+    ],
+    "swap_group": "eggs-breakfast"
+  },
+  {
+    "id": "weekend-shakshuka",
+    "name": "Weekend Shakshuka with Crusty Bread",
+    "slot": "breakfast",
+    "cuisine": "middle-eastern",
+    "per_serving": {
+      "kcal": 410,
+      "protein_g": 22,
+      "carbs_g": 36,
+      "fat_g": 20
+    },
+    "serving_label": "1 skillet + bread (~450 g)",
+    "tags": [
+      "vegetarian"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "2 eggs",
+      "400 g tin chopped tomatoes",
+      "1/2 red pepper, sliced",
+      "1/2 onion, sliced",
+      "2 tsp olive oil",
+      "1 tsp cumin, 1/2 tsp smoked paprika",
+      "60 g crusty bread"
+    ],
+    "method": [
+      "Soften onion and pepper in oil with the spices, 5 min.",
+      "Add tomatoes; simmer 8 min until thick.",
+      "Make two wells, crack in eggs, cover and cook 4-5 min to jammy yolks.",
+      "Serve from the pan with bread."
+    ],
+    "swap_group": "eggs-breakfast"
+  },
+  {
+    "id": "smoked-salmon-bagel",
+    "name": "Smoked Salmon & Cream Cheese Bagel",
+    "slot": "breakfast",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 425,
+      "protein_g": 30,
+      "carbs_g": 52,
+      "fat_g": 11
+    },
+    "serving_label": "1 filled bagel (~220 g)",
+    "tags": [
+      "pescatarian",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "1 bagel (85 g), halved and toasted",
+      "80 g smoked salmon",
+      "30 g light cream cheese",
+      "1 tsp capers",
+      "squeeze of lemon, dill",
+      "few slices red onion"
+    ],
+    "method": [
+      "Spread cream cheese on the toasted bagel.",
+      "Layer salmon, onion, capers and dill.",
+      "Finish with lemon and black pepper."
+    ],
+    "swap_group": "toast"
+  },
+  {
+    "id": "blueberry-skyr-overnight-oats",
+    "name": "Blueberry Skyr Overnight Oats",
+    "slot": "breakfast",
+    "cuisine": "nordic",
+    "per_serving": {
+      "kcal": 455,
+      "protein_g": 31,
+      "carbs_g": 62,
+      "fat_g": 9
+    },
+    "serving_label": "1 jar (~420 g)",
+    "tags": [
+      "vegetarian",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "50 g rolled oats",
+      "200 g skyr (or Greek yogurt)",
+      "100 ml milk",
+      "80 g blueberries",
+      "10 g chia seeds",
+      "1 tsp honey"
+    ],
+    "method": [
+      "Stir oats, skyr, milk, chia and honey in a jar.",
+      "Refrigerate overnight (min 4 h).",
+      "Top with blueberries before eating."
+    ],
+    "swap_group": "oats"
+  },
+  {
+    "id": "banana-peanut-butter-porridge",
+    "name": "Banana Peanut Butter Porridge",
+    "slot": "breakfast",
+    "cuisine": "british",
+    "per_serving": {
+      "kcal": 450,
+      "protein_g": 19,
+      "carbs_g": 60,
+      "fat_g": 15
+    },
+    "serving_label": "1 bowl (~450 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "50 g rolled oats",
+      "250 ml soy milk",
+      "1 banana, half mashed, half sliced",
+      "15 g peanut butter",
+      "pinch of cinnamon"
+    ],
+    "method": [
+      "Simmer oats and soy milk with the mashed banana 4-5 min.",
+      "Stir through cinnamon.",
+      "Top with banana slices and a spoon of peanut butter."
+    ],
+    "swap_group": "oats"
+  },
+  {
+    "id": "tofu-scramble-burrito",
+    "name": "Tofu Scramble Breakfast Burrito",
+    "slot": "breakfast",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 475,
+      "protein_g": 26,
+      "carbs_g": 50,
+      "fat_g": 19
+    },
+    "serving_label": "1 burrito (~330 g)",
+    "tags": [
+      "vegan",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g firm tofu, crumbled",
+      "1 large flour tortilla",
+      "60 g black beans, rinsed",
+      "handful spinach",
+      "2 tbsp salsa",
+      "1 tsp nutritional yeast",
+      "1/4 tsp turmeric",
+      "1 tsp oil"
+    ],
+    "method": [
+      "Fry crumbled tofu in oil with turmeric, salt and nutritional yeast, 4 min.",
+      "Warm beans; wilt in spinach.",
+      "Fill the warmed tortilla with scramble, beans and salsa; roll tightly."
+    ],
+    "swap_group": "wrap"
+  },
+  {
+    "id": "cottage-cheese-pancakes",
+    "name": "Fluffy Cottage Cheese Pancakes",
+    "slot": "breakfast",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 420,
+      "protein_g": 32,
+      "carbs_g": 44,
+      "fat_g": 13
+    },
+    "serving_label": "3 pancakes + berries (~350 g)",
+    "tags": [
+      "vegetarian",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g cottage cheese",
+      "1 egg + 1 egg white",
+      "40 g rolled oats, blitzed to flour",
+      "1/2 tsp baking powder",
+      "80 g mixed berries",
+      "1 tsp maple syrup",
+      "spray oil"
+    ],
+    "method": [
+      "Blend cottage cheese, eggs, oat flour and baking powder to a thick batter.",
+      "Cook 3 pancakes in a nonstick pan, 2 min per side.",
+      "Serve with berries and maple syrup."
+    ],
+    "swap_group": "pancakes"
+  },
+  {
+    "id": "chicken-ginger-congee",
+    "name": "Chicken & Ginger Congee",
+    "slot": "breakfast",
+    "cuisine": "chinese",
+    "per_serving": {
+      "kcal": 410,
+      "protein_g": 34,
+      "carbs_g": 50,
+      "fat_g": 8
+    },
+    "serving_label": "1 large bowl (~550 g)",
+    "tags": [
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "100 g chicken breast",
+      "60 g jasmine rice",
+      "700 ml chicken stock",
+      "thumb of ginger, sliced",
+      "1 tbsp soy sauce",
+      "2 spring onions, sliced",
+      "1 tsp sesame oil"
+    ],
+    "method": [
+      "Simmer rice, stock and ginger gently 40-50 min, stirring now and then, until porridge-thick.",
+      "Poach the chicken in the congee for the last 12 min; shred it back in.",
+      "Season with soy; top with spring onion and sesame oil."
+    ],
+    "swap_group": "soup"
+  },
+  {
+    "id": "japanese-breakfast-plate",
+    "name": "Grilled Salmon Japanese Breakfast Plate",
+    "slot": "breakfast",
+    "cuisine": "japanese",
+    "per_serving": {
+      "kcal": 465,
+      "protein_g": 34,
+      "carbs_g": 48,
+      "fat_g": 15
+    },
+    "serving_label": "1 tray: fish, rice, miso soup (~500 g)",
+    "tags": [
+      "pescatarian",
+      "dairy_free",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g salmon fillet",
+      "150 g cooked short-grain rice",
+      "1 tbsp miso paste + 250 ml water",
+      "50 g spinach, blanched",
+      "1 tsp soy sauce",
+      "toasted sesame seeds"
+    ],
+    "method": [
+      "Salt the salmon; grill or pan-fry 3-4 min per side.",
+      "Whisk miso into hot (not boiling) water for a quick soup.",
+      "Plate rice, salmon and soy-dressed spinach; scatter sesame."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "huevos-rancheros",
+    "name": "Huevos Rancheros",
+    "slot": "breakfast",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 470,
+      "protein_g": 24,
+      "carbs_g": 42,
+      "fat_g": 23
+    },
+    "serving_label": "1 plate (~400 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "2 eggs",
+      "2 corn tortillas",
+      "80 g black beans, warmed",
+      "80 g ranchero salsa",
+      "40 g avocado, sliced",
+      "15 g crumbled cheese",
+      "1 tsp oil"
+    ],
+    "method": [
+      "Warm tortillas in a dry pan; fry the eggs in the oil.",
+      "Layer tortillas, beans, eggs and hot salsa.",
+      "Top with avocado and cheese."
+    ],
+    "swap_group": "eggs-breakfast"
+  },
+  {
+    "id": "pb-banana-breakfast-smoothie",
+    "name": "Peanut Butter Banana Breakfast Smoothie",
+    "slot": "breakfast",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 435,
+      "protein_g": 30,
+      "carbs_g": 50,
+      "fat_g": 13
+    },
+    "serving_label": "1 large glass (~550 ml)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "170 g Greek yogurt",
+      "200 ml milk",
+      "1 banana",
+      "15 g peanut butter",
+      "20 g rolled oats",
+      "ice"
+    ],
+    "method": [
+      "Blend everything until smooth.",
+      "Add a splash more milk if too thick.",
+      "Drink straight away."
+    ],
+    "swap_group": "smoothie"
+  },
+  {
+    "id": "green-mango-smoothie",
+    "name": "Green Mango Smoothie",
+    "slot": "breakfast",
+    "cuisine": "international",
+    "per_serving": {
+      "kcal": 325,
+      "protein_g": 15,
+      "carbs_g": 42,
+      "fat_g": 11
+    },
+    "serving_label": "1 large glass (~500 ml)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "250 ml soy milk",
+      "150 g frozen mango",
+      "50 g spinach",
+      "15 g hemp seeds",
+      "20 g rolled oats",
+      "squeeze of lime"
+    ],
+    "method": [
+      "Blend everything until completely smooth.",
+      "Taste; add lime to brighten.",
+      "Serve over ice."
+    ],
+    "swap_group": "smoothie"
+  },
+  {
+    "id": "avocado-jammy-egg-sourdough",
+    "name": "Avocado & Jammy Egg Sourdough",
+    "slot": "breakfast",
+    "cuisine": "australian",
+    "per_serving": {
+      "kcal": 455,
+      "protein_g": 22,
+      "carbs_g": 44,
+      "fat_g": 21
+    },
+    "serving_label": "2 topped slices (~330 g)",
+    "tags": [
+      "vegetarian",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "2 slices sourdough (80 g)",
+      "2 eggs",
+      "70 g avocado",
+      "chilli flakes",
+      "lemon juice",
+      "salt flakes"
+    ],
+    "method": [
+      "Boil eggs 6.5 min; peel and halve.",
+      "Mash avocado with lemon and salt onto toast.",
+      "Top with eggs and chilli flakes."
+    ],
+    "swap_group": "toast"
+  },
+  {
+    "id": "besan-chilla",
+    "name": "Besan Chilla with Mint Chutney",
+    "slot": "breakfast",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 365,
+      "protein_g": 18,
+      "carbs_g": 42,
+      "fat_g": 14
+    },
+    "serving_label": "2 chilla + chutney (~300 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "80 g chickpea (gram) flour",
+      "1/2 small onion + 1 tomato, finely chopped",
+      "1 green chilli, minced",
+      "1/4 tsp turmeric, 1/2 tsp cumin seeds",
+      "2 tsp oil",
+      "2 tbsp mint-coriander chutney"
+    ],
+    "method": [
+      "Whisk flour with ~120 ml water, spices and vegetables to a pourable batter.",
+      "Cook 2 thin pancakes in oil, 2-3 min per side, until golden.",
+      "Serve hot with chutney."
+    ],
+    "swap_group": "pancakes"
+  },
+  {
+    "id": "skyr-berry-crunch-bowl",
+    "name": "Skyr Berry Crunch Bowl",
+    "slot": "breakfast",
+    "cuisine": "nordic",
+    "per_serving": {
+      "kcal": 370,
+      "protein_g": 28,
+      "carbs_g": 42,
+      "fat_g": 10
+    },
+    "serving_label": "1 bowl (~380 g)",
+    "tags": [
+      "vegetarian",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "250 g skyr",
+      "100 g mixed berries",
+      "30 g granola",
+      "1 tsp honey",
+      "10 g flaked almonds"
+    ],
+    "method": [
+      "Spoon skyr into a bowl.",
+      "Top with berries, granola and almonds.",
+      "Drizzle with honey."
+    ],
+    "swap_group": "yogurt-bowl"
+  },
+  {
+    "id": "turkish-menemen",
+    "name": "Turkish Menemen with Bread",
+    "slot": "breakfast",
+    "cuisine": "turkish",
+    "per_serving": {
+      "kcal": 440,
+      "protein_g": 23,
+      "carbs_g": 33,
+      "fat_g": 24
+    },
+    "serving_label": "1 skillet + bread (~400 g)",
+    "tags": [
+      "vegetarian"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "3 eggs, beaten",
+      "2 ripe tomatoes, grated",
+      "1 long green pepper, sliced",
+      "2 tsp olive oil",
+      "pinch of pul biber (chilli flakes)",
+      "50 g white bread"
+    ],
+    "method": [
+      "Soften pepper in oil 3 min; add tomato and cook down 5 min.",
+      "Pour in eggs; stir lazily until softly set, not dry.",
+      "Season with pul biber; scoop up with bread."
+    ],
+    "swap_group": "eggs-breakfast"
+  },
+  {
+    "id": "leaner-full-english",
+    "name": "The Leaner Full English",
+    "slot": "breakfast",
+    "cuisine": "british",
+    "per_serving": {
+      "kcal": 565,
+      "protein_g": 41,
+      "carbs_g": 66,
+      "fat_g": 15
+    },
+    "serving_label": "1 grill plate (~600 g)",
+    "tags": [
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "2 eggs, poached",
+      "2 back bacon medallions",
+      "200 g baked beans",
+      "2 slices wholemeal toast",
+      "1 large tomato, halved",
+      "100 g mushrooms",
+      "spray oil"
+    ],
+    "method": [
+      "Grill bacon, tomato and mushrooms with spray oil, ~8 min.",
+      "Warm beans; poach the eggs.",
+      "Assemble with toast; pepper everything."
+    ],
+    "swap_group": "eggs-breakfast"
+  },
+  {
+    "id": "savoury-masala-oats",
+    "name": "Savoury Masala Oats with Fried Egg",
+    "slot": "breakfast",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 355,
+      "protein_g": 17,
+      "carbs_g": 42,
+      "fat_g": 13
+    },
+    "serving_label": "1 bowl (~400 g)",
+    "tags": [
+      "vegetarian",
+      "budget",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "50 g rolled oats",
+      "60 g frozen peas and carrots",
+      "1/2 tsp each cumin, turmeric",
+      "1 egg",
+      "1 tsp ghee or oil",
+      "coriander, lemon"
+    ],
+    "method": [
+      "Toast spices in half the ghee; add oats, vegetables and 300 ml water; simmer 4 min.",
+      "Fry the egg in remaining ghee.",
+      "Top oats with the egg, coriander and lemon."
+    ],
+    "swap_group": "oats"
+  },
+  {
+    "id": "chilaquiles-verdes",
+    "name": "Chilaquiles Verdes with Fried Eggs",
+    "slot": "breakfast",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 495,
+      "protein_g": 24,
+      "carbs_g": 46,
+      "fat_g": 24
+    },
+    "serving_label": "1 plate (~420 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "3 corn tortillas, cut in wedges and baked crisp",
+      "150 g salsa verde",
+      "2 eggs",
+      "20 g cotija or feta",
+      "40 g avocado",
+      "1 tsp oil",
+      "coriander, red onion"
+    ],
+    "method": [
+      "Bake tortilla wedges at 200 C until crisp, ~10 min.",
+      "Heat salsa verde; toss chips through to barely soften.",
+      "Fry eggs; slide on top with cheese, avocado, onion and coriander."
+    ],
+    "swap_group": "eggs-breakfast"
+  },
+  {
+    "id": "chicken-shawarma-wrap",
+    "name": "Chicken Shawarma Wrap with Garlic Yogurt",
+    "slot": "lunch",
+    "cuisine": "middle-eastern",
+    "per_serving": {
+      "kcal": 530,
+      "protein_g": 42,
+      "carbs_g": 52,
+      "fat_g": 17
+    },
+    "serving_label": "1 wrap (~380 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g chicken thigh, sliced",
+      "1 tsp shawarma spice (cumin, coriander, paprika, cinnamon)",
+      "1 large flatbread",
+      "40 g yogurt + 1 grated garlic clove",
+      "pickled cucumber, tomato, red onion",
+      "1 tsp olive oil"
+    ],
+    "method": [
+      "Toss chicken with spice, salt and oil; sear over high heat 6-7 min until charred at the edges.",
+      "Stir garlic into yogurt.",
+      "Load the flatbread with chicken, salad and garlic yogurt; roll tightly."
+    ],
+    "swap_group": "wrap"
+  },
+  {
+    "id": "tuna-white-bean-salad",
+    "name": "Tuna & White Bean Salad with Lemon",
+    "slot": "lunch",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 365,
+      "protein_g": 36,
+      "carbs_g": 28,
+      "fat_g": 12
+    },
+    "serving_label": "1 bowl (~350 g)",
+    "tags": [
+      "pescatarian",
+      "gluten_free",
+      "dairy_free",
+      "budget",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "145 g tin tuna in water, drained",
+      "120 g cannellini beans, rinsed",
+      "8 cherry tomatoes, halved",
+      "1/4 red onion, thinly sliced",
+      "2 tsp olive oil",
+      "juice of 1/2 lemon",
+      "parsley"
+    ],
+    "method": [
+      "Toss beans, tomatoes and onion with oil, lemon, salt.",
+      "Flake in the tuna; fold gently.",
+      "Finish with parsley and black pepper."
+    ],
+    "swap_group": "salad"
+  },
+  {
+    "id": "grilled-chicken-caesar",
+    "name": "Grilled Chicken Caesar, Lighter Dressing",
+    "slot": "lunch",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 410,
+      "protein_g": 42,
+      "carbs_g": 18,
+      "fat_g": 19
+    },
+    "serving_label": "1 large salad (~380 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g grilled chicken breast, sliced",
+      "1 romaine heart, chopped",
+      "15 g parmesan, shaved",
+      "25 g croutons",
+      "30 g Greek-yogurt caesar dressing (yogurt, anchovy, dijon, lemon)"
+    ],
+    "method": [
+      "Grill seasoned chicken 5-6 min per side; rest and slice.",
+      "Whisk dressing ingredients.",
+      "Toss romaine with dressing; top with chicken, croutons, parmesan."
+    ],
+    "swap_group": "salad"
+  },
+  {
+    "id": "turkish-red-lentil-soup",
+    "name": "Turkish Red Lentil Soup with Bread",
+    "slot": "lunch",
+    "cuisine": "turkish",
+    "per_serving": {
+      "kcal": 450,
+      "protein_g": 22,
+      "carbs_g": 68,
+      "fat_g": 10
+    },
+    "serving_label": "1 big bowl + bread (~550 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "80 g red lentils, rinsed",
+      "1/2 onion + 1 small carrot, diced",
+      "1 tbsp tomato paste",
+      "1 tsp cumin, pinch dried mint",
+      "2 tsp olive oil",
+      "700 ml vegetable stock",
+      "40 g bread",
+      "lemon wedge"
+    ],
+    "method": [
+      "Soften onion and carrot in oil; stir in tomato paste and cumin.",
+      "Add lentils and stock; simmer 20 min until collapsed.",
+      "Blend smooth-ish; season, add mint.",
+      "Serve with lemon and bread."
+    ],
+    "swap_group": "soup"
+  },
+  {
+    "id": "chipotle-chicken-burrito-bowl",
+    "name": "Chipotle Chicken Burrito Bowl",
+    "slot": "lunch",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 565,
+      "protein_g": 43,
+      "carbs_g": 64,
+      "fat_g": 15
+    },
+    "serving_label": "1 bowl (~550 g)",
+    "tags": [
+      "gluten_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g chicken breast, cubed",
+      "1 tsp chipotle paste + lime",
+      "150 g cooked rice",
+      "80 g black beans",
+      "40 g sweetcorn",
+      "50 g salsa",
+      "30 g avocado",
+      "coriander"
+    ],
+    "method": [
+      "Toss chicken with chipotle, lime and salt; pan-fry 6-7 min.",
+      "Warm rice, beans and corn.",
+      "Bowl it up; top with salsa, avocado and coriander."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "lemongrass-tofu-banh-mi",
+    "name": "Lemongrass Tofu Banh Mi",
+    "slot": "lunch",
+    "cuisine": "vietnamese",
+    "per_serving": {
+      "kcal": 495,
+      "protein_g": 24,
+      "carbs_g": 64,
+      "fat_g": 16
+    },
+    "serving_label": "1 filled baguette (~330 g)",
+    "tags": [
+      "vegan",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g firm tofu, sliced",
+      "1 stalk lemongrass, minced, + 1 tbsp soy",
+      "120 g baguette",
+      "50 g quick-pickled carrot and daikon (vinegar, sugar)",
+      "cucumber ribbons, coriander",
+      "10 g vegan mayo, sriracha"
+    ],
+    "method": [
+      "Marinate tofu in lemongrass and soy 10 min; pan-fry until crisp-edged.",
+      "Pickle carrot and daikon in seasoned vinegar while it cooks.",
+      "Split baguette; layer mayo, tofu, pickles, cucumber, coriander, sriracha."
+    ],
+    "swap_group": "sandwich"
+  },
+  {
+    "id": "charred-halloumi-quinoa-salad",
+    "name": "Charred Halloumi & Quinoa Salad",
+    "slot": "lunch",
+    "cuisine": "mediterranean",
+    "per_serving": {
+      "kcal": 505,
+      "protein_g": 25,
+      "carbs_g": 40,
+      "fat_g": 27
+    },
+    "serving_label": "1 bowl (~400 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "80 g halloumi, sliced",
+      "150 g cooked quinoa",
+      "cucumber, cherry tomatoes, mint",
+      "30 g pomegranate seeds",
+      "1 tsp olive oil",
+      "lemon juice"
+    ],
+    "method": [
+      "Griddle halloumi slices until bar-marked, 2 min per side.",
+      "Toss quinoa with chopped vegetables, mint, oil and lemon.",
+      "Top with halloumi and pomegranate."
+    ],
+    "swap_group": "salad"
+  },
+  {
+    "id": "chicken-tikka-wrap",
+    "name": "Chicken Tikka Wrap with Mint Raita",
+    "slot": "lunch",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 450,
+      "protein_g": 40,
+      "carbs_g": 48,
+      "fat_g": 11
+    },
+    "serving_label": "1 wrap (~360 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "110 g chicken breast, cubed",
+      "2 tbsp yogurt + 1 tbsp tikka paste (marinade)",
+      "1 chapati or tortilla",
+      "40 g mint raita (yogurt, mint, cucumber)",
+      "red onion, lettuce",
+      "lemon"
+    ],
+    "method": [
+      "Marinate chicken in yogurt and tikka paste 15 min (or overnight).",
+      "Grill or pan-cook on high 7-8 min until charred.",
+      "Fill the warm chapati with chicken, salad and raita; roll."
+    ],
+    "swap_group": "wrap"
+  },
+  {
+    "id": "greek-chicken-souvlaki-pita",
+    "name": "Greek Chicken Souvlaki Pita",
+    "slot": "lunch",
+    "cuisine": "greek",
+    "per_serving": {
+      "kcal": 450,
+      "protein_g": 40,
+      "carbs_g": 45,
+      "fat_g": 12
+    },
+    "serving_label": "1 stuffed pita (~350 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g chicken breast, cubed",
+      "1 tsp oregano + lemon + 1 tsp olive oil (marinade)",
+      "1 pita",
+      "40 g tzatziki",
+      "tomato, red onion, parsley"
+    ],
+    "method": [
+      "Marinate chicken 10 min; skewer and grill 8-10 min, turning.",
+      "Warm the pita.",
+      "Stuff with chicken, salad and tzatziki."
+    ],
+    "swap_group": "wrap"
+  },
+  {
+    "id": "open-faced-tuna-melt",
+    "name": "Open-Faced Tuna Melt",
+    "slot": "lunch",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 390,
+      "protein_g": 35,
+      "carbs_g": 27,
+      "fat_g": 16
+    },
+    "serving_label": "1 loaded slice (~280 g)",
+    "tags": [
+      "pescatarian",
+      "budget",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "100 g tin tuna, drained",
+      "15 g light mayo",
+      "1 rib celery, minced",
+      "1 thick slice sourdough (50 g)",
+      "30 g cheddar, grated",
+      "black pepper, chives"
+    ],
+    "method": [
+      "Mix tuna, mayo, celery and pepper.",
+      "Pile onto the bread; top with cheddar.",
+      "Grill 3-4 min until bubbling."
+    ],
+    "swap_group": "sandwich"
+  },
+  {
+    "id": "turkey-avocado-club",
+    "name": "Turkey, Egg & Avocado Club Sandwich",
+    "slot": "lunch",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 495,
+      "protein_g": 34,
+      "carbs_g": 47,
+      "fat_g": 19
+    },
+    "serving_label": "1 stacked sandwich (~330 g)",
+    "tags": [
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "100 g sliced turkey breast",
+      "1 boiled egg, sliced",
+      "2 slices granary bread (90 g)",
+      "60 g avocado, mashed",
+      "tomato, lettuce",
+      "10 g light mayo, dijon"
+    ],
+    "method": [
+      "Toast the bread; spread mayo-dijon and mashed avocado.",
+      "Stack turkey, egg, tomato and lettuce.",
+      "Close, press and halve."
+    ],
+    "swap_group": "sandwich"
+  },
+  {
+    "id": "baked-falafel-hummus-bowl",
+    "name": "Baked Falafel & Hummus Bowl",
+    "slot": "lunch",
+    "cuisine": "middle-eastern",
+    "per_serving": {
+      "kcal": 540,
+      "protein_g": 21,
+      "carbs_g": 60,
+      "fat_g": 24
+    },
+    "serving_label": "1 bowl (~450 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "100 g dried chickpeas, soaked overnight (for 4-5 falafel)",
+      "1/2 small onion, garlic, parsley, cumin, coriander",
+      "1 tbsp flour, 2 tsp oil (for baking)",
+      "50 g hummus",
+      "100 g cooked bulgur",
+      "pickled red cabbage, cucumber",
+      "10 g tahini + lemon"
+    ],
+    "method": [
+      "Blitz soaked chickpeas with aromatics and flour to a coarse paste; shape 4-5 patties.",
+      "Brush with oil; bake 200 C, 22-25 min, turning once.",
+      "Bowl with bulgur, hummus and pickles; drizzle tahini-lemon."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "salmon-poke-style-bowl",
+    "name": "Salmon Poke-Style Bowl",
+    "slot": "lunch",
+    "cuisine": "japanese",
+    "per_serving": {
+      "kcal": 545,
+      "protein_g": 35,
+      "carbs_g": 58,
+      "fat_g": 19
+    },
+    "serving_label": "1 bowl (~480 g)",
+    "tags": [
+      "pescatarian",
+      "dairy_free",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g sushi-grade salmon, cubed",
+      "1 tbsp soy + 1 tsp sesame oil + 1/2 tsp sriracha",
+      "180 g cooked sushi rice, cooled slightly",
+      "50 g edamame",
+      "cucumber, spring onion",
+      "sesame seeds, nori strips"
+    ],
+    "method": [
+      "Toss salmon in the soy-sesame-sriracha dressing; chill 10 min.",
+      "Bowl the rice; arrange salmon, edamame and cucumber.",
+      "Scatter sesame, nori, spring onion."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "chilled-soba-edamame-salad",
+    "name": "Chilled Soba & Edamame Salad",
+    "slot": "lunch",
+    "cuisine": "japanese",
+    "per_serving": {
+      "kcal": 435,
+      "protein_g": 20,
+      "carbs_g": 60,
+      "fat_g": 13
+    },
+    "serving_label": "1 bowl (~380 g)",
+    "tags": [
+      "vegan",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "70 g soba noodles",
+      "80 g edamame",
+      "1 carrot, ribboned; 1/4 cabbage, shredded",
+      "1 tbsp soy + 1 tbsp rice vinegar + 1.5 tsp sesame oil",
+      "1 tsp sesame seeds",
+      "spring onion"
+    ],
+    "method": [
+      "Cook soba; rinse under cold water until cool.",
+      "Whisk the dressing.",
+      "Toss noodles, edamame and vegetables; top with sesame and spring onion."
+    ],
+    "swap_group": "salad"
+  },
+  {
+    "id": "thai-chicken-larb",
+    "name": "Thai Chicken Larb with Sticky Rice",
+    "slot": "lunch",
+    "cuisine": "thai",
+    "per_serving": {
+      "kcal": 380,
+      "protein_g": 37,
+      "carbs_g": 38,
+      "fat_g": 9
+    },
+    "serving_label": "1 plate (~380 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g lean chicken mince",
+      "1 tbsp fish sauce + juice of 1 lime",
+      "1 tbsp toasted rice, crushed",
+      "2 shallots, sliced; mint and coriander, torn",
+      "chilli flakes",
+      "120 g cooked sticky rice"
+    ],
+    "method": [
+      "Dry-fry chicken mince, breaking it up, until cooked and a little crisp.",
+      "Off heat, dress with fish sauce, lime, chilli and toasted rice powder.",
+      "Fold through shallots and herbs; serve warm with sticky rice."
+    ],
+    "swap_group": "salad"
+  },
+  {
+    "id": "big-batch-minestrone",
+    "name": "Big-Batch Minestrone with White Beans",
+    "slot": "lunch",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 335,
+      "protein_g": 13,
+      "carbs_g": 48,
+      "fat_g": 10
+    },
+    "serving_label": "1 big bowl (~500 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "100 g cannellini beans, rinsed",
+      "30 g small pasta",
+      "400 g tin chopped tomatoes",
+      "1 carrot, 1 rib celery, 1/2 courgette, diced",
+      "2 tsp olive oil",
+      "handful spinach",
+      "vegetable stock, oregano"
+    ],
+    "method": [
+      "Soften the diced vegetables in oil 5 min.",
+      "Add tomatoes, stock and beans; simmer 15 min.",
+      "Add pasta; cook until al dente. Wilt in spinach and season."
+    ],
+    "swap_group": "soup"
+  },
+  {
+    "id": "chicken-pesto-pasta-salad",
+    "name": "Chicken Pesto Pasta Salad",
+    "slot": "lunch",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 520,
+      "protein_g": 40,
+      "carbs_g": 54,
+      "fat_g": 16
+    },
+    "serving_label": "1 bowl (~400 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "70 g pasta (fusilli)",
+      "100 g cooked chicken breast, shredded",
+      "25 g basil pesto",
+      "8 cherry tomatoes, halved",
+      "handful rocket",
+      "squeeze of lemon"
+    ],
+    "method": [
+      "Cook pasta; cool under running water.",
+      "Toss with pesto, chicken and tomatoes.",
+      "Fold in rocket and lemon just before eating."
+    ],
+    "swap_group": "pasta"
+  },
+  {
+    "id": "smashed-chickpea-salad-sandwich",
+    "name": "Smashed Chickpea Salad Sandwich",
+    "slot": "lunch",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 445,
+      "protein_g": 18,
+      "carbs_g": 60,
+      "fat_g": 15
+    },
+    "serving_label": "1 sandwich (~300 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "120 g chickpeas, rinsed",
+      "15 g vegan mayo",
+      "1 tsp dijon mustard",
+      "1 rib celery + 2 spring onions, minced",
+      "2 slices granary bread (70 g)",
+      "lettuce, lemon"
+    ],
+    "method": [
+      "Roughly mash chickpeas with mayo, dijon and lemon.",
+      "Fold in celery and spring onion; season well.",
+      "Sandwich with lettuce."
+    ],
+    "swap_group": "sandwich"
+  },
+  {
+    "id": "chicken-black-bean-quesadilla",
+    "name": "Chicken & Black Bean Quesadilla",
+    "slot": "lunch",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 535,
+      "protein_g": 38,
+      "carbs_g": 48,
+      "fat_g": 21
+    },
+    "serving_label": "1 folded quesadilla (~320 g)",
+    "tags": [
+      "halal_friendly",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "1 large flour tortilla",
+      "60 g cooked chicken, shredded",
+      "60 g black beans, mashed a little",
+      "40 g cheddar, grated",
+      "2 tbsp salsa",
+      "spray oil"
+    ],
+    "method": [
+      "Layer beans, chicken, salsa and cheese over half the tortilla; fold.",
+      "Toast in a lightly oiled pan 2-3 min per side until golden and molten.",
+      "Rest 1 min; cut into wedges."
+    ],
+    "swap_group": "wrap"
+  },
+  {
+    "id": "prawn-summer-rolls",
+    "name": "Prawn Summer Rolls with Peanut Dip",
+    "slot": "lunch",
+    "cuisine": "vietnamese",
+    "per_serving": {
+      "kcal": 405,
+      "protein_g": 25,
+      "carbs_g": 56,
+      "fat_g": 9
+    },
+    "serving_label": "4 rolls + dip (~350 g)",
+    "tags": [
+      "pescatarian",
+      "dairy_free"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "100 g cooked prawns, halved lengthways",
+      "4 rice paper wrappers",
+      "30 g vermicelli noodles, cooked",
+      "lettuce, mint, coriander, carrot batons",
+      "20 g peanut dipping sauce (peanut butter, soy, lime, water)"
+    ],
+    "method": [
+      "Dip each wrapper in warm water 10 s until pliable.",
+      "Layer herbs, lettuce, noodles, carrot and prawns; roll tight, tucking the sides.",
+      "Whisk the dip; serve alongside."
+    ],
+    "swap_group": "wrap"
+  },
+  {
+    "id": "harvest-chicken-grain-bowl",
+    "name": "Harvest Chicken & Grain Bowl",
+    "slot": "lunch",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 540,
+      "protein_g": 40,
+      "carbs_g": 48,
+      "fat_g": 21
+    },
+    "serving_label": "1 bowl (~470 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g roast chicken thigh, sliced",
+      "120 g cooked farro (or brown rice)",
+      "100 g roast butternut squash",
+      "handful kale, massaged with lemon",
+      "15 g dried cranberries",
+      "15 g tahini + lemon + water (dressing)",
+      "10 g pumpkin seeds"
+    ],
+    "method": [
+      "Roast squash chunks at 200 C, 25 min (batch ahead).",
+      "Bowl farro, kale, squash and chicken.",
+      "Whisk tahini dressing; drizzle and top with seeds and cranberries."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "mozzarella-tomato-farro-bowl",
+    "name": "Mozzarella, Tomato & Farro Bowl",
+    "slot": "lunch",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 460,
+      "protein_g": 24,
+      "carbs_g": 32,
+      "fat_g": 26
+    },
+    "serving_label": "1 bowl (~380 g)",
+    "tags": [
+      "vegetarian",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "100 g mozzarella, torn",
+      "130 g cooked farro",
+      "2 ripe tomatoes, chopped",
+      "basil leaves",
+      "2 tsp olive oil, balsamic vinegar",
+      "handful rocket"
+    ],
+    "method": [
+      "Toss warm farro with oil, balsamic and rocket.",
+      "Top with tomatoes and mozzarella.",
+      "Finish with basil, salt and pepper."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "chicken-miso-noodle-soup",
+    "name": "Chicken Miso Noodle Soup",
+    "slot": "lunch",
+    "cuisine": "japanese",
+    "per_serving": {
+      "kcal": 345,
+      "protein_g": 35,
+      "carbs_g": 40,
+      "fat_g": 5
+    },
+    "serving_label": "1 big bowl (~600 g)",
+    "tags": [
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "100 g cooked chicken breast, shredded",
+      "160 g cooked udon noodles",
+      "20 g miso paste",
+      "600 ml chicken stock",
+      "handful spinach",
+      "2 spring onions"
+    ],
+    "method": [
+      "Heat stock; whisk in miso off the boil.",
+      "Add udon and chicken to warm through.",
+      "Wilt in spinach; top with spring onion."
+    ],
+    "swap_group": "soup"
+  },
+  {
+    "id": "sardine-tomato-toast",
+    "name": "Sardines on Toast with Tomato & Chilli",
+    "slot": "lunch",
+    "cuisine": "british",
+    "per_serving": {
+      "kcal": 375,
+      "protein_g": 31,
+      "carbs_g": 36,
+      "fat_g": 12
+    },
+    "serving_label": "2 topped slices (~280 g)",
+    "tags": [
+      "pescatarian",
+      "budget",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "100 g tin sardines in water/brine, drained",
+      "2 slices sourdough (70 g), toasted",
+      "1 tomato, sliced",
+      "chilli flakes, lemon",
+      "parsley"
+    ],
+    "method": [
+      "Lay tomato over hot toast.",
+      "Top with sardines, roughly broken.",
+      "Season with chilli, lemon and parsley."
+    ],
+    "swap_group": "toast"
+  },
+  {
+    "id": "gado-gado-salad",
+    "name": "Gado-Gado Salad with Eggs",
+    "slot": "lunch",
+    "cuisine": "indonesian",
+    "per_serving": {
+      "kcal": 520,
+      "protein_g": 32,
+      "carbs_g": 40,
+      "fat_g": 26
+    },
+    "serving_label": "1 platter (~500 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "dairy_free",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "2 boiled eggs, halved",
+      "150 g boiled new potatoes",
+      "80 g baked tofu",
+      "green beans, cabbage, beansprouts (150 g total), blanched",
+      "25 g peanut sauce (peanut butter, tamari, lime, chilli, water)",
+      "cucumber"
+    ],
+    "method": [
+      "Boil potatoes and eggs; blanch the vegetables.",
+      "Whisk peanut sauce loose with warm water.",
+      "Arrange everything on a platter; spoon sauce over."
+    ],
+    "swap_group": "salad"
+  },
+  {
+    "id": "beef-kofta-pockets",
+    "name": "Beef Kofta Pockets with Tzatziki",
+    "slot": "lunch",
+    "cuisine": "middle-eastern",
+    "per_serving": {
+      "kcal": 495,
+      "protein_g": 39,
+      "carbs_g": 46,
+      "fat_g": 17
+    },
+    "serving_label": "1 stuffed pita (~360 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "130 g lean beef mince",
+      "1/2 tsp each cumin, allspice; grated onion, parsley",
+      "1 pita",
+      "40 g tzatziki",
+      "tomato, red onion, sumac"
+    ],
+    "method": [
+      "Knead mince with spices, onion and parsley; shape 3 fingers.",
+      "Grill or pan-cook 8-9 min, turning.",
+      "Stuff the pita with kofta, salad and tzatziki; dust with sumac."
+    ],
+    "swap_group": "wrap"
+  },
+  {
+    "id": "lighter-chicken-tikka-masala",
+    "name": "Lighter Chicken Tikka Masala with Rice",
+    "slot": "dinner",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 500,
+      "protein_g": 43,
+      "carbs_g": 50,
+      "fat_g": 14
+    },
+    "serving_label": "1 plate: curry + rice (~550 g)",
+    "tags": [
+      "gluten_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "160 g chicken breast, cubed",
+      "3 tbsp yogurt + 1 tbsp tikka spice mix (marinade)",
+      "400 g tin chopped tomatoes",
+      "1 onion, 2 garlic cloves, ginger",
+      "1 tbsp single cream",
+      "2 tsp oil",
+      "150 g cooked basmati rice",
+      "coriander"
+    ],
+    "method": [
+      "Marinate chicken in spiced yogurt 30 min (or overnight); grill until charred.",
+      "Cook onion, garlic and ginger in oil; add tomatoes and simmer 15 min, then blend smooth.",
+      "Add chicken and cream; simmer 5 min.",
+      "Serve over rice with coriander."
+    ],
+    "swap_group": "curry"
+  },
+  {
+    "id": "chana-masala",
+    "name": "Chana Masala with Basmati Rice",
+    "slot": "dinner",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 480,
+      "protein_g": 18,
+      "carbs_g": 70,
+      "fat_g": 14
+    },
+    "serving_label": "1 plate (~500 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "180 g chickpeas, rinsed",
+      "1 onion + 2 tomatoes, chopped",
+      "2 garlic cloves, ginger, 1 green chilli",
+      "1.5 tsp garam masala, 1 tsp cumin, 1/2 tsp turmeric",
+      "2 tsp oil",
+      "130 g cooked basmati rice",
+      "coriander, lemon"
+    ],
+    "method": [
+      "Fry onion in oil until deeply golden; add garlic, ginger, chilli, spices.",
+      "Add tomatoes; cook down 5 min. Add chickpeas and a splash of water; simmer 12 min, mashing a few.",
+      "Finish with lemon and coriander; serve with rice."
+    ],
+    "swap_group": "curry"
+  },
+  {
+    "id": "dal-tadka",
+    "name": "Dal Tadka with Jeera Rice",
+    "slot": "dinner",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 450,
+      "protein_g": 24,
+      "carbs_g": 64,
+      "fat_g": 11
+    },
+    "serving_label": "1 bowl dal + rice (~550 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "90 g red lentils, rinsed",
+      "1/2 tsp turmeric",
+      "2 tsp oil (tadka)",
+      "1 tsp cumin seeds, 2 garlic cloves sliced, 1 dried chilli",
+      "1 tomato, chopped",
+      "120 g cooked rice tossed with toasted cumin",
+      "coriander"
+    ],
+    "method": [
+      "Simmer lentils with turmeric in ~450 ml water, 18-20 min, to a loose dal.",
+      "Make the tadka: sizzle cumin, garlic and chilli in oil; add tomato for 2 min.",
+      "Pour tadka over the dal; season. Serve with jeera rice."
+    ],
+    "swap_group": "curry"
+  },
+  {
+    "id": "palak-paneer",
+    "name": "Palak Paneer with Roti",
+    "slot": "dinner",
+    "cuisine": "indian",
+    "per_serving": {
+      "kcal": 475,
+      "protein_g": 26,
+      "carbs_g": 34,
+      "fat_g": 26
+    },
+    "serving_label": "1 bowl + 1 roti (~450 g)",
+    "tags": [
+      "vegetarian"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "80 g paneer, cubed",
+      "200 g spinach, blanched and blitzed",
+      "50 g peas",
+      "1 small onion, garlic, ginger",
+      "1/2 tsp each cumin, garam masala",
+      "2 tsp ghee or oil",
+      "1 roti"
+    ],
+    "method": [
+      "Brown paneer cubes lightly in half the ghee; set aside.",
+      "Cook onion, garlic, ginger and spices in the rest; add spinach puree and peas, simmer 5 min.",
+      "Return paneer; warm through. Serve with roti."
+    ],
+    "swap_group": "curry"
+  },
+  {
+    "id": "thai-green-chicken-curry",
+    "name": "Thai Green Chicken Curry with Jasmine Rice",
+    "slot": "dinner",
+    "cuisine": "thai",
+    "per_serving": {
+      "kcal": 505,
+      "protein_g": 38,
+      "carbs_g": 50,
+      "fat_g": 17
+    },
+    "serving_label": "1 plate (~520 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g chicken breast, sliced",
+      "1.5 tbsp green curry paste",
+      "150 ml light coconut milk",
+      "100 g green beans + 1/2 aubergine",
+      "1 tsp fish sauce, pinch sugar",
+      "150 g cooked jasmine rice",
+      "thai basil, lime"
+    ],
+    "method": [
+      "Fry curry paste in a splash of the coconut milk until fragrant.",
+      "Add chicken; coat and cook 3 min. Add remaining coconut milk and vegetables; simmer 8 min.",
+      "Season with fish sauce and sugar; serve on rice with basil and lime."
+    ],
+    "swap_group": "curry"
+  },
+  {
+    "id": "thai-red-tofu-curry",
+    "name": "Thai Red Curry with Crispy Tofu",
+    "slot": "dinner",
+    "cuisine": "thai",
+    "per_serving": {
+      "kcal": 510,
+      "protein_g": 26,
+      "carbs_g": 48,
+      "fat_g": 24
+    },
+    "serving_label": "1 plate (~500 g)",
+    "tags": [
+      "vegan",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g firm tofu, cubed and patted dry",
+      "1.5 tbsp red curry paste (vegan)",
+      "150 ml light coconut milk",
+      "1 red pepper + 80 g bamboo shoots",
+      "2 tsp soy sauce",
+      "140 g cooked jasmine rice",
+      "1 tsp oil, lime"
+    ],
+    "method": [
+      "Pan-fry tofu in oil until golden on all sides; set aside.",
+      "Fry paste in coconut milk; add vegetables, simmer 6 min.",
+      "Return tofu; season with soy and lime. Serve with rice."
+    ],
+    "swap_group": "curry"
+  },
+  {
+    "id": "teriyaki-salmon-rice-bowl",
+    "name": "Teriyaki Salmon Rice Bowl with Broccoli",
+    "slot": "dinner",
+    "cuisine": "japanese",
+    "per_serving": {
+      "kcal": 530,
+      "protein_g": 34,
+      "carbs_g": 60,
+      "fat_g": 17
+    },
+    "serving_label": "1 bowl (~500 g)",
+    "tags": [
+      "pescatarian",
+      "dairy_free",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "130 g salmon fillet",
+      "1 tbsp soy + 1 tbsp mirin + 1 tsp honey (teriyaki)",
+      "160 g cooked rice",
+      "120 g broccoli, steamed",
+      "sesame seeds, spring onion"
+    ],
+    "method": [
+      "Pan-fry salmon 3 min skin-side down; flip.",
+      "Add teriyaki mix; bubble 2 min to a glaze.",
+      "Serve on rice with broccoli; spoon over glaze, scatter sesame."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "beef-broccoli-stir-fry",
+    "name": "Beef & Broccoli Stir-Fry with Rice",
+    "slot": "dinner",
+    "cuisine": "chinese",
+    "per_serving": {
+      "kcal": 555,
+      "protein_g": 40,
+      "carbs_g": 60,
+      "fat_g": 17
+    },
+    "serving_label": "1 plate (~500 g)",
+    "tags": [
+      "dairy_free",
+      "halal_friendly",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "130 g flank or rump steak, thinly sliced",
+      "150 g broccoli florets",
+      "1.5 tbsp oyster sauce + 1 tbsp soy + 1 tsp cornflour",
+      "2 garlic cloves, ginger",
+      "2 tsp oil",
+      "150 g cooked rice"
+    ],
+    "method": [
+      "Velvet the beef: toss with cornflour and 1 tsp soy.",
+      "Stir-fry beef in hot oil 90 s; remove. Stir-fry broccoli, garlic, ginger with a splash of water 2 min.",
+      "Return beef with the sauces; toss 1 min. Serve over rice."
+    ],
+    "swap_group": "stir-fry"
+  },
+  {
+    "id": "cashew-tofu-stir-fry",
+    "name": "Cashew Tofu & Pepper Stir-Fry",
+    "slot": "dinner",
+    "cuisine": "chinese",
+    "per_serving": {
+      "kcal": 530,
+      "protein_g": 29,
+      "carbs_g": 50,
+      "fat_g": 24
+    },
+    "serving_label": "1 plate (~480 g)",
+    "tags": [
+      "vegan",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "150 g firm tofu, cubed",
+      "20 g cashews, toasted",
+      "1 red pepper + 100 g broccoli",
+      "1.5 tbsp soy + 1 tsp rice vinegar + 1 tsp maple",
+      "2 garlic cloves",
+      "2 tsp oil",
+      "140 g cooked rice"
+    ],
+    "method": [
+      "Crisp tofu in oil; set aside.",
+      "Stir-fry vegetables and garlic 3 min.",
+      "Return tofu with sauce and cashews; toss until glossy. Serve with rice."
+    ],
+    "swap_group": "stir-fry"
+  },
+  {
+    "id": "beef-bulgogi-bowls",
+    "name": "Beef Bulgogi Bowls with Quick Pickles",
+    "slot": "dinner",
+    "cuisine": "korean",
+    "per_serving": {
+      "kcal": 520,
+      "protein_g": 40,
+      "carbs_g": 56,
+      "fat_g": 15
+    },
+    "serving_label": "1 bowl (~480 g)",
+    "tags": [
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "140 g sirloin, very thinly sliced",
+      "1 tbsp soy + 1 tsp sesame oil + 1/2 grated pear + garlic (marinade)",
+      "150 g cooked short-grain rice",
+      "quick cucumber pickles (rice vinegar, pinch sugar)",
+      "1 carrot, julienned",
+      "spring onion, sesame"
+    ],
+    "method": [
+      "Marinate beef 15 min.",
+      "Pickle cucumber slices in seasoned vinegar.",
+      "Sear beef in a screaming-hot pan 2-3 min.",
+      "Bowl over rice with pickles and carrot; top with sesame and spring onion."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "vegetable-bibimbap",
+    "name": "Vegetable Bibimbap with Fried Egg",
+    "slot": "dinner",
+    "cuisine": "korean",
+    "per_serving": {
+      "kcal": 520,
+      "protein_g": 23,
+      "carbs_g": 62,
+      "fat_g": 20
+    },
+    "serving_label": "1 bowl (~520 g)",
+    "tags": [
+      "vegetarian"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "160 g cooked short-grain rice",
+      "80 g firm tofu, pan-fried",
+      "1 egg",
+      "spinach, carrot, mushrooms, beansprouts (200 g total), each sauteed briefly",
+      "20 g gochujang",
+      "2 tsp sesame oil, sesame seeds"
+    ],
+    "method": [
+      "Saute each vegetable separately with a pinch of salt; keep in neat piles.",
+      "Fry tofu, then the egg, sunny side up.",
+      "Arrange everything over rice; add gochujang and sesame oil.",
+      "Mix hard at the table."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "lean-beef-spaghetti-bolognese",
+    "name": "Lean Beef Spaghetti Bolognese",
+    "slot": "dinner",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 540,
+      "protein_g": 43,
+      "carbs_g": 61,
+      "fat_g": 14
+    },
+    "serving_label": "1 plate (~500 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "125 g 5% beef mince",
+      "75 g spaghetti",
+      "400 g tin chopped tomatoes",
+      "1/2 onion, 1 carrot, 1 rib celery, minced",
+      "1 garlic clove, oregano",
+      "1 tsp olive oil",
+      "10 g parmesan"
+    ],
+    "method": [
+      "Brown mince in oil; add soffritto and cook 5 min.",
+      "Add garlic, tomatoes, oregano; simmer 20+ min.",
+      "Cook spaghetti; toss with the ragu and a splash of pasta water.",
+      "Finish with parmesan."
+    ],
+    "swap_group": "pasta"
+  },
+  {
+    "id": "garlic-chilli-prawn-linguine",
+    "name": "Garlic & Chilli Prawn Linguine",
+    "slot": "dinner",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 525,
+      "protein_g": 42,
+      "carbs_g": 56,
+      "fat_g": 15
+    },
+    "serving_label": "1 plate (~400 g)",
+    "tags": [
+      "pescatarian",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "180 g raw king prawns",
+      "75 g linguine",
+      "3 garlic cloves, sliced",
+      "1/2 tsp chilli flakes",
+      "1 tbsp olive oil",
+      "lemon, parsley"
+    ],
+    "method": [
+      "Cook linguine; reserve a cup of pasta water.",
+      "Sizzle garlic and chilli in oil; add prawns, 2 min per side.",
+      "Toss in pasta with a splash of pasta water, lemon and parsley."
+    ],
+    "swap_group": "pasta"
+  },
+  {
+    "id": "lentil-ragu-rigatoni",
+    "name": "Lentil Ragu Rigatoni",
+    "slot": "dinner",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 490,
+      "protein_g": 23,
+      "carbs_g": 72,
+      "fat_g": 12
+    },
+    "serving_label": "1 plate (~450 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g cooked brown or green lentils",
+      "60 g rigatoni",
+      "400 g tin chopped tomatoes",
+      "1/2 onion, 1 carrot, 1 rib celery, minced",
+      "2 tsp olive oil",
+      "1 garlic clove, rosemary",
+      "1 tsp nutritional yeast (optional)"
+    ],
+    "method": [
+      "Soften soffritto in oil 6 min; add garlic and rosemary.",
+      "Add tomatoes and lentils; simmer 15 min until rich.",
+      "Cook rigatoni; toss with the ragu and pasta water."
+    ],
+    "swap_group": "pasta"
+  },
+  {
+    "id": "smoky-turkey-chili",
+    "name": "Smoky Turkey Chili with Rice",
+    "slot": "dinner",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 485,
+      "protein_g": 42,
+      "carbs_g": 54,
+      "fat_g": 11
+    },
+    "serving_label": "1 bowl + rice (~550 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "budget",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "125 g lean turkey mince",
+      "120 g kidney beans, rinsed",
+      "400 g tin chopped tomatoes",
+      "1/2 onion + 1 red pepper, diced",
+      "1 tsp each cumin, smoked paprika; 1/2 tsp chipotle flakes",
+      "1 tsp oil",
+      "100 g cooked rice"
+    ],
+    "method": [
+      "Brown turkey in oil; add onion and pepper, 5 min.",
+      "Add spices, tomatoes and beans; simmer low 30-40 min.",
+      "Season, rest 5 min; serve over rice."
+    ],
+    "swap_group": "stew"
+  },
+  {
+    "id": "sizzling-chicken-fajitas",
+    "name": "Sizzling Chicken Fajitas",
+    "slot": "dinner",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 520,
+      "protein_g": 40,
+      "carbs_g": 52,
+      "fat_g": 17
+    },
+    "serving_label": "2 loaded tortillas (~420 g)",
+    "tags": [
+      "halal_friendly",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "140 g chicken breast, in strips",
+      "1 tsp fajita seasoning (cumin, paprika, oregano, chilli)",
+      "1 red pepper + 1/2 onion, sliced",
+      "2 medium flour tortillas",
+      "2 tbsp salsa + 2 tbsp yogurt",
+      "2 tsp oil, lime"
+    ],
+    "method": [
+      "Toss chicken with seasoning; sear in half the oil 5-6 min; remove.",
+      "Char pepper and onion in the rest.",
+      "Return chicken; squeeze over lime.",
+      "Serve sizzling with warm tortillas, salsa and yogurt."
+    ],
+    "swap_group": "tacos"
+  },
+  {
+    "id": "baja-fish-tacos",
+    "name": "Baja-Style Fish Tacos with Slaw",
+    "slot": "dinner",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 420,
+      "protein_g": 32,
+      "carbs_g": 44,
+      "fat_g": 13
+    },
+    "serving_label": "3 tacos (~380 g)",
+    "tags": [
+      "pescatarian",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "140 g white fish (cod/tilapia)",
+      "1 tsp smoked paprika + cumin rub",
+      "3 corn tortillas",
+      "100 g cabbage slaw with lime",
+      "30 g yogurt + 10 g mayo + lime (crema)",
+      "pico de gallo, coriander"
+    ],
+    "method": [
+      "Rub fish with spices; pan-fry or bake until flaking, ~8 min.",
+      "Toss cabbage with lime and salt; whisk the crema.",
+      "Build tacos: tortilla, slaw, fish, crema, pico."
+    ],
+    "swap_group": "tacos"
+  },
+  {
+    "id": "black-bean-sweet-potato-tacos",
+    "name": "Black Bean & Sweet Potato Tacos",
+    "slot": "dinner",
+    "cuisine": "mexican",
+    "per_serving": {
+      "kcal": 425,
+      "protein_g": 15,
+      "carbs_g": 64,
+      "fat_g": 12
+    },
+    "serving_label": "3 tacos (~400 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g black beans, warmed with cumin",
+      "100 g sweet potato, cubed and roasted",
+      "3 corn tortillas",
+      "50 g avocado",
+      "shredded cabbage, lime, coriander",
+      "hot sauce"
+    ],
+    "method": [
+      "Roast sweet potato at 200 C, 20-25 min.",
+      "Warm beans with cumin and a splash of water; mash roughly.",
+      "Fill tortillas with beans, sweet potato, cabbage and avocado; finish with lime and hot sauce."
+    ],
+    "swap_group": "tacos"
+  },
+  {
+    "id": "greek-baked-cod",
+    "name": "Greek Baked Cod with Tomatoes & Potatoes",
+    "slot": "dinner",
+    "cuisine": "greek",
+    "per_serving": {
+      "kcal": 430,
+      "protein_g": 38,
+      "carbs_g": 40,
+      "fat_g": 13
+    },
+    "serving_label": "1 traybake portion (~500 g)",
+    "tags": [
+      "pescatarian",
+      "gluten_free",
+      "dairy_free",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "180 g cod fillet",
+      "200 g baby potatoes, halved",
+      "150 g cherry tomatoes",
+      "6 kalamata olives",
+      "2 tsp olive oil",
+      "oregano, lemon, garlic"
+    ],
+    "method": [
+      "Roast potatoes with half the oil at 200 C, 20 min.",
+      "Add tomatoes, olives, garlic; nestle in the cod with remaining oil, oregano and lemon.",
+      "Roast 12-14 min until the fish flakes."
+    ],
+    "swap_group": "traybake"
+  },
+  {
+    "id": "harissa-chicken-traybake",
+    "name": "Harissa Chicken & Vegetable Traybake",
+    "slot": "dinner",
+    "cuisine": "moroccan",
+    "per_serving": {
+      "kcal": 500,
+      "protein_g": 41,
+      "carbs_g": 34,
+      "fat_g": 22
+    },
+    "serving_label": "1 traybake portion (~500 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "160 g skinless chicken thighs",
+      "1 tbsp harissa paste",
+      "150 g baby potatoes, halved",
+      "1 red onion + 1 courgette + 1 red pepper, chunked",
+      "2 tsp olive oil",
+      "lemon"
+    ],
+    "method": [
+      "Toss everything with harissa, oil and salt on one tray.",
+      "Roast at 200 C, 35-40 min, turning once.",
+      "Squeeze over lemon to serve."
+    ],
+    "swap_group": "traybake"
+  },
+  {
+    "id": "chickpea-apricot-tagine",
+    "name": "Chickpea & Apricot Tagine with Couscous",
+    "slot": "dinner",
+    "cuisine": "moroccan",
+    "per_serving": {
+      "kcal": 485,
+      "protein_g": 18,
+      "carbs_g": 72,
+      "fat_g": 14
+    },
+    "serving_label": "1 bowl + couscous (~500 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g chickpeas, rinsed",
+      "25 g dried apricots, chopped",
+      "400 g tin chopped tomatoes",
+      "1 onion, 2 garlic cloves",
+      "1.5 tsp ras el hanout",
+      "2 tsp olive oil",
+      "40 g couscous",
+      "coriander, 10 g flaked almonds"
+    ],
+    "method": [
+      "Soften onion in oil; add garlic and ras el hanout.",
+      "Add tomatoes, chickpeas and apricots; simmer 20 min.",
+      "Steep couscous in boiling water 5 min; fluff.",
+      "Serve topped with almonds and coriander."
+    ],
+    "swap_group": "stew"
+  },
+  {
+    "id": "lemon-salmon-traybake",
+    "name": "Lemon Salmon, Asparagus & Baby Potato Traybake",
+    "slot": "dinner",
+    "cuisine": "british",
+    "per_serving": {
+      "kcal": 475,
+      "protein_g": 34,
+      "carbs_g": 38,
+      "fat_g": 21
+    },
+    "serving_label": "1 traybake portion (~480 g)",
+    "tags": [
+      "pescatarian",
+      "gluten_free",
+      "dairy_free",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "130 g salmon fillet",
+      "200 g baby potatoes, halved",
+      "100 g asparagus",
+      "1 tsp olive oil",
+      "lemon slices, dill",
+      "black pepper"
+    ],
+    "method": [
+      "Roast potatoes with oil at 200 C, 20 min.",
+      "Add asparagus, salmon and lemon slices.",
+      "Roast 12 min more; scatter dill."
+    ],
+    "swap_group": "traybake"
+  },
+  {
+    "id": "steak-chimichurri-potatoes",
+    "name": "Steak with Chimichurri & Roast Potatoes",
+    "slot": "dinner",
+    "cuisine": "argentinian",
+    "per_serving": {
+      "kcal": 510,
+      "protein_g": 44,
+      "carbs_g": 36,
+      "fat_g": 21
+    },
+    "serving_label": "1 plate (~450 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "150 g sirloin steak, trimmed",
+      "180 g potatoes, cut small and roasted",
+      "chimichurri: parsley, oregano, garlic, red wine vinegar, 2 tsp olive oil",
+      "green salad leaves"
+    ],
+    "method": [
+      "Roast potatoes at 210 C, ~30 min.",
+      "Chop chimichurri ingredients together; loosen with vinegar and oil.",
+      "Sear steak 2-3 min per side for medium-rare; rest 5 min.",
+      "Slice; spoon over chimichurri."
+    ],
+    "swap_group": "grill"
+  },
+  {
+    "id": "turkey-burgers-oven-fries",
+    "name": "Turkey Burgers with Oven Fries",
+    "slot": "dinner",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 550,
+      "protein_g": 42,
+      "carbs_g": 60,
+      "fat_g": 16
+    },
+    "serving_label": "1 burger + fries (~480 g)",
+    "tags": [
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "140 g lean turkey mince",
+      "grated onion, 1 tsp dijon, parsley (for the patty)",
+      "1 wholemeal bun",
+      "lettuce, tomato, red onion",
+      "yogurt-mustard sauce (2 tbsp)",
+      "180 g potatoes, cut into fries, 1 tsp oil"
+    ],
+    "method": [
+      "Toss fries in oil; bake at 220 C, 25-30 min.",
+      "Knead patty ingredients; shape and chill 10 min.",
+      "Pan-cook patty 5-6 min per side to 74 C.",
+      "Build the burger with salad and sauce."
+    ],
+    "swap_group": "sandwich"
+  },
+  {
+    "id": "chicken-pho",
+    "name": "Chicken Pho (Pho Ga)",
+    "slot": "dinner",
+    "cuisine": "vietnamese",
+    "per_serving": {
+      "kcal": 405,
+      "protein_g": 40,
+      "carbs_g": 48,
+      "fat_g": 6
+    },
+    "serving_label": "1 big bowl (~700 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "130 g chicken breast",
+      "900 ml chicken stock",
+      "1/2 onion + thumb of ginger, charred",
+      "1 star anise, 1/2 cinnamon stick, 2 cloves",
+      "200 g cooked flat rice noodles",
+      "1 tbsp fish sauce",
+      "beansprouts, thai basil, lime, chilli"
+    ],
+    "method": [
+      "Simmer stock with charred onion, ginger and spices 30-40 min; strain.",
+      "Poach chicken in the broth 12 min; slice.",
+      "Season broth with fish sauce.",
+      "Pour over noodles and chicken; pile on herbs, sprouts, lime."
+    ],
+    "swap_group": "soup"
+  },
+  {
+    "id": "misir-wot",
+    "name": "Ethiopian Red Lentil Stew (Misir Wot)",
+    "slot": "dinner",
+    "cuisine": "ethiopian",
+    "per_serving": {
+      "kcal": 450,
+      "protein_g": 20,
+      "carbs_g": 68,
+      "fat_g": 11
+    },
+    "serving_label": "1 bowl + rice (~500 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "75 g red lentils, rinsed",
+      "1 onion, finely chopped",
+      "2 garlic cloves, ginger",
+      "1.5 tsp berbere spice",
+      "1 tbsp tomato paste",
+      "2 tsp oil",
+      "100 g cooked rice (or injera if you have it)"
+    ],
+    "method": [
+      "Cook onion in oil slowly until deeply soft, ~10 min.",
+      "Add garlic, ginger, berbere and tomato paste; fry 2 min.",
+      "Add lentils and ~400 ml water; simmer 20 min, stirring, until thick.",
+      "Serve over rice."
+    ],
+    "swap_group": "stew"
+  },
+  {
+    "id": "chicken-souvlaki-plate",
+    "name": "Chicken Souvlaki Plate with Lemon Potatoes",
+    "slot": "dinner",
+    "cuisine": "greek",
+    "per_serving": {
+      "kcal": 465,
+      "protein_g": 43,
+      "carbs_g": 42,
+      "fat_g": 14
+    },
+    "serving_label": "1 plate (~500 g)",
+    "tags": [
+      "gluten_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "130 g chicken breast, cubed and skewered",
+      "oregano, lemon, 1 tsp olive oil (marinade)",
+      "200 g potatoes, roasted with lemon and oregano",
+      "50 g tzatziki",
+      "tomato-cucumber salad"
+    ],
+    "method": [
+      "Marinate and skewer the chicken; roast lemon-oregano potatoes at 200 C, ~35 min.",
+      "Grill skewers 10-12 min, turning.",
+      "Plate with tzatziki and salad."
+    ],
+    "swap_group": "grill"
+  },
+  {
+    "id": "jerk-chicken-rice-and-peas",
+    "name": "Jerk Chicken with Rice & Peas",
+    "slot": "dinner",
+    "cuisine": "caribbean",
+    "per_serving": {
+      "kcal": 540,
+      "protein_g": 43,
+      "carbs_g": 54,
+      "fat_g": 17
+    },
+    "serving_label": "1 plate (~520 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "140 g skinless chicken thighs",
+      "1 tbsp jerk marinade (allspice, scotch bonnet, thyme, spring onion)",
+      "130 g cooked rice simmered with 60 g kidney beans + 50 ml coconut milk",
+      "lime",
+      "charred pineapple or slaw (optional side)"
+    ],
+    "method": [
+      "Marinate chicken in jerk paste at least 2 h, ideally overnight.",
+      "Cook rice with beans, coconut milk and thyme.",
+      "Grill or roast chicken at 200 C, 25-30 min, until charred and cooked through.",
+      "Serve with lime."
+    ],
+    "swap_group": "grill"
+  },
+  {
+    "id": "spanish-chicken-chickpea-stew",
+    "name": "Spanish Chicken & Chickpea Stew",
+    "slot": "dinner",
+    "cuisine": "spanish",
+    "per_serving": {
+      "kcal": 480,
+      "protein_g": 41,
+      "carbs_g": 32,
+      "fat_g": 21
+    },
+    "serving_label": "1 bowl (~500 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "130 g skinless chicken thighs, chunked",
+      "120 g chickpeas, rinsed",
+      "400 g tin chopped tomatoes",
+      "1 tsp smoked paprika",
+      "1/2 onion, 2 garlic cloves",
+      "2 tsp olive oil",
+      "big handful spinach"
+    ],
+    "method": [
+      "Brown chicken in oil; add onion and garlic, 4 min.",
+      "Stir in paprika, tomatoes and chickpeas; simmer 20 min.",
+      "Wilt in spinach; season and serve."
+    ],
+    "swap_group": "stew"
+  },
+  {
+    "id": "one-pot-cajun-chicken-rice",
+    "name": "One-Pot Cajun Chicken & Rice",
+    "slot": "dinner",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 495,
+      "protein_g": 40,
+      "carbs_g": 54,
+      "fat_g": 13
+    },
+    "serving_label": "1 pot portion (~480 g)",
+    "tags": [
+      "gluten_free",
+      "dairy_free",
+      "budget",
+      "halal_friendly",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "140 g chicken breast, cubed",
+      "60 g long-grain rice",
+      "1 tsp cajun seasoning",
+      "1/2 onion + 1 rib celery + 1/2 green pepper, diced",
+      "300 ml chicken stock",
+      "2 tsp oil",
+      "spring onion"
+    ],
+    "method": [
+      "Sear seasoned chicken in oil; remove.",
+      "Soften the holy trinity (onion, celery, pepper) 5 min.",
+      "Add rice and stock; return chicken, cover and simmer 15 min.",
+      "Rest 5 min off heat; fork through spring onion."
+    ],
+    "swap_group": "protein-bowl"
+  },
+  {
+    "id": "weeknight-beef-mapo-tofu",
+    "name": "Weeknight Beef Mapo Tofu with Rice",
+    "slot": "dinner",
+    "cuisine": "chinese",
+    "per_serving": {
+      "kcal": 535,
+      "protein_g": 38,
+      "carbs_g": 46,
+      "fat_g": 22
+    },
+    "serving_label": "1 bowl (~500 g)",
+    "tags": [
+      "dairy_free",
+      "halal_friendly",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "200 g soft tofu, cubed",
+      "80 g lean beef mince",
+      "1 tbsp chilli bean paste (doubanjiang)",
+      "1 tbsp soy, 1 tsp cornflour in water",
+      "2 spring onions, garlic, ginger",
+      "2 tsp oil, pinch ground sichuan pepper",
+      "140 g cooked rice"
+    ],
+    "method": [
+      "Fry mince in oil until crisp; add garlic, ginger, chilli bean paste.",
+      "Add 150 ml water, soy and tofu; simmer gently 4 min.",
+      "Thicken with cornflour slurry; top with spring onion and sichuan pepper.",
+      "Serve over rice."
+    ],
+    "swap_group": "stir-fry"
+  },
+  {
+    "id": "sicilian-fish-stew",
+    "name": "Sicilian-Style Fish Stew with Bread",
+    "slot": "dinner",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 380,
+      "protein_g": 38,
+      "carbs_g": 30,
+      "fat_g": 12
+    },
+    "serving_label": "1 bowl + bread (~500 g)",
+    "tags": [
+      "pescatarian",
+      "dairy_free",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "170 g white fish, chunked",
+      "400 g tin chopped tomatoes",
+      "1/2 fennel bulb + 1/2 onion, sliced",
+      "6 green olives + 1 tsp capers",
+      "2 tsp olive oil",
+      "40 g crusty bread",
+      "parsley, lemon"
+    ],
+    "method": [
+      "Soften fennel and onion in oil 6 min.",
+      "Add tomatoes, olives, capers; simmer 10 min.",
+      "Nestle in fish; cover and cook 5-6 min until it flakes.",
+      "Finish with parsley and lemon; serve with bread."
+    ],
+    "swap_group": "stew"
+  },
+  {
+    "id": "greek-yogurt-honey-walnuts",
+    "name": "Greek Yogurt with Honey & Walnuts",
+    "slot": "snack",
+    "cuisine": "greek",
+    "per_serving": {
+      "kcal": 235,
+      "protein_g": 19,
+      "carbs_g": 17,
+      "fat_g": 10
+    },
+    "serving_label": "1 small bowl (~200 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "170 g Greek yogurt",
+      "10 g honey",
+      "15 g walnuts, roughly crushed"
+    ],
+    "method": [
+      "Spoon yogurt into a bowl.",
+      "Crush walnuts over the top.",
+      "Drizzle with honey."
+    ],
+    "swap_group": "snack-protein"
+  },
+  {
+    "id": "cottage-cheese-pineapple-bowl",
+    "name": "Cottage Cheese & Pineapple Bowl",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 185,
+      "protein_g": 18,
+      "carbs_g": 17,
+      "fat_g": 5
+    },
+    "serving_label": "1 small bowl (~250 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "150 g cottage cheese",
+      "100 g fresh or tinned-in-juice pineapple, chopped",
+      "black pepper or chilli flakes"
+    ],
+    "method": [
+      "Bowl the cottage cheese.",
+      "Chop and add the pineapple.",
+      "Finish with black pepper or chilli flakes — trust it."
+    ],
+    "swap_group": "snack-protein"
+  },
+  {
+    "id": "jammy-eggs-everything-seasoning",
+    "name": "Jammy Eggs with Everything Seasoning",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 145,
+      "protein_g": 13,
+      "carbs_g": 1,
+      "fat_g": 10
+    },
+    "serving_label": "2 eggs (~110 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "dairy_free",
+      "budget",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "2 eggs",
+      "1 tsp everything bagel seasoning (sesame, poppy, onion, garlic, salt)"
+    ],
+    "method": [
+      "Boil eggs 6.5-7 min for jammy yolks.",
+      "Cool in iced water; peel.",
+      "Halve and sprinkle generously."
+    ],
+    "swap_group": "snack-protein"
+  },
+  {
+    "id": "chilli-lime-edamame",
+    "name": "Chilli-Lime Edamame",
+    "slot": "snack",
+    "cuisine": "japanese",
+    "per_serving": {
+      "kcal": 145,
+      "protein_g": 13,
+      "carbs_g": 10,
+      "fat_g": 6
+    },
+    "serving_label": "1 bowl in pods (~200 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "vegetarian",
+      "dairy_free",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "200 g frozen edamame in pods (~120 g beans)",
+      "1/2 lime",
+      "chilli flakes, flaky salt"
+    ],
+    "method": [
+      "Boil or microwave edamame 3-4 min.",
+      "Drain well.",
+      "Toss hot with lime juice, chilli and salt."
+    ],
+    "swap_group": "snack-protein"
+  },
+  {
+    "id": "lemon-pepper-tuna-crackers",
+    "name": "Lemon-Pepper Tuna on Crackers",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 200,
+      "protein_g": 21,
+      "carbs_g": 16,
+      "fat_g": 6
+    },
+    "serving_label": "5 topped crackers (~140 g)",
+    "tags": [
+      "pescatarian",
+      "budget",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "80 g tin tuna, drained",
+      "10 g light mayo",
+      "lemon zest, black pepper",
+      "25 g wholegrain crackers"
+    ],
+    "method": [
+      "Drain the tuna well.",
+      "Mix with mayo, lemon zest and lots of pepper.",
+      "Pile onto crackers just before eating."
+    ],
+    "swap_group": "snack-protein"
+  },
+  {
+    "id": "crispy-paprika-chickpeas",
+    "name": "Crispy Paprika Chickpeas",
+    "slot": "snack",
+    "cuisine": "middle-eastern",
+    "per_serving": {
+      "kcal": 205,
+      "protein_g": 9,
+      "carbs_g": 24,
+      "fat_g": 8
+    },
+    "serving_label": "1 handful bowl (~100 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g chickpeas, rinsed and patted very dry",
+      "1 tsp olive oil",
+      "1 tsp smoked paprika, pinch of salt"
+    ],
+    "method": [
+      "Toss chickpeas with oil and seasoning.",
+      "Roast at 200 C, 25-30 min, shaking twice, until crunchy.",
+      "Cool 5 min — they crisp further."
+    ],
+    "swap_group": "snack-savoury"
+  },
+  {
+    "id": "hummus-veggie-sticks",
+    "name": "Hummus with Rainbow Veggie Sticks",
+    "slot": "snack",
+    "cuisine": "middle-eastern",
+    "per_serving": {
+      "kcal": 170,
+      "protein_g": 6,
+      "carbs_g": 18,
+      "fat_g": 8
+    },
+    "serving_label": "1 dip plate (~210 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "60 g hummus",
+      "150 g carrot, cucumber and pepper sticks",
+      "pinch of za'atar or paprika"
+    ],
+    "method": [
+      "Cut vegetables into sturdy sticks.",
+      "Spoon hummus into a bowl; dust with za'atar.",
+      "Dip."
+    ],
+    "swap_group": "snack-savoury"
+  },
+  {
+    "id": "apple-slices-peanut-butter",
+    "name": "Apple Slices with Peanut Butter",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 230,
+      "protein_g": 6,
+      "carbs_g": 29,
+      "fat_g": 10
+    },
+    "serving_label": "1 apple + 20 g PB (~200 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "1 apple, cored and sliced",
+      "20 g peanut butter",
+      "pinch of cinnamon"
+    ],
+    "method": [
+      "Core and slice the apple.",
+      "Spoon peanut butter alongside.",
+      "Dip or spread; dust with cinnamon."
+    ],
+    "swap_group": "snack-fruit"
+  },
+  {
+    "id": "maple-nut-seed-trail-mix",
+    "name": "Maple Nut & Seed Trail Mix",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 235,
+      "protein_g": 7,
+      "carbs_g": 18,
+      "fat_g": 15
+    },
+    "serving_label": "1 small handful (~55 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "15 g almonds",
+      "10 g walnuts",
+      "10 g pumpkin seeds",
+      "15 g raisins",
+      "5 g dark chocolate chips",
+      "tiny pinch of salt"
+    ],
+    "method": [
+      "Toast the nuts and seeds in a dry pan 3 min (optional but worth it).",
+      "Cool; mix with raisins, chocolate and salt.",
+      "Portion into small bags so one handful stays one handful."
+    ],
+    "swap_group": "snack-fruit"
+  },
+  {
+    "id": "mango-chia-pudding",
+    "name": "Mango Chia Pudding",
+    "slot": "snack",
+    "cuisine": "international",
+    "per_serving": {
+      "kcal": 225,
+      "protein_g": 9,
+      "carbs_g": 27,
+      "fat_g": 9
+    },
+    "serving_label": "1 jar (~280 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "20 g chia seeds",
+      "150 ml soy milk",
+      "80 g ripe mango, blended or chopped",
+      "1 tsp maple syrup"
+    ],
+    "method": [
+      "Stir chia, soy milk and maple; rest 10 min, stir again.",
+      "Chill 2+ h (or overnight).",
+      "Top with mango."
+    ],
+    "swap_group": "snack-fruit"
+  },
+  {
+    "id": "rice-cakes-cottage-cheese-tomato",
+    "name": "Rice Cakes with Cottage Cheese & Tomato",
+    "slot": "snack",
+    "cuisine": "nordic",
+    "per_serving": {
+      "kcal": 145,
+      "protein_g": 12,
+      "carbs_g": 17,
+      "fat_g": 3
+    },
+    "serving_label": "2 topped cakes (~160 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "2 rice cakes",
+      "100 g cottage cheese",
+      "1 small tomato, sliced",
+      "black pepper, chives"
+    ],
+    "method": [
+      "Spread cottage cheese on the rice cakes.",
+      "Top with tomato slices.",
+      "Season with pepper and chives; eat immediately (they soften)."
+    ],
+    "swap_group": "snack-savoury"
+  },
+  {
+    "id": "cheddar-apple-plate",
+    "name": "Cheddar & Apple Plate",
+    "slot": "snack",
+    "cuisine": "british",
+    "per_serving": {
+      "kcal": 220,
+      "protein_g": 7,
+      "carbs_g": 25,
+      "fat_g": 10
+    },
+    "serving_label": "1 small plate (~180 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "30 g mature cheddar, sliced thin",
+      "1 apple, sliced"
+    ],
+    "method": [
+      "Slice the cheddar thin.",
+      "Slice the apple.",
+      "Plate together; alternate bites."
+    ],
+    "swap_group": "snack-fruit"
+  },
+  {
+    "id": "kefir-berry-shake",
+    "name": "Kefir Berry Shake",
+    "slot": "snack",
+    "cuisine": "international",
+    "per_serving": {
+      "kcal": 195,
+      "protein_g": 9,
+      "carbs_g": 26,
+      "fat_g": 6
+    },
+    "serving_label": "1 glass (~360 ml)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "250 ml kefir",
+      "100 g frozen mixed berries",
+      "1 tsp honey"
+    ],
+    "method": [
+      "Add kefir, frozen berries and honey to a blender.",
+      "Blend until smooth.",
+      "Drink cold."
+    ],
+    "swap_group": "smoothie"
+  },
+  {
+    "id": "medjool-dates-almond-butter",
+    "name": "Medjool Dates with Almond Butter",
+    "slot": "snack",
+    "cuisine": "middle-eastern",
+    "per_serving": {
+      "kcal": 245,
+      "protein_g": 4,
+      "carbs_g": 39,
+      "fat_g": 8
+    },
+    "serving_label": "2 stuffed dates (~65 g)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "2 medjool dates, pitted",
+      "15 g almond butter",
+      "flaky salt"
+    ],
+    "method": [
+      "Split the dates and remove the pits.",
+      "Spoon almond butter into each.",
+      "Top with a few salt flakes."
+    ],
+    "swap_group": "snack-fruit"
+  },
+  {
+    "id": "miso-soup-silken-tofu",
+    "name": "Miso Soup with Silken Tofu",
+    "slot": "snack",
+    "cuisine": "japanese",
+    "per_serving": {
+      "kcal": 85,
+      "protein_g": 7,
+      "carbs_g": 5,
+      "fat_g": 4
+    },
+    "serving_label": "1 cup (~300 ml)",
+    "tags": [
+      "vegan",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "15 g miso paste",
+      "100 g silken tofu, cubed",
+      "250 ml hot water or kombu dashi",
+      "pinch of wakame, 1 spring onion"
+    ],
+    "method": [
+      "Soak wakame in the hot dashi 2 min.",
+      "Whisk in miso off the boil; add tofu to warm.",
+      "Top with spring onion."
+    ],
+    "swap_group": "soup"
+  },
+  {
+    "id": "olive-oil-sea-salt-popcorn",
+    "name": "Olive Oil & Sea Salt Popcorn",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 180,
+      "protein_g": 3,
+      "carbs_g": 19,
+      "fat_g": 10
+    },
+    "serving_label": "1 large bowl (~35 g popped)",
+    "tags": [
+      "vegan",
+      "gluten_free",
+      "budget",
+      "vegetarian",
+      "dairy_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "30 g popcorn kernels",
+      "2 tsp olive oil",
+      "sea salt"
+    ],
+    "method": [
+      "Heat oil with 2 test kernels in a lidded pot; when they pop, add the rest.",
+      "Shake over the heat until pops slow.",
+      "Salt while hot."
+    ],
+    "swap_group": "snack-savoury"
+  },
+  {
+    "id": "berry-frozen-yogurt-bark",
+    "name": "Berry Frozen Yogurt Bark",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 155,
+      "protein_g": 13,
+      "carbs_g": 17,
+      "fat_g": 4
+    },
+    "serving_label": "2 shards (~150 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "high_protein"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "120 g Greek yogurt",
+      "8 g honey",
+      "60 g mixed berries",
+      "8 g pistachios, chopped"
+    ],
+    "method": [
+      "Stir honey into yogurt; spread 1 cm thick on a lined tray.",
+      "Press in berries and pistachios.",
+      "Freeze 3+ h; snap into shards. Keeps frozen 2 weeks."
+    ],
+    "swap_group": "snack-fruit"
+  },
+  {
+    "id": "peanut-oat-energy-balls",
+    "name": "Peanut Oat Energy Balls",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 250,
+      "protein_g": 8,
+      "carbs_g": 30,
+      "fat_g": 11
+    },
+    "serving_label": "2 balls (~60 g)",
+    "tags": [
+      "vegan",
+      "budget",
+      "vegetarian",
+      "dairy_free"
+    ],
+    "effort": "standard",
+    "ingredients": [
+      "25 g rolled oats",
+      "25 g dates, pitted",
+      "20 g peanut butter",
+      "5 g chia seeds",
+      "pinch of salt (makes ~4 balls; scale up for the week)"
+    ],
+    "method": [
+      "Blitz everything to a sticky rubble.",
+      "Roll into balls; chill 30 min.",
+      "Keeps 5 days refrigerated."
+    ],
+    "swap_group": "snack-fruit"
+  },
+  {
+    "id": "turkey-cucumber-roll-ups",
+    "name": "Turkey & Cucumber Roll-Ups",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 135,
+      "protein_g": 17,
+      "carbs_g": 6,
+      "fat_g": 5
+    },
+    "serving_label": "4 roll-ups (~140 g)",
+    "tags": [
+      "dairy_free",
+      "halal_friendly",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "80 g sliced turkey breast",
+      "30 g hummus",
+      "1/2 cucumber, cut into batons",
+      "black pepper"
+    ],
+    "method": [
+      "Cut the cucumber into batons.",
+      "Spread hummus on each turkey slice.",
+      "Roll each slice around a baton; pepper well."
+    ],
+    "swap_group": "snack-protein"
+  },
+  {
+    "id": "banana-oat-snack-muffins",
+    "name": "Banana Oat Snack Muffins",
+    "slot": "snack",
+    "cuisine": "american",
+    "per_serving": {
+      "kcal": 210,
+      "protein_g": 7,
+      "carbs_g": 28,
+      "fat_g": 8
+    },
+    "serving_label": "2 mini muffins (~90 g)",
+    "tags": [
+      "vegetarian"
+    ],
+    "effort": "project",
+    "ingredients": [
+      "2 ripe bananas, mashed",
+      "120 g rolled oats",
+      "2 eggs",
+      "100 g Greek yogurt",
+      "1 tsp baking powder, cinnamon",
+      "30 g chopped walnuts (makes 12 mini muffins; macros per 2)"
+    ],
+    "method": [
+      "Mix everything to a thick batter.",
+      "Divide into a 12-hole mini muffin tin.",
+      "Bake 180 C, 16-18 min. Freezes well."
+    ],
+    "swap_group": "snack-bake"
+  },
+  {
+    "id": "mini-caprese-skewers",
+    "name": "Mini Caprese Skewers",
+    "slot": "snack",
+    "cuisine": "italian",
+    "per_serving": {
+      "kcal": 155,
+      "protein_g": 11,
+      "carbs_g": 5,
+      "fat_g": 10
+    },
+    "serving_label": "4 skewers (~140 g)",
+    "tags": [
+      "vegetarian",
+      "gluten_free",
+      "quick"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "60 g mini mozzarella balls",
+      "8 cherry tomatoes",
+      "basil leaves",
+      "balsamic glaze, few drops"
+    ],
+    "method": [
+      "Drain the mozzarella.",
+      "Thread tomato, basil and mozzarella onto picks.",
+      "Drizzle balsamic; season."
+    ],
+    "swap_group": "snack-savoury"
+  },
+  {
+    "id": "smoked-salmon-cucumber-bites",
+    "name": "Smoked Salmon Cucumber Bites",
+    "slot": "snack",
+    "cuisine": "nordic",
+    "per_serving": {
+      "kcal": 125,
+      "protein_g": 15,
+      "carbs_g": 3,
+      "fat_g": 6
+    },
+    "serving_label": "6 bites (~130 g)",
+    "tags": [
+      "pescatarian",
+      "gluten_free",
+      "quick",
+      "high_protein"
+    ],
+    "effort": "quick",
+    "ingredients": [
+      "60 g smoked salmon",
+      "1/2 cucumber, in thick rounds",
+      "20 g light cream cheese",
+      "dill, lemon, black pepper"
+    ],
+    "method": [
+      "Cut the cucumber into thick rounds.",
+      "Dab cream cheese on each.",
+      "Top with a salmon fold, dill, lemon and pepper."
+    ],
+    "swap_group": "snack-protein"
+  }
+];
+
+/** Loadable-by-id map — the lookup every store read and swap application goes through. */
+export const RECIPE_BY_ID: ReadonlyMap<string, Recipe> = new Map(RECIPES.map((r) => [r.id, r]));
+
+/* ------------------------------------------------------------------ preference filtering */
+
+/**
+ * The §3 lattice: vegan ⊂ vegetarian ⊂ pescatarian ⊂ omnivore. A user at rank N can eat any
+ * recipe whose base rank is ≤ N... inverted: a recipe's base diet is the most permissive class,
+ * and a user accepts recipes at or below their own permissiveness.
+ */
+const BASE_RANK: Record<RecipeBaseDiet, number> = {
+  vegan: 0,
+  vegetarian: 1,
+  pescatarian: 2,
+  omnivore: 3,
+};
+
+export function baseDietOf(recipe: Recipe): RecipeBaseDiet {
+  if (recipe.tags.includes('vegan')) return 'vegan';
+  if (recipe.tags.includes('vegetarian')) return 'vegetarian';
+  if (recipe.tags.includes('pescatarian')) return 'pescatarian';
+  return 'omnivore';
+}
+
+export type AvoidTag =
+  | 'dairy_free'
+  | 'gluten_free'
+  | 'halal_friendly'
+  | 'nut_free'
+  | 'shellfish_free';
+
+export interface DietPrefs {
+  base: RecipeBaseDiet;
+  avoid: AvoidTag[];
+}
+
+/**
+ * nut/shellfish exclusion is ingredient-derived (the corpus does not tag these axes). Substring
+ * match against the listed ingredients — deliberately conservative keywords ("coconut" and
+ * "butternut" must NOT trip the nut filter, so the bare word "nut" is not on the list).
+ */
+const NUT_WORDS = [
+  'almond',
+  'peanut',
+  'cashew',
+  'walnut',
+  'pecan',
+  'pistachio',
+  'hazelnut',
+  'pine nut',
+  'macadamia',
+  'brazil nut',
+  'mixed nuts',
+];
+const SHELLFISH_WORDS = [
+  'prawn',
+  'shrimp',
+  'crab',
+  'lobster',
+  'mussel',
+  'clam',
+  'scallop',
+  'squid',
+  'oyster',
+];
+
+function ingredientsContain(recipe: Recipe, words: string[]): boolean {
+  const text = recipe.ingredients.join(' | ').toLowerCase();
+  return words.some((w) => text.includes(w));
+}
+
+/**
+ * HARD filter — a recipe either satisfies every active preference or it is not servable. There is
+ * no "97% match" (§5 rule 2).
+ */
+export function satisfiesPrefs(recipe: Recipe, prefs: DietPrefs): boolean {
+  if (BASE_RANK[baseDietOf(recipe)] > BASE_RANK[prefs.base]) return false;
+  for (const tag of prefs.avoid) {
+    if (tag === 'nut_free') {
+      if (ingredientsContain(recipe, NUT_WORDS)) return false;
+    } else if (tag === 'shellfish_free') {
+      if (ingredientsContain(recipe, SHELLFISH_WORDS)) return false;
+    } else if (!recipe.tags.includes(tag)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Which corpus recipes may occupy a slot. Lunch and dinner cross both ways (§5 rule 1: recipes
+ * may serve multiple main slots): leftover pairing (cook dinner ×2, eat it tomorrow) already
+ * makes every dinner a valid lunch, and the corpus's lunch mains (protein bowls, pasta, grain
+ * salads) are equally plausible dinners. Breakfasts and snacks do not cross ("breakfasts rarely
+ * cross").
+ */
+export function slotPool(slot: MealSlotName): Recipe[] {
+  if (slot === 'lunch' || slot === 'dinner') {
+    return RECIPES.filter((r) => r.slot === 'lunch' || r.slot === 'dinner');
+  }
+  return RECIPES.filter((r) => r.slot === slot);
+}
