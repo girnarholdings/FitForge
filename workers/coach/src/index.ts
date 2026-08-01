@@ -1887,7 +1887,19 @@ async function bodyScan(
   }
 
   const outcome = validateBodyScan(extractJson(r.answer));
-  if (!outcome) return { status: 502, body: { error: 'unusable_answer' } };
+  if (!outcome)
+    // The scrubbed head of the model's actual answer rides the 502 — the client shows only
+    // its generic copy, but the probe (and anyone debugging) gets to see WHAT failed
+    // validation instead of a bare verdict. Same image-byte scrub as every other error path.
+    return {
+      status: 502,
+      body: {
+        error: 'unusable_answer',
+        detail: r.answer.replace(/data:image[^\s"'`]*/gi, '[image]').slice(0, 300),
+        provider: r.provider,
+        model: r.model,
+      },
+    };
   if (outcome.kind === 'refused')
     // The safety path succeeding, not a 5xx: the client maps each reason to its own copy and
     // offers the Old School flow.
