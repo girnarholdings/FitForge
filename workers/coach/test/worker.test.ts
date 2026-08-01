@@ -978,11 +978,11 @@ test('an empty food is rejected without spending an inference', async () => {
   assert.equal(calls.length, 0);
 });
 
-test('the health check advertises all four tasks', async () => {
+test('the health check advertises all five tasks', async () => {
   const env = stubEnv();
   const res = await worker.fetch(new Request('https://worker.test/', { method: 'GET' }), env);
   const body = (await res.json()) as { tasks: string[] };
-  assert.deepEqual(body.tasks, ['chat', 'macros', 'adapt', 'meal']);
+  assert.deepEqual(body.tasks, ['chat', 'macros', 'adapt', 'meal', 'bodyscan']);
 });
 
 /* ── the meal task: AI-first sentence parsing ─────────────────────────────────────────────── */
@@ -1303,4 +1303,228 @@ test('adapt passes through clamped holistic advice, and the unwell override supp
   body = (await res.json()) as { action?: string; advice?: { nutrition?: string } };
   assert.equal((body as { action: string }).action, 'rest');
   assert.ok(body.advice?.nutrition?.includes('electrolytes'));
+});
+
+/* ── the bodyscan task (AI Mode) ──────────────────────────────────────────────────────────────
+ *
+ * The contract worth enforcing here is only half about buckets. The other half is privacy: the
+ * photos transit the worker ONCE, and nothing — success body, error body, notes — may ever carry
+ * image bytes back out. The stubs below plant recognisable byte markers in every photo and the
+ * assertions grep the whole response for them.
+ */
+
+/** A fake client-prepped photo: right prefix, distinctive marker standing in for the bytes. */
+const scanImage = (marker: string) => 'data:image/jpeg;base64,' + marker.repeat(120);
+const SCAN_IMAGES = [
+  scanImage('FRONTBYTES'),
+  scanImage('BACKBYTES'),
+  scanImage('LEFTBYTES'),
+  scanImage('RIGHTBYTES'),
+];
+
+/** The scan makes ONE vision call; route on the system prompt like the meal stub does. */
+function scanStubEnv(
+  scanResponse: string,
+): Env & { calls: { model: string; input: Record<string, unknown> }[] } {
+  const calls: { model: string; input: Record<string, unknown> }[] = [];
+  return {
+    calls,
+    ALLOWED_ORIGINS: `${ORIGIN},http://localhost:3000`,
+    AI: {
+      run: async (model: string, input: Record<string, unknown>) => {
+        calls.push({ model, input });
+        const messages = input.messages as { role: string; content: unknown }[] | undefined;
+        const system = String(messages?.find((m) => m.role === 'system')?.content ?? '');
+        return { response: system.includes('body-scan estimator') ? scanResponse : 'wrong prompt' };
+      },
+    },
+  } as Env & { calls: { model: string; input: Record<string, unknown> }[] };
+}
+
+const SCAN_OK = JSON.stringify({
+  status: 'ok',
+  refusal_reason: null,
+  photos_ok: [true, true, true, true],
+  estimates: {
+    age_bucket: { value: '26-35', confidence: 0.4 },
+    weight_range_kg: { value: '80-90', confidence: 0.9 },
+    body_fat_band: { value: '15-19', confidence: 0.6 },
+    build: { value: 'athletic', confidence: 0.7 },
+  },
+  flags: { face_visible: false, clothing_loose: false },
+  notes: 'Fitted clothing; all four photos are readable.',
+});
+
+const postScan = (over: object = {}) =>
+  post({ task: 'bodyscan', images: SCAN_IMAGES, heightCm: 178, sex: 'male', ...over });
+
+test('bodyscan: happy path returns contract buckets — and NEVER the image bytes', async () => {
+  const env = scanStubEnv(SCAN_OK);
+  const res = await worker.fetch(postScan(), env);
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  const body = JSON.parse(text) as {
+    ageBucket: string;
+    weightBandKg: { low: number; high: number };
+    bodyFatBand: string;
+    build: string;
+    confidence: { age: string; weight: string; bodyFat: string };
+    notes: string[];
+    provider: string;
+    model: string;
+  };
+  // Bucket enums exactly per the contract — the model's prompt-side words are translated.
+  assert.equal(body.ageBucket, '26-35');
+  assert.deepEqual(body.weightBandKg, { low: 80, high: 90 }, 'weight comes back as a numeric 10 kg band');
+  assert.equal(body.bodyFatBand, '12-18', 'the prompt band 15-19 lands in the contract band 12-18');
+  assert.equal(body.build, 'athletic');
+  const tiers = ['high', 'medium', 'low'];
+  assert.ok(tiers.includes(body.confidence.age));
+  assert.ok(tiers.includes(body.confidence.weight));
+  assert.ok(tiers.includes(body.confidence.bodyFat));
+  // The fallback answered, so its self-reported 0.9 must NOT come back as full confidence.
+  assert.notEqual(body.confidence.weight, 'high', 'fallback confidences are capped to a soft guess');
+  assert.equal(body.provider, 'workers-ai');
+  assert.equal(body.model, '@cf/meta/llama-3.2-11b-vision-instruct', 'the fallback is the VISION model, not the text chain');
+  assert.ok(Array.isArray(body.notes));
+  // THE PRIVACY ASSERTION: no fragment of any photo may ride back in the response.
+  for (const marker of ['FRONTBYTES', 'BACKBYTES', 'LEFTBYTES', 'RIGHTBYTES'])
+    assert.ok(!text.includes(marker), `response must never echo image bytes (${marker})`);
+
+  // One sample only — the confirm screen is the consensus mechanism.
+  assert.equal(env.calls.length, 1);
+  const msgs = env.calls[0]!.input.messages as { role: string; content: unknown }[];
+  const parts = msgs.at(-1)!.content as { type: string; image_url?: { url: string } }[];
+  assert.equal(parts.filter((p) => p.type === 'image_url').length, 4, 'all four photos ride in ONE call');
+  const context = (parts.find((p) => p.type === 'text') as { text: string }).text;
+  assert.match(context, /height 178 cm/);
+  assert.match(context, /front/i);
+});
+
+test('bodyscan: the primary path sends a multimodal chat request and keeps full confidence', async () => {
+  // Key present, no AI binding and no project id → the gate is off and Mistral serves everyone.
+  const env = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test' } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk(SCAN_OK), () =>
+    worker.fetch(postScan(), env),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { provider: string; model: string; confidence: { weight: string } };
+  assert.equal(body.provider, 'mistral');
+  assert.equal(body.model, 'mistral-small-latest');
+  assert.equal(body.confidence.weight, 'high', 'primary confidences are not capped');
+  // The extended call path: images as image_url content PARTS inside the user message.
+  const userMsg = sent!.body.messages.at(-1) as { role: string; content: { type: string; image_url?: { url: string } }[] };
+  assert.equal(userMsg.role, 'user');
+  assert.equal(userMsg.content.filter((p) => p.type === 'image_url').length, 4);
+  assert.ok(
+    userMsg.content.some((p) => p.image_url?.url.startsWith('data:image/jpeg;base64,')),
+    'photos are sent as data URIs',
+  );
+});
+
+test('bodyscan: a model refusal is a 422 with the contract reason, not a 5xx', async () => {
+  const refusal = (reason: string) =>
+    JSON.stringify({
+      status: 'refused',
+      refusal_reason: reason,
+      photos_ok: [true, true, true, true],
+      estimates: null,
+      flags: { face_visible: false, clothing_loose: false },
+      notes: '',
+    });
+
+  // possible_minor survives verbatim — the client routes it straight to Old School.
+  let env = scanStubEnv(refusal('possible_minor'));
+  let res = await worker.fetch(postScan(), env);
+  assert.equal(res.status, 422);
+  let body = (await res.json()) as { error: string; reason: string };
+  assert.equal(body.error, 'refused');
+  assert.equal(body.reason, 'possible_minor');
+
+  // The prompt's finer-grained reasons fold into the contract enum.
+  env = scanStubEnv(refusal('image_quality'));
+  res = await worker.fetch(postScan(), env);
+  assert.equal(res.status, 422);
+  body = (await res.json()) as { error: string; reason: string };
+  assert.equal(body.reason, 'unreadable');
+
+  env = scanStubEnv(refusal('explicit_content'));
+  body = (await (await worker.fetch(postScan(), env)).json()) as { error: string; reason: string };
+  assert.equal(body.reason, 'inappropriate');
+
+  env = scanStubEnv(refusal('multiple_people'));
+  body = (await (await worker.fetch(postScan(), env)).json()) as { error: string; reason: string };
+  assert.equal(body.reason, 'not_person');
+});
+
+test('bodyscan: off-enum output is a 502, never forwarded to the client', async () => {
+  // A specific age where a bucket belongs — exactly what the buckets-only law forbids.
+  const offEnum = JSON.stringify({
+    status: 'ok',
+    refusal_reason: null,
+    photos_ok: [true, true, true, true],
+    estimates: {
+      age_bucket: { value: '34', confidence: 0.9 },
+      weight_range_kg: { value: '80-90', confidence: 0.9 },
+      body_fat_band: { value: '15-19', confidence: 0.6 },
+      build: { value: 'ectomorph', confidence: 0.7 },
+    },
+    flags: { face_visible: false, clothing_loose: false },
+    notes: '',
+  });
+  let env = scanStubEnv(offEnum);
+  let res = await worker.fetch(postScan(), env);
+  assert.equal(res.status, 502);
+  assert.equal(((await res.json()) as { error: string }).error, 'unusable_answer');
+
+  // Prose instead of JSON fails the same way.
+  env = scanStubEnv('I estimate this person weighs about 84 kilograms.');
+  res = await worker.fetch(postScan(), env);
+  assert.equal(res.status, 502);
+  assert.equal(((await res.json()) as { error: string }).error, 'unusable_answer');
+});
+
+test('bodyscan: an oversize image is a 400 without spending inference — and without echoing it', async () => {
+  const env = scanStubEnv(SCAN_OK);
+  const oversize = 'data:image/jpeg;base64,' + 'OVERSIZEBYTES'.repeat(Math.ceil((2 * 1024 * 1024) / 13) + 1);
+  const res = await worker.fetch(
+    postScan({ images: [SCAN_IMAGES[0], oversize, SCAN_IMAGES[2], SCAN_IMAGES[3]] }),
+    env,
+  );
+  assert.equal(res.status, 400);
+  const text = await res.text();
+  assert.equal((JSON.parse(text) as { error: string }).error, 'imgs_too_large');
+  assert.ok(!text.includes('OVERSIZEBYTES'), 'the rejection must not quote the payload');
+  assert.equal(env.calls.length, 0, 'an oversize photo must never cost an inference');
+});
+
+test('bodyscan: missing or wrong image count is a 400 without spending inference', async () => {
+  const env = scanStubEnv(SCAN_OK);
+
+  let res = await worker.fetch(postScan({ images: SCAN_IMAGES.slice(0, 3) }), env);
+  assert.equal(res.status, 400);
+  assert.equal(((await res.json()) as { error: string }).error, 'bad_image_count');
+
+  res = await worker.fetch(postScan({ images: undefined }), env);
+  assert.equal(res.status, 400);
+
+  res = await worker.fetch(postScan({ images: [...SCAN_IMAGES, scanImage('FIFTH')] }), env);
+  assert.equal(res.status, 400);
+
+  // Right count, wrong payload kind: a PNG data URI is not a client-prepped photo.
+  res = await worker.fetch(
+    postScan({ images: [SCAN_IMAGES[0], SCAN_IMAGES[1], SCAN_IMAGES[2], 'data:image/png;base64,AAAA'] }),
+    env,
+  );
+  assert.equal(res.status, 400);
+  assert.equal(((await res.json()) as { error: string }).error, 'bad_image_type');
+
+  assert.equal(env.calls.length, 0, 'no malformed request may cost an inference');
+});
+
+test('bodyscan appears in the health tasks list', async () => {
+  const env = stubEnv();
+  const res = await worker.fetch(new Request('https://worker.test/', { method: 'GET' }), env);
+  const body = (await res.json()) as { tasks: string[] };
+  assert.ok(body.tasks.includes('bodyscan'));
 });
