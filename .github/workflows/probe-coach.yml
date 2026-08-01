@@ -201,6 +201,40 @@ jobs:
             echo "::warning::The deployed worker does NOT yet allow https://goforge.fit (got ACAO: ${acao:-none}). Coach calls from the live site will be refused until 'cd workers/coach && npx wrangler deploy' ships the updated ALLOWED_ORIGINS."
           fi
 
+      # The bodyscan task, on the path an ONBOARDING user actually takes: anonymous (no idToken),
+      # one selfie-labeled image. Signed-out + active gate = the Workers-AI VISION fallback, the
+      # exact model this probe exists to catch dying — Cloudflare retires models under deployed
+      # workers (it happened to the text chain), and vision has no chain, only the one fallback.
+      #
+      # The probe image is a 1×1 JPEG, so the MODEL may well refuse it (422 image_quality/
+      # no_person) — that is a PASS for the pipeline: the request validated, a vision model ran,
+      # and the refusal path answered. What this step must never let through silently is a 4xx/5xx
+      # from validation or a dead/mis-invoked vision backend, which the app can only render as
+      # "the scanner isn't reachable".
+      - name: POST a bodyscan (anonymous selfie path)
+        env:
+          ENDPOINT: ${{ vars.AI_ENDPOINT }}
+        run: |
+          health=$(curl -sS -m 20 "$ENDPOINT")
+          if ! printf '%s' "$health" | jq -e '(.tasks // []) | index("bodyscan")' > /dev/null; then
+            echo "::warning::This worker predates the bodyscan task — AI-Mode onboarding falls back to Old School until it is deployed."
+            exit 0
+          fi
+          JPEG='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHR0fHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/9oACAEBAAA/AKpn/9k='
+          body=$(curl -sS -m 90 -w '\n%{http_code}' -X POST "$ENDPOINT" \
+            -H 'Content-Type: application/json' \
+            -H 'Origin: https://goforge.fit' \
+            -d "$(jq -nc --arg img "$JPEG" '{task:"bodyscan", images:[$img], shots:["selfie"]}')" || echo "CURL_FAILED")
+          code=$(printf '%s' "$body" | tail -1)
+          payload=$(printf '%s' "$body" | sed '$d' | tr '\n' ' ' | cut -c1-700)
+          echo "::notice::bodyscan ${code} — ${payload}"
+          case "$code" in
+            200) echo "::notice::bodyscan 200 — a vision model read the probe image end to end" ;;
+            422) echo "::notice::bodyscan 422 — the vision pipeline ran and refused the 1×1 probe image, which is the correct answer to a 1×1 image" ;;
+            400) echo "::error::bodyscan 400 — the request the WEB CLIENT sends is being rejected by validation. Body: ${payload}"; exit 1 ;;
+            *)   echo "::error::bodyscan ${code} — the vision backend is not serving; the app renders this as 'scanner isn’t reachable'. Body: ${payload}"; exit 1 ;;
+          esac
+
       # THE COMPANY-KEY GATE, checked against the live worker.
       #
       # The picker hides the members-only model from signed-out visitors, but hiding is not a
