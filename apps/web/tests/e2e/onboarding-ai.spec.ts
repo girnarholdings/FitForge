@@ -51,9 +51,9 @@ async function armEndpoint(page: Page): Promise<void> {
 }
 
 /**
- * Record every `fitforge:diet-generation` dispatch (request + outcome). This is the observable
- * face of the diet-generation module boundary while W2's engine is absent from this branch —
- * see components/onboarding/dietGeneration.ts for the integration checklist.
+ * Record every `fitforge:diet-generation` dispatch (request + outcome) — the observable face of
+ * the diet-generation module boundary (components/onboarding/dietGeneration.ts), proving the
+ * contracted API was CALLED with the contract's inputs, independent of what the engine then did.
  */
 async function armDietRecorder(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -216,31 +216,35 @@ test.describe('onboarding · AI Mode', () => {
     expect(state.routine.source).toBe('generated');
     expect(state.routine.days.reduce((n, d) => n + d.exercises.length, 0)).toBeGreaterThan(0);
 
-    // DIET GENERATION WAS INVOKED through the contracted boundary, with the contract's inputs.
-    // W2's engine is absent from this worktree, so the assertion is on the boundary event;
-    // INTEGRATION MUST FLIP the outcome branch below to require 'stored' + the storage key
-    // (see components/onboarding/dietGeneration.ts, integration step 4).
+    // DIET GENERATION RAN through the contracted boundary, with the contract's inputs — and,
+    // with W2's engine merged, the 7-day plan is REALLY in the store under fitforge.diet.v1.
     const dietCalls = await readDietCalls(page);
     expect(dietCalls).toHaveLength(1);
     const call = dietCalls[0]!;
     const request = call.request as {
       weightKg: number;
+      heightCm?: number;
       rankedGoals: string[];
       bodyFatBand?: string;
       prefs: { base: string; avoid: string[] };
       targets: { kcal_target: number };
     };
     expect(request.weightKg).toBe(75);
+    expect(request.heightCm).toBe(177.5);
     expect(request.rankedGoals).toEqual(['fat_loss', 'hypertrophy', 'strength']);
     expect(request.bodyFatBand).toBe('18-25');
     expect(request.prefs).toEqual({ base: 'vegetarian', avoid: ['nut_free'] });
     expect(request.targets.kcal_target).toBe(state.targets.kcal_target);
-    expect(['stored', 'engine-absent']).toContain(call.outcome);
-    if (call.outcome === 'stored') {
-      // The engine was present (post-integration): the plan must actually be in the store.
-      const dietRaw = await page.evaluate(() => window.localStorage.getItem('fitforge.diet.v1'));
-      expect(dietRaw).not.toBeNull();
-    }
+    expect(call.outcome).toBe('stored');
+    const diet = (await page.evaluate(() => {
+      const raw = window.localStorage.getItem('fitforge.diet.v1');
+      return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    })) as { version: number; stance: string; plan: { days: unknown[] } } | null;
+    expect(diet).not.toBeNull();
+    expect(diet!.version).toBe(1);
+    expect(diet!.plan.days).toHaveLength(7);
+    // fat loss + muscle in the top-3, body-fat band 18-25 (lean-ish middle) → recomp (§1.1).
+    expect(diet!.stance).toBe('recomp');
   });
 
   test('a refusal exits gracefully to Old School — and the classic flow is intact from there', async ({

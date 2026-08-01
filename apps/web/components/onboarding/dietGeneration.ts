@@ -2,33 +2,17 @@
 
 /**
  * THE DIET-GENERATION BOUNDARY — the single seam between AI-Mode onboarding completion (W3) and
- * the diet engine (W2, `apps/web/lib/diet/**`, built on a parallel branch).
+ * the diet engine (W2, `apps/web/lib/diet/**`).
  *
  * Completion calls exactly one function here ({@link runDietGenerationForDraft}); everything the
  * contract's `generateDietPlan`/`stanceForGoals`/`setDietPlan` need is assembled in this file
- * from the confirmed draft, and the actual contract imports live in ONE place —
- * `./dietBridge.ts` — behind the loader below.
+ * from the confirmed draft, and the actual lib/diet imports live in ONE place — `./dietBridge.ts`
+ * — loaded lazily below. (The seam predates the engine's merge: while W2 built on a parallel
+ * branch this loader was build-time-ignored and completion honestly reported `engine-absent`.
+ * The indirection stays because it is also what makes the call mockable and observable.)
  *
- * WHY THE LOADER IS INDIRECT (read before "fixing" it): W2's engine does not exist on this
- * branch, and a static (or statically-analyzable dynamic) import of `@/lib/diet/*` fails the
- * whole `next build`, which would take every Old School screen down with it — the exact opposite
- * of Law 1. The `webpackIgnore` comment keeps the bridge out of the bundle graph so this branch
- * builds and its e2e suite runs; at runtime the native import fails, is caught, and completion
- * reports `engine-absent`.
- *
- * ── INTEGRATION (the edits this seam needs once W2's branch is merged) ─────────────────────────
- *   1. In {@link loadDietBridge}, DELETE the `webpackIgnore` comment so webpack bundles
- *      `./dietBridge` (whose imports are the contract's exact module paths + signatures).
- *   2. In `./dietBridge.ts`, DELETE the leading `@ts-nocheck` so the contract imports are
- *      type-checked for real.
- *   3. Verify `setDietPlan`'s real signature in `lib/diet/store.ts` matches the call in
- *      `dietBridge.ts` (the contract pins the store shape but not that function's parameters).
- *   4. Flip the e2e assertion in `tests/e2e/onboarding-ai.spec.ts` from the invocation event to
- *      `localStorage['fitforge.diet.v1']` existing (the spec says exactly where).
- *
- * Every attempt — stored, absent, or failed — dispatches a `fitforge:diet-generation`
- * CustomEvent with the request and outcome. That is the observable proof-of-invocation the e2e
- * suite asserts on while the engine is absent, and a free debugging trace afterwards.
+ * Every attempt — stored or failed — dispatches a `fitforge:diet-generation` CustomEvent with
+ * the request and outcome: the e2e suite's proof-of-invocation, and a free debugging trace.
  */
 import type { GoalType } from '@fitforge/shared/types';
 import type { AiDietBase, AiDietAvoid } from '@fitforge/shared/schemas';
@@ -54,6 +38,8 @@ export interface DietGenerationRequest {
   targets: DietTargets;
   /** the confirmed weight-band MIDPOINT (Law 2) — same number the training math uses */
   weightKg: number;
+  /** height-band midpoint — lets the bridge apply the §6 BMI<18.5 cut refusal deterministically */
+  heightCm?: number;
   /** ranked goals, index 0 = leader — `stanceForGoals` derives the single energy stance */
   rankedGoals: GoalType[];
   /** confirmed body-fat band, for recomp detection (RESEARCH-DIET §1.1) */
@@ -73,10 +59,9 @@ type DietBridge = {
 
 async function loadDietBridge(): Promise<DietBridge | null> {
   try {
-    // INTEGRATION: delete the webpackIgnore comment (see the header note). With it, the browser
-    // attempts a native import that fails on this branch by design; without it, webpack bundles
-    // the bridge and the contract imports inside it.
-    const mod = (await import(/* webpackIgnore: true */ './dietBridge')) as DietBridge;
+    // Lazy on purpose: the recipe corpus rides with the engine, and only an AI-Mode completion
+    // ever needs it — the classic flow should not pay for it in its bundle.
+    const mod = (await import('./dietBridge')) as DietBridge;
     return typeof mod.generateAndStoreDietPlan === 'function' ? mod : null;
   } catch {
     return null;
@@ -112,6 +97,9 @@ export function dietRequestFromDraft(
   return {
     targets,
     weightKg,
+    ...(typeof draft.height_cm === 'number' && draft.height_cm > 0
+      ? { heightCm: draft.height_cm }
+      : {}),
     rankedGoals,
     ...(draft.ai_body_fat_band ? { bodyFatBand: draft.ai_body_fat_band } : {}),
     prefs: {
