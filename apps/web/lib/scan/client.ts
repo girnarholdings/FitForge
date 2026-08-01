@@ -26,6 +26,8 @@ import { currentIdToken } from '@/lib/auth/firebase';
 
 export type ScanRefusalReason = 'not_person' | 'possible_minor' | 'inappropriate' | 'unreadable';
 export type ScanConfidence = 'high' | 'medium' | 'low';
+/** What each uploaded photo claims to be — the worker builds its prompt around these labels. */
+export type ScanShot = 'front' | 'back' | 'left' | 'right' | 'selfie';
 
 /** The contract's 200 body, verbatim. */
 export interface BodyScan {
@@ -48,7 +50,7 @@ export type BodyScanResult =
   | { status: 'error'; detail: string };
 
 /**
- * 45s (contract): one vision round on four images, with a possible Workers-AI fallback round
+ * 45s (contract): one vision round on up to four images, with a possible Workers-AI fallback round
  * behind it — two sequential model calls, each bounded by its slowest.
  */
 export const SCAN_TIMEOUT_MS = 45_000;
@@ -96,6 +98,11 @@ function readScan(body: Record<string, unknown>): BodyScan | null {
 /* ------------------------------------------------------------------------- the call */
 
 export interface BodyScanOpts {
+  /**
+   * One label per image, in order. Omitted = the legacy four-photo order (front, back, left,
+   * right); the worker builds a different prompt for a partial set or a lone selfie.
+   */
+  shots?: ScanShot[];
   /** declared context (contract): passed for the model to USE, never to infer */
   heightCm?: number;
   sex?: 'male' | 'female' | 'other';
@@ -103,7 +110,7 @@ export interface BodyScanOpts {
 }
 
 /**
- * Send four prepped data URIs to the worker's `bodyscan` task. Never throws.
+ * Send 1–4 prepped data URIs to the worker's `bodyscan` task. Never throws.
  *
  * The images arrive already downscaled + EXIF-stripped by {@link prepareScanImage} and are
  * NEVER stored by this module — they exist here only as function arguments on their way out.
@@ -111,7 +118,10 @@ export interface BodyScanOpts {
 export async function askBodyScan(images: string[], opts: BodyScanOpts = {}): Promise<BodyScanResult> {
   const endpoint = coachEndpoint();
   if (!endpoint) return { status: 'not-configured' };
-  if (images.length !== 4) return { status: 'error', detail: 'expected exactly 4 images' };
+  if (images.length < 1 || images.length > 4)
+    return { status: 'error', detail: 'expected 1-4 images' };
+  if (opts.shots && opts.shots.length !== images.length)
+    return { status: 'error', detail: 'shots must label each image' };
 
   const controller = new AbortController();
   let timedOut = false;
@@ -130,6 +140,7 @@ export async function askBodyScan(images: string[], opts: BodyScanOpts = {}): Pr
       body: JSON.stringify({
         task: 'bodyscan',
         images,
+        ...(opts.shots ? { shots: opts.shots } : {}),
         ...(opts.heightCm ? { heightCm: opts.heightCm } : {}),
         ...(opts.sex ? { sex: opts.sex } : {}),
         ...(getPreferredModel() ? { model: getPreferredModel() } : {}),

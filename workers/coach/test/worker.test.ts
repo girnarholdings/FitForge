@@ -1498,10 +1498,10 @@ test('bodyscan: an oversize image is a 400 without spending inference — and wi
   assert.equal(env.calls.length, 0, 'an oversize photo must never cost an inference');
 });
 
-test('bodyscan: missing or wrong image count is a 400 without spending inference', async () => {
+test('bodyscan: missing or out-of-range image count is a 400 without spending inference', async () => {
   const env = scanStubEnv(SCAN_OK);
 
-  let res = await worker.fetch(postScan({ images: SCAN_IMAGES.slice(0, 3) }), env);
+  let res = await worker.fetch(postScan({ images: [] }), env);
   assert.equal(res.status, 400);
   assert.equal(((await res.json()) as { error: string }).error, 'bad_image_count');
 
@@ -1520,6 +1520,83 @@ test('bodyscan: missing or wrong image count is a 400 without spending inference
   assert.equal(((await res.json()) as { error: string }).error, 'bad_image_type');
 
   assert.equal(env.calls.length, 0, 'no malformed request may cost an inference');
+});
+
+test('bodyscan: a partial set is VALID — the prompt names the provided angles and widens doubt', async () => {
+  const env = scanStubEnv(SCAN_OK);
+  const res = await worker.fetch(
+    postScan({ images: SCAN_IMAGES.slice(0, 2), shots: ['front', 'left'] }),
+    env,
+  );
+  assert.equal(res.status, 200, 'skipping the back and one side must not be a wall');
+  assert.equal(env.calls.length, 1);
+
+  const msgs = env.calls[0]!.input.messages as { role: string; content: unknown }[];
+  const system = String(msgs.find((m) => m.role === 'system')?.content ?? '');
+  // The partial prompt of the bundle: names what was uploaded, says the rest was skipped on
+  // purpose, and calibrates confidence to the thinner coverage.
+  assert.match(system, /2 body photos \(front, left side\)/);
+  assert.match(system, /skipped on\s+purpose/);
+  assert.match(system, /2 of the four/);
+  const parts = msgs.at(-1)!.content as { type: string; text?: string }[];
+  assert.equal(parts.filter((p) => p.type === 'image_url').length, 2);
+  assert.match((parts.find((p) => p.type === 'text') as { text: string }).text, /Photo 1 is front, Photo 2 is left side/);
+});
+
+test('bodyscan: the selfie path uses the selfie prompt and caps body reads below high', async () => {
+  // The model claims 0.9 across the board — a selfie earns that for AGE (face visible), never
+  // for weight or body fat read off shoulders and arms.
+  const confident = JSON.stringify({
+    status: 'ok',
+    refusal_reason: null,
+    photos_ok: [true],
+    estimates: {
+      age_bucket: { value: '26-35', confidence: 0.9 },
+      weight_range_kg: { value: '80-90', confidence: 0.9 },
+      body_fat_band: { value: '15-19', confidence: 0.9 },
+      build: { value: 'athletic', confidence: 0.9 },
+    },
+    flags: { face_visible: true, clothing_loose: false },
+    notes: '',
+  });
+  // Mistral primary, no gate: the fallback cap stays out of the way so what shows is the
+  // SELFIE cap alone.
+  const env = { ALLOWED_ORIGINS: ORIGIN, MISTRAL_API_KEY: 'sk-test' } as unknown as Env;
+  const { res, sent } = await withMistral(mistralOk(confident), () =>
+    worker.fetch(postScan({ images: [SCAN_IMAGES[0]], shots: ['selfie'] }), env),
+  );
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { confidence: { age: string; weight: string; bodyFat: string } };
+  assert.equal(body.confidence.age, 'high', 'a visible face is a real age cue');
+  assert.equal(body.confidence.weight, 'medium', 'weight from a selfie is never high-confidence');
+  assert.equal(body.confidence.bodyFat, 'medium', 'body fat from a selfie is never high-confidence');
+
+  const sys = String((sent!.body.messages[0] as { content: unknown }).content);
+  assert.match(sys, /one selfie/);
+  assert.match(sys, /must never be refused/i, 'the selfie prompt forbids the not-full-body refusal');
+  assert.match(sys, /face is EXPECTED/);
+});
+
+test('bodyscan: bad shot labels are a 400 without spending inference', async () => {
+  const env = scanStubEnv(SCAN_OK);
+
+  // An off-enum label.
+  let res = await worker.fetch(
+    postScan({ images: [SCAN_IMAGES[0]], shots: ['portrait'] }),
+    env,
+  );
+  assert.equal(res.status, 400);
+  assert.equal(((await res.json()) as { error: string }).error, 'bad_shots');
+
+  // A length mismatch: every image must be labeled.
+  res = await worker.fetch(
+    postScan({ images: SCAN_IMAGES.slice(0, 2), shots: ['front'] }),
+    env,
+  );
+  assert.equal(res.status, 400);
+  assert.equal(((await res.json()) as { error: string }).error, 'bad_shots');
+
+  assert.equal(env.calls.length, 0);
 });
 
 test('bodyscan appears in the health tasks list', async () => {

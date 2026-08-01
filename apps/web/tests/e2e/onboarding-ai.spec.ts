@@ -6,7 +6,8 @@ import { resetDemo, readDemoState } from './helpers';
  *
  * The worker is stubbed at the network edge (page.route) with the same endpoint-injection trick
  * as nutrition-ai.spec.ts, so these specs pin the CLIENT's contract: what rides the bodyscan
- * request (4 prepped JPEG data URIs), how bucket estimates pre-fill the confirm chips, which
+ * request (1–4 prepped JPEG data URIs, each labeled with its shot), how bucket estimates
+ * pre-fill the confirm chips, which
  * midpoints land in the draft (Law 2), the ranked-goals cap, and that completion INVOKES diet
  * generation through its module boundary. Old School's own suite (onboarding.spec.ts) runs
  * unmodified beside this file — Law 1 is asserted by its continued existence.
@@ -106,12 +107,12 @@ test.describe('onboarding · AI Mode', () => {
   }) => {
     await armEndpoint(page);
     await armDietRecorder(page);
-    const scanCalls: { images?: string[] }[] = [];
+    const scanCalls: { images?: string[]; shots?: string[] }[] = [];
     await page.route(`${ENDPOINT}**`, async (route) => {
       const req = route.request();
       if (req.method() === 'GET')
         return route.fulfill({ json: HEALTH, contentType: 'application/json' });
-      const body = req.postDataJSON() as { task?: string; images?: string[] };
+      const body = req.postDataJSON() as { task?: string; images?: string[]; shots?: string[] };
       if (body.task === 'bodyscan') {
         scanCalls.push(body);
         return route.fulfill({ json: SCAN_OK, contentType: 'application/json' });
@@ -130,10 +131,12 @@ test.describe('onboarding · AI Mode', () => {
     await page.getByTestId('ai-photos-scan').click();
     await page.waitForURL(/\/onboarding\/ai_confirm/);
 
-    // What actually rode the wire: exactly 4 client-prepped JPEG data URIs (downscaled,
-    // EXIF-stripped by re-encode), never the raw files.
+    // What actually rode the wire: 4 client-prepped JPEG data URIs (downscaled, EXIF-stripped
+    // by re-encode), never the raw files — each labeled with its shot so the worker builds
+    // the right prompt of the bundle.
     expect(scanCalls).toHaveLength(1);
     expect(scanCalls[0]!.images).toHaveLength(4);
+    expect(scanCalls[0]!.shots).toEqual(['front', 'back', 'left', 'right']);
     for (const img of scanCalls[0]!.images!) {
       expect(img.startsWith('data:image/jpeg;base64,')).toBe(true);
     }
@@ -245,6 +248,91 @@ test.describe('onboarding · AI Mode', () => {
     expect(diet!.plan.days).toHaveLength(7);
     // fat loss + muscle in the top-3, body-fat band 18-25 (lean-ish middle) → recomp (§1.1).
     expect(diet!.stance).toBe('recomp');
+  });
+
+  test('the front photo alone is enough — skipped angles never gate the scan', async ({
+    page,
+  }) => {
+    await armEndpoint(page);
+    const scanCalls: { images?: string[]; shots?: string[] }[] = [];
+    await page.route(`${ENDPOINT}**`, async (route) => {
+      const req = route.request();
+      if (req.method() === 'GET')
+        return route.fulfill({ json: HEALTH, contentType: 'application/json' });
+      scanCalls.push(req.postDataJSON() as { images?: string[]; shots?: string[] });
+      return route.fulfill({ json: SCAN_OK, contentType: 'application/json' });
+    });
+
+    await enterAiMode(page);
+
+    // Back and sides carry an explicit Optional tag, and the copy says front is the one must.
+    await expect(page.getByTestId('ai-photos-skip-note')).toContainText(/front shot is required/i);
+    await expect(page.getByTestId('ai-photo-slot-back')).toContainText(/optional/i);
+
+    // Nothing uploaded → no scan; ONE front photo → the CTA opens (singular, honestly).
+    await expect(page.getByTestId('ai-photos-scan')).toBeDisabled();
+    await page.getByTestId('ai-photo-input-front').setInputFiles({
+      name: 'front.jpg',
+      mimeType: 'image/jpeg',
+      buffer: TINY_JPEG,
+    });
+    await expect(page.getByTestId('ai-photo-slot-front')).toHaveAttribute('data-filled', 'true');
+    const scanBtn = page.getByTestId('ai-photos-scan');
+    await expect(scanBtn).toBeEnabled();
+    await expect(scanBtn).toHaveText(/Scan my photo$/);
+
+    await scanBtn.click();
+    await page.waitForURL(/\/onboarding\/ai_confirm/);
+
+    // The wire says exactly what was sent: one image, labeled front.
+    expect(scanCalls).toHaveLength(1);
+    expect(scanCalls[0]!.images).toHaveLength(1);
+    expect(scanCalls[0]!.shots).toEqual(['front']);
+  });
+
+  test('the selfie path: one face-and-upper-body shot, uploaded not captured, straight to estimates', async ({
+    page,
+  }) => {
+    await armEndpoint(page);
+    const scanCalls: { images?: string[]; shots?: string[] }[] = [];
+    await page.route(`${ENDPOINT}**`, async (route) => {
+      const req = route.request();
+      if (req.method() === 'GET')
+        return route.fulfill({ json: HEALTH, contentType: 'application/json' });
+      scanCalls.push(req.postDataJSON() as { images?: string[]; shots?: string[] });
+      return route.fulfill({ json: SCAN_OK, contentType: 'application/json' });
+    });
+
+    await enterAiMode(page);
+    await page.getByTestId('ai-photos-mode-selfie').click();
+    await expect(page.getByTestId('ai-photos-mode-selfie')).toHaveAttribute('aria-pressed', 'true');
+
+    // Selfie mode speaks its own copy: get SOMETHING in, face allowed (no face-hiding rule),
+    // and the privacy claim covers the face explicitly.
+    await expect(page.getByText(/Just get something in to get started/i)).toBeVisible();
+    await expect(page.getByText(/Keep your face out of the shot/)).toHaveCount(0);
+    await expect(page.getByTestId('ai-photos-privacy')).toContainText(/face is never used/i);
+
+    // The file input has NO capture attribute — the OS offers camera AND photo library, which
+    // is the upload-from-local-storage path on every platform.
+    await expect(page.getByTestId('ai-photo-input-selfie')).not.toHaveAttribute('capture');
+
+    await page.getByTestId('ai-photo-input-selfie').setInputFiles({
+      name: 'selfie.jpg',
+      mimeType: 'image/jpeg',
+      buffer: TINY_JPEG,
+    });
+    await expect(page.getByTestId('ai-photo-slot-selfie')).toHaveAttribute('data-filled', 'true');
+    await page.getByTestId('ai-photos-scan').click();
+    await page.waitForURL(/\/onboarding\/ai_confirm/);
+
+    // One image, labeled selfie — the worker's selfie prompt and confidence caps key off this.
+    expect(scanCalls).toHaveLength(1);
+    expect(scanCalls[0]!.images).toHaveLength(1);
+    expect(scanCalls[0]!.shots).toEqual(['selfie']);
+
+    // The estimates landed on the confirm chips exactly like a full-body scan's would.
+    await expect(page.getByTestId('ai-chip-age-26-35')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('a refusal exits gracefully to Old School — and the classic flow is intact from there', async ({

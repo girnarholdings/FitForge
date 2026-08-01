@@ -1406,7 +1406,7 @@ function validateAdapt(parsed: unknown, ctx: AdaptContextWire): AdaptResult | nu
 /* ═══════════════════════════════════ bodyscan: vision bucket estimation (AI Mode) ══ */
 
 /**
- * BODYSCAN — four body photos in, coarse fitness BUCKETS out, to pre-fill the AI-Mode
+ * BODYSCAN — one to four body photos in, coarse fitness BUCKETS out, to pre-fill the AI-Mode
  * confirm screen. The confirm screen IS the error correction: every estimate is shown as
  * "estimated — tap to change" before it touches anything, which is why one low-temperature
  * sample is enough where macros needs a three-sample consensus.
@@ -1417,8 +1417,23 @@ function validateAdapt(parsed: unknown, ctx: AdaptContextWire): AdaptResult | nu
  */
 const BODYSCAN_MAX_TOKENS = 500; // the schema answer is ~250 tokens; headroom, not a leash
 const BODYSCAN_TEMPERATURE = 0.2; // near-greedy — the confirm screen is the consensus mechanism
-/** Exactly front / back / side / side. The model needs all angles in ONE call to triangulate. */
-const BODYSCAN_IMAGE_COUNT = 4;
+/**
+ * One to four photos. Four angles triangulate best, but the real usage pattern is "whatever
+ * the user actually has" — a front shot alone, or a single selfie — and a rough estimate the
+ * user corrects on the confirm screen beats a wall that sends them back to the camera.
+ */
+const BODYSCAN_MIN_IMAGES = 1;
+const BODYSCAN_MAX_IMAGES = 4;
+/** What each uploaded photo claims to be — drives which prompt of the bundle gets built. */
+const SCAN_SHOTS = ['front', 'back', 'left', 'right', 'selfie'] as const;
+type ScanShot = (typeof SCAN_SHOTS)[number];
+const SHOT_LABELS: Record<ScanShot, string> = {
+  front: 'front',
+  back: 'back',
+  left: 'left side',
+  right: 'right side',
+  selfie: 'a selfie (face and upper body)',
+};
 /**
  * Per-image budget for the data URI, in characters (1 char = 1 byte on the wire). The client
  * preps ~150 KB JPEGs (~200 KB after base64), so 2 MB is an order of magnitude of headroom —
@@ -1435,17 +1450,98 @@ const BODYSCAN_IMAGE_PREFIX = 'data:image/jpeg;base64,';
 const WORKERS_AI_VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
 /** On the fallback, cap raw confidences so every chip renders as a soft guess on the confirm screen. */
 const BODYSCAN_FALLBACK_CONFIDENCE_CAP = 0.5;
+/**
+ * A selfie shows shoulders-up: whatever the model claims, weight/body-fat/build read from a
+ * face and arms is a soft guess, so those tiers are capped below 'high'. Age is exempt — a
+ * visible face is the one thing a selfie reads BETTER than the four-angle set.
+ */
+const BODYSCAN_SELFIE_BODY_CONFIDENCE_CAP = 0.6;
 
 /**
- * The scan prompt (docs/RESEARCH-VISION.md §D, verbatim). Same construction as the other JSON
- * tasks: labeled blocks, numbered RULES, the refusal path spelled out, output contract last —
- * and, as everywhere else in this worker, the schema in the prompt is trust-but-parse: the
- * validator below is what actually holds.
+ * Which prompt of the bundle a shot list earns. `full` is the ideal four-angle set; `selfie`
+ * is the quick-start single shot where the FACE IS EXPECTED and the read is shoulders-up;
+ * everything between is `partial` — some angles skipped on purpose, uncertainty widened.
  */
-const BODYSCAN_SYSTEM = `You are the body-scan estimator inside FitForge, a fitness app. The user has
-uploaded photos of themselves (front, back, and both sides) to speed up fitness
+type ScanCoverage = 'full' | 'partial' | 'selfie';
+
+function scanCoverage(shots: ScanShot[]): ScanCoverage {
+  if (shots.length === 1 && shots[0] === 'selfie') return 'selfie';
+  return new Set(shots.filter((s) => s !== 'selfie')).size >= 4 ? 'full' : 'partial';
+}
+
+/**
+ * The scan prompt BUNDLE (docs/RESEARCH-VISION.md §D, extended). Same construction as the
+ * other JSON tasks — labeled blocks, numbered RULES, the refusal path spelled out, output
+ * contract last — but built per request, because what counts as a refusable photo depends on
+ * what the user was ASKED for: a face-and-shoulders selfie is a contract violation in the
+ * four-angle flow and the entire point of the selfie flow. As everywhere else in this worker,
+ * the schema in the prompt is trust-but-parse: the validator below is what actually holds.
+ */
+function bodyscanSystem(shots: ScanShot[]): string {
+  const coverage = scanCoverage(shots);
+  const n = shots.length;
+
+  const uploaded =
+    coverage === 'selfie'
+      ? `uploaded one selfie — face and upper body — to get started quickly. That is a
+supported path, not a mistake: estimate from what a selfie shows (face, neck,
+shoulders, chest, arms). It is not a full-body photo and must never be refused
+for that.`
+      : coverage === 'full'
+        ? `uploaded photos of themselves (front, back, and both sides) to speed up fitness
 onboarding. Faces are usually hidden or cropped — that is intentional, for
-privacy. Your ONLY job is to estimate coarse fitness buckets from the photos.
+privacy.`
+        : `uploaded ${n === 1 ? 'one body photo' : `${n} body photos`} (${shots
+            .map((s) => SHOT_LABELS[s])
+            .join(', ')}) to speed up fitness onboarding. The missing angles were skipped on
+purpose — estimate from what is visible and widen your uncertainty rather than
+refusing. Faces are usually hidden or cropped — that is intentional, for
+privacy.`;
+
+  const confidenceRule =
+    coverage === 'selfie'
+      ? `Every estimate carries a confidence from 0.0 to 1.0. A selfie supports at
+   best coin-flip certainty on weight, body fat, and build — keep those at or
+   below 0.5. A visible face is a real age cue, so age_bucket confidence may
+   honestly run higher here. 0.5 means a coin flip between adjacent buckets.
+   Below 0.3 means guessing.`
+      : coverage === 'full'
+        ? `Every estimate carries a confidence from 0.0 to 1.0. Use 0.8+ only when all
+   four photos are sharp, clothing is fitted, and the full body is visible.
+   0.5 means a coin flip between adjacent buckets. Below 0.3 means guessing.`
+        : `Every estimate carries a confidence from 0.0 to 1.0. You have ${n} of the four
+   ideal angles, so confidence above 0.6 should be rare — widen your bands'
+   doubt instead of guessing precisely. 0.5 means a coin flip between adjacent
+   buckets. Below 0.3 means guessing.`;
+
+  const notBodyPhoto =
+    coverage === 'selfie'
+      ? `the image shows no real part of the user's body - a screenshot, a drawing,
+   an object, a magazine or celebrity photo ("not_a_body_photo")`
+      : `the images are not photos of the user's body -
+   a face-only shot, a screenshot, a drawing, a magazine or celebrity photo
+   ("not_a_body_photo")`;
+
+  const faceRule =
+    coverage === 'selfie'
+      ? `The face is EXPECTED to be visible in a selfie. Never refuse or lower any
+   confidence because of it, and never describe or identify the person. Set
+   flags.face_visible true. If the person appears under 18, refuse
+   ("possible_minor").`
+      : `A hidden, cropped, or covered face is NORMAL. Never refuse for it and do
+   not reduce any confidence except age_bucket because of it. If a
+   recognizable face IS visible, set flags.face_visible true so the app can
+   remind the user they can retake without it.`;
+
+  const agePrecision =
+    coverage === 'selfie'
+      ? `Never a specific age. A visible face gives real age cues; still, buckets
+  only.`
+      : `Never a specific age. With the face hidden, body-only age cues are weak;
+  confidence above 0.5 is rare here and that is expected.`;
+
+  return `You are the body-scan estimator inside FitForge, a fitness app. The user has
+${uploaded} Your ONLY job is to estimate coarse fitness buckets from the photos.
 The user reviews and corrects every estimate on the next screen, so honest
 uncertainty beats confident precision.
 
@@ -1456,8 +1552,7 @@ bands. Never infer or output sex, gender, ethnicity, or identity from photos.
 
 ESTIMATE EXACTLY THESE FIELDS
 - age_bucket: "18-25" | "26-35" | "36-45" | "46-55" | "56+".
-  Never a specific age. With the face hidden, body-only age cues are weak;
-  confidence above 0.5 is rare here and that is expected.
+  ${agePrecision}
 - weight_range_kg: "under-50" | "50-60" | "60-70" | "70-80" | "80-90" |
   "90-100" | "100-110" | "110-120" | "over-120".
 - body_fat_band: "under-10" | "10-14" | "15-19" | "20-24" | "25-29" |
@@ -1468,9 +1563,7 @@ ESTIMATE EXACTLY THESE FIELDS
 
 RULES
 1. Output JSON only, exactly matching OUTPUT SCHEMA. No text outside the JSON.
-2. Every estimate carries a confidence from 0.0 to 1.0. Use 0.8+ only when all
-   four photos are sharp, clothing is fitted, and the full body is visible.
-   0.5 means a coin flip between adjacent buckets. Below 0.3 means guessing.
+2. ${confidenceRule}
 3. NEVER output a specific age or weight number, medical claims, diagnoses,
    health-risk statements, or advice of any kind. Buckets only.
 4. NEVER comment on attractiveness or use judgmental language. "notes" is at
@@ -1480,14 +1573,9 @@ RULES
    no real person is visible ("no_person"); more than one person
    ("multiple_people"); the person appears to be under 18
    ("possible_minor" - if in doubt, refuse); content is sexually explicit
-   ("explicit_content"); the images are not full-body photos of the user -
-   a face-only shot, a screenshot, a drawing, a magazine or celebrity photo
-   ("not_a_body_photo"); or everything is too dark, blurry, or cropped to
-   read ("image_quality").
-6. A hidden, cropped, or covered face is NORMAL. Never refuse for it and do
-   not reduce any confidence except age_bucket because of it. If a
-   recognizable face IS visible, set flags.face_visible true so the app can
-   remind the user they can retake without it.
+   ("explicit_content"); ${notBodyPhoto};
+   or everything is too dark, blurry, or cropped to read ("image_quality").
+6. ${faceRule}
 7. If one photo is unusable but the rest are readable, estimate from the
    usable ones, mark it false in photos_ok, and lower confidences.
 
@@ -1496,7 +1584,7 @@ OUTPUT SCHEMA
   "status": "ok" | "refused",
   "refusal_reason": null | "no_person" | "multiple_people" | "possible_minor"
                   | "explicit_content" | "not_a_body_photo" | "image_quality",
-  "photos_ok": [boolean, boolean, boolean, boolean],
+  "photos_ok": [${Array(n).fill('boolean').join(', ')}],
   "estimates": {
     "age_bucket":      { "value": string, "confidence": number },
     "weight_range_kg": { "value": string, "confidence": number },
@@ -1506,6 +1594,7 @@ OUTPUT SCHEMA
   "flags": { "face_visible": boolean, "clothing_loose": boolean },
   "notes": string
 }`;
+}
 
 /**
  * THE TRANSLATION TABLES. The model speaks the PROMPT's enums; the response speaks the
@@ -1734,6 +1823,7 @@ async function generateVision(
 async function bodyScan(
   env: Env,
   images: string[],
+  shots: ScanShot[],
   heightCm: number | undefined,
   sex: 'male' | 'female' | 'other' | undefined,
   preferred?: ModelChoice,
@@ -1748,14 +1838,15 @@ async function bodyScan(
       type: 'text',
       text:
         (contextBits.length ? `Context: ${contextBits.join(', ')}. ` : '') +
-        'Photo 1 is front, photo 2 back, photo 3 left side, photo 4 right side.',
+        shots.map((s, i) => `Photo ${i + 1} is ${SHOT_LABELS[s]}`).join(', ') +
+        '.',
     },
     ...images.map((url) => ({ type: 'image_url' as const, image_url: { url } })),
   ];
 
   const r = await generateVision(
     env,
-    BODYSCAN_SYSTEM,
+    bodyscanSystem(shots),
     user,
     { temperature: BODYSCAN_TEMPERATURE, maxTokens: BODYSCAN_MAX_TOKENS },
     preferred,
@@ -1776,6 +1867,12 @@ async function bodyScan(
     return { status: 422, body: { error: 'refused', reason: outcome.reason } };
 
   const cap = r.provider === 'workers-ai' ? BODYSCAN_FALLBACK_CONFIDENCE_CAP : 1;
+  // The selfie cap applies to the body reads only — the model's own age confidence stands
+  // (behind the fallback cap), because the face is genuinely visible on this path.
+  const bodyCap = Math.min(
+    cap,
+    scanCoverage(shots) === 'selfie' ? BODYSCAN_SELFIE_BODY_CONFIDENCE_CAP : 1,
+  );
   return {
     status: 200,
     body: {
@@ -1785,8 +1882,8 @@ async function bodyScan(
       build: SCAN_BUILDS[outcome.build.value]!,
       confidence: {
         age: scanConfidenceTier(outcome.age.confidence, cap),
-        weight: scanConfidenceTier(outcome.weight.confidence, cap),
-        bodyFat: scanConfidenceTier(outcome.bodyFat.confidence, cap),
+        weight: scanConfidenceTier(outcome.weight.confidence, bodyCap),
+        bodyFat: scanConfidenceTier(outcome.bodyFat.confidence, bodyCap),
       },
       notes: outcome.note ? [outcome.note] : [],
       provider: r.provider,
@@ -1913,15 +2010,41 @@ export default {
       const images = (body as { images?: unknown }).images;
       // Caps are enforced BEFORE any inference is spent, and no rejection ever quotes the
       // offending value — an index is diagnostic enough, and a data-URI fragment is image bytes.
-      if (!Array.isArray(images) || images.length !== BODYSCAN_IMAGE_COUNT)
+      if (
+        !Array.isArray(images) ||
+        images.length < BODYSCAN_MIN_IMAGES ||
+        images.length > BODYSCAN_MAX_IMAGES
+      )
         return json(
           {
             error: 'bad_image_count',
-            detail: `images must be exactly ${BODYSCAN_IMAGE_COUNT} data URIs (front, back, left side, right side)`,
+            detail: `images must be ${BODYSCAN_MIN_IMAGES}-${BODYSCAN_MAX_IMAGES} data URIs — send what you have`,
           },
           400,
           cors,
         );
+      // Each image carries a shot label so the right prompt of the bundle gets built. Absent
+      // labels mean a legacy four-photo client: the original fixed order is assumed.
+      const rawShots = (body as { shots?: unknown }).shots;
+      let shots: ScanShot[];
+      if (rawShots === undefined) {
+        shots = (['front', 'back', 'left', 'right'] as ScanShot[]).slice(0, images.length);
+      } else if (
+        Array.isArray(rawShots) &&
+        rawShots.length === images.length &&
+        rawShots.every((s) => (SCAN_SHOTS as readonly string[]).includes(String(s)))
+      ) {
+        shots = rawShots as ScanShot[];
+      } else {
+        return json(
+          {
+            error: 'bad_shots',
+            detail: `shots must label each image: ${SCAN_SHOTS.join(' | ')}`,
+          },
+          400,
+          cors,
+        );
+      }
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
         if (typeof img !== 'string' || !img.startsWith(BODYSCAN_IMAGE_PREFIX))
@@ -1943,7 +2066,7 @@ export default {
       const rawSex = (body as { sex?: unknown }).sex;
       const sex = rawSex === 'male' || rawSex === 'female' || rawSex === 'other' ? rawSex : undefined;
       try {
-        const r = await bodyScan(env, images as string[], heightCm, sex, preferred, signedIn);
+        const r = await bodyScan(env, images as string[], shots, heightCm, sex, preferred, signedIn);
         return json(r.body, r.status, cors);
       } catch (err) {
         // String(err) only — never anything derived from the request body, i.e. never image bytes.

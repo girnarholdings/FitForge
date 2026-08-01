@@ -35,8 +35,13 @@ in its context. Never a specific age anywhere — buckets only, in UI copy and i
 ## Pinned interfaces
 
 ### Worker `bodyscan` task (owner: W1)
-Request: `{task:'bodyscan', images: string[4] (data:image/jpeg;base64 URIs, ≤2MB each after
-client prep), heightCm?: number, sex?: 'male'|'female'|'other', model?, idToken?}`.
+Request: `{task:'bodyscan', images: string[1..4] (data:image/jpeg;base64 URIs, ≤2MB each after
+client prep), shots?: ('front'|'back'|'left'|'right'|'selfie')[] (one label per image; absent =
+legacy four-photo order), heightCm?: number, sex?: 'male'|'female'|'other', model?, idToken?}`.
+The worker builds a PROMPT BUNDLE from the shot labels: full four-angle set / partial set
+(missing angles skipped on purpose, uncertainty widened) / lone selfie (face EXPECTED, read is
+face+neck+shoulders+chest+arms, never refused for not-full-body; weight/body-fat confidence
+tiers hard-capped below 'high', age exempt — the face is a real age cue).
 Response 200: `{ageBucket:'18-25'|'26-35'|'36-45'|'46-55'|'56+', weightBandKg:{low:number,
 high:number} (10kg bands), bodyFatBand:'<12'|'12-18'|'18-25'|'25-32'|'32+',
 build:'lean'|'athletic'|'muscular'|'higher-fat'|'average', confidence:{age,weight,bodyFat:
@@ -85,11 +90,15 @@ as lib/food/aiParse.ts; 45s timeout).
   package).
 - Welcome screen: mode fork (two cards: "Old school" → existing flow; "AI Mode" → ai_photos).
   Old-school step order unchanged.
-- ai_photos: guidance screen per RESEARCH-VISION UX copy (fitted clothing, full body, plain
-  background, camera chest height 2-3m, FACE HIDDEN — "estimates work fine without your face"),
-  drawn SVG sample figure (spec in the research doc; house 1.75-stroke grammar), 4 capture
-  slots (front/back/side/side, `<input type=file accept="image/*" capture>`), progress state,
-  scan call, refusal → offer Old School.
+- ai_photos: two modes. FULL BODY — guidance per RESEARCH-VISION UX copy (fitted clothing,
+  full body, plain background, camera chest height 2-3m, FACE HIDDEN — "estimates work fine
+  without your face"), drawn SVG sample figure (house 1.75-stroke grammar), 4 capture slots
+  (front/back/side/side) of which ONLY FRONT IS REQUIRED — back/sides carry an Optional tag
+  and skipping them never gates the scan. SELFIE — one face-and-upper-body slot, "just get
+  something in to get started" copy, face expected (no face-hiding rule shown), privacy line
+  covers the face explicitly. All inputs are `<input type=file accept="image/*">` WITHOUT
+  `capture`, so the OS offers camera AND photo library (the upload path). The scan call labels
+  every image via `shots`. Refusal → offer Old School.
 - ai_confirm: pre-filled chips (age bucket, weight band, body-fat band from scan; each labeled
   "estimated — tap to change"), plus height band (5cm), sex, dietary preference (base + avoid
   tags), "where do you train" (gym/home basics/bodyweight → equipment defaults), experience
