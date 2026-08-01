@@ -1577,6 +1577,36 @@ test('bodyscan: the selfie path uses the selfie prompt and caps body reads below
   assert.match(sys, /face is EXPECTED/);
 });
 
+test('bodyscan: the 5016 license gate self-heals — submit "agree" once, then retry', async () => {
+  // Workers AI refuses Meta's vision model until the account has sent it the literal prompt
+  // "agree" (error 5016) — an account-level one-time ritual that only surfaces on the FIRST
+  // production call. The worker must perform it and retry, not bounce the user to Old School.
+  const calls: { model: string; input: Record<string, unknown> }[] = [];
+  let refused = false;
+  const env = {
+    ALLOWED_ORIGINS: `${ORIGIN},http://localhost:3000`,
+    AI: {
+      run: async (model: string, input: Record<string, unknown>) => {
+        calls.push({ model, input });
+        if (input.prompt === 'agree') return { response: 'ok' };
+        if (!refused) {
+          refused = true;
+          throw new Error(
+            "5016: Prior to using this model, you must submit the prompt 'agree'.",
+          );
+        }
+        return { response: SCAN_OK };
+      },
+    },
+  } as unknown as Env;
+
+  const res = await worker.fetch(postScan({ images: [SCAN_IMAGES[0]], shots: ['selfie'] }), env);
+  assert.equal(res.status, 200, 'the license gate must never surface as an outage');
+  assert.equal(calls.length, 3, 'first try → agree → retry');
+  assert.equal(calls[1]!.input.prompt, 'agree');
+  assert.ok(calls[2]!.input.messages, 'the retry sends the real multimodal request');
+});
+
 test('bodyscan: bad shot labels are a 400 without spending inference', async () => {
   const env = scanStubEnv(SCAN_OK);
 

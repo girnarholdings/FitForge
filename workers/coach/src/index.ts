@@ -1763,22 +1763,42 @@ async function generateVision(
   | { ok: true; answer: string; provider: 'mistral' | 'workers-ai'; model: string }
   | { ok: false; status: number; detail: string }
 > {
+  const runVisionModel = async () => {
+    const result = (await env.AI!.run(WORKERS_AI_VISION_MODEL, {
+      messages: messagesFor(system, user, []),
+      max_tokens: opts.maxTokens,
+      temperature: opts.temperature,
+    })) as { response?: unknown };
+    const raw = result?.response;
+    const answer = typeof raw === 'string' ? raw : raw == null ? '' : JSON.stringify(raw);
+    return { ok: true as const, answer, provider: 'workers-ai' as const, model: WORKERS_AI_VISION_MODEL };
+  };
+
   const askVisionFallback = async () => {
     try {
-      const result = (await env.AI!.run(WORKERS_AI_VISION_MODEL, {
-        messages: messagesFor(system, user, []),
-        max_tokens: opts.maxTokens,
-        temperature: opts.temperature,
-      })) as { response?: unknown };
-      const raw = result?.response;
-      const answer = typeof raw === 'string' ? raw : raw == null ? '' : JSON.stringify(raw);
-      return { ok: true as const, answer, provider: 'workers-ai' as const, model: WORKERS_AI_VISION_MODEL };
+      return await runVisionModel();
     } catch (err) {
-      return {
-        ok: false as const,
-        status: 503,
-        detail: String(err instanceof Error ? err.message : err).slice(0, 160),
-      };
+      const detail = String(err instanceof Error ? err.message : err);
+      // Error 5016: Workers AI gates Meta's vision model behind a ONE-TIME, account-level
+      // license acknowledgement — the account must send the model the literal prompt "agree"
+      // before its first real request. Nothing surfaces this until the first production call,
+      // which is exactly how every anonymous body scan came back "scanner isn't reachable"
+      // while the code was verified correct. The ack is idempotent and per-account, so:
+      // submit it and retry once. If Cloudflare ever changes the ritual, the retry's own
+      // error comes back verbatim instead.
+      if (detail.includes('5016')) {
+        try {
+          await env.AI!.run(WORKERS_AI_VISION_MODEL, { prompt: 'agree' });
+          return await runVisionModel();
+        } catch (err2) {
+          return {
+            ok: false as const,
+            status: 503,
+            detail: String(err2 instanceof Error ? err2.message : err2).slice(0, 160),
+          };
+        }
+      }
+      return { ok: false as const, status: 503, detail: detail.slice(0, 160) };
     }
   };
 
