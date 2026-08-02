@@ -237,3 +237,89 @@ test('different inputs produce different plans (the seed actually varies)', () =
   // the stance input is dead weight — catch that regression here.
   assert.notEqual(JSON.stringify(a), JSON.stringify(b));
 });
+
+/* ── the hardening round's guarantees ──────────────────────────────────────────────────────────
+ *
+ * Two production findings, pinned so they cannot regress:
+ *  · the four classic allergen answers (egg, soy, fish, sesame) used to be DROPPED at the
+ *    onboarding seam — an egg-allergic user's week contained an omelette. The engine now
+ *    carries ingredient-derived filters for them.
+ *  · a strict filter stack (vegan + gluten_free, measured) could make every floor-clearing
+ *    serving combination unpriceable, and the solver shipped degenerate 3-row ~1250 kcal days.
+ *    It now retries over the full serving ladder before ever falling back.
+ */
+
+test('egg/soy/fish/sesame filters exclude by ingredient — and eggplant is not an egg', () => {
+  const eggPrefs: DietPrefs = { base: 'omnivore', avoid: ['egg_free'] };
+  const soyPrefs: DietPrefs = { base: 'omnivore', avoid: ['soy_free'] };
+  const fishPrefs: DietPrefs = { base: 'omnivore', avoid: ['fish_free'] };
+  const sesamePrefs: DietPrefs = { base: 'omnivore', avoid: ['sesame_free'] };
+
+  const text = (id: string) => RECIPE_BY_ID.get(id)!.ingredients.join(' | ').toLowerCase();
+  for (const r of RECIPES) {
+    const t = text(r.id);
+    if (/\beggs?\b/.test(t)) {
+      assert.equal(satisfiesPrefs(r, eggPrefs), false, `${r.id} contains egg and must be filtered`);
+    }
+    if (/\btofu\b|\bsoy\b/.test(t)) {
+      assert.equal(satisfiesPrefs(r, soyPrefs), false, `${r.id} contains soy and must be filtered`);
+    }
+    if (/\bsalmon\b|\btuna\b|\bcod\b/.test(t)) {
+      assert.equal(satisfiesPrefs(r, fishPrefs), false, `${r.id} contains fish and must be filtered`);
+    }
+    if (/\btahini\b|\bsesame\b/.test(t)) {
+      assert.equal(
+        satisfiesPrefs(r, sesamePrefs),
+        false,
+        `${r.id} contains sesame and must be filtered`,
+      );
+    }
+    // The word-boundary property that keeps the filter honest: aubergine dishes stay edible.
+    if (t.includes('eggplant') && !/\beggs?\b/.test(t)) {
+      assert.equal(satisfiesPrefs(r, eggPrefs), true, `${r.id}: eggplant must not trip egg_free`);
+    }
+  }
+
+  // The filters actually bite on this corpus — an exclusion list that excludes nothing is a
+  // typo, not a feature.
+  for (const prefs of [eggPrefs, soyPrefs, fishPrefs, sesamePrefs]) {
+    const excluded = RECIPES.filter((r) => !satisfiesPrefs(r, prefs)).length;
+    assert.ok(excluded > 0, `${prefs.avoid[0]} excludes at least one corpus recipe`);
+  }
+});
+
+test('an egg-allergic classic draft can never be served an omelette across the stance grid', () => {
+  for (const stance of STANCES) {
+    const plan = generateDietPlan(
+      inputFor(stance, { base: 'omnivore', avoid: ['egg_free'] }, 2200),
+    );
+    for (const day of plan.days) {
+      for (const meal of day.meals) {
+        const recipe = RECIPE_BY_ID.get(meal.recipeId)!;
+        assert.ok(
+          !/\beggs?\b|\bomelette\b|\bfrittata\b/.test(recipe.ingredients.join(' ').toLowerCase()),
+          `${stance}: ${recipe.id} carries egg for an egg-free plan`,
+        );
+      }
+    }
+  }
+});
+
+test('a strict stack (vegan + gluten_free) never ships degenerate mains-only days', () => {
+  // The measured failure: 1550 kcal / 110 g protein female cut — before the full-ladder retry
+  // this returned 3-meal days at ~1250 kcal. The retry cannot always reach the band with 6
+  // eligible mains, but every day must at least carry a snack and clear 80% of the target.
+  for (const kcal of [1550, 1600, 2000]) {
+    const plan = generateDietPlan(
+      inputFor('cut', { base: 'vegan', avoid: ['gluten_free'] }, kcal),
+    );
+    for (const [i, day] of plan.days.entries()) {
+      assert.ok(day.meals.length >= 4, `day ${i} at ${kcal}: has a snack, not a 3-row fallback`);
+      const totals = dayTotals(day);
+      assert.ok(
+        totals.kcal >= kcal * 0.8,
+        `day ${i} at ${kcal}: ${Math.round(totals.kcal)} kcal is not a collapsed day`,
+      );
+    }
+  }
+});

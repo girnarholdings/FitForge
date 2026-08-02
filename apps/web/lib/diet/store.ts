@@ -57,6 +57,10 @@ const AVOID_TAGS: AvoidTag[] = [
   'halal_friendly',
   'nut_free',
   'shellfish_free',
+  'egg_free',
+  'soy_free',
+  'fish_free',
+  'sesame_free',
 ];
 const STANCES: DietStance[] = ['cut', 'lean-gain', 'recomp', 'endurance', 'maintain'];
 

@@ -284,9 +284,10 @@ export function generateDietPlan(input: GenerateDietPlanInput): DietPlan {
     const shortfallOf = (r: Recipe, s: number): number =>
       Math.max(0, floor - r.per_serving.protein_g * s);
 
-    for (const sB of bSteps) {
-      for (const sL of lSteps) {
-        for (const sD of dSteps) {
+    const runSearch = (bs: readonly number[], ls: readonly number[], ds: readonly number[]): void => {
+    for (const sB of bs) {
+      for (const sL of ls) {
+        for (const sD of ds) {
           const mainsKcal =
             bRec.per_serving.kcal * sB + lRec.per_serving.kcal * sL + dRec.per_serving.kcal * sD;
           const mainsProtein =
@@ -361,6 +362,17 @@ export function generateDietPlan(input: GenerateDietPlanInput): DietPlan {
         }
       }
     }
+    };
+
+    runSearch(bSteps, lSteps, dSteps);
+    // A STRICT FILTER STACK (vegan + gluten_free was the measured case) can leave only
+    // low-protein mains whose floor-clearing servings are 1.5×/2× — pushing mains kcal so far
+    // past the target that the snack prune rejects EVERY combination and the degenerate
+    // mains-only fallback shipped 3-row, ~1250 kcal days. When that happens, search again over
+    // the FULL serving ladder: the protein shortfall is already priced by `assess`, and an
+    // honest near-miss with snacks beats a fictional day nobody could eat. Deterministic — the
+    // retry runs on exactly the inputs that had no solution, never on a green path.
+    if (!best) runSearch(SERVING_STEPS, SERVING_STEPS, SERVING_STEPS);
 
     // The pools are never empty in practice, but a degenerate filter stack must still return
     // SOMETHING deterministic rather than throw.

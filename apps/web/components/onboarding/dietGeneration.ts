@@ -17,6 +17,11 @@
  */
 import type { GoalType } from '@fitforge/shared/types';
 import type { AiDietBase, AiDietAvoid } from '@fitforge/shared/schemas';
+// Type-only — erased at build time, so the lazy-loading seam below still keeps the engine and
+// its corpus out of this chunk. The engine's tag set is a superset of the UI's AiDietAvoid:
+// the four extra tags exist purely so the CLASSIC allergy answers (egg, soy, fish, sesame)
+// stop being dropped on the floor at this seam.
+import type { AvoidTag as EngineAvoidTag } from '@/lib/diet/recipes';
 import type { OnboardingDraft } from './types';
 
 /* ----------------------------------------------------- contract-mirror types (W2 owns the real ones) */
@@ -24,7 +29,7 @@ import type { OnboardingDraft } from './types';
 /** Mirror of the contract's `DietPrefs` (lib/diet/plan.ts, W2). */
 export interface DietPrefs {
   base: AiDietBase;
-  avoid: AiDietAvoid[];
+  avoid: EngineAvoidTag[];
 }
 
 /** The nutrition targets shape the existing generators persist (components/features/_mock/data). */
@@ -93,13 +98,23 @@ const DIET_TYPE_TO_BASE: Partial<Record<string, AiDietBase>> = {
   vegan: 'vegan',
 };
 
-/** The classic allergen tags → the engine's avoid vocabulary (the inverse overlap of the map above). */
-const ALLERGEN_TO_AVOID: Partial<Record<string, AiDietAvoid>> = {
+/**
+ * The classic allergen tags → the engine's avoid vocabulary — ALL NINE of them. The first cut
+ * of this map covered only the five with AI-Mode chips and silently dropped egg, soy, fish and
+ * sesame, while the questionnaire promised "we'll hide foods containing anything you select":
+ * an egg-allergic user's generated week contained an omelette. The engine now carries
+ * ingredient-derived filters for the missing four.
+ */
+const ALLERGEN_TO_AVOID: Partial<Record<string, EngineAvoidTag>> = {
   dairy: 'dairy_free',
   gluten: 'gluten_free',
   tree_nut: 'nut_free',
   peanut: 'nut_free',
   shellfish: 'shellfish_free',
+  egg: 'egg_free',
+  soy: 'soy_free',
+  fish: 'fish_free',
+  sesame: 'sesame_free',
 };
 
 /**
@@ -136,7 +151,7 @@ export function dietRequestFromDraft(
       avoid: draft.diet_avoid?.length
         ? draft.diet_avoid
         : [...new Set((draft.allergies ?? []).map((a) => ALLERGEN_TO_AVOID[a]))].filter(
-            (t): t is AiDietAvoid => t != null,
+            (t): t is EngineAvoidTag => t != null,
           ),
     },
   };

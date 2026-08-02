@@ -3403,7 +3403,14 @@ export type AvoidTag =
   | 'gluten_free'
   | 'halal_friendly'
   | 'nut_free'
-  | 'shellfish_free';
+  | 'shellfish_free'
+  // The four classic allergen answers the onboarding seam used to DROP silently — an
+  // egg-allergic user's generated week contained an omelette. Ingredient-derived below, like
+  // nut/shellfish; the corpus is never tagged for these axes.
+  | 'egg_free'
+  | 'soy_free'
+  | 'fish_free'
+  | 'sesame_free';
 
 export interface DietPrefs {
   base: RecipeBaseDiet;
@@ -3440,9 +3447,37 @@ const SHELLFISH_WORDS = [
   'oyster',
 ];
 
+/**
+ * The allergen filters use WORD BOUNDARIES, not substrings: "egg" as a substring would strike
+ * every eggplant dish for an egg allergy, and "fish" would strike nothing extra but "soy" would
+ * be safe only by luck. `\b` keeps "eggplant" edible and still catches "eggs", "fish sauce",
+ * "soy sauce". Compiled once — these run inside the plan generator's hot loop.
+ */
+const EGG_PATTERNS = [/\beggs?\b/, /\bomelette\b/, /\bfrittata\b/, /\bmayonnaise\b/, /\baioli\b/];
+const SOY_PATTERNS = [/\bsoy\b/, /\btofu\b/, /\btempeh\b/, /\bedamame\b/, /\bmiso\b/, /\btamari\b/];
+const FISH_PATTERNS = [
+  /\bfish\b/,
+  /\bsalmon\b/,
+  /\btuna\b/,
+  /\bcod\b/,
+  /\bmackerel\b/,
+  /\bsardines?\b/,
+  /\banchov(?:y|ies)\b/,
+  /\btrout\b/,
+  /\btilapia\b/,
+  /\bsea bass\b/,
+  /\bhaddock\b/,
+];
+const SESAME_PATTERNS = [/\bsesame\b/, /\btahini\b/];
+
 function ingredientsContain(recipe: Recipe, words: string[]): boolean {
   const text = recipe.ingredients.join(' | ').toLowerCase();
   return words.some((w) => text.includes(w));
+}
+
+function ingredientsMatch(recipe: Recipe, patterns: RegExp[]): boolean {
+  const text = recipe.ingredients.join(' | ').toLowerCase();
+  return patterns.some((p) => p.test(text));
 }
 
 /**
@@ -3456,6 +3491,14 @@ export function satisfiesPrefs(recipe: Recipe, prefs: DietPrefs): boolean {
       if (ingredientsContain(recipe, NUT_WORDS)) return false;
     } else if (tag === 'shellfish_free') {
       if (ingredientsContain(recipe, SHELLFISH_WORDS)) return false;
+    } else if (tag === 'egg_free') {
+      if (ingredientsMatch(recipe, EGG_PATTERNS)) return false;
+    } else if (tag === 'soy_free') {
+      if (ingredientsMatch(recipe, SOY_PATTERNS)) return false;
+    } else if (tag === 'fish_free') {
+      if (ingredientsMatch(recipe, FISH_PATTERNS)) return false;
+    } else if (tag === 'sesame_free') {
+      if (ingredientsMatch(recipe, SESAME_PATTERNS)) return false;
     } else if (!recipe.tags.includes(tag)) {
       return false;
     }

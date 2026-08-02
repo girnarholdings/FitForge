@@ -104,9 +104,11 @@ export function RecipeCatalogSheet({
             ))}
           </div>
 
-          {/* Honest count: how much of the library this user's preferences leave open. */}
+          {/* Honest count — scoped to what the filter ACTUALLY checked. "Match your
+              preferences" over-claimed for a keto user, whose stated style the base-diet
+              lattice cannot express: all 100 recipes "matched" while none were keto. */}
           <p className="tabular text-xs text-muted-foreground">
-            {listed.length} of {eligible.length} recipes match your preferences
+            {listed.length} of {eligible.length} recipes fit your base diet and avoid filters
           </p>
 
           {listed.length === 0 ? (

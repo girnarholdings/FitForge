@@ -251,7 +251,7 @@ export function AiConfirmStep() {
             ))}
           </ChipSection>
 
-          <ChipSection label="Height">
+          <ChipSection label="Height" hint="feet + inches · cm">
             {HEIGHT_BANDS.map((b) => (
               <Chip
                 key={b.id}
@@ -405,9 +405,15 @@ function ChipSection({
   estimatedTestId?: string;
   children: React.ReactNode;
 }) {
+  // The chips are toggle buttons with bare band values as names ("26–35"); without a
+  // programmatic group label a screen-reader user hears numbers with no question attached.
+  const labelId = React.useId();
   return (
     <section>
-      <p className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm font-medium text-foreground">
+      <p
+        id={labelId}
+        className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm font-medium text-foreground"
+      >
         {label}
         {estimated && (
           <span
@@ -419,7 +425,9 @@ function ChipSection({
         )}
         {hint && <span className="text-[10.5px] font-normal text-muted-foreground">{hint}</span>}
       </p>
-      <div className="flex flex-wrap gap-2">{children}</div>
+      <div role="group" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+        {children}
+      </div>
     </section>
   );
 }

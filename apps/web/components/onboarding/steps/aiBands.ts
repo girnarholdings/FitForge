@@ -69,7 +69,11 @@ export const HEIGHT_BANDS: readonly Band[] = [
     const high = low + 5;
     return {
       id: `${low}-${high}`,
-      label: `${ftIn(low)}–${ftIn(high)} · ${low}–${high} cm`,
+      // No per-chip " cm" on the mid bands — measured at 390px, that suffix was exactly what
+      // pushed every chip past half the row and collapsed the section into a 526px single
+      // column. The section hint names the unit once; the end bands keep it (their labels are
+      // short, and "Under 4′11″ · 150" without a unit reads like a typo).
+      label: `${ftIn(low)}–${ftIn(high)} · ${low}–${high}`,
       low,
       high,
       mid: (low + high) / 2,

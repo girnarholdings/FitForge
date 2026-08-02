@@ -720,7 +720,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <GoldIconDefs />
       {/* Sidebar (≥md) */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-surface md:flex md:flex-col">
-        <div className="flex items-center justify-between px-5 py-5">
+        {/* The tour's desktop "top-bar" anchor: the mobile header is md:hidden, and without a
+            visible twin the Local/Settings stop had nothing true to point at on desktop. */}
+        <div className="flex items-center justify-between px-5 py-5" data-tour="top-bar">
           {/* The wordmark goes home. It was inert on every screen, and a logo that does nothing is
               a dead end in the one place every user reflexively taps to get back. */}
           <Link href="/today" aria-label="FitForge home" data-testid="logo-home">
@@ -742,7 +744,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {announceSync && (
           <SyncAnnouncement onDone={endAnnounce} testId="sync-announcement-desktop" />
         )}
-        <nav className="flex flex-1 flex-col gap-1 px-3" data-tour="tab-bar">
+        <nav className="flex flex-1 flex-col px-3">
+          {/* The tour anchor hugs the LINKS, not the flex-1 nav — a cutout around the whole
+              growing column ringed 300px of empty sidebar under seven items. */}
+          <div className="flex flex-col gap-1" data-tour="tab-bar">
           {NAV.map((item) => {
             const active = isActive(pathname, item);
             return (
@@ -765,6 +770,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          </div>
         </nav>
         <div className="px-4 py-4">
           <div className="flex items-center gap-3 rounded-xl bg-muted px-3 py-2.5">

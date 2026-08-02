@@ -12,7 +12,7 @@
  */
 import { generateDietPlan } from '@/lib/diet/plan';
 import { stanceForGoals, guardStanceForBmi } from '@/lib/diet/stance';
-import { setDietPlan } from '@/lib/diet/store';
+import { getDietPlan, setDietPlan } from '@/lib/diet/store';
 import type { DietGenerationRequest } from './dietGeneration';
 
 export function generateAndStoreDietPlan(req: DietGenerationRequest): void {
@@ -20,6 +20,29 @@ export function generateAndStoreDietPlan(req: DietGenerationRequest): void {
   const { stance } = req.heightCm
     ? guardStanceForBmi(decision, req.weightKg, req.heightCm)
     : decision;
+
+  // IDEMPOTENT AGAINST AN EQUAL-INPUT STORED PLAN. Every onboarding step is its own route, so
+  // back-navigating from plan_preview and returning REMOUNTS the screen and re-runs generation
+  // — which, before this guard, silently regenerated over any dish the athlete had just
+  // swapped. The generator is deterministic on exactly (targets, weightKg, stance, prefs), so
+  // when a stored plan matches all four, a re-run can only ever destroy swaps, never improve
+  // the plan: keep what is stored. Changed answers (different targets, weight, goals or prefs)
+  // still regenerate, as they must.
+  const existing = getDietPlan();
+  if (
+    existing &&
+    existing.stance === stance &&
+    existing.plan.days.length === 7 &&
+    existing.plan.days.every((d) => d.meals.length > 0) &&
+    existing.plan.weightKg === req.weightKg &&
+    JSON.stringify(existing.plan.targets) === JSON.stringify(req.targets) &&
+    existing.prefs.base === req.prefs.base &&
+    JSON.stringify([...existing.prefs.avoid].sort()) ===
+      JSON.stringify([...req.prefs.avoid].sort())
+  ) {
+    return;
+  }
+
   const plan = generateDietPlan({
     targets: req.targets,
     weightKg: req.weightKg,

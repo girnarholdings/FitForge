@@ -27,10 +27,19 @@ import {
   type Routine,
   type RoutineExercise,
 } from '@/components/features/_mock/data';
+import dynamic from 'next/dynamic';
 import { useOnboarding } from '../OnboardingProvider';
 import { OnboardingFooter } from '../OnboardingFooter';
 import { runDietGenerationForDraft } from '../dietGeneration';
-import { PlanPreviewDiet } from './PlanPreviewDiet';
+
+// LAZY, deliberately — this card pulls the 100-recipe corpus plus the swap and catalog sheets
+// (~20 kB gz), and a static import here rode the shared onboarding chunk onto ALL 17 step
+// pages including welcome, defeating the dietGeneration seam's whole lazy design. As an async
+// chunk it loads while the training plan renders; the card pops in when the store fills.
+const PlanPreviewDiet = dynamic(
+  () => import('./PlanPreviewDiet').then((m) => m.PlanPreviewDiet),
+  { ssr: false },
+);
 
 interface SubHit {
   exercise_id: string;
