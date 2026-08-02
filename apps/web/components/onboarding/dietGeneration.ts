@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * THE DIET-GENERATION BOUNDARY — the single seam between AI-Mode onboarding completion (W3) and
- * the diet engine (W2, `apps/web/lib/diet/**`).
+ * THE DIET-GENERATION BOUNDARY — the single seam between onboarding and the diet engine
+ * (`apps/web/lib/diet/**`). Born AI-Mode-only; the plan preview now runs it for BOTH modes, so
+ * a classic questionnaire earns the same week of meals a photo scan does.
  *
  * Completion calls exactly one function here ({@link runDietGenerationForDraft}); everything the
  * contract's `generateDietPlan`/`stanceForGoals`/`setDietPlan` need is assembled in this file
@@ -80,6 +81,28 @@ export const AVOID_TO_ALLERGENS: Record<AiDietAvoid, string[]> = {
 };
 
 /**
+ * The classic questionnaire's `diet_type` → the engine's base lattice, for the four values the
+ * two vocabularies share. keto / mediterranean / none name eating STYLES, not exclusion sets the
+ * lattice can express, so they read as omnivore — the engine's kcal/protein targets already
+ * carry the style's arithmetic.
+ */
+const DIET_TYPE_TO_BASE: Partial<Record<string, AiDietBase>> = {
+  omnivore: 'omnivore',
+  pescatarian: 'pescatarian',
+  vegetarian: 'vegetarian',
+  vegan: 'vegan',
+};
+
+/** The classic allergen tags → the engine's avoid vocabulary (the inverse overlap of the map above). */
+const ALLERGEN_TO_AVOID: Partial<Record<string, AiDietAvoid>> = {
+  dairy: 'dairy_free',
+  gluten: 'gluten_free',
+  tree_nut: 'nut_free',
+  peanut: 'nut_free',
+  shellfish: 'shellfish_free',
+};
+
+/**
  * Build the engine's input from a completed AI-Mode draft. Null when the draft cannot honestly
  * feed the engine (no targets yet, no weight midpoint) — the caller reports `failed` rather
  * than inventing numbers, because "AI advises, arithmetic decides" cuts both ways.
@@ -103,8 +126,18 @@ export function dietRequestFromDraft(
     rankedGoals,
     ...(draft.ai_body_fat_band ? { bodyFatBand: draft.ai_body_fat_band } : {}),
     prefs: {
-      base: draft.diet_base ?? 'omnivore',
-      avoid: draft.diet_avoid ?? [],
+      // AI-Mode drafts carry the engine's own fields; a CLASSIC draft carries diet_type +
+      // allergies instead, and those translate — a vegan who answered the questionnaire must
+      // get the same hard filter as a vegan who confirmed a chip.
+      base: draft.diet_base ?? DIET_TYPE_TO_BASE[draft.diet_type ?? ''] ?? 'omnivore',
+      // `diet_avoid` starts as [] on every draft, so emptiness — not absence — is the signal a
+      // classic draft never answered it; the allergy answers translate instead. (An AI-Mode
+      // draft keeps the two in sync, so the fallback reads the same either way.)
+      avoid: draft.diet_avoid?.length
+        ? draft.diet_avoid
+        : [...new Set((draft.allergies ?? []).map((a) => ALLERGEN_TO_AVOID[a]))].filter(
+            (t): t is AiDietAvoid => t != null,
+          ),
     },
   };
 }

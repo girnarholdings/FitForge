@@ -185,7 +185,11 @@ export function TodayView() {
         // STEEL. The hero and the workout player's set card are the two structural surfaces that
         // anchor a screen; making them read as machined metal rather than paper is enough to shift
         // the app's whole material feel without flattening the premium/standard hierarchy.
-        <Card variant="steel" className="overflow-hidden !p-0 shadow-[var(--shadow-card)]">
+        <Card
+          variant="steel"
+          className="overflow-hidden !p-0 shadow-[var(--shadow-card)]"
+          data-tour="today-card"
+        >
           {/* Parked = dimmed and inert, NOT hidden: the plan still exists and saying so is the
               point. aria-hidden with pointer-events-none keeps it out of tab order too. */}
           <div
@@ -257,9 +261,13 @@ export function TodayView() {
         </Card>
       ) : (
         onToday ? (
-          <QuickWorkoutCard restDay />
+          /* The tour's "today-card" anchor must exist on rest days too — whichever card leads
+             the screen is the one the spotlight explains. */
+          <div data-tour="today-card">
+            <QuickWorkoutCard restDay />
+          </div>
         ) : (
-          <Card className="shadow-[var(--shadow-card)]" data-testid="rest-day-other">
+          <Card className="shadow-[var(--shadow-card)]" data-testid="rest-day-other" data-tour="today-card">
             <CardTitle>Rest day</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
               {/* Only the relative words survive lowercasing — "sat, aug 1" is a mangled date. */}
@@ -273,7 +281,11 @@ export function TodayView() {
       {/* Morning check-in — directly under the session it adapts, and only for TODAY's training
           day: its offers edit today's session, and editing a past or future day from here would
           be a lie about what the buttons do. */}
-      {day && onToday && <MorningCheckIn routine={routine} day={day} />}
+      {day && onToday && (
+        <div data-tour="check-in">
+          <MorningCheckIn routine={routine} day={day} />
+        </div>
+      )}
 
       {/* The "Overnight" fact line — under the check-in row, only on days Apple Health has data
           for. No data = no row (the contract bans dashes: missing data is silence, not zeroes). */}
@@ -302,7 +314,7 @@ export function TodayView() {
           stack — the dark-dashboard default this screen refuses. They are rows now: hairline
           separations, one heat bar, one action each. The workout is the only thing on Today
           that deserves a card's weight. */}
-      <section className="border-y border-border" data-testid="today-ledger">
+      <section className="border-y border-border" data-testid="today-ledger" data-tour="today-ledger">
         <div className="py-3.5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-foreground">Nutrition</p>

@@ -1,48 +1,39 @@
 'use client';
 
 /**
- * FIRST-RUN TOUR — a three-screen orientation carousel, shown once, over the real Today screen.
+ * FIRST-RUN TOUR — a five-stop SPOTLIGHT over the real Today screen, shown once.
  *
- * ─── why a sheet and not coach-marks ────────────────────────────────────────────────────────
- * The obvious shape for "show me where things are" is a spotlight tour: cut a hole over the tab
- * bar, point at it, repeat five times. Rejected, for four concrete reasons.
+ * ─── why coach-marks now, when a sheet was chosen before ────────────────────────────────────
+ * The first version was a three-screen sheet of drawn replicas, rejected coach-marks for four
+ * measurement problems, and was rebuilt by owner decision: highlight the REAL elements, don't
+ * show pictures of them. Each old objection is answered in code rather than argued away:
  *
- *  1. NOTHING IS MEASURABLE ON MOUNT. `AppShell` renders a blank canvas until its `isOnboarded()`
- *     effect resolves, so anything calling `getBoundingClientRect()` on mount measures an empty
- *     page.
- *  2. THE TARGETS ARE THE WORST POSSIBLE ONES. The tab bar is `fixed` with
- *     `pb-[env(safe-area-inset-bottom)]` inside `min-h-dvh`; the top bar is `sticky` with a
- *     backdrop blur. On iOS Safari the URL bar collapsing changes `dvh` mid-tour and a spotlight
- *     ring slides off the thing it is pointing at.
- *  3. AT 390×664 A CUTOUT COVERS THE UI IT IS EXPLAINING, and what is left over — after a tooltip,
- *     a step counter, Back, Next and Skip — is about 200 px of copy.
- *  4. IT IS HONESTLY LESS USEFUL. "What is where" is a request for a MAP. A drawn replica of the
- *     tab bar labels all five tabs AT ONCE, side by side; coach-marks physically cannot do that in
- *     fewer than five steps.
+ *  1. "Nothing is measurable on mount" — nothing is measured on mount. The tour opens from a
+ *     DELAYED effect (below), and each step measures at spotlight time, after Today has painted.
+ *  2. "dvh changes mid-tour slide the ring off its target" — the ring is re-measured on every
+ *     scroll and resize (rAF-throttled), so it TRACKS its element instead of trusting one rect.
+ *  3. "a cutout covers the UI it explains" — the tooltip is placed on whichever side of the
+ *     cutout has room, and falls back to center only when a target is genuinely absent.
+ *  4. "coach-marks cannot name five tabs at once" — the tab-bar stop highlights the whole pill
+ *     and its tooltip lists all five destinations side by side, same as the old drawn map.
  *
- * A `Sheet` is `role="dialog" aria-modal="true"` with stable testids (so the specs assert on
- * identity, never on position), it slides up over the user's ACTUAL Today screen — the honest half
- * of what coach-marks promise — and it inherits Escape-to-close, the scrim and the body scroll lock
- * for free.
- *
- * ─── the single most important implementation note ──────────────────────────────────────────
- * THE SHEET IS OPENED FROM AN EFFECT, NEVER FROM A RENDER-TIME STORE READ. `getServerSnapshot()`
- * returns the frozen default state, in which `tourSeenAt` is `null`; deciding to open during render
- * would bake an open dialog into the statically exported HTML and flash it at every returning user
- * before hydration.
+ * ─── mechanics ──────────────────────────────────────────────────────────────────────────────
+ * Targets are `[data-tour="…"]` attributes on the real components (TodayView, AppShell,
+ * FloatingTabBar) — never testids, which belong to the specs, and never class names, which
+ * belong to styling. A selector can match twice (mobile pill + desktop sidebar); the VISIBLE
+ * match wins. A target that does not exist right now (the check-in on a rest day) degrades to a
+ * centered card with the same copy — the step teaches the feature either way.
  *
  * ─── never twice ────────────────────────────────────────────────────────────────────────────
- * `onClose` is wired to `markTourSeen()`, not just to the buttons, so EVERY dismissal path
- * persists: Skip, Escape, a tap on the scrim (which `Sheet` renders as an `aria-label="Close"`
- * button) and "Start training". A close path that does not write is how a first-run tour becomes a
- * recurring one.
+ * `dismiss` is the one funnel and it persists via `markTourSeen()`: Skip, the final button,
+ * Escape, and a tap on the dimmed scrim (rendered as an `aria-label="Close"` button) all pass
+ * through it. A close path that does not write is how a first-run tour becomes a recurring one.
  *
  * ─── copy rule ──────────────────────────────────────────────────────────────────────────────
- * Every sentence below is a statement about this app's own mechanics. There is not one training or
- * nutrition claim anywhere in this file, and none may be added.
+ * Every sentence is a statement about this app's own mechanics. No training or nutrition claims.
  */
 import * as React from 'react';
-import { Sheet, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import {
   AnvilIcon,
   BarbellIcon,
@@ -51,33 +42,31 @@ import {
   TrendingUpIcon,
   type IconProps,
 } from '@/components/ui/icons';
-import { m, riseIn, staggerList, staggerItem, Pressable } from '@/components/ui/motion';
+import { m, riseIn } from '@/components/ui/motion';
 import { cn } from '@/lib/utils';
 import { useDemoState } from '@/lib/demo/useDemo';
 import { getState, hasSeenTour, markTourSeen } from '@/lib/demo/store';
 
 /**
- * Deliberately delayed. Opening on the same frame the screen paints reads as a bug ("it broke
- * before I saw it"); a beat later reads as deliberate. It is also the window in which the hydration
- * snapshot swap lands, so a returning user's real `tourSeenAt` arrives and cancels the timer before
- * anything is shown. Specs must wait on the locator, never on a fixed sleep.
+ * Deliberately delayed. Opening on the same frame the screen paints reads as a bug; a beat later
+ * reads as deliberate. It is also the window in which the hydration snapshot swap lands, so a
+ * returning user's real `tourSeenAt` arrives and cancels the timer before anything is shown —
+ * and the window in which Today's cards actually paint, which is what makes them measurable.
  */
 const OPEN_DELAY_MS = 250;
 
-/* ═════════════════════════════════════════════════════════════════════════════ screen 1 art ══ */
+/** Breathing room between an element and its cutout edge. */
+const SPOT_PAD = 8;
+/** Minimum viewport space a tooltip needs before it takes that side of the cutout. */
+const TOOLTIP_ROOM = 230;
 
 interface TabSpec {
   label: string;
   Icon: (p: IconProps) => React.ReactElement;
-  /** what this destination is FOR, in the user's words */
   blurb: string;
 }
 
-/**
- * The five primary tabs, in bar order, mirroring `AppShell.NAV`. Duplicated as data rather than
- * imported because this is a DRAWING of the bar, not the bar: it must never become clickable, and
- * it must not start rendering an `aria-current` or a live route.
- */
+/** The five primary tabs, in bar order, mirroring `AppShell.NAV` — prose for the tab-bar stop. */
 const TABS: TabSpec[] = [
   { label: 'Today', Icon: AnvilIcon, blurb: 'your session for today, plus your streak.' },
   { label: 'Workouts', Icon: BarbellIcon, blurb: 'your plan, and every split you can switch to.' },
@@ -86,162 +75,110 @@ const TABS: TabSpec[] = [
   { label: 'Progress', Icon: TrendingUpIcon, blurb: 'your lifts, PRs and body weight over time.' },
 ];
 
-/**
- * A STATIC, NON-INTERACTIVE replica of the bottom tab bar. `aria-hidden` in full: the five names
- * are read out immediately below it in the list, and a screen reader announcing them twice — once
- * as a picture of a bar, once as prose — is worse than not announcing the picture at all.
- */
-function TabBarArt() {
-  return (
-    <div
-      aria-hidden
-      className="rounded-2xl border border-border bg-surface-2/80 px-1 py-2 shadow-[var(--shadow-card)]"
-    >
-      <ul className="flex items-stretch justify-around">
-        {TABS.map((t, i) => (
-          <li key={t.label} className="min-w-0 flex-1">
-            <div
-              className={cn(
-                'flex flex-col items-center gap-1 px-0.5 text-[10px] font-semibold leading-none',
-                i === 0 ? 'text-accent' : 'text-muted-foreground',
-              )}
-            >
-              <span
-                className={cn(
-                  'grid h-8 w-12 place-items-center rounded-full',
-                  i === 0 && 'bg-accent-muted',
-                )}
-              >
-                <t.Icon size={22} />
-              </span>
-              <span className="max-w-full truncate">{t.label}</span>
-            </div>
+interface TourStop {
+  id: string;
+  /** the `[data-tour]` anchor this stop spotlights */
+  target: string;
+  title: string;
+  render: () => React.ReactElement;
+}
+
+const STOPS: TourStop[] = [
+  {
+    id: 'session',
+    target: 'today-card',
+    title: 'Your session lives here',
+    render: () => (
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        This card is the day&rsquo;s work. Tap{' '}
+        <span className="font-semibold text-foreground">Start workout</span> and every exercise
+        gets its own screen — weight, reps, RPE, each box labeled — and the rest timer starts
+        itself. Words you don&rsquo;t know are dot-underlined in there; tap one and it explains
+        itself.
+      </p>
+    ),
+  },
+  {
+    id: 'checkin',
+    target: 'check-in',
+    title: 'Check in each morning',
+    render: () => (
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        Say how you slept and how sore you are, and the day&rsquo;s session adapts to your
+        answer. On training mornings the check-in sits right under your workout card.
+      </p>
+    ),
+  },
+  {
+    id: 'ledger',
+    target: 'today-ledger',
+    title: 'Food and body weight',
+    render: () => (
+      <p className="text-[13px] leading-relaxed text-muted-foreground">
+        Your calories and protein against today&rsquo;s targets, and your weight trend — logged
+        by typing what you ate, in{' '}
+        <span className="font-semibold text-foreground">Nutrition</span>. If you built a meal
+        plan in onboarding, it lives there too, swaps included.
+      </p>
+    ),
+  },
+  {
+    id: 'tabs',
+    target: 'tab-bar',
+    title: 'Five tabs, along the bottom',
+    render: () => (
+      <ul className="space-y-1">
+        {TABS.map((t) => (
+          <li key={t.label} className="flex items-start gap-2 text-[12.5px] leading-snug">
+            <t.Icon size={15} aria-hidden className="mt-px shrink-0 text-accent" />
+            <span className="text-muted-foreground">
+              <span className="font-semibold text-foreground">{t.label}</span> — {t.blurb}
+            </span>
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function ScreenTabs() {
-  return (
-    <div className="space-y-3">
-      <TabBarArt />
-      <m.ul variants={staggerList} initial="hidden" animate="show" className="space-y-1.5">
-        {TABS.map((t) => (
-          <m.li key={t.label} variants={staggerItem} className="text-[13px] leading-snug">
-            <span className="font-semibold text-foreground">{t.label}</span>
-            <span className="text-muted-foreground"> — {t.blurb}</span>
-          </m.li>
-        ))}
-      </m.ul>
-      <p className="text-xs text-muted-foreground">
-        Settings and Coach live in the bar at the top.
-      </p>
-    </div>
-  );
-}
-
-/* ═════════════════════════════════════════════════════════════════════════════ screen 2 art ══ */
-
-/**
- * A miniature of the Today workout card — the accent header block and the gold CTA — drawn in the
- * same visual language as the real one, so the eye recognises it the moment the sheet closes.
- * Non-interactive by construction: a `div` and a `span`, never a `Link` or a `Button`.
- */
-function WorkoutCardArt() {
-  return (
-    <div
-      aria-hidden
-      className="overflow-hidden rounded-2xl border border-border shadow-[var(--shadow-card)]"
-    >
-      <div className="bg-accent px-4 py-2.5 text-accent-foreground">
-        <p className="text-[9px] font-semibold uppercase tracking-wide opacity-80">
-          Today&rsquo;s workout
-        </p>
-        <p className="font-display text-sm font-bold">Push A</p>
-      </div>
-      <div className="bg-surface-2 px-4 py-3">
-        <span className="flex h-9 items-center justify-center rounded-field bg-accent text-[13px] font-semibold text-accent-foreground">
-          Start workout
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ScreenStart() {
-  return (
-    <div className="space-y-3">
-      <WorkoutCardArt />
+    ),
+  },
+  {
+    id: 'local',
+    target: 'top-bar',
+    title: 'Coach, Settings, and your data',
+    render: () => (
       <p className="text-[13px] leading-relaxed text-muted-foreground">
-        On <span className="font-semibold text-foreground">Today</span>, tap{' '}
-        <span className="font-semibold text-foreground">Start workout</span>. Each exercise gets its
-        own screen: every box carries its own label — weight, reps, RPE — and you close the collar
-        beside them to log the set. The rest timer starts itself.
+        Settings and Coach live in the bar at the top.{' '}
+        <span className="font-semibold text-foreground">Local</span> means everything stays in
+        this browser only — clearing browser data clears FitForge, so export a backup from
+        Settings any time. You can replay this tour from Settings too.
       </p>
-      <p className="text-[13px] leading-relaxed text-muted-foreground">
-        Any word you don&rsquo;t know is underlined with dots in there. Tap it and it explains
-        itself.
-      </p>
-    </div>
-  );
-}
-
-/* ═════════════════════════════════════════════════════════════════════════════ screen 3 art ══ */
-
-/** A replica of the gold `Local` chip that sits in the top bar of every screen. */
-function LocalChipArt() {
-  return (
-    <div className="flex justify-center py-1">
-      <span
-        aria-hidden
-        className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,transparent)] bg-accent-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent"
-      >
-        <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Local
-      </span>
-    </div>
-  );
-}
-
-function ScreenLocal() {
-  return (
-    <div className="space-y-3">
-      <LocalChipArt />
-      <p className="text-[13px] leading-relaxed text-muted-foreground">
-        There&rsquo;s no account and no server. Your plan, your logs and your meals live in this
-        browser only. Clearing your browser data clears FitForge — export a backup from{' '}
-        <span className="font-semibold text-foreground">Settings</span> any time.
-      </p>
-      <p className="text-xs text-muted-foreground">You can reopen this tour from Settings.</p>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════════════════════ the carousel ══ */
-
-const SCREENS: { id: string; title: string; render: () => React.ReactElement }[] = [
-  { id: 'tabs', title: 'Five tabs, along the bottom', render: () => <ScreenTabs /> },
-  { id: 'start', title: 'Start here', render: () => <ScreenStart /> },
-  { id: 'local', title: 'Local Mode', render: () => <ScreenLocal /> },
+    ),
+  },
 ];
 
-const TOTAL_STEPS = SCREENS.length;
+const TOTAL_STEPS = STOPS.length;
+
+/** The visible element for a `data-tour` anchor — a selector can match a hidden twin. */
+function findTarget(target: string): HTMLElement | null {
+  const els = Array.from(document.querySelectorAll<HTMLElement>(`[data-tour="${target}"]`));
+  return (
+    els.find((el) => el.offsetParent !== null && el.getBoundingClientRect().width > 0) ?? null
+  );
+}
 
 export function FirstRunTour() {
-  // REACTIVE read (`useDemoState`), not `getState()`: `resetTour()` from Settings must be able to
-  // re-arm this while the component is already mounted, and `markTourSeen()` must stop the effect
-  // from re-firing. A direct read would compile and never update.
+  // REACTIVE read (`useDemoState`), not `getState()`: `resetTour()` from Settings must be able
+  // to re-arm this while the component is already mounted, and `markTourSeen()` must stop the
+  // effect from re-firing.
   const seen = hasSeenTour(useDemoState());
   const [open, setOpen] = React.useState(false);
   const [step, setStep] = React.useState(0);
+  const [rect, setRect] = React.useState<DOMRect | null>(null);
+  const cardRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (seen) return;
     const timer = window.setTimeout(() => {
-      // Second guard, against the authoritative store rather than the snapshot: on a returning
-      // user's first paint the snapshot is still the frozen server state, and if hydration were
-      // somehow slower than the delay, this is what keeps the tour from flashing.
+      // Second guard, against the authoritative store rather than the snapshot: keeps the tour
+      // from flashing if hydration were somehow slower than the delay.
       if (hasSeenTour(getState())) return;
       setStep(0);
       setOpen(true);
@@ -249,50 +186,155 @@ export function FirstRunTour() {
     return () => window.clearTimeout(timer);
   }, [seen]);
 
-  /** The ONE dismissal funnel. `Sheet` routes Escape and the scrim here too. */
+  /** The ONE dismissal funnel — Skip, finish, Escape and the scrim all land here. */
   const dismiss = React.useCallback(() => {
     setOpen(false);
     markTourSeen();
   }, []);
 
-  const screen = SCREENS[step]!;
+  const stop = STOPS[step]!;
+
+  // MEASURE AND TRACK the spotlight target. Centering the element first, then re-measuring on
+  // every scroll and resize, is what makes the cutout stay ON its element when iOS collapses
+  // the URL bar or the athlete drags the page mid-tour.
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    const el = findTarget(stop.target);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
+    let raf = 0;
+    const measure = () => {
+      const t = findTarget(stop.target);
+      setRect(t ? t.getBoundingClientRect() : null);
+    };
+    measure();
+    const onMove = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(measure);
+    };
+    window.addEventListener('resize', onMove);
+    window.addEventListener('scroll', onMove, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onMove);
+      window.removeEventListener('scroll', onMove, true);
+    };
+  }, [open, step, stop.target]);
+
+  // Escape closes — and persists, like every other exit.
+  React.useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, dismiss]);
+
+  // Move focus with the tooltip so keyboard and screen-reader users ride along.
+  React.useEffect(() => {
+    if (open) cardRef.current?.focus();
+  }, [open, step]);
+
+  if (!open) return null;
+
   const isLast = step === TOTAL_STEPS - 1;
+  const vh = window.innerHeight;
+
+  // Tooltip side: below the cutout when there is room, above when there is room there, centered
+  // when the target is missing or the viewport is too tight for either.
+  const cut = rect
+    ? {
+        x: Math.max(4, rect.left - SPOT_PAD),
+        y: rect.top - SPOT_PAD,
+        w: Math.min(window.innerWidth - 8, rect.width + SPOT_PAD * 2),
+        h: rect.height + SPOT_PAD * 2,
+      }
+    : null;
+  const below = cut != null && vh - (cut.y + cut.h) >= TOOLTIP_ROOM;
+  const above = cut != null && !below && cut.y >= TOOLTIP_ROOM;
+  const cardPos: React.CSSProperties = below
+    ? { top: cut!.y + cut!.h + 12 }
+    : above
+      ? { bottom: vh - cut!.y + 12 }
+      : { top: '50%', transform: 'translateY(-50%)' };
 
   return (
-    <Sheet open={open} onClose={dismiss} title={screen.title}>
-      <div data-testid="first-run-tour">
-        {/*
-          Keyed on the step so each screen MOUNTS fresh and plays `riseIn` on arrival. Deliberately
-          not wrapped in `AnimatePresence`: with screens of different heights, waiting for an exit
-          collapses the sheet to the chrome and bounces it back, which reads as a glitch. Reduced
-          motion is handled globally by `MotionConfig reducedMotion="user"`.
-        */}
-        <m.div
-          key={screen.id}
-          variants={riseIn}
-          initial="hidden"
-          animate="show"
-          data-testid={`tour-step-${step + 1}`}
-          data-tour-screen={screen.id}
-        >
-          {screen.render()}
-        </m.div>
+    <div
+      className="fixed inset-0 z-[70]"
+      role="dialog"
+      aria-modal="true"
+      aria-label={stop.title}
+      data-testid="first-run-tour"
+    >
+      {/* The scrim IS a button (tap anywhere dimmed = close), with the mask riding inside it.
+          The SVG is pointer-events-none so the button underneath takes the tap. */}
+      <button
+        type="button"
+        aria-label="Close"
+        onClick={dismiss}
+        className="absolute inset-0 h-full w-full cursor-default"
+      >
+        <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+          <defs>
+            <mask id="ff-tour-mask">
+              <rect width="100%" height="100%" fill="white" />
+              {cut && <rect x={cut.x} y={cut.y} width={cut.w} height={cut.h} rx={20} fill="black" />}
+            </mask>
+          </defs>
+          {/* One dim layer, masked — the cutout is a hole, not a drawn ring pretending. */}
+          <rect width="100%" height="100%" fill="rgba(12,8,6,0.8)" mask="url(#ff-tour-mask)" />
+          {cut && (
+            <rect
+              x={cut.x}
+              y={cut.y}
+              width={cut.w}
+              height={cut.h}
+              rx={20}
+              fill="none"
+              stroke="var(--accent)"
+              strokeOpacity={0.85}
+              strokeWidth={1.5}
+            />
+          )}
+        </svg>
+      </button>
 
-        <div className="mt-5 flex items-center justify-between gap-2">
-          {/* SKIP IS FIRST IN THE ROW AND PRESENT ON EVERY SCREEN. The escape hatch on a modal the
-              user did not ask for should never be something they have to hunt for, and it must
-              never be one step further away than the thing it is escaping. */}
-          <Pressable
+      {/* The tooltip card — keyed on the step so each stop mounts fresh and plays `riseIn`. */}
+      <m.div
+        key={stop.id}
+        variants={riseIn}
+        initial="hidden"
+        animate="show"
+        ref={cardRef}
+        tabIndex={-1}
+        style={cardPos}
+        data-testid={`tour-step-${step + 1}`}
+        data-tour-screen={stop.id}
+        className={cn(
+          'absolute inset-x-3 mx-auto max-w-[24rem] rounded-card border border-border bg-surface-2 p-4',
+          'shadow-[0_18px_50px_-12px_rgba(0,0,0,0.65)] outline-none',
+        )}
+      >
+        <h2 className="font-display text-lg font-bold leading-tight text-foreground">
+          {stop.title}
+        </h2>
+        <div className="mt-2">{stop.render()}</div>
+
+        <div className="mt-4 flex items-center justify-between gap-2">
+          {/* SKIP IS FIRST AND PRESENT AT EVERY STOP — the escape from a modal the user did not
+              ask for must never be a hunt. */}
+          <button
+            type="button"
             onClick={dismiss}
             data-testid="tour-skip"
             className="-ml-2 flex h-11 shrink-0 items-center rounded-full px-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             Skip
-          </Pressable>
+          </button>
 
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="flex items-center gap-1" aria-hidden>
-              {SCREENS.map((s, i) => (
+              {STOPS.map((s, i) => (
                 <span
                   key={s.id}
                   className={cn(
@@ -302,11 +344,6 @@ export function FirstRunTour() {
                 />
               ))}
             </span>
-            {/*
-              The counter is VISIBLE text, not an aria-only announcement: it is the same fact for
-              everyone, it is testable, and it tells a sighted user how much tour is left — which is
-              what stops people hunting for Skip in the first place.
-            */}
             <span
               data-testid="tour-progress"
               className="text-[11px] font-medium tabular-nums text-muted-foreground"
@@ -341,7 +378,7 @@ export function FirstRunTour() {
             )}
           </div>
         </div>
-      </div>
-    </Sheet>
+      </m.div>
+    </div>
   );
 }

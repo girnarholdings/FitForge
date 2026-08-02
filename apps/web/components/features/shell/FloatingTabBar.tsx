@@ -159,6 +159,9 @@ export function FloatingTabBar({
       data-testid="tab-bar"
     >
       <div
+        // The tour's spotlight anchor — this inner layer is the PILL's true footprint; the nav
+        // above it is a full-width strip whose empty gutters would make the cutout lie.
+        data-tour="tab-bar"
         className={cn(
           'mx-auto w-full px-3 pb-[calc(0.3125rem+env(safe-area-inset-bottom))]',
           'transition-[max-width] duration-300 ease-out',

@@ -53,7 +53,33 @@ test.describe('onboarding', () => {
   test('completing the full flow lands on /today with a generated plan and real targets', async ({
     page,
   }) => {
-    await completeOnboarding(page);
+    await completeOnboarding(page, {
+      // THE MEAL HALF OF THE PREVIEW, for the CLASSIC flow: the questionnaire's diet answers
+      // (vegetarian + tree-nut allergy, picked above) must feed the same engine AI Mode uses,
+      // and the preview must show the day of eating with a working swap door — not just the
+      // training week.
+      onPlanPreview: async (p) => {
+        const dietCard = p.getByTestId('preview-diet-card');
+        await expect(dietCard).toBeVisible();
+        const meals = p.getByTestId('preview-diet-meal');
+        expect(await meals.count()).toBeGreaterThanOrEqual(3);
+        await p.getByTestId('preview-diet-swap').first().click();
+        await expect(p.getByTestId('swap-sheet')).toBeVisible();
+        await p.keyboard.press('Escape');
+        await expect(p.getByTestId('swap-sheet')).toBeHidden();
+      },
+    });
+
+    // The classic draft really fed the engine: a 7-day plan is in the store, hard-filtered to
+    // the questionnaire's answers.
+    const diet = (await page.evaluate(() => {
+      const raw = window.localStorage.getItem('fitforge.diet.v1');
+      return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    })) as { plan: { days: unknown[] }; prefs: { base: string; avoid: string[] } } | null;
+    expect(diet, 'Old School completion must store a diet plan too').not.toBeNull();
+    expect(diet!.plan.days).toHaveLength(7);
+    expect(diet!.prefs.base).toBe('vegetarian');
+    expect(diet!.prefs.avoid).toEqual(['nut_free']);
 
     // Landed on Today with the generated routine visible.
     // The heading is the WEEKDAY IN FULL and the line under it is the calendar date. Asserted

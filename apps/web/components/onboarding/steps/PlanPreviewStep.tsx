@@ -30,6 +30,7 @@ import {
 import { useOnboarding } from '../OnboardingProvider';
 import { OnboardingFooter } from '../OnboardingFooter';
 import { runDietGenerationForDraft } from '../dietGeneration';
+import { PlanPreviewDiet } from './PlanPreviewDiet';
 
 interface SubHit {
   exercise_id: string;
@@ -66,6 +67,8 @@ export function PlanPreviewStep() {
   const [swap, setSwap] = React.useState<{ dayId: string; rowId: string; exerciseId: string } | null>(null);
   const [subs, setSubs] = React.useState<SubHit[]>([]);
   const ranRef = React.useRef(false);
+  /** The one diet generation this screen owes — held so Start plan can await it, never re-run it. */
+  const dietRun = React.useRef<Promise<unknown> | null>(null);
 
   /**
    * Generate + persist once (§7.5) — but ONLY ONCE THE DRAFT IS REAL.
@@ -86,6 +89,13 @@ export function PlanPreviewStep() {
     const r = finalizeOnboarding(draft);
     setRoutine(r);
     setOpenDay(r.days[0]?.id ?? null);
+    // THE MEALS GENERATE HERE TOO, for BOTH modes — the preview is where "what am I committing
+    // to?" gets answered, and a diet first seen days after commitment was the old failure. After
+    // finalizeOnboarding so the targets it needs are real; fire-and-track so the screen renders
+    // the training plan immediately and the meal card appears when the store fills (the card
+    // subscribes). Start plan awaits this same promise rather than running a second generation —
+    // a re-run would clobber any swap made right here on this screen.
+    dietRun.current = runDietGenerationForDraft(draft, getState().targets);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
@@ -119,11 +129,13 @@ export function PlanPreviewStep() {
   const startPlan = async () => {
     // ensure everything is persisted, then head to Today.
     if (!getState().completedAt) finalizeOnboarding(draft);
-    // AI-MODE COMPLETION also forges the 7-day diet plan (contract: "existing generatePlan +
-    // generateDietPlan both run; land on Today"). One call into the never-throw diet boundary,
-    // AFTER the training plan is safe in the store — a missing or failing diet engine changes
-    // nothing about landing on Today. Old School never enters this branch.
-    if (draft.ai_mode) await runDietGenerationForDraft(draft, getState().targets);
+    // The 7-day diet plan generated when this screen mounted (both modes) — await it so it is
+    // in the store before Today renders, but NEVER run it again: the athlete may have swapped
+    // dishes on this very screen, and a second generation would silently discard those swaps.
+    // The cold-resume fallback (a reload landing here with the effect not yet run) still
+    // generates once. One call into the never-throw diet boundary — a missing or failing diet
+    // engine changes nothing about landing on Today.
+    await (dietRun.current ?? runDietGenerationForDraft(draft, getState().targets));
     router.push('/today');
   };
 
@@ -411,6 +423,10 @@ export function PlanPreviewStep() {
               );
             })}
           </div>
+
+          {/* The meal half of the commitment — same grammar, same swap machinery as Nutrition's
+              own plan surface. Renders only once the diet generation lands in the store. */}
+          <PlanPreviewDiet />
         </>
       )}
 

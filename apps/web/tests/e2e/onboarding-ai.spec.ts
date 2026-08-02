@@ -179,8 +179,37 @@ test.describe('onboarding · AI Mode', () => {
     // Straight to the plan preview (the AI chain skips the ten classic question screens).
     await page.waitForURL(/\/onboarding\/plan_preview/);
     await expect(page.getByTestId('onboarding-continue')).toBeEnabled();
+
+    // THE MEAL HALF OF THE PREVIEW: the diet generates DURING the preview now, renders beside
+    // the training week, and its swaps are live right here. Swap the first dish and hold on to
+    // what was chosen — Start plan must carry the swap through, not regenerate over it.
+    const dietCard = page.getByTestId('preview-diet-card');
+    await expect(dietCard).toBeVisible();
+    expect(await page.getByTestId('preview-diet-meal').count()).toBeGreaterThanOrEqual(3);
+    await page.getByTestId('preview-diet-swap').first().click();
+    await expect(page.getByTestId('swap-sheet')).toBeVisible();
+    const option = page.getByTestId('diet-swap-option').first();
+    await expect(option, 'a vegetarian nut-free breakfast must have at least one ranked swap').toBeVisible();
+    const swappedTo = await option.getAttribute('data-recipe-id');
+    await option.click();
+    await expect(page.getByTestId('swap-sheet')).toBeHidden();
+    // The card re-rendered with the chosen dish — the store is the single writer and it wrote.
+    const planAfterSwap = await page.evaluate(() =>
+      window.localStorage.getItem('fitforge.diet.v1'),
+    );
+    expect(planAfterSwap).toContain(swappedTo!);
+
     await page.getByTestId('onboarding-continue').click();
     await page.waitForURL(/\/today/);
+
+    // THE NO-CLOBBER GUARD: completing onboarding must NOT run a second generation over the
+    // swap that was just made on the preview screen.
+    const planAfterStart = await page.evaluate(() =>
+      window.localStorage.getItem('fitforge.diet.v1'),
+    );
+    expect(planAfterStart, 'Start plan regenerated the diet and discarded the preview swap').toContain(
+      swappedTo!,
+    );
 
     // LAW 2 IN THE STORE: confirmed buckets as the answer of record, midpoints in the numeric
     // fields the deterministic generators read. (26–35 → 30 → birth year now−30; 70–80 → 75 kg;

@@ -154,7 +154,7 @@ export function WelcomeStep() {
             }}
             icon={<BodyIcon size={18} />}
             title="AI Mode"
-            description="Four photos, face hidden. Read once to guess your ranges — you confirm every one, and the photos are never stored."
+            description="Snap or upload photos — even just a selfie works. Read once to guess your ranges; you confirm every one, and nothing is ever stored."
             testId="welcome-mode-ai"
           />
         </div>

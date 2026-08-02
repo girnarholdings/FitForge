@@ -43,15 +43,39 @@ export function weightBandFor(low: number, high: number): Band {
   );
 }
 
-/** 5 cm height bands, 150–200+ (contract "height band (5cm bands 150-200+)"). */
+/** cm → the 5′10″ notation most people think in. Nearest whole inch; 12″ carries into the foot. */
+function ftIn(cm: number): string {
+  const totalIn = cm / 2.54;
+  let ft = Math.floor(totalIn / 12);
+  let inch = Math.round(totalIn - ft * 12);
+  if (inch === 12) {
+    ft += 1;
+    inch = 0;
+  }
+  return `${ft}′${inch}″`;
+}
+
+/**
+ * 5 cm height bands, 150–200+ (contract "height band (5cm bands 150-200+)"). LABELS LEAD WITH
+ * FEET-AND-INCHES — "5′10″" is how most people state their height (the body-metrics parser was
+ * built on the same observation) — with the cm band kept alongside, because a bucket someone
+ * cannot recognise as their own is a question they cannot answer. Adjacent bands share a rounded
+ * edge inch exactly as they share the cm edge.
+ */
 export const HEIGHT_BANDS: readonly Band[] = [
-  { id: 'under-150', label: 'Under 150 cm', low: 145, high: 150, mid: 147.5 },
+  { id: 'under-150', label: `Under ${ftIn(150)} · 150 cm`, low: 145, high: 150, mid: 147.5 },
   ...Array.from({ length: 10 }, (_, i) => {
     const low = 150 + i * 5;
     const high = low + 5;
-    return { id: `${low}-${high}`, label: `${low}–${high} cm`, low, high, mid: (low + high) / 2 };
+    return {
+      id: `${low}-${high}`,
+      label: `${ftIn(low)}–${ftIn(high)} · ${low}–${high} cm`,
+      low,
+      high,
+      mid: (low + high) / 2,
+    };
   }),
-  { id: 'over-200', label: 'Over 200 cm', low: 200, high: 205, mid: 202.5 },
+  { id: 'over-200', label: `Over ${ftIn(200)} · 200 cm`, low: 200, high: 205, mid: 202.5 },
 ];
 
 /**

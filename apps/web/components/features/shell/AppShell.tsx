@@ -742,7 +742,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {announceSync && (
           <SyncAnnouncement onDone={endAnnounce} testId="sync-announcement-desktop" />
         )}
-        <nav className="flex flex-1 flex-col gap-1 px-3">
+        <nav className="flex flex-1 flex-col gap-1 px-3" data-tour="tab-bar">
           {NAV.map((item) => {
             const active = isActive(pathname, item);
             return (
@@ -795,7 +795,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             whole scroll, on every screen. Solid costs nothing and looks identical over a solid
             page. */}
         <div className="sticky top-0 z-30 border-b border-border bg-surface md:hidden">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <div className="flex items-center justify-between gap-2 px-4 py-3" data-tour="top-bar">
           <Link href="/today" aria-label="FitForge home" data-testid="logo-home-mobile">
             <LogoLockup size={18} />
           </Link>
