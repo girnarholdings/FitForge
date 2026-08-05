@@ -41,7 +41,7 @@ import {
   type ImportMode,
 } from '@/lib/demo/store';
 import { subscribeWorkoutLog } from '@/components/features/shared/workoutLog';
-import { decideReconcile } from './reconcileRule';
+import { decideReconcile, mayPushToCloud } from './reconcileRule';
 import { isAuthConfigured, getDb } from './firebase';
 
 /** When this device last pushed, so "is the cloud newer than us?" has an answer. */
@@ -177,6 +177,23 @@ async function docRefFor(uid: string) {
  */
 let cloudWritesDisabled = false;
 
+/**
+ * HAS THIS SESSION EVER SUCCESSFULLY READ THE ACCOUNT?
+ *
+ * Uploading is only safe once we know what we would be replacing. When `syncOnSignIn` could not
+ * read `users/{uid}` — a transient Firestore failure, an offline moment during sign-in, rules
+ * briefly rejecting the read — the old code still released the app (correctly: nobody may be
+ * trapped on a spinner) and then started the mirror. Four seconds later this device's state, which
+ * on a new device is EMPTY, replaced the athlete's entire training history in the cloud. One
+ * network wobble, everything gone, nothing on screen about it.
+ *
+ * So pushes are latched off until a read succeeds. The local copy is untouched and the UI is
+ * unaffected; the only thing withheld is the authority to overwrite an account we have not seen.
+ */
+let cloudReadOk = false;
+/** Guards the deferred reconcile in {@link pushToCloud} against a burst of mirror pushes. */
+let reconcileInFlight = false;
+
 /* ═══════════════════════════════════════════════════ the sign-in conflict prompt ══════════════
  *
  * Two sets of real training and one account: this browser's, and the one already in the account.
@@ -249,7 +266,38 @@ export async function resolveSyncConflict(choice: ConflictResolution): Promise<b
 export async function pushToCloud(uid: string): Promise<boolean> {
   // An unanswered conflict blocks every upload, the debounced mirror included: its 4-second timer
   // would otherwise overwrite the account copy the athlete is still being asked about.
-  if (!isAuthConfigured() || cloudWritesDisabled || conflict !== null) return false;
+  if (
+    !mayPushToCloud({
+      configured: isAuthConfigured(),
+      erased: cloudWritesDisabled,
+      conflictPending: conflict !== null,
+      // Handled below rather than here: an unread account is a reason to GO AND READ IT, not a
+      // reason to give up for the session.
+      readOk: true,
+    })
+  )
+    return false;
+
+  /**
+   * NEVER SEEN THIS ACCOUNT? RECONCILE — DO NOT OVERWRITE.
+   *
+   * A failed sign-in read must not mute this device for the rest of the session; someone briefly
+   * offline at the wrong moment would silently stop syncing until they thought to reload. What it
+   * means is that the decision was never made, so make it now: {@link syncOnSignIn} reads the
+   * account, applies the same pull/push/ask rule as always, and earns the right to write if the
+   * read lands. If it fails again there is still nothing to safely overwrite with, so nothing is
+   * written — which is the whole point.
+   *
+   * `reconcileInFlight` keeps a burst of mirror pushes from stacking reconciles. The recursion
+   * terminates either way: a successful reconcile sets `cloudReadOk`, a failed one leaves it false
+   * and the next call returns here.
+   */
+  if (!cloudReadOk) {
+    if (reconcileInFlight) return false;
+    await syncOnSignIn(uid);
+    // That call already pushed or pulled as the rule required; this one's work is done.
+    return cloudReadOk;
+  }
   try {
     const ref = await docRefFor(uid);
     if (!ref) return false;
@@ -281,6 +329,8 @@ export async function pullFromCloud(uid: string): Promise<boolean> {
     if (!ref) return false;
     const { getDoc } = await import('firebase/firestore');
     const snap = await getDoc(ref);
+    // A successful read here counts too — this is the other door into the account (see cloudReadOk).
+    cloudReadOk = true;
     const data = snap.exists() ? (snap.data() as { bundle?: unknown; updatedAt?: unknown }) : null;
     if (!data || typeof data.bundle !== 'string') return false;
 
@@ -361,6 +411,10 @@ export async function eraseCloudCopy(uid: string): Promise<boolean> {
 export async function syncOnSignIn(uid: string): Promise<void> {
   if (!isAuthConfigured()) return;
   cloudWritesDisabled = false; // a fresh, deliberate sign-in re-arms cloud writes
+  // Every sign-in re-earns the right to upload: until THIS reconcile has read the account, this
+  // device may not overwrite it.
+  cloudReadOk = false;
+  reconcileInFlight = true;
   setConflict(null); // a new reconcile supersedes any question left over from the last one
   setStatus({ state: 'syncing' });
   patchRestore({ phase: 'restoring' });
@@ -369,6 +423,9 @@ export async function syncOnSignIn(uid: string): Promise<void> {
     if (!ref) return setStatus({ state: 'idle' });
     const { getDoc } = await import('firebase/firestore');
     const snap = await getDoc(ref);
+    // The read landed — whatever it said, including "no such document". We now know what an
+    // upload would replace, which is the whole precondition for being allowed to make one.
+    cloudReadOk = true;
 
     const data = (snap.exists() ? snap.data() : {}) as { updatedAt?: unknown; bundle?: unknown };
     const bundle = typeof data.bundle === 'string' ? data.bundle : null;
@@ -405,6 +462,7 @@ export async function syncOnSignIn(uid: string): Promise<void> {
   } catch (err) {
     setStatus({ state: 'error', detail: describe(err) });
   } finally {
+    reconcileInFlight = false;
     // ALWAYS, including on failure. The routing gate waits on this, so leaving it unset on an
     // error path would strand a signed-in user on a loading screen forever.
     patchRestore({ phase: 'done' });

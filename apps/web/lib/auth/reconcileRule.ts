@@ -35,6 +35,47 @@ export interface ReconcileFacts {
   lastPushedUid: string | null;
 }
 
+/**
+ * MAY THIS DEVICE OVERWRITE THE ACCOUNT RIGHT NOW?
+ *
+ * Four independent reasons to refuse, each of which cost something real before it existed:
+ *
+ *   · `configured`  — no Firebase project; there is no account to write to.
+ *   · `erased`      — the athlete deleted their cloud copy this session. A queued mirror push
+ *                     would quietly recreate the document they asked us to destroy.
+ *   · `conflictPending` — two histories are on screen awaiting an answer. Writing either one
+ *                     before they choose makes the question a lie.
+ *   · `readOk`      — WE HAVE NEVER SEEN THIS ACCOUNT. Uploading is only safe once we know what
+ *                     it would replace. When the sign-in reconcile could not read `users/{uid}`
+ *                     (a Firestore hiccup, a moment offline) the app still released the user —
+ *                     correctly — and then mirrored this device's EMPTY state over their entire
+ *                     training history four seconds later.
+ */
+export interface PushGuardFacts {
+  configured: boolean;
+  erased: boolean;
+  conflictPending: boolean;
+  readOk: boolean;
+}
+
+export function mayPushToCloud(f: PushGuardFacts): boolean {
+  return f.configured && !f.erased && !f.conflictPending && f.readOk;
+}
+
+/**
+ * SHOULD A CLOUD RESTORE END ONBOARDING?
+ *
+ * Only when the restore actually brought a finished plan. A pull on its own is not enough, and
+ * assuming it was created a redirect loop: a new Google account's document is written FROM the
+ * signing-in device's empty store, so the next reconcile pulls back a bundle with no plan in it.
+ * "A pull happened" then sent the athlete to the app, whose own gate saw no plan and sent them
+ * back to the wizard, forever. The two rules now partition cleanly — the app ejects people
+ * without a plan, this ejects people with one.
+ */
+export function shouldLeaveOnboarding(pulled: boolean, hasFinishedPlan: boolean): boolean {
+  return pulled && hasFinishedPlan;
+}
+
 export function decideReconcile(f: ReconcileFacts): ReconcileAction {
   // Nothing in the account yet: this device's data becomes the account's data.
   if (!f.cloudExists) return 'push';

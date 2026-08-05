@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { decideReconcile, type ReconcileFacts } from './reconcileRule';
+import {
+  decideReconcile,
+  mayPushToCloud,
+  shouldLeaveOnboarding,
+  type ReconcileFacts,
+} from './reconcileRule';
 
 /**
  * WHAT HAPPENS WHEN YOU SIGN IN — every branch, including the one that used to lose data silently.
@@ -65,4 +70,49 @@ test('an unreadable cloud document is never offered as a choice', () => {
   assert.equal(decideReconcile({ ...base, cloudHasBundle: false, cloudAt: 9_999 }), 'push');
   // …but an empty browser still tries the pull, which reports the read failure honestly.
   assert.equal(decideReconcile({ ...base, cloudHasBundle: false, localIsEmpty: true }), 'pull');
+});
+
+/* ── the two guards added after the signed-in audit ──────────────────────────────────────────── */
+
+test('a device that has never read the account may not overwrite it', () => {
+  const ok = { configured: true, erased: false, conflictPending: false, readOk: true };
+  assert.equal(mayPushToCloud(ok), true, 'the ordinary case still uploads');
+
+  // THE DATA-LOSS PATH: the sign-in reconcile could not read users/{uid} (Firestore hiccup, a
+  // moment offline). The app releases the user — correctly — and the mirror must NOT then treat
+  // this browser's empty state as the truth.
+  assert.equal(
+    mayPushToCloud({ ...ok, readOk: false }),
+    false,
+    'an unread account must never be overwritten',
+  );
+});
+
+test('the other three refusals still hold, independently', () => {
+  const ok = { configured: true, erased: false, conflictPending: false, readOk: true };
+  assert.equal(mayPushToCloud({ ...ok, configured: false }), false, 'no project, no account');
+  assert.equal(
+    mayPushToCloud({ ...ok, erased: true }),
+    false,
+    'a deliberate erasure must not be undone by a queued push',
+  );
+  assert.equal(
+    mayPushToCloud({ ...ok, conflictPending: true }),
+    false,
+    'writing while the athlete is still being asked makes the question a lie',
+  );
+});
+
+test('leaving onboarding needs a pull that actually brought a plan', () => {
+  // The redirect loop, as a truth table. A new Google account's document is written from the
+  // signing-in device's EMPTY store, so "a pull happened" and "there is a plan" come apart — and
+  // when they did, the wizard and the app shell bounced the user between them forever.
+  assert.equal(shouldLeaveOnboarding(true, true), true, 'a real plan arrived: stop asking');
+  assert.equal(
+    shouldLeaveOnboarding(true, false),
+    false,
+    'an empty account pulled back is not a reason to end onboarding',
+  );
+  assert.equal(shouldLeaveOnboarding(false, true), false, 'no pull: the wizard owns the screen');
+  assert.equal(shouldLeaveOnboarding(false, false), false);
 });

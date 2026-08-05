@@ -8,6 +8,8 @@ import { StepArt } from '@/components/illustrations';
 import { STEP_META, wizardProgressInMode } from '@/lib/onboarding/steps';
 import type { OnboardingStep } from '@fitforge/shared/schemas';
 import { getRestoreState, subscribeRestore } from '@/lib/auth/sync';
+import { shouldLeaveOnboarding } from '@/lib/auth/reconcileRule';
+import { isOnboarded } from '@/lib/demo/store';
 import { useOnboarding } from './OnboardingProvider';
 import { OnboardingDockContext } from './OnboardingFooter';
 import { STEP_COMPONENTS } from './steps';
@@ -51,9 +53,18 @@ export function OnboardingShell({ step }: { step: OnboardingStep }) {
    * plan-preview screen — while the user is still reading the plan and has not pressed "Start
    * plan" — so a `completedAt`-based condition ejects them from the wizard one screen early. The
    * first version did exactly that and the onboarding walk failed on the spot.
+   *
+   * AND THE PULL HAS TO HAVE BROUGHT A PLAN. A pull alone is not a reason to leave: signing in
+   * with a brand-new Google account creates the account document FROM THIS DEVICE's empty store,
+   * so the very next reconcile pulls back a bundle with no finished onboarding in it. That
+   * satisfied this rule, sent the athlete to /today, where the shell's own gate saw no plan and
+   * sent them straight back here — a redirect loop, roughly a hundred round trips a second, that
+   * every new Google user hit the moment they reloaded mid-wizard. Requiring an actual plan makes
+   * the two rules agree: the shell ejects people WITHOUT one, this ejects people WITH one, and
+   * nobody satisfies both.
    */
   React.useEffect(() => {
-    if (restored) router.replace('/today');
+    if (shouldLeaveOnboarding(restored, isOnboarded())) router.replace('/today');
   }, [restored, router]);
 
   if (!meta.wizard) {
