@@ -78,14 +78,34 @@ export type { User };
 
 let appPromise: Promise<FirebaseApp> | null = null;
 
+const DEFAULT_APP = '[DEFAULT]';
+
 async function getApp(): Promise<FirebaseApp> {
   if (!appPromise) {
     appPromise = (async () => {
-      const { initializeApp, getApps, getApp: existing } = await import('firebase/app');
-      // getApps() first: React strict mode double-invokes effects in development, and
-      // initializeApp twice with the same name throws.
-      return getApps().length > 0 ? existing() : initializeApp(CONFIG);
+      const { initializeApp, getApps } = await import('firebase/app');
+      /**
+       * FIND THE DEFAULT APP BY NAME — not "does any app exist".
+       *
+       * This used to read `getApps().length > 0 ? getApp() : initializeApp(CONFIG)`, and the two
+       * halves of that ternary disagree about what they are asking. `getApps()` counts EVERY
+       * Firebase app; bare `getApp()` returns the one called `[DEFAULT]` and throws `app/no-app`
+       * if it is missing. This app creates a second, NAMED app for the sign-in popup (see
+       * getPopupAuth), and `warmSignIn` builds both CONCURRENTLY — so whenever the popup app won
+       * that race, the count was 1, the default app did not exist, and this threw.
+       *
+       * The result was the failure that looks least like a race: "Sign-in failed (app/no-app)"
+       * before Google was ever contacted, on a button that had worked a moment earlier — and,
+       * because the rejected promise stayed cached below, for every attempt afterwards until the
+       * page was reloaded. React strict mode double-invoking effects, the original reason for the
+       * guard, is still handled: a second call finds the app by name and reuses it.
+       */
+      return getApps().find((a) => a.name === DEFAULT_APP) ?? initializeApp(CONFIG);
     })();
+    // A cached REJECTION is a permanently broken sign-in button. Let the next caller try again.
+    appPromise.catch(() => {
+      appPromise = null;
+    });
   }
   return appPromise;
 }
@@ -121,6 +141,10 @@ export async function getAuthClient(): Promise<Auth | null> {
         return getAuth(app);
       }
     })();
+    // Same reasoning as getApp: never let one bad moment cache itself into a dead sign-in.
+    authPromise.catch(() => {
+      authPromise = null;
+    });
   }
   return authPromise;
 }

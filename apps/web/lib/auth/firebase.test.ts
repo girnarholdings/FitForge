@@ -62,3 +62,37 @@ test('every message is a complete sentence — the UI appends a clause to it', (
     assert.match(msg, /[.!]$/, `${code} does not end a sentence: ${msg}`);
   }
 });
+
+/**
+ * THE BOOTSTRAP RACE, as a property of the lookup rather than of timing.
+ *
+ * `getApp()` used to ask "does ANY Firebase app exist?" and then fetch the one called
+ * `[DEFAULT]`. Those are different questions, and this app creates a second, NAMED app for the
+ * sign-in popup — built concurrently with the main client by `warmSignIn`. Whenever the popup app
+ * won that race the count was 1, the default app did not exist, and the bootstrap threw
+ * `app/no-app` before Google was ever contacted.
+ *
+ * The SDK is not imported here (it needs a browser); what is pinned is the decision itself, which
+ * is where the bug lived: pick by NAME, never by count.
+ */
+test('the app lookup finds the default app by name, not by "some app exists"', () => {
+  const DEFAULT_APP = '[DEFAULT]';
+  const pick = (apps: { name: string }[]) => apps.find((a) => a.name === DEFAULT_APP) ?? null;
+
+  // The exact race state: only the sign-in popup's app has been created so far.
+  assert.equal(
+    pick([{ name: 'fitforge-signin' }]),
+    null,
+    'a named app must not be mistaken for the default one — this is the app/no-app bug',
+  );
+  // The old rule, for contrast: a count-based check calls this state "already initialised".
+  assert.equal([{ name: 'fitforge-signin' }].length > 0, true);
+
+  assert.deepEqual(pick([{ name: DEFAULT_APP }]), { name: DEFAULT_APP });
+  assert.deepEqual(
+    pick([{ name: 'fitforge-signin' }, { name: DEFAULT_APP }]),
+    { name: DEFAULT_APP },
+    'order must not matter — both apps exist once warming has finished',
+  );
+  assert.equal(pick([]), null, 'a cold start still initialises');
+});
