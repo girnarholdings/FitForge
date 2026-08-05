@@ -96,11 +96,24 @@ export function CloudSyncDriver() {
 
   React.useEffect(() => {
     if (status !== 'signed-in' || !user) return;
+    /**
+     * `cancelled` is the whole point. The reconcile is a network round trip, and this effect can
+     * be torn down during it — a sign-out, or a switch to a second account on a shared phone.
+     * Without the flag the cleanup ran while `stop` was still the no-op, the promise then resolved
+     * against a dead effect, and `startCloudMirror` began mirroring THIS browser's state into the
+     * uid that just went away: a signed-out user still uploading, and on an account switch, the
+     * previous athlete's training pushed into the new one's document. Both are silent.
+     */
+    let cancelled = false;
     let stop = () => {};
     void syncOnSignIn(user.uid).then(() => {
+      if (cancelled) return;
       stop = startCloudMirror(user.uid);
     });
-    return () => stop();
+    return () => {
+      cancelled = true;
+      stop();
+    };
   }, [status, user?.uid]);
   return null;
 }

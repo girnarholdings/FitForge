@@ -7,7 +7,8 @@ import { Button, Sheet } from '@/components/ui';
 import { TargetIcon, ShakerIcon, SwapIcon, type IconProps } from '@/components/ui/icons';
 import { LogoLockup, LandingHero } from '@/components/illustrations';
 import { GoogleSignInButton } from '@/components/auth/GoogleAuth';
-import { getState, resetDemo } from '@/lib/demo/store';
+import { getState, isOnboarded, resetDemo } from '@/lib/demo/store';
+import { getRestoreState, subscribeRestore } from '@/lib/auth/sync';
 
 /**
  * Marketing landing (§5.2) — a SINGLE-VIEWPORT composition.
@@ -49,17 +50,51 @@ export default function LandingPage() {
   };
 
   /**
-   * Where a Google sign-in lands: ALWAYS the app, never a decision made here.
+   * Where a Google sign-in lands — decided HERE, but only once the account has actually answered.
    *
-   * This used to read `isOnboarded()` the instant the popup closed and route to onboarding if the
-   * local store was empty — which, on a device the user had never opened before, it always is. It
-   * was deciding "this person is new" from "this browser is new", microseconds before their real
-   * plan arrived from Firestore, and marching them through building one they already had.
+   * The history matters, because both previous versions were wrong in opposite directions. The
+   * first read `isOnboarded()` the instant the popup closed and sent an empty browser to
+   * onboarding — deciding "this person is new" from "this browser is new", microseconds before
+   * their real plan arrived from Firestore. The fix was to stop deciding at all and push everyone
+   * to `/today`, letting the app shell wait for the reconcile.
    *
-   * The app shell owns that decision now, because it is the only place that can wait for the
-   * account to be fetched before making it. Here we just go there.
+   * That trades a wrong destination for a punishing one. `/today` is this app's heaviest route
+   * (224 kB of first-load JS); a brand-new account loads all of it, hydrates, waits for the
+   * account, and is then bounced to `/onboarding/welcome` — another 272 kB. MEASURED on ordinary
+   * cellular that is ~6 s of BLANK SCREEN between "I picked my Google account" and "I can see
+   * anything", versus ~230 ms for the Local Mode button beside it. That gap is the whole reason
+   * signing in felt broken while Local Mode felt fine.
+   *
+   * So: stay on this page — already painted, nothing more to download — show that something is
+   * happening, and wait for the same reconcile the shell would have waited for. Then go straight
+   * to the right place, loading exactly one bundle. `phase: 'done'` is settled-not-successful by
+   * design, and the timeout below is the backstop for the case where even that never arrives.
    */
-  const afterSignIn = () => router.push('/today');
+  const [finishing, setFinishing] = React.useState(false);
+
+  const routeAfterRestore = React.useCallback(() => {
+    setFinishing(true);
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      off();
+      clearTimeout(timer);
+      // The account's own data decides. A returning athlete lands on their training; a genuinely
+      // new one starts the wizard — and neither pays for the other's bundle.
+      router.push(isOnboarded() ? '/today' : '/onboarding/welcome');
+    };
+    const off = subscribeRestore(() => {
+      if (getRestoreState().phase === 'done') go();
+    });
+    // A reconcile that never settles (offline mid-sign-in, Firestore unreachable) must not strand
+    // anyone on this screen. `syncOnSignIn` already resolves its phase in a `finally`; this is the
+    // belt for the case where the driver never got to run at all.
+    const timer = setTimeout(go, 12_000);
+    if (getRestoreState().phase === 'done') go();
+  }, [router]);
+
+  const afterSignIn = () => routeAfterRestore();
 
   return (
     <main data-flow="desktop" className="screen mx-auto w-full max-w-[430px] sm:max-w-md lg:max-w-[1080px] lg:px-10">
@@ -119,7 +154,19 @@ export default function LandingPage() {
       <footer className="cta-dock px-6 lg:mx-0 lg:max-w-[480px] lg:px-0">
         {/* Render CTAs only after hydration so the returning-user swap doesn't flash (§5.2). */}
         <div className={`flex flex-col gap-2 ${mounted ? '' : 'invisible'}`}>
-          {returning ? (
+          {finishing ? (
+            /* Signed in, fetching the account. Replacing the buttons rather than sitting beside
+               them is deliberate: the decision of where to go next is already made, and leaving a
+               live "Start in Local Mode" under someone's thumb invites them to start a second,
+               conflicting history one tap before their real one lands. */
+            <p
+              className="py-3 text-center text-sm text-muted-foreground"
+              role="status"
+              data-testid="landing-finishing"
+            >
+              Setting up your account…
+            </p>
+          ) : returning ? (
             <>
               <Link href="/today" className="block">
                 <Button size="lg" block glow>

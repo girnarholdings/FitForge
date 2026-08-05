@@ -425,6 +425,27 @@ export function startCloudMirror(uid: string): () => void {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => void pushToCloud(uid), 4000);
   };
+  /**
+   * FLUSH WHEN THE APP GOES AWAY. The debounce is what keeps a workout from costing hundreds of
+   * Firestore writes, but it also means the last 4 seconds of changes exist only in this browser —
+   * and "the last thing I did" is exactly what a phone user does before locking the screen. The
+   * worst case is the one that matters most: finishing onboarding and closing the app, where the
+   * entire plan the account was created for never reaches it.
+   *
+   * `visibilitychange` rather than `unload`: it is the event iOS Safari actually delivers when an
+   * app is backgrounded or a tab is swiped away, and it fires early enough for a real request.
+   */
+  const flush = () => {
+    if (!timer) return;
+    clearTimeout(timer);
+    timer = null;
+    void pushToCloud(uid);
+  };
+  const onHide = () => {
+    if (document.visibilityState === 'hidden') flush();
+  };
+  document.addEventListener('visibilitychange', onHide);
+  window.addEventListener('pagehide', flush);
   // BOTH STORES. The plan, profile and preferences live in the demo store; finished workouts live
   // in a separate one with its own listeners. Watching only the first meant a logged session was
   // uploaded solely by luck — whenever some unrelated edit happened to fire afterwards — which is
@@ -433,6 +454,8 @@ export function startCloudMirror(uid: string): () => void {
   const unsubscribes = [subscribe(schedule), subscribeWorkoutLog(schedule)];
   return () => {
     if (timer) clearTimeout(timer);
+    document.removeEventListener('visibilitychange', onHide);
+    window.removeEventListener('pagehide', flush);
     for (const off of unsubscribes) off();
   };
 }

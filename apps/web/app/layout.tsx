@@ -95,9 +95,45 @@ export const viewport: Viewport = {
   themeColor: '#131010', // the warm-iron surface — the browser chrome must wear the same metal
 };
 
+/**
+ * THE EARLY GATE — the fresh-visit decision, made before a single byte of application JavaScript
+ * has to run.
+ *
+ * The React gate in AppShell is correct but it is also expensive to *reach*: a visitor with an
+ * empty store who opens an app route downloads that route's bundle (224 kB for /today), hydrates
+ * it, learns they have no plan, and is redirected to onboarding — which is another 272 kB. Timed
+ * on ordinary cellular that round trip was 5.7 s before the onboarding CTA was usable, and 22 s on
+ * a bad connection. All of it spent loading a screen the visitor was never going to be shown.
+ *
+ * This runs inline, synchronously, in the document — so it costs one script tag and answers before
+ * the router exists. It only ever acts on the ONE case where the answer is certain and cheap:
+ *
+ *   · the path is an app route (never onboarding itself — that would be a redirect loop, and never
+ *     the landing page, which is a real destination for everyone),
+ *   · localStorage says this browser has no completed onboarding,
+ *   · AND there is no persisted Firebase session, so no account can arrive to contradict that.
+ *
+ * Any doubt — unreadable storage, a stored session, a store it cannot parse — and it does nothing
+ * at all, leaving the React gate to decide exactly as it does today. It can only ever skip a
+ * wasted download, never make a routing decision the app itself would not have made.
+ */
+const EARLY_GATE = `(function(){try{
+var p=location.pathname.replace(${JSON.stringify(process.env.NEXT_PUBLIC_BASE_PATH ?? '')},'')||'/';
+if(!/^\\/(today|routines|exercises|nutrition|progress|coach|settings|workout)(\\/|$)/.test(p))return;
+var s=localStorage.getItem('fitforge.demo.v1');
+if(s&&JSON.parse(s).completedAt)return;
+var k=${JSON.stringify(process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '')};
+if(k&&localStorage.getItem('firebase:authUser:'+k+':[DEFAULT]'))return;
+location.replace(${JSON.stringify(process.env.NEXT_PUBLIC_BASE_PATH ?? '')}+'/onboarding/welcome/');
+}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${archivo.variable} ${bigShoulders.variable}`}>
+      <head>
+        {/* eslint-disable-next-line react/no-danger -- our own static string; see EARLY_GATE. */}
+        <script dangerouslySetInnerHTML={{ __html: EARLY_GATE }} />
+      </head>
       <body>
         {/* eslint-disable-next-line react/no-danger -- the direction contract must survive the
             production build as a real HTML comment (JSX comments compile away), per the design

@@ -701,15 +701,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [checked, router, authStatus, signedIn, restore.phase, hasOnboarded]);
 
   if (!checked) {
-    // Blank canvas while we decide — except for the one case worth naming, where the wait is a
-    // network round trip and silence would read as a hang.
+    /**
+     * NEVER A BLANK VOID. This branch used to render an empty box, on the theory that the decision
+     * takes microseconds. It does not: on a phone this route's bundle, its hydration and (when a
+     * session might exist) the auth SDK all land first, and the measured gap on ordinary cellular
+     * was seconds of pure nothing — the single worst thing a first-time visitor can be shown,
+     * because a blank screen is indistinguishable from a broken app.
+     *
+     * So it holds the brand and says which wait this is. Both lines are honest: one is a network
+     * round trip to their account, the other is the app opening.
+     */
     return (
-      <div className="grid min-h-screen min-h-[100svh] place-items-center bg-surface px-6">
-        {signedIn && restore.phase === 'restoring' && (
-          <p className="text-sm text-muted-foreground" data-testid="restoring-account">
-            Restoring your training…
-          </p>
-        )}
+      <div
+        className="grid min-h-screen min-h-[100svh] place-items-center bg-surface px-6"
+        data-testid="shell-booting"
+      >
+        <div className="flex flex-col items-center gap-3">
+          <LogoLockup size={22} stacked />
+          {/* `restoring-account` keeps its exact old meaning — "we are waiting on YOUR ACCOUNT" —
+              because specs assert it never appears for someone without one. The generic wait is a
+              different statement and gets a different name. */}
+          {signedIn && restore.phase === 'restoring' ? (
+            <p className="text-sm text-muted-foreground" data-testid="restoring-account">
+              Restoring your training…
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground" data-testid="shell-opening">
+              Opening…
+            </p>
+          )}
+        </div>
       </div>
     );
   }

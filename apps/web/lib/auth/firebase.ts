@@ -51,6 +51,29 @@ export function isAuthConfigured(): boolean {
   return CONFIG.apiKey.length > 0 && CONFIG.projectId.length > 0 && CONFIG.authDomain.length > 0;
 }
 
+/**
+ * COULD THIS BROWSER POSSIBLY HAVE A SIGNED-IN USER? Answered synchronously, from localStorage,
+ * WITHOUT loading a byte of the Firebase SDK.
+ *
+ * This exists because "we do not know yet" was costing every visitor — signed in or not — a
+ * ~200 kB third-party download before the app would decide anything. `browserLocalPersistence`
+ * (see getAuthClient) keeps the session under a key the SDK builds as
+ * `firebase:authUser:{apiKey}:{appName}` (@firebase/auth `_persistenceKeyName`), and the main
+ * client is the default app. No key ⇒ `onAuthStateChanged` is going to fire with `null`; there is
+ * nothing to wait for and no reason to make a new user wait for it.
+ *
+ * FAILS TOWARD "MAYBE": an unreadable localStorage (private mode, storage disabled) returns true,
+ * so the caller takes the slow, correct path rather than declaring a signed-in user signed out.
+ */
+export function hasPersistedSession(): boolean {
+  if (!isAuthConfigured() || typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(`firebase:authUser:${CONFIG.apiKey}:[DEFAULT]`) !== null;
+  } catch {
+    return true;
+  }
+}
+
 export type { User };
 
 let appPromise: Promise<FirebaseApp> | null = null;
@@ -372,6 +395,16 @@ export async function signOutUser(): Promise<void> {
   if (!auth) return;
   const { signOut } = await import('firebase/auth');
   await signOut(auth);
+  // AND the sign-in client. It holds its own in-memory user from the popup that created this
+  // session; leaving it authenticated means "sign out" left half the app's auth state standing,
+  // which is the sort of thing that is invisible until it is a support ticket about a shared
+  // phone. Its failure cannot undo the real sign-out above, so it is deliberately swallowed.
+  try {
+    const popupAuth = await popupAuthPromise;
+    if (popupAuth) await signOut(popupAuth);
+  } catch {
+    /* the main session is already gone, which is what "signed out" means */
+  }
 }
 
 /**
