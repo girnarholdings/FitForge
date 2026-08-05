@@ -43,6 +43,30 @@ function subscribeRedirectError(listener: () => void) {
   return () => redirectListeners.delete(listener);
 }
 
+/**
+ * A REDIRECT SIGN-IN THAT SUCCEEDED, announced so the page it lands on can act.
+ *
+ * The popup path tells its caller through `onDone`. The redirect path has no caller left to tell —
+ * the browser went to Google and came back on a fresh page load — so the landing page just sat
+ * there still offering "Continue with Google" to someone who had already signed in. Tapping again
+ * looked like the remedy and was another go round the same loop.
+ *
+ * Deliberately NOT "the user is signed in": that is true for a returning visitor who typed the
+ * URL, and for the moment after Settings → Erase signs someone out and sends them here. This flag
+ * means one specific thing — a redirect we started has just completed on THIS page load — which is
+ * the only case where a page is entitled to move someone somewhere they did not ask to go.
+ */
+let redirectCompleted = false;
+const redirectDoneListeners = new Set<() => void>();
+
+export function subscribeRedirectSignIn(listener: () => void): () => void {
+  redirectDoneListeners.add(listener);
+  return () => redirectDoneListeners.delete(listener);
+}
+export function redirectSignInCompleted(): boolean {
+  return redirectCompleted;
+}
+
 function useRedirectError() {
   return React.useSyncExternalStore(
     subscribeRedirectError,
@@ -90,7 +114,14 @@ export function CloudSyncDriver() {
   // question produces no off-origin request at all, and this component is on that page too.
   React.useEffect(() => {
     void completeRedirectSignIn().then((outcome) => {
-      if (outcome && !outcome.ok && outcome.reason === 'failed') setRedirectError(outcome.message);
+      if (!outcome) return;
+      if (outcome.ok) {
+        // Whoever is rendering the current page may now hand this person to the app.
+        redirectCompleted = true;
+        for (const l of redirectDoneListeners) l();
+        return;
+      }
+      if (outcome.reason === 'failed') setRedirectError(outcome.message);
     });
   }, []);
 

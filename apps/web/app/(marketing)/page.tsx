@@ -6,8 +6,13 @@ import { useRouter } from 'next/navigation';
 import { Button, Sheet } from '@/components/ui';
 import { TargetIcon, ShakerIcon, SwapIcon, type IconProps } from '@/components/ui/icons';
 import { LogoLockup, LandingHero } from '@/components/illustrations';
-import { GoogleSignInButton } from '@/components/auth/GoogleAuth';
+import {
+  GoogleSignInButton,
+  redirectSignInCompleted,
+  subscribeRedirectSignIn,
+} from '@/components/auth/GoogleAuth';
 import { getState, isOnboarded, resetDemo } from '@/lib/demo/store';
+import { signOutUser } from '@/lib/auth/firebase';
 import { getRestoreState, subscribeRestore } from '@/lib/auth/sync';
 
 /**
@@ -42,9 +47,27 @@ export default function LandingPage() {
     setMounted(true);
   }, []);
 
-  const startOver = () => {
-    resetDemo();
+  /**
+   * START OVER — and for a signed-in user, SIGN OUT FIRST.
+   *
+   * The sheet promises this erases "your Local Mode data — plan, logs, and meals stored in this
+   * browser". For a signed-out user that is exactly what happened. For a signed-in one it was a
+   * lie with teeth: the cloud mirror was still running, so emptying the store notified it, and
+   * four seconds later the empty bundle replaced the athlete's entire history in their Google
+   * account. A control that says "this browser" was quietly destroying the backup that exists
+   * precisely so this browser would not matter.
+   *
+   * Signing out first stops the mirror before the wipe, which makes the promise true: the account
+   * keeps its copy, this browser starts clean, and signing back in restores it. Deleting the
+   * account's data is a different decision and still lives where it says so — Settings → Erase
+   * everything, which deletes the document explicitly and refuses if it cannot confirm it.
+   */
+  const startOver = async () => {
     setConfirmReset(false);
+    // Awaited, not fire-and-forget: the mirror must be gone BEFORE the store is emptied. A failed
+    // sign-out leaves the account untouched, which is the safe side of this to fail on.
+    await signOutUser().catch(() => {});
+    resetDemo();
     setReturning(false);
     router.push('/onboarding/welcome');
   };
@@ -71,8 +94,13 @@ export default function LandingPage() {
    * design, and the timeout below is the backstop for the case where even that never arrives.
    */
   const [finishing, setFinishing] = React.useState(false);
+  /** Latches across calls: the popup's `onDone` and a returning redirect both land here, and one
+   *  leave is all anybody needs. Without it each call would add a subscription and a timer. */
+  const leaving = React.useRef(false);
 
   const routeAfterRestore = React.useCallback(() => {
+    if (leaving.current) return;
+    leaving.current = true;
     setFinishing(true);
     let done = false;
     const go = () => {
@@ -95,6 +123,29 @@ export default function LandingPage() {
   }, [router]);
 
   const afterSignIn = () => routeAfterRestore();
+
+  /**
+   * A REDIRECT SIGN-IN COMES BACK HERE, and nothing used to notice.
+   *
+   * The popup path calls `afterSignIn` from its own click handler. The redirect path cannot: the
+   * browser left for Google and returned on a fresh page load, so the component that started it is
+   * long gone. `CloudSyncDriver` claimed the credential app-wide — but this page just sat there,
+   * still offering "Continue with Google" to someone who had already signed in. Tapping it again
+   * looked like the fix and was simply another go round the same loop.
+   *
+   * KEYED ON THE REDIRECT ITSELF, not on "is signed in". Being signed in is also true for a
+   * returning visitor who deliberately opened this page to press "Start over", and for the moment
+   * after Settings → Erase signs someone out and sends them back here. Neither of those has asked
+   * to be moved.
+   */
+  const redirectDone = React.useSyncExternalStore(
+    subscribeRedirectSignIn,
+    redirectSignInCompleted,
+    () => false,
+  );
+  React.useEffect(() => {
+    if (redirectDone) routeAfterRestore();
+  }, [redirectDone, routeAfterRestore]);
 
   return (
     <main data-flow="desktop" className="screen mx-auto w-full max-w-[430px] sm:max-w-md lg:max-w-[1080px] lg:px-10">
@@ -216,7 +267,7 @@ export default function LandingPage() {
           restarts onboarding. This cannot be undone.
         </p>
         <div className="mt-4 flex flex-col gap-2">
-          <Button variant="danger" block onClick={startOver}>
+          <Button variant="danger" block onClick={() => void startOver()}>
             Erase and start over
           </Button>
           <Button variant="ghost" block onClick={() => setConfirmReset(false)}>

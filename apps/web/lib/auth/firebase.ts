@@ -202,6 +202,38 @@ export type SignInOutcome =
 const CANCELLED = /popup-closed-by-user|cancelled-popup-request|user-cancelled/;
 
 /**
+ * Failures where a full-page redirect is the RIGHT answer, not a consolation prize.
+ *
+ * `popup-blocked` is the obvious one. `internal-error` is the important one: in the popup flow it
+ * almost always means Google's `apis.google.com` script never loaded — a content blocker, a school
+ * or corporate filter, Safari's tracking protection — and the redirect flow does not need that
+ * script at all. Dead-ending on it left the most locked-down users with an apology and no way in,
+ * when the way in was one different call. `missing-or-invalid-nonce` and `web-storage-unsupported`
+ * are the same shape: the popup's storage handshake is unavailable, the redirect's is not.
+ */
+const REDIRECTABLE =
+  /popup-blocked|internal-error|missing-or-invalid-nonce|web-storage-unsupported|operation-not-supported-in-this-environment/;
+
+/**
+ * A HOME-SCREEN APP, where `window.open` is not a popup — it is a jarring jump into a separate
+ * Safari window, and on iOS it is frequently just suppressed. The button then spins forever with
+ * no Google screen and no error, which is exactly the report from an installed FitForge.
+ * Standalone display mode therefore skips the popup entirely and takes the redirect, which stays
+ * inside the installed app.
+ */
+function isStandaloneApp(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return (
+      window.matchMedia?.('(display-mode: standalone)').matches === true ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Turn a Firebase error code into something that names the actual problem AND where it is fixed.
  * Most of these are configuration in the Firebase console rather than anything the app can repair
  * at runtime, so the message's job is to point at the right screen.
@@ -321,6 +353,21 @@ export async function signInWithGoogle(): Promise<SignInOutcome> {
       return p;
     };
 
+    /**
+     * INSTALLED APPS SKIP THE POPUP. See isStandaloneApp: `window.open` from a Home-Screen app is
+     * either a disorienting jump into Safari or nothing at all, and "nothing at all" is a button
+     * that spins until the user gives up. The redirect keeps the whole flow inside the app.
+     */
+    if (isStandaloneApp()) {
+      try {
+        await signInWithRedirect(auth, provider(), browserPopupRedirectResolver);
+        return { ok: false, reason: 'redirecting' };
+      } catch (err) {
+        const code = (err as { code?: string }).code ?? '';
+        return { ok: false, reason: 'failed', code, message: describeAuthError(code, host) };
+      }
+    }
+
     try {
       // Run on the sign-in client, whose resolver was registered at construction so the popup
       // machinery is already warm and `window.open` happens inside the click's activation window.
@@ -341,7 +388,7 @@ export async function signInWithGoogle(): Promise<SignInOutcome> {
       const code = (err as { code?: string }).code ?? '';
       if (CANCELLED.test(code)) return { ok: false, reason: 'cancelled' };
 
-      if (code === 'auth/popup-blocked') {
+      if (REDIRECTABLE.test(code)) {
         try {
           await signInWithRedirect(auth, provider(), browserPopupRedirectResolver);
           // The browser is now navigating to Google; nothing after this runs.
@@ -418,7 +465,21 @@ export async function currentIdToken(): Promise<string | null> {
   if (!isAuthConfigured()) return null;
   try {
     const auth = await getAuthClient();
-    return (await auth?.currentUser?.getIdToken()) ?? null;
+    if (!auth) return null;
+    /**
+     * WAIT FOR THE SESSION TO RESTORE FIRST.
+     *
+     * `currentUser` is null until the SDK has read persistence and revalidated — a moment, but a
+     * moment that starts at page load, which is exactly when someone opens the app and asks the
+     * Coach something. Reading it too early returned no token, the worker saw an anonymous
+     * request, and a signed-in (or paying Pro) user was quietly served by the free tier: the one
+     * failure this whole token path exists to prevent, and invisible when it happens.
+     *
+     * `authStateReady()` resolves once that first resolution has happened — immediately thereafter.
+     * Guarded because it is a newer SDK addition: without it we are no worse off than before.
+     */
+    await auth.authStateReady?.().catch(() => {});
+    return (await auth.currentUser?.getIdToken()) ?? null;
   } catch {
     return null;
   }

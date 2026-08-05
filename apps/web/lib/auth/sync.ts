@@ -321,8 +321,20 @@ export async function pushToCloud(uid: string): Promise<boolean> {
   }
 }
 
-/** Adopt the cloud copy. Resolves false when there was nothing to adopt or it would not validate. */
-export async function pullFromCloud(uid: string): Promise<boolean> {
+/**
+ * Adopt the cloud copy. Resolves false when there was nothing to adopt or it would not validate.
+ *
+ * `mode` matters more than it looks. `'overwrite'` is right when this browser has nothing to lose
+ * — the new-device case, which is most pulls. It is WRONG for the other pull: a device that has
+ * pushed to this account before and finds the cloud newer. That device can still hold work the
+ * cloud has never seen (a session logged at a gym with no signal, then the ride home), and
+ * overwriting silently deleted exactly that — the athlete opened the app at home and the workout
+ * was gone. Merging keeps both sides, which is the only answer that cannot lose a set.
+ */
+export async function pullFromCloud(
+  uid: string,
+  mode: ImportMode = 'overwrite',
+): Promise<boolean> {
   if (!isAuthConfigured()) return false;
   try {
     const ref = await docRefFor(uid);
@@ -336,7 +348,7 @@ export async function pullFromCloud(uid: string): Promise<boolean> {
 
     // The SAME validator the file importer uses. A document that fails it is left alone rather
     // than partially applied — a half-restored account is worse than an un-restored one.
-    const result = importAllState(data.bundle);
+    const result = importAllState(data.bundle, mode);
     if (!result.ok) {
       setStatus({ state: 'error', detail: `Cloud copy could not be read: ${result.error}` });
       return false;
@@ -433,12 +445,13 @@ export async function syncOnSignIn(uid: string): Promise<void> {
     // nothing to adopt and nothing to ask about, so the check belongs in the facts, not after them.
     const inspected = bundle ? inspectBackup(bundle) : null;
 
+    const localIsEmpty = !isOnboarded();
     const action = decideReconcile({
       uid,
       cloudExists: snap.exists(),
       cloudHasBundle: inspected?.ok === true,
       cloudAt: typeof data.updatedAt === 'number' ? data.updatedAt : 0,
-      localIsEmpty: !isOnboarded(),
+      localIsEmpty,
       lastPushedAt: lastPushedAt(),
       lastPushedUid: lastPushedUid(),
     });
@@ -457,8 +470,17 @@ export async function syncOnSignIn(uid: string): Promise<void> {
       return;
     }
 
-    if (action === 'pull') await pullFromCloud(uid);
-    else await pushToCloud(uid);
+    if (action === 'pull') {
+      /**
+       * An empty browser has nothing to lose, so it takes the account wholesale. A browser that
+       * already holds training is pulling because a SIBLING DEVICE moved the account forward —
+       * and it may still be carrying work of its own that never reached the cloud. Merging is the
+       * only outcome there that cannot delete a logged session.
+       */
+      await pullFromCloud(uid, localIsEmpty ? 'overwrite' : 'merge');
+    } else {
+      await pushToCloud(uid);
+    }
   } catch (err) {
     setStatus({ state: 'error', detail: describe(err) });
   } finally {
