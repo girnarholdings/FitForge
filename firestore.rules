@@ -1,0 +1,53 @@
+rules_version = '2';
+
+/**
+ * FITFORGE — Firestore security rules.
+ *
+ * These live in the repository because a security model that exists only as a paragraph in a
+ * README is a security model nobody can review, diff, or restore. Nothing here could previously
+ * detect a console edit; now a change to who can read an athlete's training is a commit like any
+ * other, and `firebase deploy --only firestore:rules` is what puts it live (see firebase.json).
+ *
+ * THE WHOLE DATA MODEL IS ONE DOCUMENT PER USER. `users/{uid}` holds a single JSON `bundle`
+ * string — the same bytes Settings → Export produces — plus its `updatedAt` stamp and a schema
+ * number. There are no subcollections, no shared documents and no server code, which is what
+ * makes the rule below both short and total: a signed-in athlete may touch exactly their own
+ * document, and nothing else in the project is reachable at all.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid} {
+      // Only the owner, and only while actually signed in. `request.auth != null` is not
+      // redundant with the uid check: without it an unauthenticated request whose auth is null
+      // would throw rather than deny on some paths.
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+
+      /**
+       * Writes carry a shape check as well as an owner check. The client is the only writer and
+       * it always sends these three fields, so anything else is either a bug or someone poking
+       * at the API with a stolen session — and a malformed document is one the app would refuse
+       * to import anyway (`inspectBackup`), leaving the athlete with a backup that silently
+       * restores nothing.
+       *
+       * The 950 kB ceiling mirrors the client's own MAX_BYTES guard (900 kB) with a little head
+       * room: Firestore's hard limit is 1 MiB per document, and a write that exceeds it fails at
+       * the edge in a way that is invisible to the user. The client now prunes to a 180-day
+       * window (lib/demo/retention.ts) precisely so this is never reached in normal use.
+       */
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['bundle', 'updatedAt', 'schema'])
+        && request.resource.data.bundle is string
+        && request.resource.data.bundle.size() < 950 * 1024
+        && request.resource.data.updatedAt is int
+        && request.resource.data.schema is int;
+    }
+
+    // Everything else in the project is closed. There is no other collection today, and a new one
+    // must be opened deliberately here rather than inherit an accidental allow.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

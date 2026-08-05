@@ -40,6 +40,7 @@ import { sleepHM } from '@/lib/health/format';
 import { MorningCheckIn } from './MorningCheckIn';
 import { QuickWorkoutCard } from './QuickWorkoutCard';
 import { FirstRunTour } from './FirstRunTour';
+import { RetentionNotice } from './RetentionNotice';
 
 export function TodayView() {
   const routine = useActiveRoutine();
@@ -148,6 +149,10 @@ export function TodayView() {
           explaining a screen they are not on. It renders nothing at all unless it is owed (see the
           component: it opens from an effect, never from a render-time store read). */}
       <FirstRunTour />
+      {/* The 180-day log bound: warnings from day 150, the trim itself, and the account of what
+          it removed. Renders nothing until there is something to say. Today is the right home —
+          it is where every session and every sign-in lands. */}
+      <RetentionNotice />
       <header>
         <h1
           className="font-display text-display font-bold"

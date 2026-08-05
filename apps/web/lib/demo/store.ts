@@ -49,6 +49,8 @@ import {
   type ShapeIssues,
 } from '@/components/features/shared/workoutLog';
 import { safeSetItem } from '@/lib/storage/safeWrite';
+import { localISO } from '@/components/features/_mock/data';
+import { retentionStatus, type RetentionStatus } from './retention';
 
 export const DEMO_STORAGE_KEY = 'fitforge.demo.v1';
 export const DEMO_USER_ID = 'demo-user';
@@ -103,6 +105,16 @@ export interface DemoState {
    * backup (no such field) reads as, so a pre-tour file simply earns its owner the tour.
    */
   tourSeenAt: string | null;
+  /**
+   * When the athlete was last shown the retention warning (ISO), or null if never.
+   *
+   * NOT merely a "don't nag" marker — it is the GATE on deletion. `pruneOldData` refuses to run
+   * while this is null, so training can never be trimmed from someone who was never told it would
+   * be. See lib/demo/retention.ts.
+   */
+  retentionWarnedAt: string | null;
+  /** When the last prune ran (ISO), so the app can say what happened rather than leave a hole. */
+  retentionPrunedAt: string | null;
 }
 
 export interface WeightEntry {
@@ -127,6 +139,8 @@ export function defaultState(): DemoState {
     progressionScheme: null,
     quickSession: null,
     tourSeenAt: null,
+    retentionWarnedAt: null,
+    retentionPrunedAt: null,
   };
 }
 
@@ -781,6 +795,11 @@ export function normalizeDemoState(value: unknown, issues: ShapeIssues = []): De
     // an issue, and either way the value degrades to "unseen" — the harmless direction: a returning
     // user sees one skippable sheet, rather than the app throwing on a hand-edited number.
     tourSeenAt: readStringOrNull(value.tourSeenAt, 'state.tourSeenAt', issues),
+    // Same absent-is-silent rule as the tour: a backup written before retention existed imports
+    // cleanly and reads as "never warned, never pruned" — the safe starting point, because it
+    // means the first thing that can happen to that athlete is a warning, never a deletion.
+    retentionWarnedAt: readStringOrNull(value.retentionWarnedAt, 'state.retentionWarnedAt', issues),
+    retentionPrunedAt: readStringOrNull(value.retentionPrunedAt, 'state.retentionPrunedAt', issues),
   };
 }
 
@@ -907,6 +926,33 @@ function persist(next: DemoState) {
   cache = next;
   writeStorage(next);
   for (const l of listeners) l();
+}
+
+/**
+ * ANOTHER TAB WROTE. Drop the in-memory copy and tell everyone to re-read.
+ *
+ * Every read in this module is served from `cache`, which is populated once and then only ever
+ * updated by THIS tab's own writes. Two tabs therefore each held their own idea of the truth, and
+ * whichever wrote last flattened the other: log a set in one tab, change a target in the other,
+ * and the second tab's next write — built from its stale snapshot — silently reverted the first.
+ * Signed in, the mirror then uploaded that reverted state, so the loss reached the account too.
+ *
+ * The `storage` event is the browser telling us exactly this, and it never fires in the tab that
+ * made the change, so there is no loop. `key === null` is a whole-storage `clear()` — an erase in
+ * another tab — which invalidates just as surely.
+ *
+ * Registered at module scope, once, because the cache is module scope too: a per-component
+ * listener would have a lifetime shorter than the thing it is protecting.
+ */
+// `addEventListener` is checked, not merely `window`: the unit tests run in Node against a
+// hand-built localStorage stub, and a bare `typeof window` guard would call a method that is not
+// there. Anywhere the listener cannot be attached, the single-context behaviour is unchanged.
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== null && e.key !== DEMO_STORAGE_KEY) return;
+    cache = null;
+    for (const l of listeners) l();
+  });
 }
 
 /* ----------------------------------------------------------------- external-store contract */
@@ -1606,4 +1652,91 @@ export function markTourSeen(): void {
 /** Re-arm the tour — "show me the tour again" from Settings. */
 export function resetTour(): void {
   update((s) => ({ ...s, tourSeenAt: null }));
+}
+
+/* ══════════════════════════════════════════════════════════════════ retention (180 days) ══════
+ *
+ * See lib/demo/retention.ts for why a bound exists and what it deliberately spares. These three
+ * are the store's half: find the oldest prunable record, record that a warning was shown, and
+ * trim — in that order, because the middle one is what unlocks the last one.
+ */
+
+/**
+ * The earliest date among PRUNABLE records — logged workouts and food days.
+ *
+ * Weigh-ins are excluded on purpose (retention.ts): they are never trimmed, so counting them here
+ * would park an athlete permanently in the warning state with nothing to remove when it fired.
+ */
+export function oldestPrunableDate(): string | null {
+  let oldest: string | null = null;
+  const consider = (d: string | null | undefined) => {
+    if (!d || d.length < 10) return;
+    const day = d.slice(0, 10);
+    if (!oldest || day < oldest) oldest = day;
+  };
+  const state = load();
+  for (const day of Object.keys(state.logsByDate)) {
+    if ((state.logsByDate[day]?.length ?? 0) > 0) consider(day);
+  }
+  for (const session of readWorkoutLog().sessions) consider(session.finishedAt);
+  return oldest;
+}
+
+/** Where this athlete stands right now. */
+export function retentionState(today = localISO()): RetentionStatus {
+  return retentionStatus(oldestPrunableDate(), today);
+}
+
+/** Stamp that the warning has actually been put in front of them — the gate on {@link pruneOldData}. */
+export function markRetentionWarned(): void {
+  update((s) => ({ ...s, retentionWarnedAt: new Date().toISOString() }));
+}
+
+export interface PruneResult {
+  sessions: number;
+  foodDays: number;
+  /** the cutoff applied, so the UI can name the window rather than a vague "old data" */
+  cutoff: string;
+}
+
+/**
+ * Trim workouts and food older than the retention window. Returns null when nothing was removed.
+ *
+ * REFUSES WITHOUT A WARNING ON RECORD. `retentionWarnedAt` being null means this athlete has never
+ * been told their log is bounded — which is the case for anyone importing an old backup, or on the
+ * first build after this feature shipped. Deleting their training in that state would be exactly
+ * the silent loss this whole feature exists to prevent, so the caller is expected to show the
+ * warning first and try again later; the data simply waits.
+ *
+ * Weigh-ins, the plan, profile, targets and preferences are untouched — see retention.ts.
+ */
+export function pruneOldData(today = localISO()): PruneResult | null {
+  const state = load();
+  if (!state.retentionWarnedAt) return null;
+
+  const { phase, cutoff } = retentionStatus(oldestPrunableDate(), today);
+  if (phase !== 'due') return null;
+
+  const keptLogs: Record<string, NutritionLog[]> = {};
+  let foodDays = 0;
+  for (const [day, rows] of Object.entries(state.logsByDate)) {
+    if (day >= cutoff) keptLogs[day] = rows;
+    else if (rows.length > 0) foodDays++;
+  }
+
+  const log = readWorkoutLog();
+  const keptSessions = log.sessions.filter((s) => s.finishedAt.slice(0, 10) >= cutoff);
+  const sessions = log.sessions.length - keptSessions.length;
+
+  if (sessions === 0 && foodDays === 0) return null;
+
+  // The workout log is a separate store with its own subscribers; both writes land before the
+  // stamp, so a listener that wakes on either one sees a consistent pair.
+  if (sessions > 0) replaceWorkoutLog({ version: 1, sessions: keptSessions });
+  update((s) => ({
+    ...s,
+    logsByDate: keptLogs,
+    retentionPrunedAt: new Date().toISOString(),
+  }));
+  return { sessions, foodDays, cutoff };
 }

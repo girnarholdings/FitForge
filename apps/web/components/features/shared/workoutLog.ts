@@ -283,6 +283,24 @@ function persist(next: LogState) {
   for (const l of listeners) l();
 }
 
+/**
+ * ANOTHER TAB WROTE — the same rule, and the same reason, as the demo store's listener.
+ *
+ * This slice holds every logged set of every session, which makes a stale cache here the most
+ * expensive kind: finish a workout in one tab and a second tab, still holding the pre-workout
+ * log, reverts it on its next write. Dropping the cache sends the next read to disk.
+ */
+// `addEventListener` is checked, not merely `window`: the unit tests run in Node against a
+// hand-built localStorage stub, and a bare `typeof window` guard would call a method that is not
+// there. Anywhere the listener cannot be attached, the single-context behaviour is unchanged.
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== null && e.key !== WORKOUT_LOG_KEY) return;
+    cache = null;
+    for (const l of listeners) l();
+  });
+}
+
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
