@@ -697,6 +697,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // Still resolving who this is — deciding now would be deciding on no information.
     if (authStatus === 'loading') return;
     if (signedIn && restore.phase !== 'done') return;
+    // LATCH BEFORE LEAVING. /onboarding lives outside this shell, so every bounce unmounts and
+    // remounts AppShell with `checked` back to false — nothing damped an oscillation if anything
+    // ever sent the user back here. The wizard's own escape hatch is the fixed half of that pair
+    // (it now requires a restore that actually brought a plan); this is the other half, so a
+    // future rule that disagrees costs one redirect instead of a hundred a second.
+    setChecked(true);
     router.replace('/onboarding/welcome');
   }, [checked, router, authStatus, signedIn, restore.phase, hasOnboarded]);
 

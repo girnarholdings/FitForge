@@ -32,6 +32,7 @@
  */
 import {
   exportAllState,
+  getState,
   importAllState,
   inspectBackup,
   isOnboarded,
@@ -509,12 +510,20 @@ export async function syncOnSignIn(uid: string): Promise<void> {
 
     if (action === 'pull') {
       /**
-       * An empty browser has nothing to lose, so it takes the account wholesale. A browser that
-       * already holds training is pulling because a SIBLING DEVICE moved the account forward —
-       * and it may still be carrying work of its own that never reached the cloud. Merging is the
-       * only outcome there that cannot delete a logged session.
+       * A TRULY untouched browser takes the account wholesale. Everything else merges.
+       *
+       * `localIsEmpty` means "onboarding is not finished", which is NOT the same as "there is
+       * nothing here to lose". Someone half-way through the wizard has answered real questions —
+       * goals, equipment, injuries — and those live in the same store the import replaces. A
+       * signed-in user reloading mid-onboarding had every answer wiped and was returned to the
+       * welcome screen with no explanation, which for a new user is the last thing they see.
+       *
+       * A device that has pushed before is also carrying possible unsynced work (the session
+       * logged at a gym with no signal). Merging covers both, and on a genuinely empty browser it
+       * is equivalent to overwriting anyway — there is nothing on this side to keep.
        */
-      await pullFromCloud(uid, localIsEmpty ? 'overwrite' : 'merge');
+      const untouched = localIsEmpty && Object.keys(getState().draft).length === 0;
+      await pullFromCloud(uid, untouched ? 'overwrite' : 'merge');
     } else {
       await pushToCloud(uid);
     }
