@@ -116,3 +116,47 @@ test('leaving onboarding needs a pull that actually brought a plan', () => {
   assert.equal(shouldLeaveOnboarding(false, true), false, 'no pull: the wizard owns the screen');
   assert.equal(shouldLeaveOnboarding(false, false), false);
 });
+
+test('a shared phone never uploads the previous athlete to the next one', () => {
+  // The whole point of lastPushedUid. This browser holds training that provably went to account
+  // A; account B is signing in. Before this, an EMPTY account B took the "nothing in the cloud →
+  // push" branch and adopted A's entire history without a word.
+  const foreign: ReconcileFacts = {
+    uid: 'athlete-B',
+    cloudExists: false,
+    cloudHasBundle: false,
+    cloudAt: 0,
+    localIsEmpty: false,
+    lastPushedAt: 1_000,
+    lastPushedUid: 'athlete-A',
+  };
+  assert.equal(decideReconcile(foreign), 'ask', 'a new account must not inherit a stranger’s data');
+  // …and the same holds when B's account DOES have training: still two unrelated histories.
+  assert.equal(
+    decideReconcile({ ...foreign, cloudExists: true, cloudHasBundle: true, cloudAt: 5_000 }),
+    'ask',
+  );
+});
+
+test('the foreign-data guard does not fire on the cases it would ruin', () => {
+  const base: ReconcileFacts = {
+    uid: 'athlete-A',
+    cloudExists: false,
+    cloudHasBundle: false,
+    cloudAt: 0,
+    localIsEmpty: false,
+    lastPushedAt: 1_000,
+    lastPushedUid: 'athlete-A',
+  };
+  // My own device, my own account: push, as always.
+  assert.equal(decideReconcile(base), 'push');
+  // An upgrade from before the uid key existed is not a stranger (see the field's doc).
+  assert.equal(decideReconcile({ ...base, lastPushedUid: null }), 'push');
+  // An empty browser has no data to be foreign, whoever pushed from it last.
+  assert.equal(
+    decideReconcile({ ...base, localIsEmpty: true, lastPushedUid: 'athlete-B' }),
+    'push',
+  );
+  // A first-ever sign-in on a device with local training: never pushed anywhere, so it is theirs.
+  assert.equal(decideReconcile({ ...base, lastPushedAt: 0, lastPushedUid: null }), 'push');
+});

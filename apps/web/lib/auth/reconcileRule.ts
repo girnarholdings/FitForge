@@ -77,6 +77,23 @@ export function shouldLeaveOnboarding(pulled: boolean, hasFinishedPlan: boolean)
 }
 
 export function decideReconcile(f: ReconcileFacts): ReconcileAction {
+  /**
+   * WHOSE TRAINING IS ON THIS DEVICE? Asked before anything else, because the answer changes what
+   * "this device's data" even means.
+   *
+   * A device that last pushed to a DIFFERENT account is holding someone else's training. On a
+   * shared phone that is the ordinary case: one athlete signs out, the next signs in, and the
+   * store still holds the first one's history. The empty-account branch below used to upload it
+   * without a word — a brand-new account's first act was to adopt a stranger's workouts, and the
+   * stranger's sets now lived in an account they had never heard of.
+   *
+   * Asking is the only honest move: the two histories are unrelated, and no timestamp can rank
+   * them. (`lastPushedUid === null` is an app upgrade, not a stranger — see the field's doc.)
+   */
+  const foreignData =
+    !f.localIsEmpty && f.lastPushedUid !== null && f.lastPushedUid !== f.uid;
+  if (foreignData) return 'ask';
+
   // Nothing in the account yet: this device's data becomes the account's data.
   if (!f.cloudExists) return 'push';
 

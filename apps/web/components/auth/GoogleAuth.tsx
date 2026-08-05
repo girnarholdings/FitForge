@@ -21,7 +21,13 @@ import {
   warmSignIn,
 } from '@/lib/auth/firebase';
 import { useAuth } from '@/lib/auth/useUser';
-import { getSyncStatus, startCloudMirror, subscribeSync, syncOnSignIn } from '@/lib/auth/sync';
+import {
+  getSyncStatus,
+  resetSyncSession,
+  startCloudMirror,
+  subscribeSync,
+  syncOnSignIn,
+} from '@/lib/auth/sync';
 
 /**
  * A sign-in that went out via redirect finishes on a PAGE LOAD, not in the click handler that
@@ -124,6 +130,13 @@ export function CloudSyncDriver() {
       if (outcome.reason === 'failed') setRedirectError(outcome.message);
     });
   }, []);
+
+  // Signing out ends the relationship with that account; every flag describing it goes with it.
+  // (Guarded on the resolved state, so the 'loading' window before a session restores is not
+  // mistaken for a sign-out and does not wipe a reconcile that is already under way.)
+  React.useEffect(() => {
+    if (status === 'signed-out') resetSyncSession();
+  }, [status]);
 
   React.useEffect(() => {
     if (status !== 'signed-in' || !user) return;

@@ -128,6 +128,22 @@ export function subscribeRestore(l: () => void): () => void {
   restoreListeners.add(l);
   return () => restoreListeners.delete(l);
 }
+
+/**
+ * FORGET THE LAST SESSION. Called on sign-out, because every flag in this module describes a
+ * relationship with an account that no longer exists.
+ *
+ * `pulled` is the one that bites: it is what tells onboarding "your real plan arrived, stop
+ * asking". Left standing after a sign-out it belongs to nobody — the next person to use this
+ * browser inherits a claim about an account they have never signed into.
+ */
+export function resetSyncSession(): void {
+  restoreState = { phase: 'idle', pulled: false };
+  for (const l of restoreListeners) l();
+  cloudReadOk = false;
+  setConflict(null);
+  setStatus({ state: 'idle' });
+}
 export function getRestoreState(): RestoreState {
   return restoreState;
 }
@@ -455,6 +471,27 @@ export async function syncOnSignIn(uid: string): Promise<void> {
       lastPushedAt: lastPushedAt(),
       lastPushedUid: lastPushedUid(),
     });
+
+    /**
+     * ASKED, BUT THERE IS NOTHING TO COMPARE AGAINST — a shared phone where the NEXT athlete's
+     * account is brand new. The rule says ask (this browser holds training that provably belongs
+     * to another account); the sheet cannot run, because it exists to show two copies side by side
+     * and there is only one.
+     *
+     * So write nothing at all. Pushing would make a new account's first act the adoption of a
+     * stranger's workouts; pulling has nothing to pull. Local training is untouched and the app
+     * works exactly as it does with no account, which is the correct failure direction — and the
+     * status says why, rather than claiming a backup that is not happening.
+     */
+    if (action === 'ask' && !(bundle && inspected?.ok)) {
+      setStatus({
+        state: 'error',
+        detail:
+          'This browser holds training from a different account, so nothing has been uploaded. ' +
+          'Export it from Settings if you want to keep it, then erase and sign in again.',
+      });
+      return;
+    }
 
     if (action === 'ask' && bundle && inspected?.ok) {
       const cloudAt = typeof data.updatedAt === 'number' ? data.updatedAt : 0;
