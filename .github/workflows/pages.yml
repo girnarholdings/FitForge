@@ -158,9 +158,10 @@ jobs:
           # Every page 200s, every asset 404s.
           #
           # So: EMPTY base path, and the site URL is the domain. If the custom domain is ever
-          # removed, the site falls back to https://girnarholdings.github.io/FitForge/ (owner is
-          # girnarholdings — the repo was TRANSFERRED; ZeusNightBolt in `git remote -v` is a stale
-          # 301, never read the owner off it) and both values below must come back:
+          # removed, the site falls back to https://girnarholdings.github.io/FitForge/ (the repo
+          # was TRANSFERRED to girnarholdings; a clone taken before the transfer still carries the
+          # old owner in `git remote -v` and reaches the repo only through GitHub's 301, so never
+          # read the Pages owner off a remote URL) and both values below must come back:
           #   NEXT_PUBLIC_BASE_PATH: /FitForge
           #   NEXT_PUBLIC_SITE_URL: https://girnarholdings.github.io
           # Override without a commit via repo variables PAGES_BASE_PATH / PAGES_SITE_URL.

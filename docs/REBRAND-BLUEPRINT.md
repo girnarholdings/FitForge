@@ -7,7 +7,7 @@
 > `apps/web/app/globals.css` is the single source of truth for live tokens; the sections below are
 > kept as the decision record they were.
 ### Gold-on-Dark "Forged" Edition · authoritative spec for the Opus build fleet + Fable visual/UX agent
-**Date:** 2026-07-20 · **Repo:** `ZeusNightBolt/FitForge` · **Target:** `apps/web` (Next.js 15 App Router, Tailwind v4, static export → GitHub Pages, fully client-side Local Mode)
+**Date:** 2026-07-20 · **Repo:** `girnarholdings/FitForge` (recorded here as `ZeusNightBolt/FitForge`; the repo was transferred after this was written) · **Target:** `apps/web` (Next.js 15 App Router, Tailwind v4, static export → GitHub Pages, fully client-side Local Mode)
 
 ---
 
