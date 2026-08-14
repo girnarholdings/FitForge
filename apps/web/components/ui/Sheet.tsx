@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { AnimatePresence, m, SPRING } from './motion';
+import { useReducedMotion } from 'motion/react';
+import { useDragDismiss } from './useDragDismiss';
 
 export interface SheetProps {
   open: boolean;
@@ -20,12 +21,17 @@ export interface SheetProps {
  * from the bottom reads as a layer covering a page that is still there — which is exactly the
  * mental model needed for "close this and I am back where I was".
  *
- * The exit is faster than the entrance (spring in, short tween out) because dismissal should feel
- * immediate; waiting for a bouncy spring to unwind before your content returns is the commonest
- * way sheets end up feeling sluggish.
+ * IT IS DRAGGABLE, and that is the point of the grabber pill at the top. See
+ * {@link useDragDismiss} for the physics: 1:1 tracking, rubber-banding at the top edge, momentum
+ * projection on release, velocity handoff into the settle, and an interrupt that starts from the
+ * live on-screen position. For a year the pill was drawn and nothing was behind it.
  *
- * `AnimatePresence` is what makes the exit possible at all — the sheet stays mounted until it has
- * finished leaving, instead of vanishing the moment `open` flips.
+ * MOUNTING IS MANAGED HERE RATHER THAN BY `AnimatePresence`, because the panel's travel is owned
+ * by the drag layer. Two systems writing `transform` on the same node is how a grabbed sheet ends
+ * up jumping: the drag writes a live offset, then the exit animation restarts from the value the
+ * animation library still believes is current. One owner, no jumps. The scrim keeps its own plain
+ * CSS transition — its opacity is never something the finger drives directly, except during a
+ * drag, where the drag layer fades it in lockstep with the sheet.
  *
  * FOCUS IS MANAGED HERE, ONCE, so every sheet in the app inherits it. `aria-modal` is a promise:
  * a screen reader is told the page behind the scrim does not exist, so the keyboard must agree —
@@ -40,10 +46,65 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), ' +
   'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** Below this the sheet is a bottom sheet and drags; above it, a centred dialog and does not. */
+const DRAGGABLE_MAX_WIDTH = 640;
+
 export function Sheet({ open, onClose, title, children, className }: SheetProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const panelRef = React.useRef<HTMLDivElement>(null);
   const restoreRef = React.useRef<HTMLElement | null>(null);
+  const reduced = useReducedMotion() ?? false;
+
+  /**
+   * The panel outlives `open` by the length of its exit, so mounting is its own state. `shown`
+   * is what the scrim's CSS transition keys off — it flips a frame after mount so there is an
+   * off→on change to animate rather than an element that was simply born opaque.
+   */
+  const [mounted, setMounted] = React.useState(open);
+  const [shown, setShown] = React.useState(false);
+
+  // Mounted in the SAME COMMIT that `open` flips, by adjusting state during render rather than
+  // from an effect. This is not a style preference: the focus effect schedules a rAF to move the
+  // keyboard into the panel, and an effect-driven mount can commit AFTER that frame — the rAF then
+  // finds no panel, focus never enters, and an `aria-modal` dialog is left telling a screen reader
+  // the page behind does not exist while the keyboard is still standing on it.
+  if (open && !mounted) setMounted(true);
+
+  const [draggable, setDraggable] = React.useState(false);
+  React.useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${DRAGGABLE_MAX_WIDTH - 1}px)`);
+    const sync = () => setDraggable(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  const drag = useDragDismiss({ onDismiss: onClose, enabled: draggable && mounted, reduced });
+  const panelRef = drag.ref;
+
+  // The exit. `open` has already gone false, but the panel stays mounted for the length of its
+  // travel so it can leave the way it arrived instead of blinking out.
+  const { animateIn, animateOut } = drag;
+  React.useEffect(() => {
+    if (open || !mounted) return;
+    setShown(false);
+    let live = true;
+    animateOut(() => {
+      if (live) setMounted(false);
+    });
+    return () => {
+      live = false;
+    };
+  }, [open, mounted, animateOut]);
+
+  // The entrance runs in a layout effect so the panel is already parked below the fold before the
+  // browser paints — starting it in a passive effect shows one frame of the sheet at rest first,
+  // which is the flash that makes a sheet look like it teleported in and then decided to animate.
+  React.useLayoutEffect(() => {
+    if (!mounted || !open) return;
+    animateIn();
+    const raf = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(raf);
+  }, [mounted, open, animateIn]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -64,8 +125,8 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
     // Captured before focus moves anywhere, so close can hand the keyboard back to the trigger.
     restoreRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    // The panel mounts in the same commit `open` flips, but under AnimatePresence its first frame
-    // is still being set up — a rAF guarantees the node exists and is styled before it is focused.
+    // The panel mounts in the same commit `open` flips, but the entrance has only just parked it
+    // below the fold — a rAF guarantees the node exists and is positioned before it is focused.
     // `preventScroll` because the browser would otherwise yank the page toward an element that is
     // mid-slide from off-screen.
     const raf = requestAnimationFrame(() => {
@@ -126,47 +187,57 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
     }
   };
 
+  if (!mounted) return null;
+
   return (
-    <AnimatePresence>
-      {open && (
+    <div
+      ref={containerRef}
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onKeyDown={onTabKey}
+      /* A sheet is a layer OVER the screen, so nothing inside it belongs to the screen's own
+         gestures. Without this, dragging a sheet on Nutrition also swipes the day underneath it. */
+      data-no-swipe-nav
+    >
+      <button
+        ref={drag.scrimRef as React.RefObject<HTMLButtonElement>}
+        aria-label="Close"
+        className={cn(
+          'ff-sheet-scrim absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200',
+          shown ? 'opacity-100' : 'opacity-0',
+        )}
+        onClick={onClose}
+      />
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        data-testid="sheet-panel"
+        onPointerDown={drag.onPointerDown}
+        className={cn(
+          // `outline-none`: the panel is focusable only as the keyboard's landing point on
+          // open — a visible ring around the whole sheet would read as one giant button.
+          'relative z-10 max-h-[85dvh] w-full max-w-[430px] overflow-y-auto rounded-t-3xl bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none',
+          'sm:rounded-3xl',
+          // A claimed drag calls preventDefault on move; telling the browser up front that this
+          // surface handles its own vertical panning is what stops iOS starting a rubber-band
+          // page scroll in the same gesture.
+          draggable && 'touch-pan-y overscroll-contain',
+          className,
+        )}
+      >
+        {/* The grabber. `sm:hidden` because above the phone breakpoint this is a centred dialog
+            with nothing to drag — and an affordance for a gesture that is switched off is exactly
+            the lie this whole change existed to remove. */}
         <div
-          ref={containerRef}
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          onKeyDown={onTabKey}
-        >
-          <m.button
-            aria-label="Close"
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={onClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          />
-          <m.div
-            ref={panelRef}
-            tabIndex={-1}
-            className={cn(
-              // `outline-none`: the panel is focusable only as the keyboard's landing point on
-              // open — a visible ring around the whole sheet would read as one giant button.
-              'relative z-10 max-h-[85dvh] w-full max-w-[430px] overflow-y-auto rounded-t-3xl bg-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl outline-none',
-              'sm:rounded-3xl',
-              className,
-            )}
-            initial={{ y: '100%', opacity: 0.6 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0, transition: { duration: 0.16, ease: 'easeIn' } }}
-            transition={SPRING.sheet}
-          >
-            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-border sm:hidden" aria-hidden />
-            {title && <h2 className="mb-3 text-lg font-semibold text-foreground">{title}</h2>}
-            {children}
-          </m.div>
-        </div>
-      )}
-    </AnimatePresence>
+          data-testid="sheet-grabber"
+          className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-border sm:hidden"
+          aria-hidden
+        />
+        {title && <h2 className="mb-3 text-lg font-semibold text-foreground">{title}</h2>}
+        {children}
+      </div>
+    </div>
   );
 }

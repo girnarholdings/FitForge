@@ -225,6 +225,95 @@
   --dock-clearance: calc(9rem + env(safe-area-inset-bottom));
 }
 
+/* ── accessibility: the two signals that are not reduced-motion ──────────────
+   `prefers-reduced-motion` has been honoured app-wide from the start (the root
+   MotionConfig plus the per-component CSS gates further down). The OS exposes
+   two more preferences that this app answered with silence until now, and both
+   are about MATERIAL rather than movement:
+
+     · prefers-reduced-transparency — set by people for whom a blurred backdrop
+       showing through a panel makes the text on that panel unreadable. The
+       correct response is not "less blur", it is NO blur and an opaque surface.
+     · prefers-contrast: more — set by people who need edges they can find. The
+       response is defined borders and a foreground that is not a soft grey.
+
+   Both are handled at the TOKEN level wherever possible, so a component written
+   next year inherits the behaviour without knowing these queries exist. Only
+   the backdrop filters, which Tailwind emits as utilities rather than through a
+   token, have to be named directly.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-transparency: reduce) {
+  /* Every backdrop filter in the app, off. There is no "gentle" version of this
+     preference — a person who set it wants the layer behind to stop bleeding
+     through, and a halved blur radius still bleeds. */
+  .backdrop-blur-xs,
+  .backdrop-blur-sm,
+  .backdrop-blur,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* The sheet scrim stops being a blurred veil and becomes a plain dark ground.
+     78% rather than fully opaque because the sheet still has to read as a layer
+     OVER a page, not as a new page — losing that costs the "close this and I am
+     back where I was" model the whole component is built on. */
+  .ff-sheet-scrim {
+    background-color: rgb(0 0 0 / 0.78);
+  }
+
+  /* Surfaces that float over content composite against a solid fill instead. */
+  :root {
+    --surface-veil: var(--surface-2);
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    /* Borders become the visible ones. The whisper-weight `--border` exists so
+       elevation can be carried by fill rather than hairlines; that trade is
+       exactly wrong for someone who needs to locate an edge. */
+    --border: var(--border-strong);
+    --muted-foreground: #d8cfc4;
+    --surface-veil: var(--surface-2);
+  }
+
+  :root[data-theme='light'] {
+    --border: var(--border-strong);
+    --muted-foreground: #3c424e;
+  }
+
+  .backdrop-blur-xs,
+  .backdrop-blur-sm,
+  .backdrop-blur,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .ff-sheet-scrim {
+    background-color: rgb(0 0 0 / 0.85);
+  }
+
+  /* A floating surface with no blur and no border is a rectangle of nearly the
+     same colour sitting on the page. Give the ones that float a real edge. */
+  .ff-veil {
+    border: 1px solid var(--border-strong);
+  }
+}
+
+/* The fill a floating translucent surface falls back to. Unset by default, so a
+   component's own `bg-elevated/95` applies untouched; the two queries above
+   point it at a solid token, and only then does this rule do anything. */
+.ff-veil {
+  background-color: var(--surface-veil, transparent);
+}
+
 /* ── the gym material layer ──────────────────────────────────────────────────
    Two static surface treatments. Neither animates, so neither has anything to
    say to prefers-reduced-motion — that is exactly why they are CSS and the

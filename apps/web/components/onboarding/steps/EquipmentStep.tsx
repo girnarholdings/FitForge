@@ -770,7 +770,7 @@ export function EquipmentStep() {
                   className={cn(
                     'inline-flex items-center gap-1.5 rounded-chip border border-accent/50 bg-surface-2/92 px-3 py-1',
                     'font-display text-[11px] font-bold uppercase tracking-[0.14em] text-accent',
-                    'shadow-[var(--shadow-card)] backdrop-blur-sm',
+                    'ff-veil shadow-[var(--shadow-card)] backdrop-blur-sm',
                     !reduced && 'ff-pop-fade',
                   )}
                   style={{ ['--ff-dur' as string]: '1400ms' }}
@@ -1151,7 +1151,7 @@ function OverlayScreen({
             key={toast.id}
             className={cn(
               'rounded-card border border-accent/45 bg-elevated/95 px-4 py-2.5 text-center',
-              'shadow-[var(--shadow-pop)] backdrop-blur-sm',
+              'ff-veil shadow-[var(--shadow-pop)] backdrop-blur-sm',
               !reduced && 'ff-pop-fade',
             )}
             style={{ ['--ff-dur' as string]: '1700ms' }}

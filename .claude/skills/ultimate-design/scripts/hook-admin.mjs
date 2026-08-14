@@ -39,11 +39,11 @@ import {
 
 const ACTIONS = new Set(['status', 'on', 'off', 'ignore-rule', 'ignore-file', 'ignore-value', 'reset']);
 const IMPECCABLE_HOOK_COMMAND_MARKERS = [
-  'skills/impeccable/scripts/hook-probe.mjs',
-  'skills/impeccable/scripts/hook.mjs',
-  'skills/impeccable/scripts/hook-before-edit.mjs',
-  'skills/impeccable/scripts/hook-after-edit.mjs',
-  'skills/impeccable/scripts/hook-stop.mjs',
+  'skills/ultimate-design/scripts/hook-probe.mjs',
+  'skills/ultimate-design/scripts/hook.mjs',
+  'skills/ultimate-design/scripts/hook-before-edit.mjs',
+  'skills/ultimate-design/scripts/hook-after-edit.mjs',
+  'skills/ultimate-design/scripts/hook-stop.mjs',
 ];
 const TIMEOUT_SECONDS = 5;
 const STATUS_MESSAGE = 'Checking UI changes';
@@ -71,7 +71,7 @@ function stopManifestEntry(command) {
 const HOOK_MANIFEST_TARGETS = [
   {
     provider: '.claude',
-    skillRel: '.claude/skills/impeccable',
+    skillRel: '.claude/skills/ultimate-design',
     destRel: '.claude/settings.local.json',
     sharedDestRel: '.claude/settings.json',
     manifest: () => ({
@@ -83,20 +83,20 @@ const HOOK_MANIFEST_TARGETS = [
             hooks: [
               {
                 type: 'command',
-                command: 'node "${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs"',
+                command: 'node "${CLAUDE_PROJECT_DIR}/.claude/skills/ultimate-design/scripts/hook.mjs"',
                 timeout: TIMEOUT_SECONDS,
                 statusMessage: STATUS_MESSAGE,
               },
             ],
           },
         ],
-        Stop: [stopManifestEntry('node "${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs"')],
+        Stop: [stopManifestEntry('node "${CLAUDE_PROJECT_DIR}/.claude/skills/ultimate-design/scripts/hook.mjs"')],
       },
     }),
   },
   {
     provider: '.agents',
-    skillRel: '.agents/skills/impeccable',
+    skillRel: '.agents/skills/ultimate-design',
     destRel: '.codex/hooks.json',
     manifest: () => ({
       hooks: {
@@ -106,27 +106,27 @@ const HOOK_MANIFEST_TARGETS = [
             hooks: [
               {
                 type: 'command',
-                command: 'node ".agents/skills/impeccable/scripts/hook.mjs"',
+                command: 'node ".agents/skills/ultimate-design/scripts/hook.mjs"',
                 timeout: TIMEOUT_SECONDS,
                 statusMessage: STATUS_MESSAGE,
               },
             ],
           },
         ],
-        Stop: [stopManifestEntry('node ".agents/skills/impeccable/scripts/hook.mjs"')],
+        Stop: [stopManifestEntry('node ".agents/skills/ultimate-design/scripts/hook.mjs"')],
       },
     }),
   },
   {
     provider: '.cursor',
-    skillRel: '.cursor/skills/impeccable',
+    skillRel: '.cursor/skills/ultimate-design',
     destRel: '.cursor/hooks.json',
     manifest: () => ({
       version: 1,
       hooks: {
         preToolUse: [
           {
-            command: 'node ".cursor/skills/impeccable/scripts/hook-before-edit.mjs"',
+            command: 'node ".cursor/skills/ultimate-design/scripts/hook-before-edit.mjs"',
             timeout: TIMEOUT_SECONDS,
           },
         ],
@@ -139,7 +139,7 @@ const HOOK_MANIFEST_TARGETS = [
     // the cloud/app agent. Schema differs: lowercase `postToolUse`, flat entries,
     // `bash`/`timeoutSec`, and a `matcher` regex against the `edit`/`create` tools.
     provider: '.github',
-    skillRel: '.github/skills/impeccable',
+    skillRel: '.github/skills/ultimate-design',
     destRel: '.github/hooks/impeccable.json',
     manifest: () => ({
       version: 1,
@@ -148,7 +148,7 @@ const HOOK_MANIFEST_TARGETS = [
           {
             type: 'command',
             matcher: 'edit|create|apply_patch',
-            bash: 'node "$(git rev-parse --show-toplevel)/.github/skills/impeccable/scripts/hook.mjs"',
+            bash: 'node "$(git rev-parse --show-toplevel)/.github/skills/ultimate-design/scripts/hook.mjs"',
             timeoutSec: TIMEOUT_SECONDS,
           },
         ],

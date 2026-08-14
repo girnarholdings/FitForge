@@ -85,7 +85,7 @@ export function Composer({
       <div className="bg-surface px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] pt-1 md:bg-transparent md:px-0 md:pb-0 md:pt-0">
         <div className="mx-auto w-full max-w-[720px]">
           {showExamples && (
-            <div className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5">
+            <div className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5" data-no-swipe-nav>
               {EXAMPLES.map((e) => (
                 <button
                   key={e}

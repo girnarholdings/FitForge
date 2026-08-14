@@ -21,6 +21,7 @@ import {
 import { useDemoState, useNutritionTargets, useLogsForDate } from '@/lib/demo/useDemo';
 import { useSelectedDate, addDays, dayLabel, isToday } from '@/lib/demo/selectedDate';
 import { DateNav } from '@/components/features/shared/DateNav';
+import { useSwipeDay } from '@/components/ui/useSwipeDay';
 import { foodById, FOOD_COUNT } from '@/lib/food/index';
 import {
   computeMacros,
@@ -55,6 +56,11 @@ export function NutritionView() {
   // what a confirmed draft is stamped with — follows this one value, so backfilling last night's
   // dinner is the same flow as logging lunch now.
   const [date, setDate] = useSelectedDate();
+  // Swipe the screen sideways to change the day. The chevrons and the week strip stay — this
+  // is the thumb's version of the same control, not a replacement for it.
+  const swipeRef = useSwipeDay({
+    onNavigate: (dir) => setDate(addDays(date, dir)),
+  });
   const { logs, setLogs } = useLogsForDate(date);
   const state = useDemoState();
   /** Most recent logged weight, else what they told onboarding, else nothing. */
@@ -250,7 +256,12 @@ export function NutritionView() {
   return (
     /* Extra bottom room on mobile only: the composer is fixed above the floating tab bar, so the
        last meal card would otherwise sit permanently under it with no way to scroll clear. */
-    <div className="ff-dense space-y-3.5 pb-20 md:pb-0" data-testid="nutrition-view">
+    <div
+      ref={swipeRef}
+      className="ff-dense space-y-3.5 pb-20 md:pb-0"
+      data-testid="nutrition-view"
+      style={{ touchAction: 'pan-y' }}
+    >
       <header>
         <h1 className="font-display text-display font-bold">Nutrition</h1>
       </header>

@@ -20,6 +20,7 @@ import {
 } from '@/lib/demo/useDemo';
 import {
   useSelectedDate,
+  addDays,
   dayLabel,
   dayOffset,
   isToday,
@@ -28,6 +29,7 @@ import {
   parseISO,
 } from '@/lib/demo/selectedDate';
 import { DateNav } from '@/components/features/shared/DateNav';
+import { useSwipeDay } from '@/components/ui/useSwipeDay';
 import { exerciseCountLabel } from '@/lib/demo/generate';
 import { useWorkoutSessions, weeklyStreak } from '@/components/features/shared/workoutLog';
 import { setQuickSession } from '@/lib/demo/store';
@@ -48,6 +50,11 @@ export function TodayView() {
   // already had an answer under the weekly blueprint — nothing was scheduling-bound, the screen
   // was simply hard-wired to `new Date()`.
   const [date, setDate] = useSelectedDate();
+  // Swipe the screen sideways to change the day. The chevrons and the week strip stay — this
+  // is the thumb's version of the same control, not a replacement for it.
+  const swipeRef = useSwipeDay({
+    onNavigate: (dir) => setDate(addDays(date, dir)),
+  });
   const viewing = React.useMemo(() => parseISO(date), [date]);
   const day = todaysRoutineDay(routine, viewing);
   const onToday = isToday(date);
@@ -143,7 +150,12 @@ export function TodayView() {
     /* `ff-dense` re-scales the whole type ramp for this screen (see globals.css) — Today stacks
        seven cards of numbers, and at the house scale they read zoomed-in on a 390px phone. The
        stack gap comes down with it so the saving is vertical as well as textual. */
-    <div className="ff-dense space-y-4" data-testid="today-view">
+    <div
+      ref={swipeRef}
+      className="ff-dense space-y-4"
+      data-testid="today-view"
+      style={{ touchAction: 'pan-y' }}
+    >
       {/* THE FIRST-RUN TOUR. Mounted on Today because Today is where onboarding lands and where a
           returning user starts — orienting someone on the five tabs anywhere else would mean
           explaining a screen they are not on. It renders nothing at all unless it is owed (see the

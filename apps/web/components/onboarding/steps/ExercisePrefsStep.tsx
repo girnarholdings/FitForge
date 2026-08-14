@@ -863,7 +863,7 @@ export function ExercisePrefsStep() {
             data-testid={toast.testId}
             className={cn(
               'rounded-card border border-accent/45 bg-elevated/95 px-4 py-2.5 text-center',
-              'shadow-[var(--shadow-pop)] backdrop-blur-sm',
+              'ff-veil shadow-[var(--shadow-pop)] backdrop-blur-sm',
               !reduced && 'ff-pop-fade',
             )}
             style={{ ['--ff-dur' as string]: '2200ms' }}
@@ -876,7 +876,7 @@ export function ExercisePrefsStep() {
       {/* single-level undo snackbar for cross-list moves */}
       {undo && (
         <div className="fixed inset-x-0 bottom-24 z-[70] flex justify-center px-6">
-          <div className="flex items-center gap-3 rounded-card border border-border bg-elevated/95 px-4 py-2 shadow-[var(--shadow-pop)] backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-card border border-border bg-elevated/95 px-4 py-2 shadow-[var(--shadow-pop)] ff-veil backdrop-blur-sm">
             <span className="text-[13px] text-foreground">{undo.text}</span>
             <button
               type="button"
