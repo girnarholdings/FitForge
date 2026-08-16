@@ -34,6 +34,58 @@ async function drag(
   await page.mouse.up();
 }
 
+/**
+ * A flick with a GUARANTEED speed, dispatched through CDP with explicit event timestamps.
+ *
+ * `page.mouse` cannot express "fast": its moves are paced by the test runner, so on a loaded CI
+ * runner the same call that is a 1400px/s flick locally arrives as a 200px/s haul, the projection
+ * correctly declines to commit, and the test fails having proved nothing about the code. CDP takes
+ * the timestamp as a parameter and Chromium passes it straight through to `event.timeStamp`, which
+ * is the value the velocity tracker reads — so the gesture's speed is stated, not hoped for.
+ *
+ * The physics itself is unit-tested in `lib/gesture/physics.test.ts`; what this proves is that a
+ * real browser gesture at a known speed reaches the hook and resolves the way the maths says.
+ */
+async function flick(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  opts: { durationMs?: number; steps?: number; holdMs?: number } = {},
+) {
+  const { durationMs = 50, steps = 6, holdMs = 0 } = opts;
+  const cdp = await page.context().newCDPSession(page);
+  const base = Date.now() / 1000;
+
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mousePressed',
+    x: from.x,
+    y: from.y,
+    button: 'left',
+    buttons: 1,
+    clickCount: 1,
+    timestamp: base,
+  });
+  for (let i = 1; i <= steps; i++) {
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: from.x + ((to.x - from.x) * i) / steps,
+      y: from.y + ((to.y - from.y) * i) / steps,
+      button: 'left',
+      buttons: 1,
+      timestamp: base + (durationMs / 1000) * (i / steps),
+    });
+  }
+  await cdp.send('Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
+    x: to.x,
+    y: to.y,
+    button: 'left',
+    buttons: 0,
+    clickCount: 1,
+    timestamp: base + (durationMs + holdMs) / 1000,
+  });
+}
+
 async function boxOf(locator: Locator) {
   const box = await locator.boundingBox();
   if (!box) throw new Error('expected the element to be laid out');
@@ -122,9 +174,10 @@ test.describe('bottom sheet drag-to-dismiss', () => {
     const box = await restingBox(panel);
     const x = box.x + box.width / 2;
 
-    // Only 70px of travel, well under the distance threshold, but delivered fast and released
-    // while still moving. Projection is what turns this into a dismissal.
-    await drag(page, { x, y: box.y + 8 }, { x, y: box.y + 78 }, { steps: 4 });
+    // Only 70px of travel, well under the distance threshold, but delivered at 1400px/s and
+    // released while still moving. Projection is the only thing that can turn this into a
+    // dismissal, which is exactly what the test is for.
+    await flick(page, { x, y: box.y + 8 }, { x, y: box.y + 78 }, { durationMs: 50 });
 
     await expect(page.getByRole('dialog')).toBeHidden({ timeout: 3000 });
   });
@@ -182,7 +235,7 @@ test.describe('bottom sheet drag-to-dismiss', () => {
     const panel = await openASheet(page);
     const box = await restingBox(panel);
     const x = box.x + box.width / 2;
-    await drag(page, { x, y: box.y + 8 }, { x, y: box.y + 78 }, { steps: 4 });
+    await flick(page, { x, y: box.y + 8 }, { x, y: box.y + 78 }, { durationMs: 50 });
     await expect(page.getByRole('dialog')).toBeHidden({ timeout: 3000 });
   });
 
