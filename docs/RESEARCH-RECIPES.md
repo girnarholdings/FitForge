@@ -8,6 +8,10 @@ catalog. That means every recipe here is **original text** (no copied recipe con
 freshly written), and every nutrient number must be **derivable and internally consistent**, in
 the same spirit as `apps/web/lib/food/core.json` ("Nothing is ever invented").
 
+> **Shipped elsewhere.** The recommendation below was implemented as `fixtures/recipes.v1.json`
+> with the engine in `apps/web/lib/diet/`. Neither `seed/data/recipes.json` nor
+> `apps/web/lib/food/recipes.core.json` exists — read this section as the proposal it was.
+
 **Deliverable:** 100 curated recipes (the `data` payload of this research task). Recommended home:
 `seed/data/recipes.json` as the canonical copy, bundled into the app the same way
 `lib/food/core.json` is (e.g. `apps/web/lib/food/recipes.core.json`), with the validator below

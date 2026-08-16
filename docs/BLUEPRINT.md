@@ -3,6 +3,13 @@
 **Version:** 1.0 · **Date:** 2026-07-19 · **Author:** Fable master architect (prewalk)
 **License of this project:** Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0) — see WS-7.
 
+> **WHERE THE BUILD DIVERGED.** Two contractual items below were never built as specified and
+> the code is the truth on both. (1) **Auth is Firebase, not Supabase SSR.** There is no
+> `middleware.ts` and no `lib/supabase/**` — a static export has no server for either to run on;
+> see `apps/web/lib/auth/`. The Supabase paths named in §9 were removed once it was clear they
+> had never been imported. (2) **iOS is a WKWebView shell**, not a native SwiftUI implementation
+> of these screens; see `apps/ios/README.md`. Everything else remains contractual.
+
 This is the single authoritative blueprint for the FitForge MVP. A fleet of parallel engineering
 agents will execute Section 9 against Sections 4/6/7 verbatim. Where this document gives exact
 names (slugs, enum values, table names, file paths), they are **contractual** — do not rename.

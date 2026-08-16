@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@fitforge/shared": "*",
-    "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.0",
     "firebase": "^12.16.0",
     "motion": "^12.42.2",

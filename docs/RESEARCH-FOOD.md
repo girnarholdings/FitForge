@@ -1,5 +1,9 @@
 # FitForge Nutrition Rebuild — Food Data + Conversational Logging Research
 
+> **Shipped elsewhere.** The proposed six-stage `seed/food/` pipeline was implemented as the
+> single importer `seed/import-usda.mjs`, run in CI by `.github/workflows/pages.yml` and emitting
+> the lazy shards under `apps/web/public/food/`. There is no `seed/food/` directory.
+
 Date: 2026-07-26. Constraint recap: Next.js **static export** on GitHub Pages, no runtime server/API keys,
 localStorage-only "Local Mode", assets served same-origin (lazy static JSON/binary chunks OK), repo is
 **CC BY-SA 4.0** so every shipped dataset must be legally redistributable. First keystroke of search must

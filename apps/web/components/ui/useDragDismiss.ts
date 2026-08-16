@@ -72,6 +72,14 @@ export function useDragDismiss({ onDismiss, enabled, reduced }: DragDismissOptio
   const progressRef = React.useRef(0);
 
   const raf = React.useRef<number | null>(null);
+  /**
+   * The entrance defers its spring by one frame so the sheet paints once below the fold first.
+   * That deferred frame has to be cancellable, because a sheet can be dismissed INSIDE it — a
+   * keyboard user pressing Escape the instant a sheet appears, or a test doing the same. If it
+   * fires anyway it calls `animateTo`, which cancels the exit animation whose completion callback
+   * is the thing that unmounts the sheet, and the sheet is then stuck on screen forever.
+   */
+  const entranceRaf = React.useRef<number | null>(null);
   const offset = React.useRef(0);
   /**
    * True from the moment the sheet is committed to leaving until it has left.
@@ -118,6 +126,13 @@ export function useDragDismiss({ onDismiss, enabled, reduced }: DragDismissOptio
     }
   }, []);
 
+  const cancelEntrance = React.useCallback(() => {
+    if (entranceRaf.current !== null) {
+      cancelAnimationFrame(entranceRaf.current);
+      entranceRaf.current = null;
+    }
+  }, []);
+
   /**
    * Critically-damped analytic spring toward `target`, seeded with `v0`.
    *
@@ -153,7 +168,13 @@ export function useDragDismiss({ onDismiss, enabled, reduced }: DragDismissOptio
     [paint, reduced, stopAnimation],
   );
 
-  React.useEffect(() => stopAnimation, [stopAnimation]);
+  React.useEffect(
+    () => () => {
+      stopAnimation();
+      cancelEntrance();
+    },
+    [stopAnimation, cancelEntrance],
+  );
 
   const onPointerDown = React.useCallback(
     (e: React.PointerEvent) => {
@@ -279,11 +300,18 @@ export function useDragDismiss({ onDismiss, enabled, reduced }: DragDismissOptio
     const node = ref.current;
     if (!node) return;
     exiting.current = false;
+    cancelEntrance();
     paint(node.offsetHeight || 1);
     // A frame at the offscreen position before the spring starts, so the first visible frame is
     // the sheet below the fold rather than the sheet already halfway up.
-    requestAnimationFrame(() => animateTo(0, 0));
-  }, [animateTo, paint]);
+    entranceRaf.current = requestAnimationFrame(() => {
+      entranceRaf.current = null;
+      // A dismissal that landed inside this frame owns the sheet now; starting the entrance on
+      // top of it would cancel the exit and strand the sheet.
+      if (exiting.current) return;
+      animateTo(0, 0);
+    });
+  }, [animateTo, paint, cancelEntrance]);
 
   /**
    * The exit. Enter and exit travel the same path in opposite directions (§7) — a sheet that
@@ -292,6 +320,8 @@ export function useDragDismiss({ onDismiss, enabled, reduced }: DragDismissOptio
   const animateOut = React.useCallback(
     (done: () => void) => {
       const node = ref.current;
+      // Before the latch, so a still-pending entrance frame can never outlive the decision to go.
+      cancelEntrance();
       exiting.current = true;
       if (!node) {
         done();
@@ -299,7 +329,7 @@ export function useDragDismiss({ onDismiss, enabled, reduced }: DragDismissOptio
       }
       animateTo(node.offsetHeight || 1, MIN_EXIT_VELOCITY * 0.5, done);
     },
-    [animateTo],
+    [animateTo, cancelEntrance],
   );
 
   return { ref, scrimRef, progressRef, onPointerDown, animateIn, animateOut };

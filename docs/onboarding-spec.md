@@ -1,6 +1,6 @@
 # FitForge — Onboarding Specification
 
-> Condensed from [`BLUEPRINT.md`](./BLUEPRINT.md) §2.2 and §7. The blueprint holds the frozen, screen-exact detail; this is the working summary. The web implementation lives in `apps/web/app/onboarding/[step]/`, the iOS implementation in `apps/ios/FitForge/Features/Onboarding/`.
+> Condensed from [`BLUEPRINT.md`](./BLUEPRINT.md) §2.2 and §7. The blueprint holds the frozen, screen-exact detail; this is the working summary. The web implementation lives in `apps/web/app/onboarding/[step]/`. There is no native iOS onboarding: `apps/ios` is a thin WKWebView shell around goforge.fit, so iPhone users run the web flow above and the shell adds only what a webview cannot do itself (see `apps/ios/README.md`).
 
 ## Goal
 

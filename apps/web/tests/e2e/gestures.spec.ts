@@ -159,6 +159,33 @@ test.describe('bottom sheet drag-to-dismiss', () => {
     await expect(panel).toBeVisible();
   });
 
+  test('dismissing inside the entrance frame still closes it', async ({ page }) => {
+    /**
+     * The regression this exists for: the entrance defers its spring by one frame, and a dismissal
+     * landing INSIDE that frame used to let the entrance cancel the exit — and the exit's
+     * completion callback is what unmounts the sheet. The sheet stayed on screen forever,
+     * swallowing every click on the page behind it. No delay here on purpose.
+     */
+    await page.goto('/exercises');
+    await page.getByTestId('muscle-filter-open').click();
+    await expect(page.getByTestId('sheet-panel')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden({ timeout: 3000 });
+  });
+
+  test('open, dismiss, reopen leaves a sheet that still drags', async ({ page }) => {
+    // The exit latch must be cleared by the next entrance, or the second open is undismissable.
+    await openASheet(page);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden({ timeout: 3000 });
+
+    const panel = await openASheet(page);
+    const box = await restingBox(panel);
+    const x = box.x + box.width / 2;
+    await drag(page, { x, y: box.y + 8 }, { x, y: box.y + 78 }, { steps: 4 });
+    await expect(page.getByRole('dialog')).toBeHidden({ timeout: 3000 });
+  });
+
   test('the escape hatch still works and focus returns to the trigger', async ({ page }) => {
     await openASheet(page);
     await page.keyboard.press('Escape');
