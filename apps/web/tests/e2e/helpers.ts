@@ -215,7 +215,10 @@ export async function completeOnboarding(page: Page, hooks: OnboardingHooks = {}
   await enterDemo(page);
 
   // 2 · Goals — pick a primary goal.
-  await expect(page.getByText("What are you training for?")).toBeVisible();
+  // BY ROLE, not by text. Next 16's route announcer mirrors the current page's <h1> into a live
+  // region (`#__next-route-announcer__`), so a bare getByText on a page title now matches two
+  // elements and trips Playwright's strict mode. The announcer is a div, never a heading.
+  await expect(page.getByRole('heading', { name: 'What are you training for?' })).toBeVisible();
   await page.getByText('Lose fat').click();
   await cont(page);
 
@@ -734,7 +737,15 @@ export async function firebaseApiKey(page: Page): Promise<string | null> {
       const res = await page.request.get(route).catch(() => null);
       if (!res?.ok()) continue;
       const html = await res.text();
-      for (const m of html.matchAll(/\/_next\/[A-Za-z0-9/._-]+\.js/g)) {
+      const chunks = [...html.matchAll(/\/_next\/[A-Za-z0-9/._()%-]+\.js/g)];
+      // A page that references NO script at all means the scan itself broke — a chunk-naming
+      // change the character class above stopped matching, say. That must be loud: returning
+      // null here is indistinguishable from "this build has no Firebase project", which makes
+      // every account spec skip while CI stays green and proves nothing.
+      if (chunks.length === 0) {
+        throw new Error(`no /_next/*.js chunks found in ${route} — the bundle scan is broken`);
+      }
+      for (const m of chunks) {
         const chunk = await page.request.get(m[0]).catch(() => null);
         if (!chunk?.ok()) continue;
         const key = (await chunk.text()).match(/AIza[0-9A-Za-z_-]{35}/);

@@ -26,7 +26,10 @@ const GOOGLE = /identitytoolkit\.googleapis\.com|securetoken\.googleapis\.com|ap
  */
 async function apiKeyFromBundle(page: Page): Promise<string | null> {
   const html = await (await page.request.get('/today/')).text();
-  for (const m of html.matchAll(/\/_next\/[A-Za-z0-9/._-]+\.js/g)) {
+  const chunks = [...html.matchAll(/\/_next\/[A-Za-z0-9/._()%-]+\.js/g)];
+  // Loud on a broken scan, null only on a genuinely Firebase-less build — see helpers.ts.
+  if (chunks.length === 0) throw new Error('no /_next/*.js chunks found — bundle scan is broken');
+  for (const m of chunks) {
     const js = await (await page.request.get(m[0])).text();
     const key = js.match(/AIza[0-9A-Za-z_-]{35}/);
     if (key) return key[0];
