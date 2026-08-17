@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { seedOnboarded } from './helpers';
 
 test.use({ viewport: { width: 390, height: 664 } });
@@ -10,10 +10,37 @@ test.use({ viewport: { width: 390, height: 664 } });
  * targets never shrink below the 44px floor, and the labels collapse visually while staying in
  * the accessibility tree.
  */
+/**
+ * Scroll, then PROVE the scroll landed.
+ *
+ * `window.scrollTo` silently clamps to the maximum scrollable offset. Before React mounts, the
+ * prerendered body of this static export is exactly one viewport tall, so a scroll to 500 clamps
+ * to 0 — and because the bar folds on scroll DELTA (FloatingTabBar.tsx: `dy = y - lastY`), the
+ * event that never fired never comes back. The bar then sits unfolded forever and the failure
+ * reads as "the tab bar is broken" rather than "the page had not mounted yet".
+ *
+ * Asserting scrollY makes a clamp fail as itself. Deliberately NOT an expect.poll around the
+ * scroll+assert pair: retrying the scroll would also go green, while silently tolerating a bar
+ * that only folds on the second attempt.
+ */
+async function scrollWindowTo(page: Page, top: number) {
+  await page.evaluate((t) => window.scrollTo({ top: t }), top);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(top);
+}
+
 test.describe('tab bar · mini on scroll', () => {
   test.beforeEach(async ({ page }) => {
     await seedOnboarded(page);
     await page.goto('/today');
+    // `goto` resolves on `load`, which here precedes hydration: no tab bar exists yet, so its
+    // scroll listener is not attached to hear anything. Wait for the bar itself — the sibling
+    // test got this gate for free from its first assertion; this makes it explicit and shared.
+    await expect(page.getByTestId('tab-today')).toBeVisible();
+    // And guard the premise: if /today ever gets short enough that 500px is unreachable, this
+    // should fail loudly here rather than intermittently as a phantom tab-bar bug.
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+    ).toBeGreaterThan(500);
   });
 
   test('folds to icons on scroll down, restores on scroll up, and keeps 44px targets', async ({
@@ -28,7 +55,7 @@ test.describe('tab bar · mini on scroll', () => {
     const fullBox = (await bar.boundingBox())!;
 
     // Scroll down — one real scroll event with a downward delta.
-    await page.evaluate(() => window.scrollTo({ top: 500 }));
+    await scrollWindowTo(page, 500);
     await expect(bar).toHaveAttribute('data-mini', 'true');
     // The label row is collapsed out of sight (zero-height, not display:none).
     await expect(label).not.toBeVisible();
@@ -44,14 +71,14 @@ test.describe('tab bar · mini on scroll', () => {
     await expect(page.getByTestId('tab-nutrition')).toHaveText(/Nutrition/);
 
     // Any upward scroll brings the full bar back.
-    await page.evaluate(() => window.scrollTo({ top: 300 }));
+    await scrollWindowTo(page, 300);
     await expect(bar).not.toHaveAttribute('data-mini', 'true');
     await expect(label).toBeVisible();
   });
 
   test('a route change never leaves the bar hiding', async ({ page }) => {
     const bar = page.getByTestId('tab-bar').locator('ul');
-    await page.evaluate(() => window.scrollTo({ top: 500 }));
+    await scrollWindowTo(page, 500);
     await expect(bar).toHaveAttribute('data-mini', 'true');
 
     // Client-side navigation lands a new page at the top — the bar must arrive full.
