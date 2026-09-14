@@ -1,0 +1,116 @@
+{
+  "lens": "startup-cost-timeline",
+  "checks": [
+    {
+      "claim": "Bolt rule of thumb: a simple hardware product costs $100k-$500k and takes ~6-9 months to develop; complex products cost millions and take years (lens attributes it to 'Hardware by the Numbers Part 2').",
+      "verdict": "confirmed",
+      "corrected_value": "Figures unchanged. Attribution corrected: the sentence is from Ben Einstein's Bolt post 'Will Your Hardware Startup Make Money?' (blog.bolt.io/make-money/, c. 2015), not Part 2 of the series; the figures are ~10 years old and not inflation-adjusted.",
+      "evidence": "An independent query returned the verbatim sentence 'Simple products cost $100k-500k to develop and usually take around 6-9 months' from the Bolt post 'Will Your Hardware Startup Make Money?' (mirrored on Medium/LinkedIn, covered by TechSpot in 2015). The post's worked example (Bolt-o-Phones) has a 4-person team (ME, EE, ID, ops) spending 9 months to reach manufacturing readiness.",
+      "source_url": "https://blog.bolt.io/make-money/"
+    },
+    {
+      "claim": "Bolt: most Chinese contract manufacturers want a ~5,000-unit MOQ and ~$1M of BOM per customer leaving the factory in the first production year.",
+      "verdict": "confirmed",
+      "corrected_value": "n/a",
+      "evidence": "Ben Einstein's 'Hardware by the Numbers (Part 2: Financing + Manufacturing)' (Bolt blog; Medium mirror) states most Chinese CMs have a 5k-unit MOQ and that 'in the first year of production, a typical CM would like to see $1M worth of BOM leaving their factory for each customer'. Bolt's hardware glossary adds that 5,000 units for final assembly is common in China but CMs really care about total order value, and the make-money post notes many component suppliers have MOQs above 5,000 units. Same ~2015 vintage caveat.",
+      "source_url": "https://medium.com/@BenEinstein/hardware-by-the-numbers-part-2-financing-manufacturing-474c7efe6c5f"
+    },
+    {
+      "claim": "Bolt: retail price must be 2-5x manufacturing cost depending on business model.",
+      "verdict": "corrected",
+      "corrected_value": "2.5x-4x. Bolt's 'Hardware by the Numbers (Part 4: Retail + Exits)': 'Most consumer product MSRPs are between 2.5x and 4x of what the product costs to make' (so a $1 BOM increase can be a $4 shelf-price increase).",
+      "evidence": "The only Bolt multiple surfaced by an independent query is 2.5x-4x MSRP-to-manufacturing-cost (Part 4); the '2-5x depending on business model' phrasing was not found in any Bolt text returned (the follow-up query to settle this was blocked by the search budget). Bolt's make-money example uses a $32.16 BOM against a $99 price (~3.1x) and shows even that is marginal once fully loaded.",
+      "source_url": "https://blog.bolt.io/hardware-retail-exits/"
+    },
+    {
+      "claim": "Bluetooth SIG: Adopter membership is $0/yr and Contributing Adopter (small) is $3,500/yr on the fee schedule effective 1 March 2026.",
+      "verdict": "confirmed",
+      "corrected_value": "n/a (add: 'small' = annual revenue under $100M; Contributing Adopter large (> $100M) is $16,500/yr)",
+      "evidence": "Bluetooth SIG support article 'Schedule of Dues and Fee Changes Effective 01 March 2026' and bluetooth.com/fee-schedule: Adopter $0; Contributing Adopter small $3,500; large $16,500. The Board approved an ~8.7% increase on all existing member fees effective 1 March 2026, and Contributing Adopters receive a discount on their first product qualification fee each membership year (amount not captured). Receipt numbers bought on/after 9 Sep 2025 expire six months after payment.",
+      "source_url": "https://support.bluetooth.com/hc/en-us/articles/360058202612-Bluetooth-SIG-Schedule-of-Dues-and-Fee-Changes-Effective-01-March-2026"
+    },
+    {
+      "claim": "Bluetooth SIG product qualification (Declaration ID) fee for Adopter members is $11,040; post-March-2026 value not found.",
+      "verdict": "corrected",
+      "corrected_value": "$12,000 per Declaration ID for Adopter members effective 1 March 2026 (one-time per product listing, not annual); $11,040 applied from January 2024 to 28 February 2026.",
+      "evidence": "The Bluetooth SIG fee-change notice effective 01 March 2026 (support.bluetooth.com) and two test-lab summaries (Zhongle Certification: 'membership fee will increase by about 8.7% from March 1, 2026'; BlueAsia Labs 'BQB Certification 2026') report the standard Adopter product certification fee rising from $11,040 to $12,000. Infineon community and Cetecom pages confirm $11,040 was the January-2024-onward figure. Contributing-Adopter discounted amount on the new schedule was not captured (fee-schedule page egress-blocked).",
+      "source_url": "https://support.bluetooth.com/hc/en-us/articles/360058202612-Bluetooth-SIG-Schedule-of-Dues-and-Fee-Changes-Effective-01-March-2026"
+    },
+    {
+      "claim": "A discounted ~$2,500 Bluetooth listing fee (vs $8,000 standard) is available to companies with under $1M revenue (used as the lens's low-case certification input).",
+      "verdict": "refuted",
+      "corrected_value": "No such tier exists on the current schedule. The Innovation Incentive Program (up to two declarations at $2,500 for members with < $1M revenue and no prior listings) was discontinued in February 2020, and the $8,000 base fee it discounted is itself obsolete (now $12,000). The only remaining reduction is the Contributing Adopter first-declaration discount, which requires the $3,500/yr membership (discounted amount not captured).",
+      "evidence": "Two independent queries returned summaries stating the Innovation Incentive Program 'was quietly stopped in February 2020', attributed to Ezurio's (formerly Laird Connectivity) post 'Bluetooth SIG Changes - Everyone Pays!'. The pages still quoting $2,500/$8,000 (Desirable Apps blog, Infineon KB, Silicon Labs 2014 EPL guide) predate that change. Neither bluetooth.com/fee-schedule snippets nor the March-2026 change notice list any sub-$1M-revenue tier. The Ezurio page itself was not opened (search budget exhausted before the confirming query ran).",
+      "source_url": "https://www.ezurio.com/resources/blog/bluetooth-sig-changes-everyone-pays"
+    },
+    {
+      "claim": "FCC route for a host product using a pre-certified BLE module costs ~$3k-$10k (MarkReady, 2026).",
+      "verdict": "confirmed",
+      "corrected_value": "n/a",
+      "evidence": "MarkReady's 2026 cost page states pre-certified WiFi/BLE modules cost $3K-$10K. Independent 2026 pages (Promise Legal's startup guide; MarkReady's FCC guide) put host Part 15B unintentional-radiator testing at $3,000-$8,000 over 2-6 weeks, SDoC-style testing at $800-$5,000 over 1-4 weeks, and the module-vs-chip-down certification saving at $5,500-$14,500. All are compliance-consultancy marketing pages, not lab quotes; none is body-worn-specific.",
+      "source_url": "https://markready.io/learn/fcc-certification-cost"
+    },
+    {
+      "claim": "FCC custom-radio (chip-down) route: Part 15C Bluetooth testing ~$1k-$4k (Jettest 2026) plus TCB review ~$2k-$8k (IB-Lenhardt) = ~$3k-$12k; SparkFun paid $4k in 2019.",
+      "verdict": "corrected",
+      "corrected_value": "Testing $1,000-$4,000 (Jettest) and SparkFun's $4,000 (Dec 2019) are confirmed, but TCB-fee sources disagree ~10x: Jettest quotes TCB review at $120-$500 (plus $100-$500 Form-731 prep) vs IB-Lenhardt's $2,000-$8,000. Jettest also lists SAR testing at $2,500-$6,000 for body-worn intentional radiators, which the lens omitted. Working range: ~$1.5k-$12k, up to ~$18k if SAR is required; the lens's $2k-$8k TCB figure is an upper bound.",
+      "evidence": "Jettest's 2026 breakdown: Bluetooth devices $1,000-$4,000 (Part 15C 2.4 GHz band-edge + basic SAR evaluation), SAR $2,500-$6,000 for body-worn devices, Form 731 $100-$500, TCB review $120-$500. IB-Lenhardt KB: TCB review 'roughly USD 2,000-8,000'. MarkReady: full certification typically $3,000-$20,000+ over 4-12 weeks. SparkFun 'Getting a Module FCC Certified' (news.sparkfun.com/3124, Dec 2019): $4,000 FCC Part 15 testing & certification for a Bluetooth module; $12,200 total for FCC+ISED+CE. A query for actual TCB price lists (ACB/PCTEST/UL) was blocked by the search budget.",
+      "source_url": "https://www.jettest.net/blog/explained-what-is-fcc-certification-cost-breakdown-2026"
+    },
+    {
+      "claim": "UN38.3 lithium-battery transport testing costs ~$5k-$7k (Ufine, 2026).",
+      "verdict": "corrected",
+      "corrected_value": "~$300-$7,000 depending on lab and scope: JJR Lab (China) $300-$930 for a UN38.3 test report; other guides $500-$800 average, or 'at least $2,000 for a full set of tests in China'; Ufine's $5,000-$7,000 is the top of the found range (Western labs / full certification). A bought-in cell normally already carries its maker's UN38.3 report; a separate pack-level test is only needed if the startup assembles the pack.",
+      "evidence": "An independent query returned four priced sources (JJR Lab x2, Amade-Tech/Saphiion guides, Ufine) spanning $300 to $7,000; the lens used only the highest. Intertek and TUV SUD UN38.3 service pages give no prices. Epec's separate wording is 'several thousand dollars'.",
+      "source_url": "https://www.jjrlab.com/news/how-much-does-un383-testing-cost.html"
+    },
+    {
+      "claim": "IEC 62133 / UL battery-pack certification can cost over $20,000 (Epec); battery certification projects take 4-12 weeks (Ufine).",
+      "verdict": "corrected",
+      "corrected_value": "IEC 62133-2 for cells/packs under 100 Wh: ~USD 1,000-1,500 at Chinese labs, ~USD 4,000-6,000 at TUV/SGS (DNK Power); other guides $6,000-$10,000; '>$20,000' applies only to UL-listing programs (UL 2054 / UL 62133 with follow-up service), not a plain IEC 62133-2 CB report. Typical duration ~6-8 weeks (consistent with the lens's 4-12 weeks).",
+      "evidence": "DNK Power's IEC 62133 page quotes USD 1,000-1,500 (local China labs) vs USD 4,000-6,000 (TUV/SGS) for batteries under 100 Wh, ~6 weeks; Inntbattery/Ufine-style guides give an average of $6,000-$10,000 and 6-8 weeks; ATS, Enix, Dan Energy and TUV SUD service pages give no prices. Epec's '>$20,000' is the only source at that level and explicitly bundles UL pack certification. The lens's high case should be ~$6k-$10k unless a UL listing is required.",
+      "source_url": "https://www.dnkpower.com/battery-iec-62133/"
+    },
+    {
+      "claim": "Upwork (2026): embedded systems engineer median $35/hr, typical range $25-$50/hr.",
+      "verdict": "confirmed",
+      "corrected_value": "n/a (context: contractrates.fyi crowdsourced 2026 freelance embedded-software rates average ~$104/hr, most $65-$120 - consistent with the prompt's unverified US band of $80-$150)",
+      "evidence": "Upwork's rate page states the median hourly rate for Embedded Systems Engineers is $35 and rates typically range $25-$50, described as historical contract ranges worldwide and subject to negotiation (no country split). contractrates.fyi's 2026 page reports $104/hr average ($65-$120) for freelance embedded software engineers, indicating the Upwork median is a global/offshore-weighted figure.",
+      "source_url": "https://www.upwork.com/hire/embedded-systems-engineers/cost/"
+    },
+    {
+      "claim": "Nordic: NRF52-DK shows a 4-week factory lead time at Avnet; CEO said 'gradual recovery continuing through 2025' on the Q3-2025 call; no nRF52 SoC lead-time figure found.",
+      "verdict": "confirmed",
+      "corrected_value": "n/a (add: Mouser lists a 20-week factory lead time for the same NRF52-DK, so distributor lead times differ 5x; the call also described the nRF52 series as 'running out of steam' in some areas as Nordic transitions to nRF54 - a 2026 design should check nRF54L availability rather than nRF52)",
+      "evidence": "Avnet's NRF52-DK listing shows a 4-week factory lead time; Mouser's listing shows 20 weeks. Investing.com and Yahoo Finance transcripts confirm CEO Vegard Wollan's quote 'We are enjoying a gradual recovery continuing through 2025', Q3-2025 revenue $179M (+13% y/y), and that less than 10% of Q3 certifications were on the new nRF54 products; no SoC-level lead-time weeks were stated. Nordic's own 'Q3 2025 Pre-close comments' page exists but was not opened.",
+      "source_url": "https://www.investing.com/news/transcripts/earnings-call-transcript-nordic-semiconductor-q3-2025-sees-strong-revenue-growth-93CH-4320415"
+    },
+    {
+      "claim": "Ultrahuman bought LazyCo in April 2022, opened global pre-orders on 7 July 2022 and shipped from August 2022 (~4 months acquisition-to-ship).",
+      "verdict": "unverifiable",
+      "corrected_value": "April 2022 acquisition confirmed by three independent outlets (Fitt Insider; IoT M2M Council; FashionUnited, 12 Apr 2022). The 7 July 2022 pre-order and August 2022 ship dates rest solely on Ultrahuman's own press release; one secondary source (healthcare.digital) says the original Ring launched 'late 2022'. LazyCo's Aina Ring had already completed a Kickstarter, so the ~4-month interval measures finishing/re-badging an existing design, not a design cycle.",
+      "evidence": "Independent April-2022 coverage confirms the acquisition and that LazyCo had built an AI smart ring (Aina) with a successful Kickstarter; terms undisclosed. No independent confirmation of the July pre-order or August shipping dates was obtained - the dedicated query was blocked by the search budget (unverifiable: search budget).",
+      "source_url": "https://insider.fitt.co/ultrahuman-acquires-smart-ring-maker-lazyco/"
+    },
+    {
+      "claim": "Certification stack for a module-based BLE wearable sold in the US (FCC via module + host, Bluetooth SIG Declaration, UN38.3, IEC 62133) sums to ~$10.5k-$48k.",
+      "verdict": "corrected",
+      "corrected_value": "~$15.5k-$49k, central case ~$20k. Low = $3,000 FCC host (module route) + $12,000 Declaration ID (Adopter fee from 1 Mar 2026; no small-business discount exists) + ~$500 UN38.3 (Chinese-lab report, if the pack needs its own) + $0 IEC 62133 (pre-certified cell) = ~$15,500. High = $10,000 + $12,000 + $7,000 + $20,000 = $49,000; add $2,500-$6,000 if SAR testing is required for the body-worn host. Central (Chinese/TUV labs: UN38.3 $2k, IEC 62133 $1.5k-$6k, FCC $5k) = ~$20k-$25k.",
+      "evidence": "The lens's low case depended on a $2,500 Innovation Incentive Program fee (discontinued Feb 2020) and an $11,040 Declaration fee (now $12,000 from 1 March 2026); those two corrections raise the floor by ~$5k. The high case survives almost unchanged because Ufine's UN38.3 and Epec's IEC/UL figures are already the highest quotes on the market. CE RED, ISED, RoHS, WPC ETA and BIS remain excluded; SparkFun's 2019 experience (FCC+ISED+CE = $12,200 for one module) suggests adding CE+ISED roughly doubles the FCC line.",
+      "source_url": "https://support.bluetooth.com/hc/en-us/articles/360058202612-Bluetooth-SIG-Schedule-of-Dues-and-Fee-Changes-Effective-01-March-2026"
+    }
+  ],
+  "stale_or_missing": [
+    "Predictable Designs phase-by-phase development-cost figures: NOT FOUND. One query surfaced a relevant page, 'How Much Does It Cost to Certify an Electronic Product?' (https://predictabledesigns.com/certification-costs-what-it-really-takes/), but no dollar figures were captured in the snippet; the two planned queries on Teel's development-cost breakdown (PCB/firmware/enclosure phases) were blocked by the search budget (200/200).",
+    "Indian design-house hourly rates (VVDN, Tata Elxsi, LTTS, Cyient, Sasken, Mistral Solutions): NOT FOUND - both planned queries (offshore billing rate / revenue per FTE for Tata Elxsi-LTTS-Cyient; VVDN-Mistral-Sasken hourly rates) were blocked by the search budget. Next step: derive revenue-per-employee from Tata Elxsi, LTTS and Cyient annual reports and NASSCOM ER&D pricing surveys.",
+    "CE RED / ISED / RoHS test costs: PARTIAL. SparkFun's first-hand Dec-2019 account gives FCC + ISED + CE for one Bluetooth module = $12,200 total with FCC = $4,000, implying ISED + CE of roughly $8,200 combined (line-item split not captured) - https://news.sparkfun.com/3124. Dedicated 2025-26 price queries for CE RED (EN 300 328 / EN 62368-1 / EMC), ISED (RSS-247 / RSS-Gen) and RoHS testing were blocked by the search budget: not found.",
+    "EVT/DVT/PVT durations: NOT FOUND - both planned queries were blocked by the search budget. Only indirect datapoint: Bolt's make-money post assumes ~9 months from first engineering hires to manufacturing readiness for a simple product (https://blog.bolt.io/make-money/).",
+    "Whoop and Oura time-to-first-ship: NOT FOUND - queries were not reached before the search budget was exhausted; the prompt's priors (Whoop founded 2012 / first strap 2015; Oura Kickstarter 2015 / shipping 2016) remain unverified.",
+    "Kickstarter fitness-wearable campaign totals: PARTIAL. Fitt Insider confirms LazyCo's Aina Ring ran a successful Kickstarter before the April-2022 Ultrahuman acquisition, amount not captured (https://insider.fitt.co/ultrahuman-acquires-smart-ring-maker-lazyco/). Goal / raised / delivery-slip figures for Ultrahuman Ring AIR, Oura, Atlas Wristband, Moov, Push, GymWatch and Beast: not found (search budget).",
+    "Typical wearable seed-round sizes 2024-2026: NOT FOUND (search budget). Only datapoint surfaced: Ultrahuman's Sept-2026 $70M round reportedly led by Qualcomm (https://www.healthcare.digital/single-post/analysis-of-qualcomm-s-70-million-bet-on-ultrahuman-and-transforming-wearable-smart-rings-into-comp; secondary), which is a late-stage round, not a seed comparable.",
+    "Warranty/return reserves for consumer wearables: NOT FOUND - planned queries (Garmin/Fitbit 10-K warranty accrual as % of revenue; wearable return rates) were not reached before the search budget was exhausted.",
+    "Bluetooth SIG Contributing Adopter first-declaration discounted amount on the 1-March-2026 schedule: NOT CAPTURED (bluetooth.com/fee-schedule egress-blocked; the support article only confirms a discount exists). BlueAsia Labs' 2026 headline claims '33% savings for new members' (https://www.blueasialabs.com/shouyehuandeng/bqb-certification-2026-massive-overhaul-membership-certification-fees-hike-33-savings-for-new-members) - unverified promotion.",
+    "nRF52 SoC lead time 2025-26: still NOT FOUND; but dev-kit lead times diverge by distributor (Avnet 4 weeks vs Mouser 20 weeks for NRF52-DK: https://www.mouser.com/ProductDetail/Nordic-Semiconductor/NRF52-DK) and Nordic's Q3-2025 call flags nRF52 as being superseded by nRF54, so a 2026 program should check nRF54L supply instead."
+  ],
+  "summary": "20 of 34 planned WebSearch queries completed before the session-wide budget hit 200/200; the 14 blocked queries covered the IIP-discontinuation primary source, Ultrahuman ship dates, TCB price lists, Bolt's 2-5x phrasing, SparkFun's ISED/CE split and all eight stale/missing topics, which are therefore recorded as not found or partial. Of 14 checks: 6 confirmed, 6 corrected, 1 refuted, 1 unverifiable (search budget). Load-bearing corrections: (1) the Bluetooth Declaration ID fee is $12,000 from 1 March 2026, not $11,040, and the $2,500 small-business (Innovation Incentive) discount has not existed since February 2020, which lifts the certification-stack floor from ~$10.5k to ~$15.5k (high case ~$49k, central ~$20-25k); (2) the lens's UN38.3 ($5-7k) and IEC 62133 (>$20k) inputs are the highest quotes on the market - Chinese and TUV/SGS labs quote $300-$2,000 and $1,000-$6,000 respectively - so its high case is conservative; (3) FCC TCB review-fee sources disagree ~10x ($120-$500 vs $2k-$8k) and SAR testing ($2.5k-$6k) may apply to a wrist-worn radio; (4) Bolt's $100k-$500k / 6-9-month rule is genuine but comes from the c.2015 'Will Your Hardware Startup Make Money?' post, not Part 2, and Bolt's retail multiple is 2.5-4x, not 2-5x. Bluetooth membership tiers ($0 / $3,500), Bolt's 5k MOQ / $1M-BOM norm, MarkReady's $3k-$10k module route, Upwork's $35 median and the Nordic datapoints held up; the Ultrahuman ~4-month acquisition-to-ship figure rests only on the company press release and measures finishing an already-Kickstarted ring."
+}

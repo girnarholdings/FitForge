@@ -1,0 +1,121 @@
+{
+  "lens": "hardware-supplement",
+  "headline_findings": [
+    "Goodix GH3220 (WLCSP-42 PPG AFE, the chip inside many Chinese bands) is listed at USD 2.5298 per piece on JLCPCB parts (assembly-service pricing, Sept 2026 snippet); an Alibaba listing quotes USD 0.10/pc for \"new and original\" GH3220 which is not credible for genuine parts and is ignored. [secondary: JLCPCB]",
+    "PixArt PAH8011ET (older integrated PPG sensor) was listed \"from USD 4.8972\" on the Mbed component page (undated, older listing); PAH8013 unit pricing was not found. [secondary/stale]",
+    "Component prices NOT found in public listings after targeted searches: ADI MAX86171/MAX86176 AFE volume price, TI BQ25180 and Nordic nPM1300 charger/PMIC volume price, Grepow/EVE 150 mAh curved LiPo cell volume price (only eBay hobby pricing ~USD 1.89-1.99/pc for generic 150 mAh cells at small qty), and Chinese silicone strap unit cost (Made-in-China suppliers state 1,000-piece MOQ for custom straps but list no price). These lines in the BOM stay \"estimate\" and must be priced by RFQ. [not found]"
+  ],
+  "data_points": [
+    {
+      "metric": "Goodix GH3220 PPG AFE price",
+      "value": "2.5298",
+      "unit": "USD per piece (JLCPCB parts listing)",
+      "date": "2026",
+      "confidence": "secondary",
+      "source_title": "JLCPCB: GH3220 Goodix Technology",
+      "source_url": "https://jlcpcb.com/partdetail/GoodixTechnology-GH3220/C2942337",
+      "note": "Assembly-service list price; volume price lower."
+    },
+    {
+      "metric": "PixArt PAH8011ET PPG sensor price",
+      "value": "from 4.8972",
+      "unit": "USD per piece (older listing)",
+      "date": "undated",
+      "confidence": "secondary",
+      "source_title": "Mbed: PAH8011ET Ultra Low Power PPG Sensor",
+      "source_url": "https://os.mbed.com/components/PAH8011ET-Ultra-Low-Power-PPG-Sensor/",
+      "note": "Stale listing; PAH8013 price not found."
+    },
+    {
+      "metric": "Generic 150 mAh LiPo cell, small-quantity price",
+      "value": "1.89 to 1.99",
+      "unit": "USD per piece (eBay, small qty)",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "eBay listing (150 mAh LiPo)",
+      "source_url": "https://www.ebay.de/itm/113326966732",
+      "note": "Hobby-market anchor only; curved wearable cells from Grepow/EVE need a quote."
+    },
+    {
+      "metric": "Custom silicone strap MOQ (China)",
+      "value": "1,000",
+      "unit": "pieces minimum for custom straps",
+      "date": "2026",
+      "confidence": "secondary",
+      "source_title": "Made-in-China: silicone watch strap manufacturers",
+      "source_url": "https://www.made-in-china.com/manufacturers/silicone-watch-strap.html",
+      "note": "Price not listed."
+    },
+    {
+      "metric": "MAX86176 / MAX86171 volume price",
+      "value": "not found",
+      "unit": "",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "Mouser new-product page MAX86176",
+      "source_url": "https://www.mouser.com/en/new/analog-devices/maxim-max86176-ppg-and-ecg-afe",
+      "note": "Distributor price tables not visible in search."
+    },
+    {
+      "metric": "BQ25180 / nPM1300 volume price",
+      "value": "not found",
+      "unit": "",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "TI BQ25180 product page; Nordic nPM1300 page",
+      "source_url": "https://www.ti.com/product/BQ25180",
+      "note": ""
+    }
+  ],
+  "detailed_notes": "# Hardware supplement (main-session searches, 2026-09-14)\nOnly one new credible price anchor was found: Goodix GH3220 at USD 2.53/pc on JLCPCB. This is the \"cheap Chinese band\" PPG AFE and sets the floor for the optical front end in the minimum-viable BOM; ADI/Maxim AFEs (MAX86171/86176) used in premium bands will cost more but no volume price was visible. Battery, charger, and strap unit prices must come from RFQs (Grepow/EVE for cells; TI/Nordic distributors for PMIC; Made-in-China strap factories, 1,000-pc MOQ).",
+  "open_questions": [
+    "RFQ: MAX86171 at 1k/10k; nPM1300 or BQ25180 at 1k/10k; 150 mAh curved LiPo (IEC 62133-certified) at 1k/10k; silicone strap + buckle at 1k/10k."
+  ],
+  "sources": [
+    {
+      "title": "JLCPCB: GH3220 Goodix Technology part detail",
+      "url": "https://jlcpcb.com/partdetail/GoodixTechnology-GH3220/C2942337",
+      "type": "distributor"
+    },
+    {
+      "title": "Goodix: GH3220 health sensor product page",
+      "url": "https://www.goodix.com/en/product/sensors/health_sensors/gh3220",
+      "type": "vendor"
+    },
+    {
+      "title": "Mbed: PAH8011ET Ultra Low Power PPG Sensor",
+      "url": "https://os.mbed.com/components/PAH8011ET-Ultra-Low-Power-PPG-Sensor/",
+      "type": "component page"
+    },
+    {
+      "title": "Mouser: MAX86176 PPG and ECG AFE",
+      "url": "https://www.mouser.com/en/new/analog-devices/maxim-max86176-ppg-and-ecg-afe",
+      "type": "distributor"
+    },
+    {
+      "title": "Digi-Key: MAX86171 base product",
+      "url": "https://www.digikey.com/en/products/base-product/analog-devices-inc-maxim-integrated/175/MAX86171/347602",
+      "type": "distributor"
+    },
+    {
+      "title": "TI: BQ25180 product page",
+      "url": "https://www.ti.com/product/BQ25180",
+      "type": "vendor"
+    },
+    {
+      "title": "Nordic: nPM1300 PMIC",
+      "url": "https://www.nordicsemi.com/Products/nPM1300",
+      "type": "vendor"
+    },
+    {
+      "title": "Grepow: curved lithium polymer battery for wearables",
+      "url": "https://www.grepow.com/shaped-battery/curved-battery.html",
+      "type": "vendor"
+    },
+    {
+      "title": "Made-in-China: silicone watch strap manufacturers",
+      "url": "https://www.made-in-china.com/manufacturers/silicone-watch-strap.html",
+      "type": "marketplace"
+    }
+  ]
+}

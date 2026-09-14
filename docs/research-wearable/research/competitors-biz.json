@@ -1,0 +1,1267 @@
+{
+  "lens": "competitors-biz",
+  "headline_findings": [
+    "Whoop closed a $575M Series G at a $10.1B valuation in March 2026, reported $1.1B annualized bookings for 2025 (+103% YoY), 2.5M+ members and cash-flow positivity - i.e., the subscription-wearable model is now a ~9x-bookings asset [verified: Whoop press center; Yahoo Finance; Crunchbase News].",
+    "Whoop pricing is $199 (One) / $239 (Peak) / $359 (Life) per year with hardware bundled; the May 2025 attempt to charge $49/$79 upgrade fees was reversed within ~48 hours after user backlash, showing hardware-refresh promises are a liability in the HaaS model [verified: whoop.com; Bloomberg 2025-05-09; TechCrunch 2025-05-11].",
+    "The FDA warning letter to Whoop is dated 14 July 2025 (not Sept 2025 as briefed), classifying Blood Pressure Insights as a device; FDA closed it out in June 2026 after labeling changes, but a class action was filed on the back of it [verified: fda.gov; secondary: STAT 2026-06-23; ArentFox Schiff].",
+    "Whoop Strength Trainer (launched 2023-04-25) computes \"muscular load\" from user-logged sets/reps/weights plus IMU data - it is manual/assisted logging, not automatic rep or exercise detection, leaving the gap the owner is targeting open [verified: BusinessWire; whoop.com].",
+    "Whoop hardware is China-assembled (sensor, PCBA, battery, housing) with band attachment and firmware in the US, and CBP classifies imports under HTSUS 9031.90.9195 + 9903.88.01 (Section 301) - a China-built clone inherits the same tariff exposure [verified: Federal Register 2020-12-14; CBP N339661 2024-05-09].",
+    "Oura reported >$500M revenue in 2024, guided ~$1B for 2025, raised $900M+ at $11B (Oct 2025), and has sold 5.5M rings cumulatively; it holds ~74% of a smart-ring market that grew ~77% in 2025 to ~4.4M units [secondary: CNBC 2025-10-14; TechCrunch; Counterpoint/Omdia].",
+    "In June-Sept 2025 the screenless-band segment was simultaneously validated and commoditized: Amazfit Helio Strap $99 (no sub), Garmin Index Sleep Monitor $169.99, Polar Loop $199.99 (no sub) - $99 is now the retail floor for a 24/7 HR/HRV/sleep/temp band from a brand with an app [verified: BusinessWire 2025-06-24; Garmin newsroom; Polar press release].",
+    "Fitbit 10-Ks put scaled hardware-only wearable gross margin at 43% (2017), 40% (2018) and 29.8% GAAP (2019), eroded by smartwatch mix, promotions and tariffs - the base rate for a no-subscription hardware business [verified: SEC EDGAR FY2018/FY2019 10-K].",
+    "The strength-wearable graveyard is real: Atlas Wristband (>$500K Indiegogo 2014, \"ambitious but flawed\", absorbed by Peloton and cancelled) and Amazon Halo (killed April 2023, data deleted, refunds) both died on accuracy/differentiation and margin, not on demand [verified: CNBC 2023-04-26; secondary: TechCrunch 2014; AppleInsider 2016; Wareable].",
+    "Garmin's automatic rep counting is blog-reported at 80-90% on isolated arm movements and poor on bench/squat/deadlift; no vendor publishes accuracy, and a 2021 peer-reviewed validation exists but was not readable here - detection on compound lifts is the unsolved, differentiating problem [secondary: Alibaba Wellness blog; verified existence: PMC8471343].",
+    "India's wearables market shrank 4.0% to 114.2M units in 2025 (smartwatches -17.6%, boAt 29.2% share, earwear ASP $17.5) while Indian rings (Ultrahuman 30.4% domestic share, INR 28,499, no subscription) are the bright spot - India is a manufacturing/export story, not a domestic-demand story for a premium band [verified: IDC 2Q25 release; secondary: IDC FY2025 via TelecomLead/FoneArena; Smartprix].",
+    "Global wrist-worn shipments grew ~10% in 2025 (Q1: 45.6M units) with IDC forecasting 156.8M smartwatches and 35.3M wristbands for 2025; no analyst breaks out screenless bands, so the addressable segment is unmeasured and small relative to the ~190M wrist-worn base [verified: IDC prAP53613925; prUS52615024]."
+  ],
+  "data_points": [
+    {
+      "metric": "Whoop Series G raise",
+      "value": "575",
+      "unit": "USD million",
+      "date": "2026-03",
+      "confidence": "verified",
+      "source_title": "WHOOP press center: Raises $575 Million at $10.1 Billion Valuation (Series G)",
+      "source_url": "https://www.whoop.com/us/en/press-center/whoop-announces-series-g-funding/",
+      "note": "Led by Collaborative Fund; participants incl. 2PointZero, Qatar Investment Authority, Mubadala, Abbott, Mayo Clinic; athlete investors Ronaldo, LeBron James, McIlroy. Seen in Whoop press-center listing and Yahoo Finance/Crunchbase coverage."
+    },
+    {
+      "metric": "Whoop post-money valuation (Series G)",
+      "value": "10.1",
+      "unit": "USD billion",
+      "date": "2026-03",
+      "confidence": "verified",
+      "source_title": "WHOOP press center: Raises $575 Million at $10.1 Billion Valuation (Series G)",
+      "source_url": "https://www.whoop.com/us/en/press-center/whoop-announces-series-g-funding/",
+      "note": "Same release; corroborated by Crunchbase News and Yahoo Finance."
+    },
+    {
+      "metric": "Whoop total capital raised to date",
+      "value": "979",
+      "unit": "USD million",
+      "date": "2026-03",
+      "confidence": "secondary",
+      "source_title": "Yahoo Finance: Whoop Raises $575 Million at $10.1 Billion Valuation, Reports 103% Growth",
+      "source_url": "https://finance.yahoo.com/sectors/healthcare/articles/whoop-raises-575-million-10-204207038.html",
+      "note": "Reported alongside Series G; not seen in a primary filing."
+    },
+    {
+      "metric": "Whoop annualized bookings 2025",
+      "value": "1.1",
+      "unit": "USD billion",
+      "date": "2025 (FY)",
+      "confidence": "verified",
+      "source_title": "WHOOP press center: Raises $575 Million at $10.1 Billion Valuation (Series G)",
+      "source_url": "https://www.whoop.com/us/en/press-center/whoop-announces-series-g-funding/",
+      "note": "Up 103% YoY per the Series G release as quoted by Yahoo Finance. Note: \"bookings\" not GAAP revenue; multi-year prepaid plans inflate bookings vs recognized revenue."
+    },
+    {
+      "metric": "Whoop YoY growth in annualized bookings",
+      "value": "103",
+      "unit": "percent",
+      "date": "2025",
+      "confidence": "verified",
+      "source_title": "Yahoo Finance: Whoop Raises $575 Million at $10.1 Billion Valuation, Reports 103% Growth",
+      "source_url": "https://finance.yahoo.com/sectors/healthcare/articles/whoop-raises-575-million-10-204207038.html",
+      "note": "From Series G announcement coverage."
+    },
+    {
+      "metric": "Whoop cash-flow positive",
+      "value": "yes",
+      "unit": "boolean",
+      "date": "2025",
+      "confidence": "verified",
+      "source_title": "Yahoo Finance: Whoop Raises $575 Million at $10.1 Billion Valuation, Reports 103% Growth",
+      "source_url": "https://finance.yahoo.com/sectors/healthcare/articles/whoop-raises-575-million-10-204207038.html",
+      "note": "Company statement in Series G release coverage; no audited numbers."
+    },
+    {
+      "metric": "Whoop members",
+      "value": "2.5+",
+      "unit": "million members",
+      "date": "2026-03",
+      "confidence": "verified",
+      "source_title": "WHOOP press center: Raises $575 Million at $10.1 Billion Valuation (Series G)",
+      "source_url": "https://www.whoop.com/us/en/press-center/whoop-announces-series-g-funding/",
+      "note": "Stated in Series G coverage; \"members\" = active subscribers per Whoop terminology."
+    },
+    {
+      "metric": "Whoop implied bookings per member (derived)",
+      "value": "~440",
+      "unit": "USD per member per year",
+      "date": "2025/2026",
+      "confidence": "estimate",
+      "source_title": "WHOOP press center: Raises $575 Million at $10.1 Billion Valuation (Series G)",
+      "source_url": "https://www.whoop.com/us/en/press-center/whoop-announces-series-g-funding/",
+      "note": "Arithmetic: $1.1B annualized bookings / 2.5M members = ~$440. Exceeds every list price ($199-$359/yr) - implies multi-year prepay counted in bookings, add-ons (Advanced Labs, apparel/accessories), and/or member count lag. Treat as a flag, not a fact."
+    },
+    {
+      "metric": "Whoop implied EV / annualized bookings (derived)",
+      "value": "~9.2",
+      "unit": "x",
+      "date": "2026-03",
+      "confidence": "estimate",
+      "source_title": "WHOOP press center: Raises $575 Million at $10.1 Billion Valuation (Series G)",
+      "source_url": "https://www.whoop.com/us/en/press-center/whoop-announces-series-g-funding/",
+      "note": "$10.1B / $1.1B. Compare Oura ~11x expected 2025 revenue."
+    },
+    {
+      "metric": "WHOOP One membership price",
+      "value": "199",
+      "unit": "USD per year",
+      "date": "2025-2026",
+      "confidence": "verified",
+      "source_title": "WHOOP Membership Options | Compare Plans & Features",
+      "source_url": "https://www.whoop.com/us/en/membership/",
+      "note": "Whoop 5.0 hardware included; essential sleep/recovery/strain metrics."
+    },
+    {
+      "metric": "WHOOP Peak membership price",
+      "value": "239",
+      "unit": "USD per year",
+      "date": "2025-2026",
+      "confidence": "verified",
+      "source_title": "WHOOP Membership Options | Compare Plans & Features",
+      "source_url": "https://www.whoop.com/us/en/membership/",
+      "note": "Adds Healthspan/WHOOP Age, real-time stress monitor."
+    },
+    {
+      "metric": "WHOOP Life membership price",
+      "value": "359",
+      "unit": "USD per year",
+      "date": "2025-2026",
+      "confidence": "verified",
+      "source_title": "WHOOP Life Membership Plan",
+      "source_url": "https://www.whoop.com/us/en/life/",
+      "note": "Requires WHOOP MG hardware: ECG, Blood Pressure Insights (the feature that drew the FDA letter)."
+    },
+    {
+      "metric": "Whoop 4.0-era monthly membership price",
+      "value": "20-30",
+      "unit": "USD per month",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "businessmodelcanvastemplate.com: How Does Whoop Company Work?",
+      "source_url": "https://businessmodelcanvastemplate.com/blogs/how-it-works/whoop-how-it-works",
+      "note": "Blog-grade source; \"$20-$30/month with steep discounts for 12- and 24-month upfront plans\". The $30/mo 4.0 price in the brief was NOT independently verified this session."
+    },
+    {
+      "metric": "Whoop 5.0 / MG launch and upgrade-fee controversy",
+      "value": "May 8-11, 2025",
+      "unit": "date",
+      "date": "2025-05",
+      "confidence": "verified",
+      "source_title": "Bloomberg (2025-05-09): Whoop Reverses Course After Customer Backlash on Upgrade Fees",
+      "source_url": "https://www.bloomberg.com/news/articles/2025-05-09/whoop-faces-backlash-after-charging-existing-users-upgrade-fee-for-new-models",
+      "note": "Bloomberg 2025-05-09; TechCrunch 2025-05-11; reversal announced Saturday 2025-05-10."
+    },
+    {
+      "metric": "Whoop initial upgrade fee to 5.0 (one-time) or alternative",
+      "value": "49",
+      "unit": "USD one-time (or extend membership 12 months)",
+      "date": "2025-05",
+      "confidence": "verified",
+      "source_title": "TechCrunch (2025-05-11): Fitness tracker Whoop faces unhappy customers over upgrade policy",
+      "source_url": "https://techcrunch.com/2025/05/11/fitness-tracker-whoop-faces-unhappy-customers-over-upgrade-policy",
+      "note": "MG upgrade was $79. Contradicted a since-deleted blog post promising \"next-generation device for free after having been a member for six months or more\"."
+    },
+    {
+      "metric": "Whoop initial upgrade fee to MG (one-time)",
+      "value": "79",
+      "unit": "USD one-time",
+      "date": "2025-05",
+      "confidence": "verified",
+      "source_title": "TechCrunch (2025-05-11): Fitness tracker Whoop faces unhappy customers over upgrade policy",
+      "source_url": "https://techcrunch.com/2025/05/11/fitness-tracker-whoop-faces-unhappy-customers-over-upgrade-policy",
+      "note": "See above."
+    },
+    {
+      "metric": "Whoop reversal rule",
+      "value": ">12 months remaining = free upgrade; <12 months must extend; fees already paid refunded",
+      "unit": "policy",
+      "date": "2025-05-10",
+      "confidence": "verified",
+      "source_title": "TechRadar: Whoop subscribers can now get a free upgrade ... after a huge user backlash",
+      "source_url": "https://www.techradar.com/health-fitness/fitness-trackers/whoop-has-broken-a-promise-on-free-hardware-upgrades-and-users-arent-pleased",
+      "note": "Bloomberg/TechRadar/TechCrunch consistent. Lesson: hardware-as-a-service promises become liabilities."
+    },
+    {
+      "metric": "FDA warning letter to WHOOP, Inc. (Blood Pressure Insights)",
+      "value": "2025-07-14",
+      "unit": "date",
+      "date": "2025-07-14",
+      "confidence": "verified",
+      "source_title": "FDA Warning Letter: WHOOP, Inc. (MARCS-CMS 709755, 07/14/2025)",
+      "source_url": "https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/whoop-inc-709755-07142025",
+      "note": "FDA URL encodes MARCS-CMS 709755 and date 07142025. CORRECTION to brief: letter is July 2025, not Sept 2025. FDA position: BPI is a device (diagnosis of hypo/hypertension implied by target ranges and sleep claims). Whoop position: wellness feature."
+    },
+    {
+      "metric": "FDA closeout of Whoop warning letter",
+      "value": "2026-06 (reported 2026-06-23)",
+      "unit": "date",
+      "date": "2026-06",
+      "confidence": "secondary",
+      "source_title": "STAT (2026-06-23): FDA drops enforcement against Whoop after it tweaks blood pressure feature",
+      "source_url": "https://www.statnews.com/2026/06/23/fda-drops-enforcement-against-wearable-maker-whoop/",
+      "note": "STAT and MobiHealthNews report a closeout letter: FDA \"no longer intends to enforce\" after Whoop modified product and labeling. Primary closeout letter not seen."
+    },
+    {
+      "metric": "Class action citing FDA warning letter against Whoop",
+      "value": "filed",
+      "unit": "event",
+      "date": "2025-12",
+      "confidence": "secondary",
+      "source_title": "Finkelstein Blankinship (2025-12-19): FDA Sends Warning Letter to WHOOP for Marketing Blood Pressure Insights Without Approval",
+      "source_url": "https://4classaction.com/2025/12/19/fda-sends-warning-letter-to-whoop-inc-for-marketing-blood-pressure-insights-without-approval/",
+      "note": "Plaintiff-firm notice dated 2025-12-19; ArentFox Schiff commentary. Regulatory letters create litigation convexity for any \"medical-grade\" claim."
+    },
+    {
+      "metric": "Whoop Strength Trainer launch",
+      "value": "2023-04-25",
+      "unit": "date",
+      "date": "2023-04-25",
+      "confidence": "verified",
+      "source_title": "BusinessWire (2023-04-25): WHOOP Introduces Strength Trainer, Becomes First Wearable to Measure Muscular Load",
+      "source_url": "https://www.businesswire.com/news/home/20230425005456/en/5429321/WHOOP-Introduces-Strength-Trainer-Becomes-First-Wearable-to-Measure-Muscular-Load",
+      "note": "Press release: \"first wearable to measure muscular load\". Mechanism: user logs sets/reps/weights (manual/assisted); accelerometer+gyroscope compute muscular load, folded into Strain. NOT automatic rep detection."
+    },
+    {
+      "metric": "Whoop Strength Trainer workouts at launch",
+      "value": "200",
+      "unit": "prebuilt workouts",
+      "date": "2023-04",
+      "confidence": "secondary",
+      "source_title": "FitTechGlobal: Whoop adds Strength Trainer function with 200 workouts",
+      "source_url": "https://www.fittechglobal.com/fit-tech-news/Whoop-adds-Strength-Trainer-feature-allowing-members-to-measure-muscular-load/351262",
+      "note": "Trade press at launch."
+    },
+    {
+      "metric": "Whoop Strength Trainer exercise library (2026 update)",
+      "value": "~500",
+      "unit": "exercises",
+      "date": "2026-05",
+      "confidence": "secondary",
+      "source_title": "Gadgets & Wearables (2026-05-22): WHOOP wants to make gym strain less of a guessing game (Strength Trainer update)",
+      "source_url": "https://gadgetsandwearables.com/2026/05/22/whoop-strength-trainer-2/",
+      "note": "Blog coverage of 2026 Strength Trainer update: build routines, supersets, live set-by-set guidance, rest timers; logging remains user-driven."
+    },
+    {
+      "metric": "Whoop hardware country of assembly",
+      "value": "China (sensor, PCBA, battery, housing assembled); band attached + firmware loaded in USA",
+      "unit": "origin",
+      "date": "2020-12-14",
+      "confidence": "verified",
+      "source_title": "Federal Register (2020-12-14): Notice of Issuance of Final Determination Concerning a Whoop Strap Device (CBP country-of-origin)",
+      "source_url": "https://www.federalregister.gov/documents/2020/12/14/2020-26342/notice-of-issuance-of-final-determination-concerning-a-whoop-strap-device",
+      "note": "CBP final determination published in Federal Register (procurement country-of-origin). Also CBP ruling N339661 (2024-05-09) classifies \"Whoop Bands from China\"."
+    },
+    {
+      "metric": "Whoop band US tariff classification",
+      "value": "9031.90.9195 + 9903.88.01",
+      "unit": "HTSUS",
+      "date": "2024-05-09",
+      "confidence": "verified",
+      "source_title": "CBP Ruling NY N339661 (2024-05-09): The tariff classification of Whoop Bands from China",
+      "source_url": "https://rulings.cbp.gov/ruling/n339661",
+      "note": "9903.88.01 = Section 301 China List 1 additional duty. Signals a China-assembled Whoop pays Section 301 duties on US imports (rate not in snippet)."
+    },
+    {
+      "metric": "Whoop lawsuit vs Chinese rival over $100 look-alike tracker",
+      "value": "filed (reported)",
+      "unit": "event",
+      "date": "2025-10",
+      "confidence": "secondary",
+      "source_title": "the5krunner (2025-10-19): Why WHOOP Is Suing a Chinese Rival Over a $100 Copycat Tracker",
+      "source_url": "https://the5krunner.com/2025/10/19/why-whoop-is-suing-a-chinese-rival-over-a-wholesale-imitation-tracker-design/",
+      "note": "Blog-grade source; indicates Whoop is enforcing design IP against low-cost clones - relevant to any generic Whoop-shaped band."
+    },
+    {
+      "metric": "Whoop daily-use retention",
+      "value": ">50",
+      "unit": "percent of members using device daily at 18+ months",
+      "date": "undated (pre-2025 newsletter)",
+      "confidence": "secondary",
+      "source_title": "Fitt Insider Issue No. 161: WHOOP's High-Performance Platform",
+      "source_url": "https://insider.fitt.co/issue-no-161-whoops-high-performance-platform/",
+      "note": "Fitt Insider newsletter; date of underlying stat not in snippet."
+    },
+    {
+      "metric": "Whoop retention in core demographic",
+      "value": ">80",
+      "unit": "percent (retention)",
+      "date": "undated",
+      "confidence": "secondary",
+      "source_title": "Robbie K. Baxter (Medium): Subscriptions that Combine Hardware and Software with Ben Foster, CPO of WHOOP",
+      "source_url": "https://robbiebax.medium.com/subscriptions-that-combine-hardware-and-software-with-ben-foster-chief-product-officer-of-whoop-e0972049175",
+      "note": "Attribution ambiguous between Fitt Insider and the Baxter/Ben Foster interview; definition (annual? cohort?) not given."
+    },
+    {
+      "metric": "Whoop revenue mix (blog claim)",
+      "value": "~85 memberships / ~10 accessories+WHOOP Body / ~5 B2B",
+      "unit": "percent of revenue",
+      "date": "undated",
+      "confidence": "secondary",
+      "source_title": "businessmodelcanvastemplate.com: How Does Whoop Company Work?",
+      "source_url": "https://businessmodelcanvastemplate.com/blogs/how-it-works/whoop-how-it-works",
+      "note": "Blog-grade, unverified; the same page projected \"ARR above $600M by 2026\", already stale vs. $1.1B bookings in 2025 - discount heavily."
+    },
+    {
+      "metric": "Whoop LTV:CAC (blog claim)",
+      "value": "~4.5",
+      "unit": "x",
+      "date": "undated",
+      "confidence": "secondary",
+      "source_title": "businessmodelcanvastemplate.com: How Does Whoop Company Work?",
+      "source_url": "https://businessmodelcanvastemplate.com/blogs/how-it-works/whoop-how-it-works",
+      "note": "Blog-grade, no methodology. Do not use without corroboration (Sacra PDF likely has a real estimate)."
+    },
+    {
+      "metric": "Whoop churn reduction from shipment-tracking vendor",
+      "value": "50",
+      "unit": "percent reduction (vendor claim)",
+      "date": "undated",
+      "confidence": "secondary",
+      "source_title": "TrackingMore case study: WHOOP reduces customer churn rate",
+      "source_url": "https://www.trackingmore.com/customers/whoop",
+      "note": "Vendor marketing case study; unverifiable."
+    },
+    {
+      "metric": "Oura revenue 2024",
+      "value": ">500",
+      "unit": "USD million",
+      "date": "2024 (FY)",
+      "confidence": "secondary",
+      "source_title": "CNBC (2025-10-14): Oura reaches $11 billion valuation with new $900 million fundraise",
+      "source_url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html",
+      "note": "Company-disclosed via CNBC."
+    },
+    {
+      "metric": "Oura expected revenue 2025",
+      "value": "~1,000",
+      "unit": "USD million",
+      "date": "2025 (FY, company expectation)",
+      "confidence": "secondary",
+      "source_title": "CNBC (2025-10-14): Oura reaches $11 billion valuation with new $900 million fundraise",
+      "source_url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html",
+      "note": "Company guidance quoted by CNBC on 2025-10-14; Sacra later states Oura \"generated $1B in 2025\"."
+    },
+    {
+      "metric": "Oura Series E raise",
+      "value": "900+",
+      "unit": "USD million",
+      "date": "2025-10-14",
+      "confidence": "secondary",
+      "source_title": "CNBC (2025-10-14): Oura reaches $11 billion valuation with new $900 million fundraise",
+      "source_url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html",
+      "note": "Led by Fidelity Management & Research; Iconiq, Whale Rock, Atreides participated."
+    },
+    {
+      "metric": "Oura valuation (Series E)",
+      "value": "11",
+      "unit": "USD billion",
+      "date": "2025-10",
+      "confidence": "secondary",
+      "source_title": "TechCrunch (2025-10-14): Smart ring maker Oura raises $900M from Fidelity",
+      "source_url": "https://techcrunch.com/2025/10/14/smart-ring-maker-oura-raises-900m-from-fidelity",
+      "note": "More than double the Dec 2024 mark."
+    },
+    {
+      "metric": "Oura prior round",
+      "value": "200 raised at 5.2 valuation",
+      "unit": "USD million / USD billion",
+      "date": "2024-12-19",
+      "confidence": "secondary",
+      "source_title": "TechCrunch (2024-12-19): Oura closes $200M round, bringing its valuation to $5.2B",
+      "source_url": "https://techcrunch.com/2024/12/19/oura-closes-200m-round-bringing-its-valuation-to-5-2b",
+      "note": "TechCrunch."
+    },
+    {
+      "metric": "Oura cumulative rings sold",
+      "value": "5.5",
+      "unit": "million units since 2015",
+      "date": "2025-09",
+      "confidence": "secondary",
+      "source_title": "CNBC (2025-10-14): Oura reaches $11 billion valuation with new $900 million fundraise",
+      "source_url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html",
+      "note": "Up from 2.5M announced June 2024 -> ~3M rings in ~15 months. Snippet also says more than half of all rings sold through 2024 were sold in 2024 (ambiguous phrasing)."
+    },
+    {
+      "metric": "Oura revolving credit facility",
+      "value": "250",
+      "unit": "USD million",
+      "date": "2025-09",
+      "confidence": "secondary",
+      "source_title": "CNBC (2025-10-14): Oura reaches $11 billion valuation with new $900 million fundraise",
+      "source_url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html",
+      "note": "Arranged by JPMorgan, Goldman Sachs, BofA, Barclays, Citi, Wells Fargo."
+    },
+    {
+      "metric": "Oura revenue H1 2026 (analyst estimate)",
+      "value": "764",
+      "unit": "USD million (through June 2026)",
+      "date": "2026-06",
+      "confidence": "secondary",
+      "source_title": "Sacra: Oura revenue, valuation & funding",
+      "source_url": "https://sacra.com/c/oura/",
+      "note": "Sacra estimate from snippet; methodology not seen."
+    },
+    {
+      "metric": "Oura implied EV / expected 2025 revenue (derived)",
+      "value": "~11",
+      "unit": "x",
+      "date": "2025-10",
+      "confidence": "estimate",
+      "source_title": "CNBC (2025-10-14): Oura reaches $11 billion valuation with new $900 million fundraise",
+      "source_url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html",
+      "note": "$11B / ~$1B."
+    },
+    {
+      "metric": "Global smart ring share, H1 2025",
+      "value": "Oura 74; Ultrahuman 9; Samsung 9; RingConn 5",
+      "unit": "percent of shipments",
+      "date": "2025 H1",
+      "confidence": "secondary",
+      "source_title": "Omdia (Nov 2025): Empowering the Health and Fitness Ecosystem with Smart Rings",
+      "source_url": "https://omdia.tech.informa.com/blogs/2025/nov/empowering-the-health-and-fitness-ecosystem-with-smart-rings",
+      "note": "Attribution in snippet ambiguous between Counterpoint and Omdia (Nov 2025 blog)."
+    },
+    {
+      "metric": "Global smart ring shipment growth 2025",
+      "value": "77",
+      "unit": "percent YoY",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Counterpoint Research: From Niche to Necessity: Smart Rings and the Next Phase of Health-Tech Evolution",
+      "source_url": "https://counterpointresearch.com/en/reports/from-niche-to-necessity-smart-rings-and-the-next-phase-of-health-tech-evolution",
+      "note": "Counterpoint estimate per its report page."
+    },
+    {
+      "metric": "Global smart ring shipments 2025",
+      "value": "~4.4",
+      "unit": "million units",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Counterpoint Research: From Niche to Necessity: Smart Rings and the Next Phase of Health-Tech Evolution",
+      "source_url": "https://counterpointresearch.com/en/reports/from-niche-to-necessity-smart-rings-and-the-next-phase-of-health-tech-evolution",
+      "note": "Attribution ambiguous in snippet; North America ~2.6M (~60%). An older forecast in the same results said \"4 million units in 2025\"."
+    },
+    {
+      "metric": "India smart ring share 2025",
+      "value": "Ultrahuman 30.4; Gabit 18.3",
+      "unit": "percent",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Counterpoint Research: From Niche to Necessity: Smart Rings and the Next Phase of Health-Tech Evolution",
+      "source_url": "https://counterpointresearch.com/en/reports/from-niche-to-necessity-smart-rings-and-the-next-phase-of-health-tech-evolution",
+      "note": "Attribution ambiguous (IDC India or Counterpoint). Indicates a domestic Indian ring ecosystem (Ultrahuman, Gabit, Noise, boAt)."
+    },
+    {
+      "metric": "Smart ring top-5 concentration 2025 (aggregator claim)",
+      "value": "85.9",
+      "unit": "percent (Oura, Ultrahuman, Noise, Renpho US, boAt)",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Global Market Insights: Smart Rings Market Size, Forecasts Report 2026-2035",
+      "source_url": "https://www.gminsights.com/industry-analysis/smart-rings-market",
+      "note": "Market-research aggregator; low reliability; conflicts with the H1-2025 share table (Samsung/RingConn absent). Do not rely on."
+    },
+    {
+      "metric": "Amazfit Helio Strap launch price",
+      "value": "99",
+      "unit": "USD (one-time; no subscription)",
+      "date": "2025-06-24",
+      "confidence": "verified",
+      "source_title": "BusinessWire (2025-06-24): Amazfit Helio Strap launch release",
+      "source_url": "https://www.businesswire.com/news/home/20250624910772/en",
+      "note": "BusinessWire release; no screen, no buttons, double-tap gesture only; Zepp app; up to 10-day battery; USB-C charging puck; BLE HR broadcast to Zwift/Peloton; HR alerts."
+    },
+    {
+      "metric": "Amazfit Helio Strap 2",
+      "value": "announced/covered",
+      "unit": "event",
+      "date": "2026-06",
+      "confidence": "secondary",
+      "source_title": "the5krunner (2026-06-06): Amazfit Helio Strap 2: Release Date, Specs and Whoop Comparison",
+      "source_url": "https://the5krunner.com/2026/06/06/amazfit-helio-strap-2/",
+      "note": "Blog coverage; price not captured. Confirms Zepp iterating in the segment."
+    },
+    {
+      "metric": "Polar Loop launch price",
+      "value": "199.99 USD / 149.50 GBP",
+      "unit": "currency (one-time; no subscription)",
+      "date": "2025-09-03",
+      "confidence": "verified",
+      "source_title": "Polar press release: Polar launches Polar Loop, its first screen-free, subscription-free wearable",
+      "source_url": "https://www.polar.com/en/media-room/polar-launches-polar-loop-first-screen-free-subscription-free-wearable",
+      "note": "Polar press release + Forbes 2025-09-04. Pre-orders 3 Sept, shipping from 10 Sept 2025; 24/7 HR, sleep, automatic training detection; up to 8-day battery."
+    },
+    {
+      "metric": "Garmin Index Sleep Monitor price",
+      "value": "169.99",
+      "unit": "USD (one-time)",
+      "date": "2025-06-18",
+      "confidence": "verified",
+      "source_title": "Garmin newsroom: Rest easy with the Index Sleep Monitor smart sleep band from Garmin",
+      "source_url": "https://www.garmin.com/en-US/newsroom/press-release/sports-fitness/rest-easy-with-the-index-sleep-monitor-smart-sleep-band-from-garmin/",
+      "note": "Upper-arm screenless band: sleep stages, HRV status, breathing variations, skin temperature, pulse ox; up to 7 nights battery; washable band; two sizes."
+    },
+    {
+      "metric": "Screenless-band retail price ladder (derived)",
+      "value": "Amazfit 99 < Garmin 169.99 < Polar 199.99 = Whoop One 199/yr < Whoop Peak 239/yr < Whoop Life 359/yr",
+      "unit": "USD",
+      "date": "2025",
+      "confidence": "estimate",
+      "source_title": "Polar press release: Polar launches Polar Loop, its first screen-free, subscription-free wearable",
+      "source_url": "https://www.polar.com/en/media-room/polar-launches-polar-loop-first-screen-free-subscription-free-wearable",
+      "note": "Derived from verified list prices. Over 2 years Whoop One costs 2x Polar Loop and 4x Helio Strap. $99 no-sub is the effective price floor for a 24/7 HR/HRV/sleep/temp screenless band from a brand with an existing app."
+    },
+    {
+      "metric": "Ultrahuman Ring AIR India price",
+      "value": "28,499",
+      "unit": "INR (one-time)",
+      "date": "2026-06 (listing)",
+      "confidence": "secondary",
+      "source_title": "Smartprix: Ultrahuman Ring Air - Price in India (Jun 2026), Specs",
+      "source_url": "https://www.smartprix.com/smart_rings/ultrahuman-ring-air-ppd15b9fnrb5",
+      "note": "Smartprix/Flipkart listings; Ultrahuman buy page confirms no subscription (\"one-time purchase... lifelong access\"). US $349 price in brief NOT verified this session."
+    },
+    {
+      "metric": "Ultrahuman Ring AIR subscription",
+      "value": "none",
+      "unit": "policy",
+      "date": "2026",
+      "confidence": "verified",
+      "source_title": "Ultrahuman: Ring AIR in India | Price, UPI, COD & EMI",
+      "source_url": "https://www.ultrahuman.com/in/ring/buy/",
+      "note": "Vendor page."
+    },
+    {
+      "metric": "FORT (ex-Tesla engineers) strength+recovery tracker",
+      "value": "announced",
+      "unit": "event",
+      "date": "2026-02-19",
+      "confidence": "secondary",
+      "source_title": "the5krunner (2026-02-19): Whoop Rival FORT: Ex-TESLA Engineers Launch new Strength and Recovery Tracker",
+      "source_url": "https://the5krunner.com/2026/02/19/fort-whoop-competitor/",
+      "note": "Blog; positioned explicitly as a Whoop rival focused on strength. Price/specs not captured. Direct evidence others are attacking the same gap the owner identified."
+    },
+    {
+      "metric": "Global wrist-worn shipments Q1 2025",
+      "value": "45.6",
+      "unit": "million units",
+      "date": "2025 Q1",
+      "confidence": "verified",
+      "source_title": "IDC (prAP53613925): Global Wrist-Worn Device Shipments Grew 10.5% in Q1 2025",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prAP53613925",
+      "note": "+10.5% YoY; smartwatches 34.8M (+4.8%). IDC press release."
+    },
+    {
+      "metric": "Global wrist-worn growth, first three quarters 2025",
+      "value": "10",
+      "unit": "percent YoY",
+      "date": "2025 Q1-Q3",
+      "confidence": "secondary",
+      "source_title": "Futu News: IDC: global wrist-worn device market grew 10% YoY in first three quarters of 2025",
+      "source_url": "https://news.futunn.com/en/post/66291023/idc-the-global-wrist-worn-device-market-grew-10-year",
+      "note": "Futu citing IDC."
+    },
+    {
+      "metric": "IDC forecast: global smartwatch shipments 2025",
+      "value": "156.8",
+      "unit": "million units",
+      "date": "2025 (forecast)",
+      "confidence": "verified",
+      "source_title": "IDC (prUS52615024): IDC Forecasts Continued Growth for Wearables But Growth Will Be Uneven Across Product Categories",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prUS52615024",
+      "note": "IDC forecast release (late 2024). Overall wearables growth forecast +3.9% in 2025 as US and India mature."
+    },
+    {
+      "metric": "IDC forecast: global wristband shipments 2025",
+      "value": "35.3",
+      "unit": "million units",
+      "date": "2025 (forecast)",
+      "confidence": "verified",
+      "source_title": "IDC (prUS52615024): IDC Forecasts Continued Growth for Wearables But Growth Will Be Uneven Across Product Categories",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prUS52615024",
+      "note": "\"Wristbands\" = screened bands like Xiaomi Band; screenless Whoop-class bands are a sliver within/adjacent to this and are not broken out by IDC in any snippet seen."
+    },
+    {
+      "metric": "IDC forecast: global smartwatch shipments 2026",
+      "value": "159.7",
+      "unit": "million units",
+      "date": "2026 (forecast)",
+      "confidence": "verified",
+      "source_title": "IDC (prUS52856224): Wearables to Face Continued Growth While Giving Way to New Form Factors",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prUS52856224",
+      "note": "Snippet also said \"a decline of 2.8% year over year\" - inconsistent with 156.8M -> 159.7M; treat the YoY sign as unresolved."
+    },
+    {
+      "metric": "IDC forecast: global wristband shipments 2026",
+      "value": "34.6",
+      "unit": "million units",
+      "date": "2026 (forecast)",
+      "confidence": "verified",
+      "source_title": "IDC (prUS52856224): Wearables to Face Continued Growth While Giving Way to New Form Factors",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prUS52856224",
+      "note": "Flat-to-down category."
+    },
+    {
+      "metric": "India wearables shipments 2Q25",
+      "value": "27",
+      "unit": "million units",
+      "date": "2025 Q2",
+      "confidence": "verified",
+      "source_title": "IDC (prAP53747725): India's Wearable Device Market Declined by 9% YoY in 2Q25 to 27 Million Units",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prAP53747725",
+      "note": "-9% YoY. IDC press release."
+    },
+    {
+      "metric": "India wearables shipments 2025",
+      "value": "114.2",
+      "unit": "million units",
+      "date": "2025 (FY)",
+      "confidence": "secondary",
+      "source_title": "TelecomLead: India Wearables Market Declines 4% in 2025 as Smartwatch Shipments Fall",
+      "source_url": "https://telecomlead.com/smart-phone/india-wearables-market-declines-4-in-2025-as-smartwatch-shipments-fall-price-rise-124907",
+      "note": "-4.0% YoY, second consecutive annual decline (IDC via TelecomLead/FoneArena/BizTechReports, April 2026)."
+    },
+    {
+      "metric": "India smartwatch shipments 2025 YoY",
+      "value": "-17.6",
+      "unit": "percent",
+      "date": "2025 (FY)",
+      "confidence": "secondary",
+      "source_title": "BizTechReports: India's Wearables Market Declines 4.0% to 114 Million Units in 2025 as Smartwatch Shipments Fall 17.6% - IDC (April 2026)",
+      "source_url": "https://www.biztechreports.com/news-archive/2026/4/1/indias-wearables-market-declines-40-to-114-million-units-in-2025-as-smartwatch-shipments-fall-176-idc-april-1-2026",
+      "note": "IDC via trade press. Domestic wrist-wearable demand is contracting, ASPs rising."
+    },
+    {
+      "metric": "India wearables leader share 2025",
+      "value": "boAt 29.2 (from 27.6)",
+      "unit": "percent of units",
+      "date": "2025 (FY)",
+      "confidence": "secondary",
+      "source_title": "FoneArena: Indian wearable shipments fall 4.0% YoY in 2025; realme posts 27.8% growth: IDC",
+      "source_url": "https://www.fonearena.com/blog/476987/indian-wearable-shipments-2025.html",
+      "note": "boAt = Imagine Marketing; dominated TWS/earwear. In smartwatches Noise led at 26.6%, boAt 14.1%."
+    },
+    {
+      "metric": "India earwear shipments and ASP 2025",
+      "value": "84.7M units; ASP 17.5",
+      "unit": "million units; USD",
+      "date": "2025 (FY)",
+      "confidence": "secondary",
+      "source_title": "TelecomLead: India Wearables Market Declines 4% in 2025 as Smartwatch Shipments Fall",
+      "source_url": "https://telecomlead.com/smart-phone/india-wearables-market-declines-4-in-2025-as-smartwatch-shipments-fall-price-rise-124907",
+      "note": "+1.4% units, ASP -1.1%. Shows how brutal Indian mass-market pricing is."
+    },
+    {
+      "metric": "Fitbit gross margin FY2017",
+      "value": "43",
+      "unit": "percent",
+      "date": "2017",
+      "confidence": "verified",
+      "source_title": "SEC EDGAR: Fitbit Inc. Form 10-K FY2018",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1447599/000162828019002374/fitbit1231201810-k.htm",
+      "note": "From FY2018 10-K comparison."
+    },
+    {
+      "metric": "Fitbit gross margin FY2018",
+      "value": "40",
+      "unit": "percent",
+      "date": "2018",
+      "confidence": "verified",
+      "source_title": "SEC EDGAR: Fitbit Inc. Form 10-K FY2018",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1447599/000162828019002374/fitbit1231201810-k.htm",
+      "note": "Decline attributed to mix shift to higher-cost smartwatches vs trackers."
+    },
+    {
+      "metric": "Fitbit gross margin FY2019 (GAAP / non-GAAP)",
+      "value": "29.8 / 31.2",
+      "unit": "percent",
+      "date": "2019",
+      "confidence": "verified",
+      "source_title": "SEC EDGAR: Fitbit, Inc. Form 10-K FY2019",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1447599/000144759920000016/fit-20191231.htm",
+      "note": "Drivers: smartwatch mix, higher promotions, tariffs, absence of prior-year warranty-accrual release. Base rate for a scaled hardware-only wearable business = 30-43% GM, trending down under tariffs/promotion."
+    },
+    {
+      "metric": "Garmin automatic rep-count accuracy (blog claim)",
+      "value": "80-90",
+      "unit": "percent",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Alibaba Wellness blog: Is Garmin Strength Training Accurate? A Complete Guide",
+      "source_url": "https://wellness.alibaba.com/fitlife/is-garmin-strength-training-accurate-",
+      "note": "Blog-grade; best on isolated arm movements (curls, shoulder press, cable pulldown); poor when wrist is stable (bench press, squat) or full-body (deadlift, clean). No vendor-published accuracy found."
+    },
+    {
+      "metric": "Peer-reviewed validation of smartwatch strength-tracking app",
+      "value": "exists (exercise recognition, rep count, 1RM prediction)",
+      "unit": "paper",
+      "date": "2021",
+      "confidence": "verified",
+      "source_title": "PMC8471343: Validation of a Smartwatch-Based Workout Analysis Application in Exercise Recognition, Repetition Count and Prediction of 1RM in the Strength Training-Specific Setting",
+      "source_url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8471343/",
+      "note": "Title/URL seen; results not read (egress-blocked). Rep-detection-science lens should extract the accuracy tables."
+    },
+    {
+      "metric": "Atlas Wearables crowdfunding",
+      "value": ">500",
+      "unit": "USD thousand (Indiegogo)",
+      "date": "2014",
+      "confidence": "secondary",
+      "source_title": "TechCrunch (2014-01-07): Atlas Wearables Takes On Jawbone And Nike With A Smarter Exercise Tracker",
+      "source_url": "https://techcrunch.com/2014/01/07/atlas-wearables-takes-on-jawbone-and-nike-with-a-smarter-exercise-tracker",
+      "note": "Wrist IMU strength tracker; shipped 2015; 2016 reviews: \"ambitious but flawed\". Later acquired by Peloton; Multi-Trainer 3 cancelled with refunds. Acquisition date not in snippet."
+    },
+    {
+      "metric": "Amazon Halo discontinuation announced",
+      "value": "2023-04-26",
+      "unit": "date",
+      "date": "2023-04-26",
+      "confidence": "verified",
+      "source_title": "CNBC (2023-04-26): Amazon axes Halo fitness wearable in latest cost-cutting move",
+      "source_url": "https://www.cnbc.com/2023/04/26/amazon-halo-fitness-wearable-dead-in-latest-cost-cutting-move.html",
+      "note": "Launched 2020; service ended 2023-07-31; all user health data deleted; refunds issued. Reasons cited: crowded segment, macro, Amazon cost cuts; privacy controversy (body-fat camera scan, tone-of-voice). Even Amazon could not make a screenless band work."
+    },
+    {
+      "metric": "Pebble Kickstarter 2012",
+      "value": "10.3",
+      "unit": "USD million (~69,000 backers)",
+      "date": "2012",
+      "confidence": "secondary",
+      "source_title": "MIT Technology Review (2016-06-02): How Pebble Is Killing It on Kickstarter",
+      "source_url": "https://www.technologyreview.com/2016/06/02/159865/how-pebble-is-killing-it-on-kickstarter/",
+      "note": "Then most-funded Kickstarter."
+    },
+    {
+      "metric": "Pebble Time Kickstarter 2015",
+      "value": "20.3",
+      "unit": "USD million",
+      "date": "2015",
+      "confidence": "secondary",
+      "source_title": "MIT Technology Review (2016-06-02): How Pebble Is Killing It on Kickstarter",
+      "source_url": "https://www.technologyreview.com/2016/06/02/159865/how-pebble-is-killing-it-on-kickstarter/",
+      "note": "Record at the time."
+    },
+    {
+      "metric": "Pebble 2 / Time 2 / Core Kickstarter 2016",
+      "value": "12.8",
+      "unit": "USD million",
+      "date": "2016",
+      "confidence": "secondary",
+      "source_title": "Stark Insider (June 2016): Was Pebble's $12.8 million Kickstarter campaign a success?",
+      "source_url": "https://www.starkinsider.com/2016/06/12-8m-pebbles-latest-kickstarter-success.html",
+      "note": "Third campaign; Pebble sold assets to Fitbit in Dec 2016 (event not captured in snippets this session - listed as an open item)."
+    },
+    {
+      "metric": "Oura original Kickstarter velocity",
+      "value": "100K in 15 hours",
+      "unit": "USD",
+      "date": "2015",
+      "confidence": "secondary",
+      "source_title": "Jason Stoffer (Substack): Whoop vs. Oura: The $10 Billion Question",
+      "source_url": "https://ringingthebell.substack.com/p/whoop-vs-oura-the-10-billion-question",
+      "note": "Investor blog; total not captured."
+    },
+    {
+      "metric": "White-label Whoop-style bands from Shenzhen ODMs",
+      "value": "available (multiple listings)",
+      "unit": "observation",
+      "date": "2025-2026",
+      "confidence": "verified",
+      "source_title": "Alibaba: Whoop Band Manufacturer Guide: Find Verified Suppliers",
+      "source_url": "https://electronics.alibaba.com/supplier/whoop-band-manufacturer",
+      "note": "Alibaba/Global Sources/Made-in-China list \"whoop band\" manufacturers (e.g., Shenzhen Climber Technology, Guangdong). Unit prices not captured. Implication: the hardware shell is commoditized; differentiation must be algorithmic/software."
+    }
+  ],
+  "detailed_notes": "# Competitor landscape and business-model economics (Whoop-class screenless wearables)\n\nMethod note: 20 WebSearch queries executed before the session's search budget was exhausted; both permitted WebFetch attempts (whoop.com press center, sacra.com) were egress-blocked. Everything below is from search-result snippets. Items the brief asked for that could not be searched are listed as \"not found\" and in open_questions. Dates are given for every figure.\n\n## 1. Whoop: the reference model\n\n**Scale and capital (verified, Whoop press center / Yahoo Finance / Crunchbase News, March 2026).** Series G of $575M at a $10.1B post-money valuation, led by Collaborative Fund with 2PointZero, QIA, Mubadala, Abbott and Mayo Clinic plus athlete investors; total raised ~$979M (secondary). Whoop reported $1.1B in annualized bookings for 2025 (+103% YoY), 2.5M+ members, and said it was cash-flow positive in 2025. Derived: EV/bookings ~9.2x; bookings/member ~$440/yr, which is above the top list price and therefore signals multi-year prepay in bookings, add-ons, or member-count lag - a reconciliation item, not a fact.\n\n**Pricing (verified, whoop.com membership pages, 2025-2026).** WHOOP One $199/yr (5.0 hardware included), Peak $239/yr, Life $359/yr (MG hardware with ECG and Blood Pressure Insights). The 4.0-era \"$30/month\" price in the brief was not independently verified; a blog-grade source gives \"$20-30/month with steep discounts for 12- and 24-month plans\".\n\n**The May 2025 upgrade-fee backlash (verified, Bloomberg 2025-05-09, TechCrunch 2025-05-11, TechRadar).** With the 5.0/MG launch Whoop told existing members to either extend 12 months or pay a one-time $49 (5.0) / $79 (MG) upgrade fee, contradicting a since-deleted blog promise of free next-gen hardware after 6+ months of membership. Within ~48 hours it reversed: >12 months remaining = free upgrade, <12 months = extend, fees refunded. Lesson for a hardware-as-a-service model: forward promises about hardware refresh become balance-sheet liabilities and reputational convexity.\n\n**Regulatory (verified, fda.gov).** FDA warning letter dated 14 July 2025 (MARCS-CMS 709755) - not September as the brief stated - held that Blood Pressure Insights is a medical device because target ranges and sleep-related claims imply diagnosis of hypo/hypertension; Whoop argued it is a wellness feature. STAT and MobiHealthNews report an FDA closeout in June 2026 after Whoop modified the product and labeling (secondary). A plaintiff class action citing the letter was announced in December 2025 (secondary). Read-through: any \"medical-grade\" language on a new device is a free option written to regulators and plaintiffs; the wellness lane (readiness, recovery, strain) is the safe lane, which happens to be where FitForge already sits.\n\n**Strength Trainer (verified, BusinessWire 2023-04-25; vendor blog).** Launched April 2023 as the \"first wearable to measure muscular load\". Mechanism: the user logs sets/reps/weights (manual or from prebuilt routines; 200 workouts at launch, ~500 exercises by the 2026 update); accelerometer and gyroscope data are used to compute muscular load that feeds Strain. It is NOT automatic set/rep detection. This is the gap the owner's idea targets, and a new entrant (FORT, ex-Tesla engineers, Feb 2026, blog-sourced) is explicitly attacking it.\n\n**Manufacturing and tariffs (verified, Federal Register 2020-12-14; CBP ruling N339661 2024-05-09).** CBP's country-of-origin determination: sensor, PCBA, battery and housing are assembled in China; in the US the module is attached to the fabric band and firmware is loaded. The 2024 ruling classifies Whoop Bands from China under HTSUS 9031.90.9195 with 9903.88.01 (Section 301 China list). A blog (the5krunner, Oct 2025) reports Whoop suing a Chinese rival over a $100 look-alike - IP enforcement risk for any Whoop-shaped clone. Alibaba/Global Sources list multiple Shenzhen \"whoop band\" ODMs (verified existence; prices not captured): the shell is a commodity.\n\n**Retention (secondary, Fitt Insider / Baxter interview, undated).** >50% of members use the device daily at 18+ months; \"retention north of 80% in core demographic\" (definition unclear). Blog-grade claims of LTV:CAC ~4.5x and an 85/10/5 revenue split (memberships / accessories+apparel / B2B) come from a page whose own ARR projection (>$600M by 2026) is already stale, so discount them. Sacra's Whoop PDF (updated 2026-05-31) is the best next source and was blocked.\n\n## 2. Oura and the ring segment\n\nOura: >$500M revenue in 2024; expected ~$1B in 2025; Series E of $900M+ at $11B led by Fidelity (Oct 14, 2025), up from $200M at $5.2B in Dec 2024; 5.5M cumulative rings by Sept 2025 vs 2.5M in June 2024 (i.e., ~3M rings in ~15 months); $250M revolver (Sept 2025). Sacra estimates $764M revenue through June 2026 (all secondary: CNBC, TechCrunch, Fierce). Derived EV/revenue ~11x vs Whoop ~9x on bookings. The $5.99/mo subscription and $349 Ring 4 price in the brief were not verified this session.\n\nRing market (secondary, Counterpoint/Omdia): shipments +77% YoY in 2025 to ~4.4M units, North America ~60%; H1 2025 share Oura 74%, Ultrahuman 9%, Samsung 9%, RingConn 5%. India: Ultrahuman 30.4%, Gabit 18.3% (attribution ambiguous). Ultrahuman Ring AIR lists at INR 28,499 with no subscription (vendor page verified; price is a 2026 listing). The Oura-vs-Ultrahuman/RingConn ITC patent matter could not be searched - open item with large implications for any Indian ring/band exporter to the US.\n\n## 3. 2025: the screenless-band segment was validated and commoditized in the same quarter\n\nVerified launches: Amazfit Helio Strap, $99, no subscription, 24 June 2025 (BusinessWire); Garmin Index Sleep Monitor, $169.99, upper-arm, sleep-only, 18 June 2025 (Garmin newsroom); Polar Loop, $199.99 / GBP 149.50, no subscription, announced 3-4 Sept 2025, shipping 10 Sept (Polar press release, Forbes). Helio Strap 2 followed in mid-2026 (blog). Price ladder: $99 < $169.99 < $199.99 = Whoop One's annual fee. Over two years Whoop One costs 2x a Polar Loop and 4x a Helio Strap - and Amazfit, Garmin and Polar bring existing apps, retail and service organizations at near-zero incremental platform cost. For a new entrant this sets the retail anchor at $99-$199 with no subscription attached, which means hardware gross profit per unit is small in absolute dollars: the value has to be in software/data, and the sensor hardware should be treated as a distribution cost for the software.\n\n## 4. Base rates from the graveyard and from public filings\n\nFitbit (verified, SEC 10-Ks): gross margin 43% (2017) -> 40% (2018, smartwatch mix) -> 29.8% GAAP / 31.2% non-GAAP (2019: mix, promotions, tariffs, no warranty-accrual release). That is the scaled, hardware-only base rate, with tariffs and promotions as the drift. Amazon Halo (verified, CNBC 2023-04-26): launched 2020, killed April 2023, service off 31 July 2023, all health data deleted, refunds paid; cited reasons were a crowded segment, cost cuts and privacy blowback. Atlas Wristband (secondary): >$500K Indiegogo (2014), shipped 2015, reviewed as \"ambitious but flawed\" (2016), acquired by Peloton, next product cancelled with refunds - the closest analogue to the owner's idea, and it died on accuracy and scale. Pebble's Kickstarters ($10.3M 2012, $20.3M 2015, $12.8M 2016) show crowdfunding can validate demand but did not save the company (sale to Fitbit, Dec 2016, not captured in snippets). Jawbone, Misfit, Basis, Moov, Push, Beast, Peloton Guide: not searched (budget); should be filled by another lens or a follow-up.\n\nStrength auto-tracking state of the art: Garmin auto-rep is blog-reported at 80-90% on isolated arm movements and poor on bench/squat/deadlift; a 2021 peer-reviewed validation of a smartwatch workout-analysis app (PMC8471343) exists but was not read. Apple Watch/Hevy/Gymatic, Samsung and Fitbit rep detection, and the VBT encoder pricing (Vitruve/RepOne/Tendo/GymAware/Enode) were not searched.\n\n## 5. Market size context (IDC, verified press releases)\n\nGlobal wrist-worn Q1 2025: 45.6M units (+10.5%), smartwatches 34.8M; +10% YoY through Q3 2025 (secondary). IDC forecast: smartwatches 156.8M (2025) / 159.7M (2026); wristbands 35.3M (2025) / 34.6M (2026); total wearables +3.9% in 2025. No analyst breaks out \"screenless bands\" as a category in any snippet seen. India (IDC): 2Q25 27M units (-9%); FY2025 114.2M units (-4.0%, second straight decline), smartwatches -17.6%, boAt 29.2% unit share, Noise leads smartwatches at 26.6%, earwear ASP $17.5. India's domestic wrist-wearable market is shrinking and ultra-low-ASP; the Indian angle is export manufacturing (Ultrahuman as proof of a premium India-built wearable) rather than domestic demand.\n\n## 6. Distribution\n\nVerified/secondary evidence: Amazon listings for Polar Loop; DTC vendor pages for Whoop/Polar/Amazfit/Ultrahuman; Kickstarter/Indiegogo history (Pebble, Oura, Atlas). Gym/coach B2B (Whoop Unite), Amazon fee economics, App Store commission tiers and DTC CAC benchmarks: not searched; the only CAC-type figure seen (LTV:CAC 4.5x) is blog-grade.\n\n## 7. Trader framing: relative value, convexity, downside\n\n- **Relative value.** Whoop ~9x bookings and Oura ~11x revenue are late-stage private marks that price in a subscription/annuity narrative; Fitbit's 30-43% hardware GM history is what a no-subscription hardware business is actually worth operationally. The market is paying for recurring revenue and data, not for bands.\n- **Where the segment's price discovery landed.** $99 (Amazfit) is the 2025 clearing price for a screenless 24/7 HR/HRV/sleep/temp band from a brand with an app; $169.99-$199.99 is the premium no-sub tier; $199-$359/yr is the subscription tier. A generic tracker from a new brand cannot price above the $99-$199 band without a feature nobody else has.\n- **The option.** None of the $99-$359 devices does automatic set/rep/exercise detection; Whoop's Strength Trainer is user-logged; Garmin's auto-rep is unreliable on compound lifts. If FitForge's algorithm works on compound barbell lifts, the payoff is asymmetric because it turns a commodity band into a data pipe for an existing training app with a readiness engine. If it does not, the product is a $99 commodity with a subscale supply chain - i.e., Atlas.\n- **Cheapest way to buy the option.** The verified facts suggest sequencing: (1) prove the detection algorithm on IMU data from an existing device before tooling anything - Helio Strap/Polar Loop-class hardware already exists at $99-$199, and Shenzhen ODMs sell white-label shells; (2) only build custom hardware if raw IMU access from existing devices is impossible (open question) and the algorithm is demonstrably accurate.\n- **Downside drivers.** Incumbents' zero-marginal-cost entry (Amazfit/Garmin/Polar/FORT), Section 301-style tariff exposure for China-assembled units (Whoop precedent), design-IP enforcement (Whoop v. Chinese clone), regulatory drift if any medical claim is made (Whoop FDA letter), and hardware-refresh promises (Whoop upgrade backlash). Base rate for standalone strength-tracking wearables is close to total loss (Atlas, Halo).\n- **Upside drivers.** Category growth (rings +77%, wrist-worn +10%), proven willingness to pay $199-$359/yr for recovery data (2.5M Whoop members, 5.5M Oura rings), and India as a credible premium-wearable origin (Ultrahuman). Nobody has yet combined auto strength logging with a Whoop-class recovery band at a no-subscription price.",
+  "open_questions": [
+    "Whoop: exact 4.0-era pricing history ($30/mo, $239/yr, 24-month tiers) and Sacra's revenue/ARPU/churn estimates - fetch https://sacra-pdfs.s3.us-east-2.amazonaws.com/whoop.pdf (updated 2026-05-31) from a session with egress. Not verified this session.",
+    "Whoop: founding details (2012, Will Ahmed, Harvard) and full round history (Crunchbase) were not searched this session - unverified prior from the brief.",
+    "Whoop Advanced Labs (blood testing) price and launch date - not searched (budget exhausted).",
+    "Whoop B2B (Whoop Unite / teams) revenue share - only a blog-grade ~5% figure seen; not verified.",
+    "Reconcile $1.1B annualized bookings vs 2.5M members (~$440/member) - what share is multi-year prepay, add-ons, apparel?",
+    "Whoop 5.0/MG BOM or teardown (TechInsights/iFixit) - not searched; belongs to hardware-arch lens.",
+    "Oura: $5.99/mo membership, Ring 4 $349 price, gross margin/profitability, member count - not verified this session (unverified priors from the brief).",
+    "ITC patent case Oura v. Ultrahuman/RingConn (exclusion order, 2025) - not searched; critical for any India-built ring/band exporting to the US.",
+    "Samsung Galaxy Ring, RingConn Gen 2, Circular Ring 2 (Kickstarter total), Xiaomi Smart Band 9/10 prices and volumes, Fitbit Charge 6 / Inspire 3 prices, Coros, Suunto, Apple Watch shipment share - not searched.",
+    "Apple Watch third-party rep detection (Gymatic, Hevy 2024, Strong), Samsung and Fitbit auto rep counting, and whether raw IMU streams are accessible from Helio Strap / Polar Loop / Apple Watch to third-party apps - not searched; determines whether custom hardware is needed at all.",
+    "VBT device pricing (Vitruve, RepOne, Tendo, GymAware, Enode Pro) and the status of Beast Sensor, Push Band, Moov Now, Jabra Elite Sport, Wahoo Tickr X, Polar Verity Sense, Peloton Guide - not searched.",
+    "Jawbone, Misfit, Pebble (Fitbit asset sale Dec 2016), Basis failure post-mortems - not searched.",
+    "Unit economics benchmarks: DTC wearable CAC, subscription attach rates, wearable return/warranty rates (brief's 5-10% prior), support cost per unit, App Store 15%/30% commission thresholds, Amazon referral fees - not searched; only blog-grade LTV:CAC 4.5x seen.",
+    "Section 301 duty rate applicable to HTSUS 9031.90.9195 from China, and current US tariff treatment of India-origin wearables - not in snippets; belongs to india-policy-trade lens.",
+    "IDC 2026 smartwatch forecast: snippet shows 159.7M for 2026 and \"-2.8% YoY\" simultaneously - inconsistent; obtain the original release.",
+    "Which analyst (Counterpoint vs Omdia vs IDC India) owns the 74/9/9/5 ring share, the 4.4M-unit 2025 ring volume and the Ultrahuman 30.4% India share - attribution ambiguous in snippets.",
+    "Kickstarter/Indiegogo totals for recent fitness wearables (2023-2026), e.g., Circular Ring 2, Pebble/Core Devices 2025 relaunch - not searched.",
+    "FORT (ex-Tesla strength/recovery tracker, Feb 2026): price, sensor set, detection claims, funding - only a blog headline seen."
+  ],
+  "sources": [
+    {
+      "title": "WHOOP press center: Raises $575 Million at $10.1 Billion Valuation (Series G)",
+      "url": "https://www.whoop.com/us/en/press-center/whoop-announces-series-g-funding/",
+      "type": "company press release (primary)"
+    },
+    {
+      "title": "Yahoo Finance: Whoop Raises $575 Million at $10.1 Billion Valuation, Reports 103% Growth",
+      "url": "https://finance.yahoo.com/sectors/healthcare/articles/whoop-raises-575-million-10-204207038.html",
+      "type": "trade/financial press"
+    },
+    {
+      "title": "Crunchbase News: Whoop Lands $575M ... To Reach $10.1B Valuation",
+      "url": "https://news.crunchbase.com/venture/wearable-fitness-tech-ai-whoop-seriesg-funding/",
+      "type": "analyst/trade press"
+    },
+    {
+      "title": "Sacra: Whoop revenue, valuation & funding (equity research, updated 05/31/2026)",
+      "url": "https://sacra.com/c/whoop/",
+      "type": "analyst (egress-blocked; not read)"
+    },
+    {
+      "title": "Sacra Equity Research PDF: Whoop (updated 05/31/2026)",
+      "url": "https://sacra-pdfs.s3.us-east-2.amazonaws.com/whoop.pdf",
+      "type": "analyst (not read)"
+    },
+    {
+      "title": "Getlatka: Whoop Revenue 2025: $1.1B ARR, $10.1B Valuation",
+      "url": "https://getlatka.com/companies/whoop.com",
+      "type": "aggregator (secondary)"
+    },
+    {
+      "title": "WHOOP Membership Options | Compare Plans & Features",
+      "url": "https://www.whoop.com/us/en/membership/",
+      "type": "vendor product page (primary)"
+    },
+    {
+      "title": "WHOOP Life Membership Plan",
+      "url": "https://www.whoop.com/us/en/life/",
+      "type": "vendor product page (primary)"
+    },
+    {
+      "title": "WHOOP Support: Upgrades",
+      "url": "https://support.whoop.com/s/article/Upgrades",
+      "type": "vendor support page (primary)"
+    },
+    {
+      "title": "TrackerVS: WHOOP Pricing 2026: All 3 Plans Compared ($199-$359/yr)",
+      "url": "https://trackervs.com/pricing/whoop-pricing/",
+      "type": "blog/comparison site"
+    },
+    {
+      "title": "Tom's Guide: Whoop 5.0 and Whoop MG just announced",
+      "url": "https://www.tomsguide.com/wellness/fitness-trackers/whoop-5-0-and-whoop-mg-just-announced-heres-everything-you-need-to-know",
+      "type": "tech press"
+    },
+    {
+      "title": "Bloomberg (2025-05-09): Whoop Reverses Course After Customer Backlash on Upgrade Fees",
+      "url": "https://www.bloomberg.com/news/articles/2025-05-09/whoop-faces-backlash-after-charging-existing-users-upgrade-fee-for-new-models",
+      "type": "financial press"
+    },
+    {
+      "title": "TechCrunch (2025-05-11): Fitness tracker Whoop faces unhappy customers over upgrade policy",
+      "url": "https://techcrunch.com/2025/05/11/fitness-tracker-whoop-faces-unhappy-customers-over-upgrade-policy",
+      "type": "tech press"
+    },
+    {
+      "title": "TechRadar: Whoop subscribers can now get a free upgrade ... after a huge user backlash",
+      "url": "https://www.techradar.com/health-fitness/fitness-trackers/whoop-has-broken-a-promise-on-free-hardware-upgrades-and-users-arent-pleased",
+      "type": "tech press"
+    },
+    {
+      "title": "Boston Globe (2025-05-09): Whoop faces backlash after charging existing users upgrade fee",
+      "url": "https://www.bostonglobe.com/2025/05/09/business/whoop-backlash-users-upgrade-fee-models/",
+      "type": "press"
+    },
+    {
+      "title": "FDA Warning Letter: WHOOP, Inc. (MARCS-CMS 709755, 07/14/2025)",
+      "url": "https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/whoop-inc-709755-07142025",
+      "type": "government (primary)"
+    },
+    {
+      "title": "Duane Morris: FDA Issues Warning Letter Classifying Wearable Blood Pressure Monitor as a Device (July 2025)",
+      "url": "https://www.duanemorris.com/alerts/fda_issues_warning_letter_classifying_wearable_blood_pressure_monitor_device_0725.html",
+      "type": "law firm alert"
+    },
+    {
+      "title": "MedTech Dive: What medtech firms can learn from Whoop's warning letter",
+      "url": "https://www.medtechdive.com/news/whoop-warning-letter-lessons-learned/807352/",
+      "type": "trade press"
+    },
+    {
+      "title": "MobiHealthNews: FDA closes warning letter to Whoop for blood pressure insights feature",
+      "url": "https://www.mobihealthnews.com/news/fda-closes-warning-letter-whoop-blood-pressure-insights-feature",
+      "type": "trade press"
+    },
+    {
+      "title": "STAT (2026-06-23): FDA drops enforcement against Whoop after it tweaks blood pressure feature",
+      "url": "https://www.statnews.com/2026/06/23/fda-drops-enforcement-against-wearable-maker-whoop/",
+      "type": "trade press"
+    },
+    {
+      "title": "ArentFox Schiff: FDA Warning Letter Now Anchors a Class Action Against Whoop",
+      "url": "https://www.afslaw.com/perspectives/longevity-lens/whoop-there-it-fda-warning-letter-now-anchors-class-action-against",
+      "type": "law firm alert"
+    },
+    {
+      "title": "Finkelstein Blankinship (2025-12-19): FDA Sends Warning Letter to WHOOP for Marketing Blood Pressure Insights Without Approval",
+      "url": "https://4classaction.com/2025/12/19/fda-sends-warning-letter-to-whoop-inc-for-marketing-blood-pressure-insights-without-approval/",
+      "type": "plaintiff law firm (secondary)"
+    },
+    {
+      "title": "MD+DI: To be or not to be a medical device: FDA vs WHOOP",
+      "url": "https://www.mddionline.com/wearable-medical-devices/to-be-or-not-to-be-a-medical-device-fda-vs-whoop",
+      "type": "trade press"
+    },
+    {
+      "title": "BusinessWire (2023-04-25): WHOOP Introduces Strength Trainer, Becomes First Wearable to Measure Muscular Load",
+      "url": "https://www.businesswire.com/news/home/20230425005456/en/5429321/WHOOP-Introduces-Strength-Trainer-Becomes-First-Wearable-to-Measure-Muscular-Load",
+      "type": "company press release (primary)"
+    },
+    {
+      "title": "WHOOP Locker: Muscular Load Explained: What It Is and How WHOOP Tracks It",
+      "url": "https://www.whoop.com/us/en/thelocker/how-whoop-measures-muscular-load/",
+      "type": "vendor blog (primary for product mechanics)"
+    },
+    {
+      "title": "Wareable: Whoop Strength Trainer explained & five essential tips",
+      "url": "https://www.wareable.com/fitness-trackers/whoop-strength-trainer-how-to-use-tips-wish-list",
+      "type": "tech press"
+    },
+    {
+      "title": "FitTechGlobal: Whoop adds Strength Trainer function with 200 workouts",
+      "url": "https://www.fittechglobal.com/fit-tech-news/Whoop-adds-Strength-Trainer-feature-allowing-members-to-measure-muscular-load/351262",
+      "type": "trade press"
+    },
+    {
+      "title": "Gadgets & Wearables (2026-05-22): WHOOP wants to make gym strain less of a guessing game (Strength Trainer update)",
+      "url": "https://gadgetsandwearables.com/2026/05/22/whoop-strength-trainer-2/",
+      "type": "tech blog"
+    },
+    {
+      "title": "Federal Register (2020-12-14): Notice of Issuance of Final Determination Concerning a Whoop Strap Device (CBP country-of-origin)",
+      "url": "https://www.federalregister.gov/documents/2020/12/14/2020-26342/notice-of-issuance-of-final-determination-concerning-a-whoop-strap-device",
+      "type": "government (primary)"
+    },
+    {
+      "title": "CBP Ruling NY N339661 (2024-05-09): The tariff classification of Whoop Bands from China",
+      "url": "https://rulings.cbp.gov/ruling/n339661",
+      "type": "government (primary)"
+    },
+    {
+      "title": "Alibaba: Whoop Band Manufacturer Guide: Find Verified Suppliers",
+      "url": "https://electronics.alibaba.com/supplier/whoop-band-manufacturer",
+      "type": "B2B marketplace (vendor marketing)"
+    },
+    {
+      "title": "Global Sources: Shenzhen Climber Technology Co., Ltd - Xiaomi Band / Whoop-style band manufacturer",
+      "url": "https://climber.manufacturer.globalsources.com/homepage_6008844726722.htm",
+      "type": "B2B marketplace listing"
+    },
+    {
+      "title": "the5krunner (2025-10-19): Why WHOOP Is Suing a Chinese Rival Over a $100 Copycat Tracker",
+      "url": "https://the5krunner.com/2025/10/19/why-whoop-is-suing-a-chinese-rival-over-a-wholesale-imitation-tracker-design/",
+      "type": "blog (last resort)"
+    },
+    {
+      "title": "Fitt Insider Issue No. 161: WHOOP's High-Performance Platform",
+      "url": "https://insider.fitt.co/issue-no-161-whoops-high-performance-platform/",
+      "type": "industry newsletter (secondary)"
+    },
+    {
+      "title": "Robbie K. Baxter (Medium): Subscriptions that Combine Hardware and Software with Ben Foster, CPO of WHOOP",
+      "url": "https://robbiebax.medium.com/subscriptions-that-combine-hardware-and-software-with-ben-foster-chief-product-officer-of-whoop-e0972049175",
+      "type": "interview/blog"
+    },
+    {
+      "title": "businessmodelcanvastemplate.com: How Does Whoop Company Work?",
+      "url": "https://businessmodelcanvastemplate.com/blogs/how-it-works/whoop-how-it-works",
+      "type": "blog (last resort, unverified figures)"
+    },
+    {
+      "title": "circuly: Case Study: Whoop Business Strategy & Device-as-a-Service Success",
+      "url": "https://www.circuly.io/blog/case-study-whoop-business-strategy-device-as-a-service-success",
+      "type": "vendor blog (last resort)"
+    },
+    {
+      "title": "TrackingMore case study: WHOOP reduces customer churn rate",
+      "url": "https://www.trackingmore.com/customers/whoop",
+      "type": "vendor marketing (last resort)"
+    },
+    {
+      "title": "CNBC (2025-10-14): Oura reaches $11 billion valuation with new $900 million fundraise",
+      "url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html",
+      "type": "financial press"
+    },
+    {
+      "title": "TechCrunch (2025-10-14): Smart ring maker Oura raises $900M from Fidelity",
+      "url": "https://techcrunch.com/2025/10/14/smart-ring-maker-oura-raises-900m-from-fidelity",
+      "type": "tech press"
+    },
+    {
+      "title": "TechCrunch (2024-12-19): Oura closes $200M round, bringing its valuation to $5.2B",
+      "url": "https://techcrunch.com/2024/12/19/oura-closes-200m-round-bringing-its-valuation-to-5-2b",
+      "type": "tech press"
+    },
+    {
+      "title": "Fierce Healthcare: Oura raises $900M series E as smart ring sales catapult company's growth",
+      "url": "https://www.fiercehealthcare.com/health-tech/oura-raises-900m-series-e-oura-ring-sales-catapult",
+      "type": "trade press"
+    },
+    {
+      "title": "Sacra: Oura revenue, valuation & funding",
+      "url": "https://sacra.com/c/oura/",
+      "type": "analyst (egress-blocked; snippet only)"
+    },
+    {
+      "title": "Athletech News: Oura Sees Ring Sales Surge Amid Rumored $11B Valuation",
+      "url": "https://athletechnews.com/oura-smart-ring-sales-surge-amid-rumored-11b-valuation/",
+      "type": "trade press"
+    },
+    {
+      "title": "BusinessWire (2025-06-24): Amazfit Helio Strap launch release",
+      "url": "https://www.businesswire.com/news/home/20250624910772/en",
+      "type": "company press release (primary)"
+    },
+    {
+      "title": "Amazfit US product page: Helio Strap",
+      "url": "https://us.amazfit.com/products/helio-strap",
+      "type": "vendor product page (primary)"
+    },
+    {
+      "title": "DC Rainmaker (June 2025): Amazfit Helio Band In-Depth Review: $99 & No Sub Fee, But Worth it?",
+      "url": "https://www.dcrainmaker.com/2025/06/amazfit-helio-band-in-depth-review-99-no-sub-fee-but-worth-it.html",
+      "type": "expert review"
+    },
+    {
+      "title": "Garmin Rumors: Amazfit Helio Strap Launches: $99, No Screen, No Subscription",
+      "url": "https://garminrumors.com/amazfit-helio-strap-launches-99-no-screen-no-subscription/",
+      "type": "tech blog"
+    },
+    {
+      "title": "the5krunner (2026-06-06): Amazfit Helio Strap 2: Release Date, Specs and Whoop Comparison",
+      "url": "https://the5krunner.com/2026/06/06/amazfit-helio-strap-2/",
+      "type": "blog"
+    },
+    {
+      "title": "TechTimes (2026-08-05): Amazfit Helio Strap Worn on Bicep Rivals Chest Strap Accuracy",
+      "url": "https://www.techtimes.com/articles/323131/20260805/amazfit-helio-strap-worn-bicep-rivals-chest-strap-accuracy-workout-time.htm",
+      "type": "tech press"
+    },
+    {
+      "title": "Polar press release: Polar launches Polar Loop, its first screen-free, subscription-free wearable",
+      "url": "https://www.polar.com/en/media-room/polar-launches-polar-loop-first-screen-free-subscription-free-wearable",
+      "type": "company press release (primary)"
+    },
+    {
+      "title": "Polar product page: Polar Loop",
+      "url": "https://www.polar.com/en/loop",
+      "type": "vendor product page (primary)"
+    },
+    {
+      "title": "Forbes (2025-09-04): Polar Launches Whoop Rival Subscription-Free Screenless Health Tracker",
+      "url": "https://www.forbes.com/sites/andrewwilliams/2025/09/04/polar-launches-whoop-rival-subscription-free-screenless-health-tracker/",
+      "type": "press"
+    },
+    {
+      "title": "Wareable: Polar Loop arrives as a screenless fitness tracker with no subscription",
+      "url": "https://www.wareable.com/fitness-trackers/polar-loop-fitness-tracker-announcement-subscription-price-features",
+      "type": "tech press"
+    },
+    {
+      "title": "Amazon.com listing: POLAR Loop screen-free wearable (B0G2X12YRY)",
+      "url": "https://www.amazon.com/Polar-Loop-Screen-Free-Automatic-Subscription/dp/B0G2X12YRY",
+      "type": "retail listing"
+    },
+    {
+      "title": "Garmin newsroom: Rest easy with the Index Sleep Monitor smart sleep band from Garmin",
+      "url": "https://www.garmin.com/en-US/newsroom/press-release/sports-fitness/rest-easy-with-the-index-sleep-monitor-smart-sleep-band-from-garmin/",
+      "type": "company press release (primary)"
+    },
+    {
+      "title": "Bloomberg (2025-06-18): Garmin Launches $170 Health-Tracking Arm Band for Wear During Sleep",
+      "url": "https://www.bloomberg.com/news/articles/2025-06-18/garmin-launches-170-health-tracking-arm-band-for-wear-during-sleep",
+      "type": "financial press"
+    },
+    {
+      "title": "Ultrahuman: Ring AIR in India | Price, UPI, COD & EMI",
+      "url": "https://www.ultrahuman.com/in/ring/buy/",
+      "type": "vendor product page (primary)"
+    },
+    {
+      "title": "Smartprix: Ultrahuman Ring Air - Price in India (Jun 2026), Specs",
+      "url": "https://www.smartprix.com/smart_rings/ultrahuman-ring-air-ppd15b9fnrb5",
+      "type": "price aggregator"
+    },
+    {
+      "title": "Flipkart: Ultrahuman Ring Air Smart Ring",
+      "url": "https://www.flipkart.com/ultrahuman-ring-air-smart/p/itm84a128948dde1",
+      "type": "retail listing"
+    },
+    {
+      "title": "IDC (prAP53613925): Global Wrist-Worn Device Shipments Grew 10.5% in Q1 2025",
+      "url": "https://my.idc.com/getdoc.jsp?containerId=prAP53613925",
+      "type": "analyst press release (primary)"
+    },
+    {
+      "title": "IDC (prUS52615024): IDC Forecasts Continued Growth for Wearables But Growth Will Be Uneven Across Product Categories",
+      "url": "https://my.idc.com/getdoc.jsp?containerId=prUS52615024",
+      "type": "analyst press release (primary)"
+    },
+    {
+      "title": "IDC (prUS52856224): Wearables to Face Continued Growth While Giving Way to New Form Factors",
+      "url": "https://my.idc.com/getdoc.jsp?containerId=prUS52856224",
+      "type": "analyst press release (primary)"
+    },
+    {
+      "title": "IDC (prAP53747725): India's Wearable Device Market Declined by 9% YoY in 2Q25 to 27 Million Units",
+      "url": "https://my.idc.com/getdoc.jsp?containerId=prAP53747725",
+      "type": "analyst press release (primary)"
+    },
+    {
+      "title": "Futu News: IDC: global wrist-worn device market grew 10% YoY in first three quarters of 2025",
+      "url": "https://news.futunn.com/en/post/66291023/idc-the-global-wrist-worn-device-market-grew-10-year",
+      "type": "financial news (secondary, citing IDC)"
+    },
+    {
+      "title": "FoneArena: Indian wearable shipments fall 4.0% YoY in 2025; realme posts 27.8% growth: IDC",
+      "url": "https://www.fonearena.com/blog/476987/indian-wearable-shipments-2025.html",
+      "type": "tech press (citing IDC)"
+    },
+    {
+      "title": "TelecomLead: India Wearables Market Declines 4% in 2025 as Smartwatch Shipments Fall",
+      "url": "https://telecomlead.com/smart-phone/india-wearables-market-declines-4-in-2025-as-smartwatch-shipments-fall-price-rise-124907",
+      "type": "trade press (citing IDC)"
+    },
+    {
+      "title": "BizTechReports: India's Wearables Market Declines 4.0% to 114 Million Units in 2025 as Smartwatch Shipments Fall 17.6% - IDC (April 2026)",
+      "url": "https://www.biztechreports.com/news-archive/2026/4/1/indias-wearables-market-declines-40-to-114-million-units-in-2025-as-smartwatch-shipments-fall-176-idc-april-1-2026",
+      "type": "trade press (citing IDC)"
+    },
+    {
+      "title": "Beebom: boAt Dominates Indian Wearable Market in H1 2025 with 28% Market Share (IDC)",
+      "url": "https://gadgets.beebom.com/news/indian-wearable-market-idc-report",
+      "type": "tech press (citing IDC)"
+    },
+    {
+      "title": "Counterpoint Research: From Niche to Necessity: Smart Rings and the Next Phase of Health-Tech Evolution",
+      "url": "https://counterpointresearch.com/en/reports/from-niche-to-necessity-smart-rings-and-the-next-phase-of-health-tech-evolution",
+      "type": "analyst report page (primary)"
+    },
+    {
+      "title": "Omdia (Nov 2025): Empowering the Health and Fitness Ecosystem with Smart Rings",
+      "url": "https://omdia.tech.informa.com/blogs/2025/nov/empowering-the-health-and-fitness-ecosystem-with-smart-rings",
+      "type": "analyst blog (primary)"
+    },
+    {
+      "title": "Global Market Insights: Smart Rings Market Size, Forecasts Report 2026-2035",
+      "url": "https://www.gminsights.com/industry-analysis/smart-rings-market",
+      "type": "market-research aggregator (low reliability)"
+    },
+    {
+      "title": "XtendedView: Smart Ring Statistics 2026",
+      "url": "https://xtendedview.com/smart-ring-statistics/",
+      "type": "blog aggregator (low reliability)"
+    },
+    {
+      "title": "SEC EDGAR: Fitbit, Inc. Form 10-K FY2019",
+      "url": "https://www.sec.gov/Archives/edgar/data/1447599/000144759920000016/fit-20191231.htm",
+      "type": "SEC filing (primary)"
+    },
+    {
+      "title": "SEC EDGAR: Fitbit Inc. Form 10-K FY2018",
+      "url": "https://www.sec.gov/Archives/edgar/data/1447599/000162828019002374/fitbit1231201810-k.htm",
+      "type": "SEC filing (primary)"
+    },
+    {
+      "title": "Nasdaq/Fitbit (2020-02-20): Fitbit Reports 2019 Fourth Quarter and Full Year Results",
+      "url": "https://www.nasdaq.com/press-release/fitbit-reports-2019-fourth-quarter-and-full-year-results-2020-02-20",
+      "type": "company press release (primary)"
+    },
+    {
+      "title": "Alibaba Wellness blog: Is Garmin Strength Training Accurate? A Complete Guide",
+      "url": "https://wellness.alibaba.com/fitlife/is-garmin-strength-training-accurate-",
+      "type": "blog (last resort)"
+    },
+    {
+      "title": "PMC8471343: Validation of a Smartwatch-Based Workout Analysis Application in Exercise Recognition, Repetition Count and Prediction of 1RM in the Strength Training-Specific Setting",
+      "url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8471343/",
+      "type": "peer-reviewed paper (primary; content not read)"
+    },
+    {
+      "title": "LiftTrack: The Best Garmin Watch for Weightlifting: Complete 2025 Guide",
+      "url": "https://lifttrackapp.com/best-garmin-for-weightlifting/",
+      "type": "blog"
+    },
+    {
+      "title": "TechCrunch (2014-01-07): Atlas Wearables Takes On Jawbone And Nike With A Smarter Exercise Tracker",
+      "url": "https://techcrunch.com/2014/01/07/atlas-wearables-takes-on-jawbone-and-nike-with-a-smarter-exercise-tracker",
+      "type": "tech press"
+    },
+    {
+      "title": "AppleInsider (2016-02-13): Review: Atlas Wristband is an ambitious but flawed strength training tracker",
+      "url": "https://appleinsider.com/articles/16/02/13/review-atlas-wristband-is-an-ambitious-but-flawed-strength-training-tracker",
+      "type": "tech press review"
+    },
+    {
+      "title": "Wareable: Peloton acquires Atlas Wearables",
+      "url": "https://www.wareable.com/wearable-tech/peloton-acquires-atlas-wearables-8366",
+      "type": "tech press"
+    },
+    {
+      "title": "Pelo Buddy: Rumor: Peloton acquired Atlas Wearables [Update: Now Confirmed]",
+      "url": "https://www.pelobuddy.com/rumor-peloton-acquired-atlas-wearables/",
+      "type": "community blog"
+    },
+    {
+      "title": "the5krunner (2026-02-19): Whoop Rival FORT: Ex-TESLA Engineers Launch new Strength and Recovery Tracker",
+      "url": "https://the5krunner.com/2026/02/19/fort-whoop-competitor/",
+      "type": "blog"
+    },
+    {
+      "title": "CNBC (2023-04-26): Amazon axes Halo fitness wearable in latest cost-cutting move",
+      "url": "https://www.cnbc.com/2023/04/26/amazon-halo-fitness-wearable-dead-in-latest-cost-cutting-move.html",
+      "type": "financial press"
+    },
+    {
+      "title": "GeekWire: Amazon's Halo disappears: Tech giant discontinues health devices and service, promises refunds",
+      "url": "https://www.geekwire.com/2023/amazons-halo-disappears-tech-giant-discontinues-health-devices-and-service-promises-refunds/",
+      "type": "tech press"
+    },
+    {
+      "title": "Fierce Healthcare: Amazon sunsets Halo fitness wearable in the face of competitive, crowded market",
+      "url": "https://www.fiercehealthcare.com/digital-health/amazon-sunsets-halo-fitness-wearable-face-competitive-crowded-market",
+      "type": "trade press"
+    },
+    {
+      "title": "TechRadar: Amazon Halo is dead and soon your wearable will be worthless",
+      "url": "https://www.techradar.com/news/amazon-halo-is-dead-and-soon-your-wearable-will-be-worthless-its-okay-to-be-angry",
+      "type": "tech press"
+    },
+    {
+      "title": "CNBC (2016-05-24): Pebble's new watches top $1 million on Kickstarter",
+      "url": "https://www.cnbc.com/2016/05/24/pebbles-new-watches-top-1-million-on-kickstarter.html",
+      "type": "financial press"
+    },
+    {
+      "title": "Stark Insider (June 2016): Was Pebble's $12.8 million Kickstarter campaign a success?",
+      "url": "https://www.starkinsider.com/2016/06/12-8m-pebbles-latest-kickstarter-success.html",
+      "type": "press/blog"
+    },
+    {
+      "title": "MIT Technology Review (2016-06-02): How Pebble Is Killing It on Kickstarter",
+      "url": "https://www.technologyreview.com/2016/06/02/159865/how-pebble-is-killing-it-on-kickstarter/",
+      "type": "press"
+    },
+    {
+      "title": "HBS Digital Innovation: Pebble Smartwatch: The Serial Crowdfunded Superstar",
+      "url": "https://aiinstitute.hbs.edu/platform-digit/submission/pebble-smartwatch-the-serial-crowdfunded-superstar/",
+      "type": "academic case note"
+    },
+    {
+      "title": "Jason Stoffer (Substack): Whoop vs. Oura: The $10 Billion Question",
+      "url": "https://ringingthebell.substack.com/p/whoop-vs-oura-the-10-billion-question",
+      "type": "investor blog (last resort)"
+    }
+  ]
+}

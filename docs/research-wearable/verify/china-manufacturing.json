@@ -1,0 +1,144 @@
+{
+  "lens": "china-manufacturing",
+  "checks": [
+    {
+      "claim": "White-label price floor: Alibaba screenless HRV/SpO2/sleep bands list at $8.80-$12.55/unit with MOQs of 1-100 pcs; Da Fit/MoYoung RTL8762-class watches retail at ~$7 on Amazon.",
+      "verdict": "unverifiable",
+      "corrected_value": "",
+      "evidence": "The $8.80-$12.55 bracket appears only on Alibaba's own marketing page ('starting as low as'); a sibling Alibaba sourcing page for the same category quotes $9.80-$26.00, so the floor is not independently corroborated. No search result corroborated the 1-100 pc MOQ range, and the ~$7 Amazon price for RTL8762/Da Fit watches appears only in the jphein/moyoung-watch README (TechRadar's sub-$4 AliExpress band is a different, older device). Order of magnitude is plausible; the specific numbers are single-source.",
+      "source_url": "https://electronics.alibaba.com/product/smart-bands-without-display"
+    },
+    {
+      "claim": "Alibaba's OEM-vs-ODM wearable guide: full-custom OEM NRE $150k-$400k plus $50k-$120k certification and $30k+ tooling; OEM MOQ 5,000; ODM MOQ 2,000-3,000.",
+      "verdict": "corrected",
+      "corrected_value": "Same guide: OEM $18-$32/unit at 5,000-unit MOQ with $150k-$400k NRE, $50k-$120k certifications, $30k+ tooling amortization (as cited); but ODM MOQ in that guide is 1,000 units (not 2,000-3,000) at $25-$45/unit, with $12k-$28k branding setup and $0-$15k for minor firmware tweaks. The 2,000-3,000 figure is iSmarch's stated MOQ, not Alibaba's.",
+      "evidence": "Search of the Alibaba guide confirms the NRE/certification/tooling figures and the 5,000-unit OEM MOQ verbatim, but gives ODM MOQ as 1,000 units and adds per-unit brackets the research file omitted. All of these numbers exist only in Alibaba marketing content; no ODM quotation corroborates them, so treat as order-of-magnitude.",
+      "source_url": "https://electronics.alibaba.com/buyingguides/oem-vs-odm-wearables-which-fits-your-brand"
+    },
+    {
+      "claim": "Firmware source-code access reportedly requires MOQs up to 50,000 units; mid-tier ODM GPS smartwatch $34/unit at 2,000 units vs $29/unit OEM plus ~$210k one-time.",
+      "verdict": "unverifiable",
+      "corrected_value": "",
+      "evidence": "Alibaba's smartwatch-manufacturer guide does say ODMs 'might require a much higher MOQ - like 50,000 units' for full source code, so the citation is accurate, but it is a single marketing source summarizing buyer discussions with no named vendor. The $34/$29/$210k figures were not surfaced by search even though the seller-blog URL exists; they could not be independently corroborated.",
+      "source_url": "https://electronics.alibaba.com/buyingguides/smartwatch-manufacturer-guide-oem-vs-odm-selection"
+    },
+    {
+      "claim": "J-Style/Jointcorp ECG bands (JCVital V8) have MOQ 1,000 with full iOS/Android SDK + cloud API, ISO 13485, CE/FCC; iSmarch screenless bands have MOQ 2,000-3,000 on EXW quotes with SDK/protocol docs supplied.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Jointcorp's own site states OEM MOQ 'generally starts at 1,000 units' (white-label ODM lower), open SDK and cloud API for JCVital V8 ECG/HRV/SpO2 data, ISO13485 factory, CE/FCC/RoHS. iSmarch's own site states MOQ 'usually 2000-3000 units', USD EXW pricing, SDKs/protocols/examples for own-app integration, pilots of 50-200 units, samples 2-4 weeks, mass production 8-12 weeks.",
+      "source_url": "https://www.jointcorp.com/ecg-smart-band-manufacturer-how-to-choose-the-right-odm-oem-partner/"
+    },
+    {
+      "claim": "Amazfit Helio Strap: $99 one-time with no subscription; BioTracker 6.0 PPG with 5 photodiodes and 2 LEDs; accelerometer + gyroscope + temperature sensor; auto-recognition of 25 strength-training movements.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "DC Rainmaker's June 2025 review and Garmin Rumors report a $99 launch (June 24, 2025) with no subscription; Notebookcheck (2026) lists the restock price at $99.99/GBP 99.90/EUR 99.90. Amazfit's product page and multiple reviews confirm BioTracker 6.0 with five photodiodes and two LEDs, accelerometer, gyroscope, temperature sensor (plus a geomagnetic sensor the research file omits), 25 strength-movement recognition, 10-day battery, 20 g.",
+      "source_url": "https://www.dcrainmaker.com/2025/06/amazfit-helio-band-in-depth-review-99-no-sub-fee-but-worth-it.html"
+    },
+    {
+      "claim": "A Helio Strap Pro shipped in June 2026; price not found.",
+      "verdict": "corrected",
+      "corrected_value": "Announced June 18, 2026 (BusinessWire) at US$199.99, available globally from end of June 2026. It is a two-sensor system (upper-arm HR strap + waist-mounted motion sensor with up to 40-day battery) that tracks all eight HYROX movements and pairs with Balance 3/Balance Ultra watches.",
+      "evidence": "Amazfit's BusinessWire release and coverage by FoneArena, Gizbot, Basic Tutorials and WearableXP all give $199.99 and a late-June 2026 availability; the research file's 'price not found' is stale and its description misses that the Pro is a dual-sensor body-worn system rather than a single strap.",
+      "source_url": "https://www.businesswire.com/news/home/20260618031434/en/Amazfit-Introduces-Helio-Strap-Pro-Bringing-Body-Worn-Movement-Intelligence-to-HYROX-and-Hybrid-Training"
+    },
+    {
+      "claim": "Zepp Health gross margin ~38-39%, adjusted operating breakeven in Q3 2025 (vs $11.3M adjusted loss prior year), revenue +78.5% YoY.",
+      "verdict": "confirmed",
+      "corrected_value": "Precise figures: Q3 2025 gross margin 38.2% (+2.0 pts QoQ); revenue US$75.8M (+78.5% YoY, +27.6% QoQ); GAAP operating loss US$0.9M and adjusted operating income US$0.4M vs US$12.5M / US$11.3M losses in Q3 2024.",
+      "evidence": "Zepp Health's own Q3 2025 press release (PR Newswire, Nov 4, 2025; syndicated on Nasdaq/Morningstar) states gross margin 38.2%, revenue $75.8M up 78.5% YoY, and adjusted operating income of $0.4M ('breakeven') vs $11.3M adjusted loss a year earlier. The file's ~38-39% is within rounding but the primary number is 38.2%.",
+      "source_url": "https://www.prnewswire.com/news-releases/zepp-health-corporation-reports-third-quarter-2025-unaudited-financial-results-302604324.html"
+    },
+    {
+      "claim": "WHOOP 4.0 silicon: Maxim MAX86171 optical AFE, MAX32652 MCU, MAX6631 temperature sensor; optics are 5 LEDs (3 green, 1 red, 1 IR) and 4 photodiodes.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "the5krunner's June 2025 sensor-architecture article, citing the TechInsights deep-dive teardown (DDT-2111-806), lists four Maxim design wins in WHOOP 4.0: MAX32652 Cortex-M4F MCU, MAX77818 PMIC (omitted in the file), MAX86171 pulse-ox/HR AFE and MAX6631MTT digital temperature sensor. WHOOP's own CTO post states the 4.0 sensor has 5 LEDs (three green, one red, one infrared) and 4 photodiodes.",
+      "source_url": "https://the5krunner.com/2025/06/16/whoop-4-0-vs-whoop-5-0-sensor-architecture-changes-detailed-technical-content/"
+    },
+    {
+      "claim": "Section 301 List 4A rate of 7.5% applies to 8517.62.0090-class Bluetooth consumer devices (carved out of List 1), reported under 9903.88.15.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "CBP CROSS rulings for Bluetooth products classified in 8517.62.0090 (e.g., N308565 wireless earbuds; a wireless intercom headset ruling summarized by Clark Hill/Lexology; a Bluetooth tracking device ruling) state that Chinese products under 8517.62.0090 are subject to an additional 7.5% ad valorem duty and must be reported with chapter 99 subheading 9903.88.15. FreightAmigo and 2026 trade guides confirm Tranche 4A remains at 7.5%.",
+      "source_url": "https://rulings.cbp.gov/ruling/N308565"
+    },
+    {
+      "claim": "2026 tariff sequence: IEEPA tariffs struck down Feb 20, 2026; Section 122 10% global surcharge ran Feb 24 - Jul 24, 2026; forced-labor Section 301 duties effective Jul 24, 2026 at 12.5% for China and 10% for India.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Supreme Court decided Learning Resources, Inc. v. Trump on Feb 20, 2026 (6-3, IEEPA does not authorize tariffs; supremecourt.gov 24-1287). Skadden/PwC/GingerControl confirm the Section 122 10% surcharge took effect Feb 24, 2026 under Proclamation 11012 and expired at its 150-day limit on Jul 24, 2026. Holland & Knight, Akerman, C.H. Robinson, GHY and Wiley confirm the USTR forced-labor Section 301 final action (issued Jul 23) took effect 12:01 a.m. EDT Jul 24, 2026 at 10% or 12.5% across 60 economies, with India in the 10% tier and China at 12.5%. Newer development the file misses: the Court of International Trade struck down the Section 122 tariffs in May 2026 (appeal pending; refund implications).",
+      "source_url": "https://www.hklaw.com/en/insights/publications/2026/07/and-the-tariff-beat-goes-on"
+    },
+    {
+      "claim": "JLCPCB economic SMT assembly: $0.0016-$0.0017 per solder joint, $8 setup, $1.50 stencil, $3 per extended part type.",
+      "verdict": "confirmed",
+      "corrected_value": "Setup fee is listed as $7.00 on JLCPCB's own assembly-price help page and as $8 in 2026 third-party guides (Hack Club, Andwin); per-joint $0.0017 (manual $0.0173), stencil $1.50 and $3.00 per unique extended component are consistent across JLCPCB pages.",
+      "evidence": "JLCPCB's 'PCB Assembly Cost: What Does the Price Include?' and 'In what cases will there be charged extra?' help pages give SMT assembly at $0.0017/joint, stencil $1.50, setup $7, and a $3.00 per-unique-extended-component feeder-loading fee (Preferred Extended parts exempt). The $8 setup figure appears in 2026 third-party guides, so the exact setup fee is $7-$8 depending on date; immaterial to the cost model.",
+      "source_url": "https://jlcpcb.com/help/article/pcb-assembly-price"
+    },
+    {
+      "claim": "JLCPCB 4-layer bare-board rate is ~$70.6/m2.",
+      "verdict": "unverifiable",
+      "corrected_value": "",
+      "evidence": "The $70.6/m2 figure appears only in one GitHub cost note (maxsimmonds1337/SBS_hw). JLCPCB does not publish a per-m2 rate; its promotional 4-layer pricing (e.g., $2 for five 100x100 mm boards, i.e., ~$40/m2 promo) and third-party 2026 guides ($2-5/piece for small 4-layer boards) are not comparable to a volume laminate rate. Treat as an unanchored estimate.",
+      "source_url": "https://jlcpcb.com/news/discount-on-quality-4-layer-pcbs"
+    },
+    {
+      "claim": "Wearable-class LiPo cells: 150 mAh 601520 ~$2-4 small-quantity; ultra-thin 110-250 mAh ~$3-8 at MOQ; Grepow/Benzo curved cells quote-only.",
+      "verdict": "confirmed",
+      "corrected_value": "601520 150 mAh cells: ~$2-3/unit at single-piece retail (multiple eBay listings, Amazon 10-packs, Makers Electronics); YDL Battery MOQ 10 pcs; Shenzhen Vats (Made-in-China) MOQ negotiable. Volume (5k+) pricing not published anywhere found.",
+      "evidence": "Several independent retail listings put a protected 601520 150 mAh cell at roughly $2-3 each in small quantities, consistent with the file's $2-4 bracket; wholesale MOQ/price tiers are quote-only, and the $3-8 'ultra-thin' bracket and Grepow/Benzo quote-only status were not separately checked before the search budget ran out.",
+      "source_url": "https://ydlbattery.com/products/ydl-601520-150mah-3-7v-lithium-polymer-battery-6x15x22mm-with-ph2-0-connector"
+    },
+    {
+      "claim": "Ultrahuman manufactures at its first UltraFactory in Bengaluru, India, and at a Plano, Texas UltraFactory with SVtronics, operational Nov 2024 and scaling to >500k rings/yr.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Ultrahuman's May 2025 press release (syndicated by I-Connect007, Yahoo Finance, HIT Consultant) states the Plano, Texas UltraFactory with SVtronics has been operational since November 2024, currently produces ~400 Ring AIR units/day and will scale to more than half a million units annually to serve 100% of US demand. Wikipedia and Indian press (BioSpectrum, StartupTalky) confirm the first automated facility is in Bengaluru; no source supports an Indore site.",
+      "source_url": "https://cyborg.ultrahuman.com/press-releases/ultrahuman-expands-its-american-factorys-manufacturing-capacity"
+    },
+    {
+      "claim": "PPG AFE single-quantity prices: Goodix GH3026 ~$3, PixArt PAH8011 ~$2, ADI/Maxim MAX86177 ~$6.",
+      "verdict": "unverifiable",
+      "corrected_value": "",
+      "evidence": "No distributor price was retrievable for PAH8011 or MAX86177 (Octopart/Digi-Key pages surfaced without prices). For GH3026, a Shenzhen distributor listing (SZYJC, part C009592877) shows a reference price of about CNY 7.94 (~US$1.10) in the search snippet, which if accurate would make the ~$3 community figure high by ~2.5x; tiered pricing was not viewed, so the correction is low-confidence. All three figures otherwise rest on a single community BOM note.",
+      "source_url": "https://www.szyjc.com/en/product/C009592877"
+    },
+    {
+      "claim": "WHOOP membership tiers: One $199/yr (WHOOP 5.0), Peak $239/yr, Life $359/yr (WHOOP MG).",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Multiple 2026 pricing round-ups (TrackerVS, Lifestack, Runner's Picks, Metabolic Journal) independently list One $199/yr, Peak $239/yr and Life $359/yr, with the 5.0 device bundled in One/Peak and the MG in Life, matching the file's verbatim whoop.com capture from June 2026.",
+      "source_url": "https://trackervs.com/pricing/whoop-pricing/"
+    },
+    {
+      "claim": "Dial et al. 2025 (Physiological Reports): nocturnal HRV vs ECG - WHOOP 4.0 CCC 0.94 (MAPE ~8.2%), Oura Gen 4 0.99, Oura Gen 3 0.97, Garmin 0.87, Polar 0.82; RHR Oura Gen 3 CCC 0.97 MAPE 1.67%, WHOOP CCC 0.91 MAPE 3.00%.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "The Wiley/PMC full text (13 adults, 536 nights, Polar H10 ECG reference) reports HRV CCC of 0.99 (Oura Gen 4, MAPE 5.96%), 0.97 (Gen 3), 0.94 (WHOOP 4.0, MAPE 8.17%), 0.87 (Garmin Fenix 6), 0.82 (Polar Grit X Pro), and RHR CCC 0.97/0.98 for Oura Gen 3/Gen 4, 0.91 for WHOOP (MAPE 3.00%), 0.86 for Polar. Note the reference is a chest-strap ECG (Polar H10), not clinical 12-lead ECG.",
+      "source_url": "https://physoc.onlinelibrary.wiley.com/doi/10.14814/phy2.70527"
+    }
+  ],
+  "stale_or_missing": [
+    "STALE - Helio Strap Pro: file says 'price not found'; it was announced Jun 18, 2026 at $199.99 (BusinessWire) as a two-sensor arm-strap + waist-sensor system, available end of June 2026. https://www.businesswire.com/news/home/20260618031434/en/Amazfit-Introduces-Helio-Strap-Pro-Bringing-Body-Worn-Movement-Intelligence-to-HYROX-and-Hybrid-Training",
+    "STALE - Helio Strap line: the5krunner published 'Amazfit Helio Strap 2: release date, specs and Whoop comparison' on Jun 6, 2026, suggesting a second-generation base strap; the Helio Strap was out of stock from late 2025 and restocked in 2026 at $99.99 (Notebookcheck). Not reflected in the file. https://the5krunner.com/2026/06/06/amazfit-helio-strap-2/",
+    "STALE - Section 122: beyond expiring on Jul 24, 2026, the US Court of International Trade struck down the Section 122 tariffs in May 2026 (Skadden, PwC, Ward and Smith); appeal pending and refund exposure for Feb-Jul 2026 entries. https://www.skadden.com/insights/publications/2026/05/us-trade-court-strikes-down-section-122-tariffs",
+    "STALE - Zepp Health margin: primary Q3 2025 figure is 38.2% (not '~38-39%' from a stock-pitch note); Q4 2025 and 2026 quarterly results were not checked (search budget exhausted) and should replace the TTM/market-cap figures taken from a personal-website stock pitch. https://www.prnewswire.com/news-releases/zepp-health-corporation-reports-third-quarter-2025-unaudited-financial-results-302604324.html",
+    "STALE - WHOOP 5.0 silicon: file says the 5.0 AFE is undisclosed, but TechInsights has published a WHOOP 5.0 teardown (Electronics360 summary) and the5krunner covers 4.0-vs-5.0 sensor architecture changes; part identities were not extracted before the budget ran out. https://electronics360.globalspec.com/article/23159/techinsights-teardown-whoop-5-0",
+    "STALE - WHOOP 4.0 BOM omits the MAX77818 PMIC (fourth Maxim design win per TechInsights/the5krunner). https://www.techinsights.com/products/ddt-2111-806",
+    "STALE - Alibaba OEM/ODM guide: the file's ODM MOQ of 2,000-3,000 is misattributed; the guide gives ODM MOQ 1,000 at $25-45/unit, OEM $18-32/unit at 5,000, branding setup $12k-28k and minor firmware tweaks $0-15k - the last two partially fill the file's 'unverified $30k-150k platform-customization NRE' bracket. https://electronics.alibaba.com/buyingguides/oem-vs-odm-wearables-which-fits-your-brand",
+    "STALE - Helio Strap sensor list omits the geomagnetic sensor listed by Amazfit alongside accelerometer, gyroscope and temperature. https://us.amazfit.com/products/helio-strap",
+    "GAP - Real JDM custom-firmware quote with NRE + unit price at 5k/25k/100k: not found. Closest public data: Alibaba guide brackets above; iSmarch (MOQ 2,000-3,000, EXW USD, pilots 50-200 units, samples 2-4 wks, pilot 4-6 wks, mass production 8-12 wks; no prices) https://ismarch.com/smartwatch-manufacturer/ ; J-Style (OEM MOQ 1,000, SDK/API, no prices) https://www.jointcorp.com/ecg-smart-band-manufacturer-how-to-choose-the-right-odm-oem-partner/ . Targeted quote searches could not run (search budget). Requires direct RFQs.",
+    "GAP - Where WHOOP and Oura devices are assembled: not found; not searched (search budget exhausted after 23 queries). Only evidence remains the CBP ruling title 'Whoop Bands from China' (N339661); Oura's Ring 4 assembly site is still unverified.",
+    "GAP - Validation study of a cheap (Vcare/PAH8011/Goodix white-label) PPG band vs ECG/PSG: not found; not searched (search budget). The only validation data re-verified was Dial 2025 for WHOOP/Oura/Garmin/Polar.",
+    "GAP - Forced-labor Section 301 annex exemptions: whether 8517.62 is exempt for China/India was not resolved (search budget); C.H. Robinson and GHY advisories linked to the CBP guidance and likely carry the exemption annex. https://www.chrobinson.com/en-us/resources/insights-and-advisories/client-advisories/2026q3/07-24-26-client-advisory-new-section-301-forced-labor-tariffs-now-in-effect/",
+    "GAP - US-India interim trade deal status as of Sept 2026: not searched (search budget).",
+    "GAP - CBP ruling N339661 body (HTS subheading for WHOOP bands): not searched (search budget); the 8517.62.0090 -> 7.5% List 4A path is confirmed for analogous Bluetooth devices via N308565 and related rulings.",
+    "GAP - Miller 2022 (PMID 36016077) ICC values and Bellenger 2021 (Sensors 21:3571) bias/LOA figures: unverifiable (search budget) - not re-checked this session.",
+    "GAP - Component unit prices (GH3026, PAH8011, MAX86177, QMI8658, RTL8762, Jieli JL70xx, EVE cells): distributor prices not retrievable; one Shenzhen distributor snippet suggests GH3026 reference price ~CNY 7.94 (~$1.10), which would lower the file's AFE line. https://www.szyjc.com/en/product/C009592877",
+    "GAP - JLCPCB setup fee discrepancy ($7 on JLCPCB help page vs $8 in 2026 third-party guides): confirm in the live quote tool; immaterial to the cost model."
+  ],
+  "summary": "17 load-bearing claims checked with 23 independent WebSearch queries before the session search budget (200/200) was exhausted. 11 confirmed against primary or multiple independent sources: Helio Strap $99/sensors/25-movement detection; Zepp Health Q3 2025 (38.2% GM, adjusted operating breakeven, +78.5% revenue); WHOOP 4.0 Maxim silicon (MAX86171/MAX32652/MAX6631 plus MAX77818) and 5-LED/4-PD optics; Section 301 List 4A 7.5% for 8517.62.0090 via 9903.88.15; the Feb 20 IEEPA ruling, Feb 24-Jul 24 Section 122 surcharge and Jul 24, 2026 forced-labor 301 rates (China 12.5%, India 10%); JLCPCB SMT per-joint/stencil/extended-part fees; 601520 LiPo small-qty prices; Ultrahuman Bengaluru + Plano/SVtronics footprint; WHOOP tiers $199/$239/$359; Dial 2025 HRV/RHR statistics. 2 corrected: Helio Strap Pro is $199.99 (announced Jun 18, 2026, dual-sensor system), and Alibaba's OEM-vs-ODM guide gives ODM MOQ 1,000 (not 2,000-3,000) with $25-45 ODM / $18-32 OEM unit brackets. 4 unverifiable: the Alibaba $8.80-12.55 band floor and Da Fit ~$7 retail (single marketing/README sources; sibling Alibaba page says $9.80-26.00), the 50k firmware-source MOQ and $34/$29/$210k ODM/OEM figures (single Alibaba source), JLCPCB $70.6/m2 4-layer rate (single GitHub note), and AFE chip prices (no distributor prices; a Shenzhen distributor snippet puts GH3026 at ~CNY 7.94, well below the ~$3 note). Biggest remaining gaps, none closable this session because the budget ran out: a real JDM quote with NRE and 5k/25k/100k unit prices, WHOOP/Oura assembly sites, any validation study of a cheap white-label PPG band, the forced-labor 301 exemption annex for 8517.62, and the Miller 2022/Bellenger 2021 numbers. Newer data the file misses: CIT struck down Section 122 in May 2026; TechInsights has a WHOOP 5.0 teardown; a Helio Strap 2 was covered in June 2026."
+}

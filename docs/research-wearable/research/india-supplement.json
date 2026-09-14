@@ -1,0 +1,397 @@
+{
+  "lens": "india-supplement",
+  "headline_findings": [
+    "Domestic manufacturing share of India smartwatch shipments jumped to 82% in Q3 2023 from 4% a year earlier (Counterpoint report title; details paywalled). [secondary]",
+    "IDC: India wearables shipped 114.2M units in 2025 (-4.0% YoY, second annual decline); smartwatches 28.9M (-17.6%); smartwatch ASP rose 11.7% to USD 26.5 (from USD 23.8 in 2024); overall wearables ASP USD 20.3 (+1.8%). [secondary, quoting IDC April 2026 release]",
+    "Counterpoint: India smartwatch shipments fell 27% YoY in Q2 2025 (fifth straight quarterly decline; Q1 2025 was -33%); Noise, boAt and Titan/Fastrack held 62% combined share. [secondary]",
+    "boAt's updated DRHP (Oct 2025): 75.83% of units made in India in Q1 FY2026 vs 39.65% in FY2023; >75M units produced domestically to date; wearables were Rs 330.41 crore = 10.76% of FY2025 revenue; the 50:50 Dixon JV Califonix made 13.44M units in FY25 at 44.80% utilisation of a 30M-unit installed capacity. [secondary, quoting the SEBI filing]",
+    "Dixon Q1 FY26 earnings call: wearables & hearables segment revenue INR 175 crore for the quarter with \"healthy operating margin\"; smartwatches added to the portfolio with the existing customer. Per-unit conversion charges were not disclosed. [secondary, transcript]",
+    "Optiemus Electronics runs two Noida plants, designs and manufactures hearables for Noise, planned a new Noida wearables factory (Dec 2024) and targets >10M units/yr by end-2025. [secondary]",
+    "Ultrahuman's US UltraFactory (Plano, TX) opened at 200,000 rings/yr and is ramping to >500,000/yr (~400/day now, 1,350/day planned by end-2025); the company says it is modelled on its first India facility, but Indore capacity/output figures were not found. [verified for US numbers via Ultrahuman press releases; Indore: not found]",
+    "India tooling NRE indications: injection-mold tooling Rs 2 lakh to Rs 30 lakh+ per tool (Moldrite 2026); jigs/fixtures Rs 60,000 to Rs 6 lakh (IndiaMART). [blog-grade]",
+    "FCC cost ladder (MarkReady 2026): SDoC USD 1,500-5,000; device using a pre-certified Wi-Fi/BLE module USD 3,000-10,000; full custom RF testing USD 8,000-200,000+. Indian labs with FCC/CE wireless capability: TUV SUD Bengaluru (10 m semi-anechoic chamber), UL Solutions India Bengaluru, STQC (Bangalore, Chennai, Hyderabad, Pune and others). Indian lab price lists were not found. [secondary]",
+    "PMP for wearables (Union Budget 2022-23): 20% basic customs duty on finished smartwatches/hearables; component duty ladder 0-15% across FY23-FY26 with most component duties nil from 1 Apr 2022. What applies from FY27 (i.e. now) was not found. [secondary; Global Trade Alert / Business Standard / KNN]",
+    "Per-unit India EMS conversion/box-build charges for a wearable were NOT found in any public source after 14 targeted searches; this number must come from RFQs. The only listed figure (Tri-Sol Technology, Pune, \"Rs 0.25 per piece\" on IndiaMART) has no stated basis and cannot be used. [not found]",
+    "FX for synthesis: USD/INR spot on 14 Sep 2026 is about Rs 95.7 per USD (BookMyForex daily rate page; Federal Reserve H.10 lists the official series). Use Rs 95.7/USD for every INR↔USD conversion in the brief; the Rs 85/USD rate used inside india-manufacturing.json is stale and must be re-based. [secondary]"
+  ],
+  "data_points": [
+    {
+      "metric": "India smartwatch domestic-manufacturing share, Q3 2023",
+      "value": "82",
+      "unit": "% of shipments (from 4% a year earlier)",
+      "date": "2023-Q3",
+      "confidence": "secondary",
+      "source_title": "Counterpoint: India Q3 Smartwatch Shipments Hit Fresh High; Domestic Manufacturing Share Zooms to 82% From 4%",
+      "source_url": "https://www.counterpointresearch.com/research_portal/india-q3-smartwatch-shipments-hit-fresh-high/",
+      "note": "Figure appears in the report title; body is paywalled."
+    },
+    {
+      "metric": "India wearables shipments 2025",
+      "value": "114.2",
+      "unit": "million units, -4.0% YoY",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "IDC via FoneArena: Indian wearable shipments fall 4.0% YoY in 2025",
+      "source_url": "https://www.fonearena.com/blog/476987/indian-wearable-shipments-2025.html",
+      "note": "IDC press release dated April 2026."
+    },
+    {
+      "metric": "India smartwatch shipments 2025",
+      "value": "28.9",
+      "unit": "million units, -17.6% YoY",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "BizTechReports: India Wearables Market Declines 4.0% to 114 Million Units in 2025 as Smartwatch Shipments Fall 17.6% (IDC)",
+      "source_url": "https://www.biztechreports.com/news-archive/2026/4/1/indias-wearables-market-declines-40-to-114-million-units-in-2025-as-smartwatch-shipments-fall-176-idc-april-1-2026",
+      "note": ""
+    },
+    {
+      "metric": "India smartwatch ASP 2025",
+      "value": "26.5",
+      "unit": "USD (2024: 23.8; +11.7%)",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "IDC via FoneArena",
+      "source_url": "https://www.fonearena.com/blog/476987/indian-wearable-shipments-2025.html",
+      "note": "ASP rose while volumes fell."
+    },
+    {
+      "metric": "India overall wearables ASP 2025",
+      "value": "20.3",
+      "unit": "USD (+1.8%)",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "IDC via FoneArena",
+      "source_url": "https://www.fonearena.com/blog/476987/indian-wearable-shipments-2025.html",
+      "note": ""
+    },
+    {
+      "metric": "India wearables 2Q25",
+      "value": "27",
+      "unit": "million units, -9% YoY",
+      "date": "2025-Q2",
+      "confidence": "verified",
+      "source_title": "IDC: India Wearable Device Market Declined by 9% YoY in 2Q25 to 27 Million Units",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prAP53747725",
+      "note": "IDC own press-release title."
+    },
+    {
+      "metric": "India wearables 2024",
+      "value": "-11.3",
+      "unit": "% YoY (first annual decline)",
+      "date": "2024",
+      "confidence": "verified",
+      "source_title": "IDC: India Wearable Device Market Declined YoY for the First Time, Falling by 11.3% in 2024",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prAP53199725",
+      "note": "IDC own press-release title."
+    },
+    {
+      "metric": "India smartwatch shipments Q2 2025",
+      "value": "-27",
+      "unit": "% YoY (Q1 2025: -33%)",
+      "date": "2025-Q2",
+      "confidence": "secondary",
+      "source_title": "Counterpoint: India Smartwatch Shipments Fall 27% YoY in Q2 2025",
+      "source_url": "https://counterpointresearch.com/en/insights/india-smartwatch-market-q2-2025",
+      "note": "Noise, boAt, Titan/Fastrack = 62% combined share."
+    },
+    {
+      "metric": "boAt units made in India, Q1 FY2026",
+      "value": "75.83",
+      "unit": "% (FY2023: 39.65%)",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Business Standard: BoAt local production jumps to 76%",
+      "source_url": "https://www.business-standard.com/companies/news/boat-s-local-production-up-from-40-to-76-hits-3x-localisation-in-2-years-125112101139_1.html",
+      "note": "Quotes the updated DRHP (SEBI filing)."
+    },
+    {
+      "metric": "boAt wearables revenue FY2025",
+      "value": "330.41",
+      "unit": "Rs crore = 10.76% of revenue from operations",
+      "date": "FY2025",
+      "confidence": "secondary",
+      "source_title": "boAt UDRHP coverage (Outlook Business / BusinessToday)",
+      "source_url": "https://www.businesstoday.in/markets/ipo-corner/story/boat-parent-imagine-marketing-files-updated-drhp-for-rs-1500-crore-ipo-check-details-500014-2025-10-29",
+      "note": ""
+    },
+    {
+      "metric": "Califonix (Dixon-boAt JV) output FY25",
+      "value": "13.44",
+      "unit": "million units; 44.80% utilisation of 30M installed capacity (FY24: 29.03%)",
+      "date": "FY2025",
+      "confidence": "secondary",
+      "source_title": "Business Standard (UDRHP)",
+      "source_url": "https://www.business-standard.com/companies/news/boat-s-local-production-up-from-40-to-76-hits-3x-localisation-in-2-years-125112101139_1.html",
+      "note": "Q1FY26: 3.19M units = 37.46% of boAt units."
+    },
+    {
+      "metric": "Dixon wearables & hearables revenue Q1 FY26",
+      "value": "175",
+      "unit": "INR crore per quarter",
+      "date": "2025-Q2",
+      "confidence": "secondary",
+      "source_title": "Dixon Q1-2026 earnings call transcript (Alpha Spread)",
+      "source_url": "https://www.alphaspread.com/security/nse/dixon/investor-relations/earnings-call/q1-2026",
+      "note": "Margin described as healthy; per-unit charges not disclosed."
+    },
+    {
+      "metric": "Optiemus Electronics capacity target",
+      "value": ">10",
+      "unit": "million units/yr by end-2025 (all categories)",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Whalesbook / Mobility India",
+      "source_url": "https://www.mobilityindia.com/noise-partners-with-optiemus-electronics-to-aid-the-domestic-production-of-consumer-electronics/",
+      "note": "Two Noida plants; new wearables factory planned Dec 2024."
+    },
+    {
+      "metric": "Ultrahuman US UltraFactory capacity",
+      "value": "200,000 initial → >500,000",
+      "unit": "rings/yr; ~400/day now, 1,350/day planned by end-2025",
+      "date": "2025",
+      "confidence": "verified",
+      "source_title": "Ultrahuman press release: expands American factory capacity",
+      "source_url": "https://cyborg.ultrahuman.com/press-releases/ultrahuman-expands-its-american-factorys-manufacturing-capacity",
+      "note": "Modelled on first India facility; Indore figures not found."
+    },
+    {
+      "metric": "Injection-mold tooling cost, India",
+      "value": "2 to 30+",
+      "unit": "Rs lakh per tool",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "Moldrite: Injection Molding Cost in India (2026)",
+      "source_url": "https://www.moldrite.in/blog/injection-molding-cost-india",
+      "note": "Vendor blog; wide range by complexity."
+    },
+    {
+      "metric": "Jig / fixture cost, India",
+      "value": "60,000 to 6,00,000",
+      "unit": "Rs per jig",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "IndiaMART jigs & fixtures listing",
+      "source_url": "https://m.indiamart.com/tool-machinetech/jigs-fixture.html",
+      "note": "Marketplace listing."
+    },
+    {
+      "metric": "FCC certification cost ladder",
+      "value": "SDoC 1,500-5,000; pre-certified module 3,000-10,000; custom RF 8,000-200,000+",
+      "unit": "USD",
+      "date": "2026",
+      "confidence": "secondary",
+      "source_title": "MarkReady: FCC Certification Cost (2026)",
+      "source_url": "https://markready.io/learn/fcc-certification-cost",
+      "note": "Vendor guide."
+    },
+    {
+      "metric": "Indian FCC/CE wireless test labs",
+      "value": "TUV SUD Bengaluru (10 m SAC), UL Solutions India Bengaluru, STQC (Bangalore, Chennai, Hyderabad, Pune)",
+      "unit": "labs",
+      "date": "2026",
+      "confidence": "verified",
+      "source_title": "TUV SUD Bengaluru campus; UL Solutions India IoT CoE",
+      "source_url": "https://www.tuvsud.com/en-in/landing/asmea/bangalore-lab",
+      "note": "Prices not published."
+    },
+    {
+      "metric": "PMP wearables: finished-goods BCD",
+      "value": "20",
+      "unit": "% on imported smartwatches/hearables",
+      "date": "2022-04-01",
+      "confidence": "secondary",
+      "source_title": "Global Trade Alert: PMP for smart watches (Budget 2022-23)",
+      "source_url": "https://globaltradealert.org/state-act/62058",
+      "note": "Component ladder 0-15% FY23-FY26; FY27 status not found."
+    },
+    {
+      "metric": "India EMS per-unit box-build charge for a wearable",
+      "value": "not found",
+      "unit": "",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "Zetwerk EMS in India guide 2026 (context only)",
+      "source_url": "https://www.zetwerk.com/blog/ems/electronics-manufacturing-services-india/",
+      "note": "No public quote found; must come from RFQ."
+    },
+    {
+      "metric": "Typical OEM/ODM MOQ (band with logo + packaging)",
+      "value": "1,000 (custom logo) / 10,000-20,000 (first bulk)",
+      "unit": "units",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "J-Style (jointcorp) / iSmarch OEM pages",
+      "source_url": "https://www.jointcorp.com/fitness-band-wholesale-bulk-pricing-moq-for-businesses/",
+      "note": "Chinese ODM vendor pages."
+    },
+    {
+      "metric": "India budget smartwatch retail floor",
+      "value": "899 to 1,299",
+      "unit": "Rs (Fire-Boltt 899-2,199)",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "Retailer blogs (Nalanda Enterprises; Analytics Insight)",
+      "source_url": "https://www.nalandaenterprises.com/blogs/nalanda-blog/best-smartwatch-under-2000-india-2026-guide",
+      "note": "Retailer content; BOM not disclosed."
+    },
+    {
+      "metric": "USD/INR spot, 14 Sep 2026",
+      "value": "95.72",
+      "unit": "INR per USD",
+      "date": "2026-09-14",
+      "confidence": "secondary",
+      "source_title": "BookMyForex: USD to INR forecast/daily rate",
+      "source_url": "https://www.bookmyforex.com/currency-converter/usd-to-inr/forecast/",
+      "note": "Federal Reserve H.10 (8 Sep 2026 release) is the official series: https://www.federalreserve.gov/releases/h10/hist/dat00_in.htm"
+    }
+  ],
+  "detailed_notes": "# India supplement (main-session searches, 2026-09-14)\n\n## Market (IDC / Counterpoint)\n- 2025 full year (IDC, Apr 2026 release, via FoneArena/BizTechReports): wearables 114.2M units (-4.0%), smartwatches 28.9M (-17.6%), smartwatch ASP USD 26.5 (+11.7% from 23.8), overall wearables ASP USD 20.3 (+1.8%). Volumes fell for the second year while ASPs rose: the market is premiumising slightly, not collapsing further in price.\n- IDC 2Q25: 27M units, -9% YoY (IDC's own release). IDC 2024: -11.3% (first ever annual decline).\n- Counterpoint Q2 2025: smartwatch shipments -27% YoY (fifth straight decline); Noise + boAt + Titan/Fastrack = 62%.\n- Counterpoint Q3 2023: domestic manufacturing share of smartwatch shipments 82% (from 4%). This is the headline proof that India can assemble wearables at scale; it was driven by the 20% finished-goods duty + nil component duty ladder (PMP).\n\n## Who builds (from filings and calls)\n- boAt UDRHP (Oct 2025): 75.83% of units made in India in Q1 FY26 (39.65% in FY23); Califonix (50:50 Dixon JV) 30M units/yr installed capacity, 13.44M units in FY25 (44.8% utilisation), 3.19M in Q1 FY26 (37.46% of boAt units). Wearables = Rs 330.41 crore = 10.76% of FY25 revenue. Note: Califonix is described as an audio JV; smartwatch assembly for boAt is at Dixon per the Dixon Q1 FY26 call (\"added smart watches with the existing customer\").\n- Dixon Q1 FY26 call: wearables & hearables revenue INR 175 crore/quarter, \"healthy operating margin and very good ROCE\". No per-unit numbers.\n- Optiemus Electronics: two Noida plants; designs and makes hearables for Noise; planned a dedicated Noida wearables factory (Dec 2024); target >10M units/yr by end-2025 across categories.\n- East India Technologies (Greater Noida) advertises OEM/ODM smartwatch manufacturing (vendor page, eitplems.com). Syrma SGS, Avalon, Kaynes provide PCBA + box build (vendor/industry pages).\n- Ultrahuman: US UltraFactory (Plano, TX) 200k → >500k rings/yr, ~400/day now; \"based on the company's first operational model of such a facility in India\". Indore capacity, output and cost: not found.\n\n## NRE indications (India)\n- Injection-mold tooling Rs 2-30+ lakh per tool (Moldrite 2026 vendor blog). A screenless band needs roughly 3-5 tools (housing, back/optical window, strap/buckle, charger) — that count is an estimate, not sourced.\n- Jigs/fixtures Rs 60k-6 lakh each (IndiaMART).\n\n## Certification\n- FCC (MarkReady 2026): SDoC USD 1.5-5k; pre-certified BLE module route USD 3-10k; custom RF USD 8k-200k+. Using a pre-certified nRF52 module is the cheapest path.\n- Indian labs: TUV SUD Bengaluru (10 m SAC, Bluetooth/Wi-Fi/SRD, FCC-capable), UL Solutions India Bengaluru, STQC labs. Prices not published.\n\n## Policy\n- PMP for wearables (Budget 2022-23): 20% BCD on finished smartwatches/hearables; component duties 0-15% FY23-FY26, most nil from 1 Apr 2022. FY27 status: not found.\n\n## Not found (must come from RFQ)\n- Per-unit India EMS SMT + box-build charge for a wearable at 5k/25k/100k.\n- India per-unit conversion cost vs China/Vietnam (ELCINA benchmark).\n- Ultrahuman Indore numbers.\n- Indian lab price lists for FCC/CE.",
+  "open_questions": [
+    "India EMS per-unit conversion charge for a 1-PCBA screenless band at 5k/25k/100k units: request quotes (Dixon, Optiemus, VVDN, Syrma SGS, East India Technologies).",
+    "FY27 customs-duty status of the wearables PMP ladder (CBIC notification).",
+    "Ultrahuman Indore facility capacity and unit cost (not public)."
+  ],
+  "sources": [
+    {
+      "title": "Counterpoint: India Q3 Smartwatch Shipments Hit Fresh High; Domestic Manufacturing Share Zooms to 82% From 4%",
+      "url": "https://www.counterpointresearch.com/research_portal/india-q3-smartwatch-shipments-hit-fresh-high/",
+      "type": "analyst"
+    },
+    {
+      "title": "Counterpoint: India Smartwatch Shipments Fall 27% YoY in Q2 2025",
+      "url": "https://counterpointresearch.com/en/insights/india-smartwatch-market-q2-2025",
+      "type": "analyst"
+    },
+    {
+      "title": "IDC: India Wearable Device Market Declined by 9% YoY in 2Q25 to 27 Million Units",
+      "url": "https://my.idc.com/getdoc.jsp?containerId=prAP53747725",
+      "type": "analyst (primary release)"
+    },
+    {
+      "title": "IDC: India Wearable Device Market Declined YoY for the First Time, Falling by 11.3% in 2024",
+      "url": "https://my.idc.com/getdoc.jsp?containerId=prAP53199725",
+      "type": "analyst (primary release)"
+    },
+    {
+      "title": "FoneArena: Indian wearable shipments fall 4.0% YoY in 2025 (IDC)",
+      "url": "https://www.fonearena.com/blog/476987/indian-wearable-shipments-2025.html",
+      "type": "trade press"
+    },
+    {
+      "title": "BizTechReports: India Wearables Market Declines 4.0% to 114 Million Units in 2025 (IDC)",
+      "url": "https://www.biztechreports.com/news-archive/2026/4/1/indias-wearables-market-declines-40-to-114-million-units-in-2025-as-smartwatch-shipments-fall-176-idc-april-1-2026",
+      "type": "trade press"
+    },
+    {
+      "title": "Business Standard: BoAt local production jumps to 76%; hits 3x localisation in 2 years",
+      "url": "https://www.business-standard.com/companies/news/boat-s-local-production-up-from-40-to-76-hits-3x-localisation-in-2-years-125112101139_1.html",
+      "type": "press (quoting SEBI UDRHP)"
+    },
+    {
+      "title": "BusinessToday: boAt parent Imagine Marketing files updated DRHP for Rs 1500 crore IPO",
+      "url": "https://www.businesstoday.in/markets/ipo-corner/story/boat-parent-imagine-marketing-files-updated-drhp-for-rs-1500-crore-ipo-check-details-500014-2025-10-29",
+      "type": "press"
+    },
+    {
+      "title": "Dixon Q1-2026 earnings call transcript (Alpha Spread)",
+      "url": "https://www.alphaspread.com/security/nse/dixon/investor-relations/earnings-call/q1-2026",
+      "type": "transcript"
+    },
+    {
+      "title": "Mobility India: Noise partners with Optiemus Electronics",
+      "url": "https://www.mobilityindia.com/noise-partners-with-optiemus-electronics-to-aid-the-domestic-production-of-consumer-electronics/",
+      "type": "trade press"
+    },
+    {
+      "title": "Whalesbook: Optiemus Electronics to produce 3 million Ai+ devices annually",
+      "url": "https://www.whalesbook.com/news/English/industrial-goodsservices/Optiemus-Electronics-to-Produce-3-Million-Ai-Devices-Annually/69b2454717d794d3dcfbb7b6",
+      "type": "trade press"
+    },
+    {
+      "title": "Ultrahuman press release: expands its American factory manufacturing capacity",
+      "url": "https://cyborg.ultrahuman.com/press-releases/ultrahuman-expands-its-american-factorys-manufacturing-capacity",
+      "type": "company"
+    },
+    {
+      "title": "Ultrahuman press release: UltraFactory (US)",
+      "url": "https://cyborg.ultrahuman.com/press-releases/made-in-the-usa-ultrahuman-plants-flag-in-us-with-manufacturing-facility-ultrafactory-to-make-first-wearable-rings-in-the-country",
+      "type": "company"
+    },
+    {
+      "title": "Android Central: I built an Ultrahuman smart ring by hand",
+      "url": "https://www.androidcentral.com/wearables/i-assembled-a-smart-ring-by-hand-and-learned-how-they-work",
+      "type": "press"
+    },
+    {
+      "title": "Moldrite: Injection Molding Cost in India (2026)",
+      "url": "https://www.moldrite.in/blog/injection-molding-cost-india",
+      "type": "vendor blog"
+    },
+    {
+      "title": "IndiaMART: jigs & fixtures (Tool & Machine Tech)",
+      "url": "https://m.indiamart.com/tool-machinetech/jigs-fixture.html",
+      "type": "marketplace"
+    },
+    {
+      "title": "MarkReady: FCC Certification Cost (2026)",
+      "url": "https://markready.io/learn/fcc-certification-cost",
+      "type": "vendor guide"
+    },
+    {
+      "title": "TUV SUD Bengaluru campus (wireless/EMC lab)",
+      "url": "https://www.tuvsud.com/en-in/landing/asmea/bangalore-lab",
+      "type": "lab"
+    },
+    {
+      "title": "UL Solutions India IoT Centre of Excellence, Bengaluru",
+      "url": "https://india.ul.com/iotcentreofexcellence/",
+      "type": "lab"
+    },
+    {
+      "title": "Global Trade Alert: India PMP for smart watches (Budget 2022-23)",
+      "url": "https://globaltradealert.org/state-act/62058",
+      "type": "policy tracker"
+    },
+    {
+      "title": "Business Standard: After mobile phones, India eyes smartwatches, earbuds manufacturing (1 Feb 2022)",
+      "url": "https://www.business-standard.com/article/economy-policy/after-mobile-phones-india-eyes-smartwatches-earbuds-manufacturing-122020101564_1.html",
+      "type": "press"
+    },
+    {
+      "title": "KNN India: Phased Manufacturing Programme to promote domestic manufacturing of wearables",
+      "url": "https://knnindia.co.in/news/newsdetails/sectors/phased-manufacturing-programme-to-promote-domestic-manufacturing-of-wearables",
+      "type": "press"
+    },
+    {
+      "title": "Zetwerk: EMS in India, the complete 2026 guide",
+      "url": "https://www.zetwerk.com/blog/ems/electronics-manufacturing-services-india/",
+      "type": "vendor blog"
+    },
+    {
+      "title": "East India Technologies: smartwatch manufacturing services in India",
+      "url": "https://eitplems.com/smartwatch-manufacturer-in-india/",
+      "type": "vendor"
+    },
+    {
+      "title": "J-Style (jointcorp): fitness band wholesale bulk pricing & MOQ",
+      "url": "https://www.jointcorp.com/fitness-band-wholesale-bulk-pricing-moq-for-businesses/",
+      "type": "vendor"
+    },
+    {
+      "title": "Nalanda Enterprises: best smartwatch under Rs 2000 in India 2026",
+      "url": "https://www.nalandaenterprises.com/blogs/nalanda-blog/best-smartwatch-under-2000-india-2026-guide",
+      "type": "retailer blog"
+    },
+    {
+      "title": "BookMyForex: USD to INR daily rate and forecast",
+      "url": "https://www.bookmyforex.com/currency-converter/usd-to-inr/forecast/",
+      "type": "fx vendor"
+    },
+    {
+      "title": "Federal Reserve H.10 Foreign Exchange Rates, India (8 Sep 2026)",
+      "url": "https://www.federalreserve.gov/releases/h10/hist/dat00_in.htm",
+      "type": "government"
+    }
+  ]
+}

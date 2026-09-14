@@ -1,0 +1,120 @@
+{
+  "lens": "hardware-arch",
+  "checks": [
+    {
+      "claim": "Whoop 4.0 is built on the Nordic nRF52840 as its MCU (64 MHz Cortex-M4F, 1 MB flash, 256 KB RAM); its PPG AFE, IMU and temperature-sensor part numbers were NOT FOUND",
+      "verdict": "corrected",
+      "corrected_value": "Whoop 4.0 is a two-processor design: a Maxim MAX32652 (Cortex-M4F, up to 120 MHz) is the application MCU and the nRF52840 is the BLE SoC. The other main sockets are Maxim MAX86171 (PPG / SpO2 AFE), MAX77818 (PMIC with ModelGauge m5 fuel gauge) and MAX6631MTT (digital temperature sensor). IMU part number still not found.",
+      "evidence": "TechInsights' Whoop 4.0 WS40/WB40 deep-dive teardown page states that Maxim held the major design wins (MAX32652 MCU, MAX77818 power management, MAX86171 pulse-ox/heart-rate sensor, MAX6631MTT temperature sensor); the March 2026 RBA Equity memo on Ambiq, citing TechInsights, says the Whoop 5.0's Ambiq MCU 'directly displaced the Maxim MAX32652 used in WHOOP 4.0'. Nordic's 2022 press release remains correct that an nRF52840 sits inside the 4.0, but it describes a supervisory/relay (BLE) role, not the sole processor. Implication: the 4.0 does not demonstrate that a lone nRF52840 can run a Whoop-class pipeline; Ultrahuman Ring AIR is the real single-nRF52840 precedent.",
+      "source_url": "https://www.techinsights.com/products/ddt-2111-806"
+    },
+    {
+      "claim": "Whoop 5.0 (WG50) main board uses an Ambiq Cortex-M4 MCU with integrated BLE plus a TDK-InvenSense six-axis IMU; the PPG/ECG flex carries an Analog Devices 1 A buck-boost converter and an ADI optical PPG/ECG AFE (file assumes the Apollo4 Blue family)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "TechInsights' WHOOP 5.0 (WG50) deep-dive teardown (Sept 2025) and its Electronics360 summary name Ambiq (32-bit Cortex-M4 MCU with Bluetooth), TDK-InvenSense (six-axis MEMS gyro + accelerometer) and Analog Devices (1 A step-up/step-down converter, optical PPG/ECG AFE); an RBA Equity investment memo citing the same teardown adds that the Ambiq part is a Cortex-M4 with BLE 5.0 at about US$2.67 ASP and is the sole main processor. The exact Ambiq SKU is still not public; the 'BLE 5.0' descriptor fits Apollo3 Blue / Blue Plus better than Apollo4 Blue Plus (BLE 5.1) or Apollo4 Blue Lite (BLE 5.4), so 'Apollo4 Blue family' must stay an assumption. Ambiq's product page does confirm the separate claim of 4 uA/MHz active current for Apollo4 Blue Plus.",
+      "source_url": "https://www.techinsights.com/blog/whoop-50-wg50-deep-dive-teardown"
+    },
+    {
+      "claim": "Whoop 5.0 samples PPG at about 26 Hz (secondary: the5krunner 2025-06-16)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Whoop's own 5.0 launch material (support.whoop.com 'Unlock New with WHOOP 5.0' and the whoop.com launch post) says the new sensor captures data 26 times per second with '10x more power efficiency', and Whoop rates the 5.0/MG at 14+ days of battery life. This is independent of the5krunner's FCC-filing analysis. The file never records the 14-day figure (see stale_or_missing).",
+      "source_url": "https://support.whoop.com/s/article/Unlock-New-with-WHOOP-5-0?language=en_US"
+    },
+    {
+      "claim": "nRF52840-QIAA-R costs US$6.78 at qty 1 and US$4.07 per unit on a 3,000-piece reel at Digi-Key (2026-09-14), anchoring the BLE-SoC line (US$5.50-6.50 at 1k) and the MVP BOM totals of US$28-47 / 20-33 / 14-25 at 1k / 10k / 100k",
+      "verdict": "unverifiable",
+      "corrected_value": "",
+      "evidence": "The Digi-Key figures could not be re-observed before the search budget ran out. Independent cross-check: Mouser lists nRF52840-QIAA-R7 (reel) at US$7.50 and nRF52840-QIAA-T (tray) at US$7.35 at qty 1, full reels in multiples of 3,000 - consistent in magnitude with US$6.78 but not a confirmation of the US$4.07 reel price. The BOM totals are estimates no search can verify; the new anchors found this session (MAX86171ENI+ 'from US$2.16' at LCSC, GH3220 US$2.53, BQ25180 US$1.58-1.72 at the top visible distributor tiers, Ambiq MCU US$2.67 ASP per TechInsights) fall inside or below the corresponding line estimates, except the charger line (US$0.80-1.50 at 1k), which sits 10-50 percent below distributor tier pricing.",
+      "source_url": "https://www.mouser.com/en/ProductDetail/Nordic-Semiconductor/nRF52840-QIAA-R7?qs=AQlKX63v8RsCBZQshXcHUQ%3D%3D"
+    },
+    {
+      "claim": "Bosch BMI270 costs US$4.23 at Digi-Key (quantity tier not shown)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Digi-Key's BMI270 listing (product 9974488 and the product-highlight page) shows US$4.23, which is the qty-1 price. Mouser and LCSC carry the part but their prices were not visible in search results, so there is no second-distributor cross-check and no observed volume tier; the BOM's IMU line (US$3.00-3.80 at 1k) is an extrapolation.",
+      "source_url": "https://www.digikey.com/en/products/detail/bosch-sensortec/BMI270/9974488"
+    },
+    {
+      "claim": "BMI270 draws about 685 uA with accelerometer + gyroscope at full performance (RECALLED-UNVERIFIED)",
+      "verdict": "corrected",
+      "corrected_value": "685 uA is the accel+gyro Normal-mode figure at maximum ODR (VDD 1.8 V, 25 C); Performance mode is 970 uA; accel+gyro Low Power mode at 25 Hz is 420 uA (Bosch BMI270 datasheet rev 1.6, March 2026)",
+      "evidence": "The Bosch datasheet's electrical characteristics list three A+G modes - Performance 970 uA, Normal 685 uA, Low Power 420 uA at 25 Hz - so the recalled value belongs to Normal mode, not 'full performance'. The power budget's 'gyro adds 0.3-0.5 mA' assumption is roughly right for Normal mode but understates Performance mode.",
+      "source_url": "https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmi270-ds000.pdf"
+    },
+    {
+      "claim": "nRF52840 radio draws 4.8 mA TX at 0 dBm and about 4.6 mA RX; CPU about 52 uA/MHz (3.3 mA at 64 MHz), System ON idle about 1.5 uA, System OFF about 0.4 uA (radio secondary via module datasheets; the rest RECALLED-UNVERIFIED)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Nordic's own nRF52840 Product Specification and product brief (v2.2 / v2.3 mirrors) state 4.8 mA peak TX at 0 dBm and 4.6 mA peak RX (DC/DC regulator, 3 V). Caution: product brief v3.0 (Mouser mirror) lists 6.40 mA TX at 0 dBm and 6.26 mA RX under its stated condition, so the 4.8 / 4.6 mA values only hold when the DC/DC converter is enabled. The CPU uA/MHz, System ON and System OFF figures could not be re-read before the search budget was exhausted and remain unverified.",
+      "source_url": "https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/product-briefs/nrf52840-soc-product-brief.pdf"
+    },
+    {
+      "claim": "Ultrahuman Ring AIR: nRF52840 SoC, 24 mAh Li-Po, up to 5 days",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Nordic's September 2023 press release states the ring integrates the nRF52840 and a 24 mAh Li-Po battery for up to five days; retailer listings repeat '24 mAh'. The 5-day figure is now stale: Ultrahuman markets up to 6 days after a firmware update it says extends battery life by about 35 percent (Ultrahuman blog; retailer listing '24 mAh, 6 Days Battery Life').",
+      "source_url": "https://www.nordicsemi.com/Nordic-news/2023/09/the-ultrahuman-ring-air-employs-nrf52840-soc"
+    },
+    {
+      "claim": "Oura Ring 4 has a 26 mAh battery (secondary: EDN, citing the TechInsights Gen 4 teardown)",
+      "verdict": "unverifiable",
+      "corrected_value": "",
+      "evidence": "The 26 mAh figure appears in EDN's Oura Ring 4 article, which restates the TechInsights Gen 4 teardown; the TechInsights blog page surfaced in search but its snippet did not expose the capacity, and no second independent source (FCC filing, iFixit, Oura) was found before the budget ran out. Ring cells scale with ring size, so a single mAh figure is size-specific in any case. Keep as secondary, not verified.",
+      "source_url": "https://www.techinsights.com/blog/oura-ring-gen-4-teardown"
+    },
+    {
+      "claim": "Amazfit Helio Strap: 232 mAh cell, up to 10 days; BioTracker 6.0 PPG with 5 photodiodes + 2 LEDs; BLE only; SoC not found (secondary: Wareable review, Amazon listing)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Amazfit's own India FAQ pages state a 232 mAh rated capacity and up to 10 days of typical use (24/7 HR, sleep tracking, three GPS-connected workouts per week), charging in under 2 hours. The same official specs add details the file lacks: acceleration, gyroscope and temperature sensors alongside BioTracker 6.0 (5PD + 2LED), Bluetooth 5.2 BLE, 5 ATM water resistance and 20 g weight. The SoC is still undisclosed.",
+      "source_url": "https://in.amazfit.com/pages/faq/what-is-the-battery-capacity-of-the-amazfit-helio-strap"
+    },
+    {
+      "claim": "Polar Loop (2025): 170 mAh, up to 8 days, 42 x 27 x 9 mm, 29 g, WR30 (secondary: SensorSpecs, GSMArena)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Polar's own user-manual technical specification lists Li-Pol 170 mAh, up to 8 days of standard use, 42 x 27 x 9 mm, 29 g total (19.5 g module + 9.5 g wristband), water resistance 30 m, USB-C charging and Bluetooth 5.1, plus 'Processor 64 MHz, Memory 1.3 MB, Storage 16 MB' - figures consistent with an nRF52840-class SoC (64 MHz, 1 MB flash + 256 KB RAM) and a 16 MB external flash, although the SoC is not named (inference).",
+      "source_url": "https://support.polar.com/e_manuals/polar-loop/polar-loop-user-manual-english/technical-specifications.htm"
+    },
+    {
+      "claim": "The commonly quoted 638 mAh / 3.85 V / 2.46 Wh figure is the slide-on Battery Pack 4.0, not the strap cell; Whoop Inc files under FCC grantee code 2AJ2X (2AJ2X-WP40 = 4.0 battery pack), not the 2AI7N prefix in the brief",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Amazon (B0BWSFHKGW) and Dick's Sporting Goods listings for the WHOOP Battery Pack 4.0 give 638 mAh, 3.85 V, 2.46 Wh, IP68 and 'stores power for up to 1 week', i.e. a charger accessory that is not compatible with the 5.0/MG; fccid.io lists 2AJ2X as Whoop Inc's grantee code and 2AJ2X-WP40 as the 'Portable Battery Charger WP40'. None of these sources discloses the strap cell capacity.",
+      "source_url": "https://fccid.io/2AJ2X-WP40"
+    },
+    {
+      "claim": "Whoop 4.0's battery gains about 20 percent energy density from Sila silicon-anode material (secondary: IoT Design Pro)",
+      "verdict": "corrected",
+      "corrected_value": "17 percent higher energy density (Whoop / Sila 2021 launch figure; Sila projected up to 40 percent in future generations). TechInsights' battery characterization of the Sila WS40 cell reports 258 Wh/kg and a 2.8 g cell, which implies about 0.72 Wh, i.e. roughly 185-195 mAh at 3.7-3.85 V (derived arithmetic, not a stated figure).",
+      "evidence": "Sila's September 2021 press release and the Whoop 4.0 launch coverage (MIT Technology Review, Whoop's '4.0 vs 3.0' page) quote the silicon anode as delivering up to 17 percent higher energy density; TechInsights' teardown blog on the 4.0 battery and its WS40 battery characterization report (bcr-2304-801) give 258 Wh/kg and 2.8 g. No source states the strap's mAh directly.",
+      "source_url": "https://www.techinsights.com/blog/teardown/fitness-wearable-whoop-40-leverages-next-generation-battery-anode-technology"
+    },
+    {
+      "claim": "Goodix GH3220 PPG/ECG AFE lists at US$2.5298 per piece at JLCPCB (assembly-service pricing)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "JLCPCB's GH3220 part page (C2942337) shows US$2.5298; an independent Chinese distributor listing (SZYJC, C002227065, WLCSP-42) gives a reference price of CNY 17.33, about US$2.4 at 2026 rates, so the roughly US$2.5 small-quantity level is corroborated by two sellers. Volume tiers are not visible.",
+      "source_url": "https://jlcpcb.com/partdetail/GoodixTechnology-GH3220/C2942337"
+    }
+  ],
+  "stale_or_missing": [
+    "STALE / CORRECTED - Whoop 4.0 part numbers: the file says the PPG AFE, IMU and temperature-sensor parts were NOT FOUND. TechInsights' WS40 teardown names Maxim MAX32652 (application MCU, Cortex-M4F 120 MHz), MAX86171 (PPG AFE), MAX77818 (PMIC / fuel gauge) and MAX6631MTT (temperature sensor); the nRF52840 is the BLE SoC only. IMU part: not found. https://www.techinsights.com/products/ddt-2111-806",
+    "MISSING - Whoop 5.0 battery life benchmark: Whoop rates the 5.0 / MG at 14+ days (about 3x the 4.0) on a 'new internal lithium-ion battery' with '10x more power efficiency'; the file never records this even though it is the headline benchmark for the category. Cell mAh: not disclosed. https://www.engadget.com/wearables/whoops-latest-wearables-are-smaller-and-offer-14-day-battery-life-170525375.html and https://support.whoop.com/s/article/Unlock-New-with-WHOOP-5-0?language=en_US",
+    "MISSING - Whoop 4.0 strap cell capacity: no source states mAh, but TechInsights' battery characterization of the Sila WS40 cell gives 258 Wh/kg and 2.8 g, implying about 0.72 Wh or roughly 185-195 mAh at 3.7-3.85 V (derived). Whoop 5.0 cell capacity and chemistry: not found. https://www.techinsights.com/blog/teardown/fitness-wearable-whoop-40-leverages-next-generation-battery-anode-technology ; https://www.techinsights.com/products/bcr-2304-801",
+    "MISSING - Whoop 5.0 Ambiq SKU and cost: an RBA Equity memo (2026-03-16) citing TechInsights puts the Ambiq Cortex-M4 + BLE 5.0 MCU at about US$2.67 ASP as the sole main processor (secondary). The SKU is still unnamed; 'BLE 5.0' points to Apollo3 Blue / Blue Plus rather than the Apollo4 Blue family assumed in the file, which also assumed US$5-8 for an Ambiq option. https://rbaequity.org/AMBQ_Investment_Memo.pdf",
+    "MISSING - Helio Strap MCU: not found. Zepp Health's Helio Strap 2 FCC filing (model A2671, confidentiality request dated 2026-05-12) keeps internal photos hidden until launch or roughly November 2026; the filing shows a BLE-only radio and a 230 mAh cell. The original Helio Strap's FCC internal photos were not located before the search budget ran out. https://www.notebookcheck.net/Amazfit-Helio-Strap-2-New-FCC-filing-proves-the-rumored-Fitbit-Air-rival-is-on-its-way.1308631.0.html",
+    "STALE - Helio Strap spec sheet: Amazfit's official FAQ adds acceleration, gyroscope and temperature sensors, Bluetooth 5.2, 5 ATM water resistance and 20 g weight (the file lists only the BioTracker 6.0 optics and calls the water rating unverified). Amazfit has also listed a 'Helio Strap Pro' (https://us.amazfit.com/products/helio-strap-pro) whose specs were not captured (search budget). https://in.amazfit.com/pages/faq/what-is-the-battery-capacity-of-the-amazfit-helio-strap",
+    "MISSING - AFE volume price: MAX86171ENI+ is listed at LCSC (C3678802) 'from US$2.16' per unit (tier not shown; needs confirmation because it is far below typical Maxim AFE pricing and Digi-Key shows constrained supply with no backorders accepted). MAX86176 / MAX86178 prices: not found. https://www.lcsc.com/product-detail/C3678802.html",
+    "MISSING - Charger / PMIC price: TI BQ25180YBGR at Digi-Key US$3.010 (qty 1) with tiers US$2.253 / 1.854 / 1.723, and at Mouser US$3.010 / 2.260 / 1.860 / 1.640 / 1.580 - so the BOM's US$0.80-1.50 charger line at 1k is 10-50 percent below visible distributor tiers unless direct TI pricing is assumed. Nordic nPM1100 (NPM1100-QDAA-R / QDAB-R) is listed at Digi-Key and Mouser but no price was visible: not found. https://www.digikey.com/en/products/detail/texas-instruments/BQ25180YBGR/15857374 ; https://eu.mouser.com/en/ProductDetail/Texas-Instruments/BQ25180YBGR?qs=doiCPypUmgEWjAK%2BJAX6Tw%3D%3D",
+    "MISSING - nRF52840 price cross-check: Mouser US$7.50 (nRF52840-QIAA-R7 reel, qty 1) and US$7.35 (nRF52840-QIAA-T tray); full reels in multiples of 3,000. LCSC lists NRF52840-QIAA-R (C190794) but its price was not captured. https://www.mouser.com/en/ProductDetail/Nordic-Semiconductor/nRF52840-QIAA-R7?qs=AQlKX63v8RsCBZQshXcHUQ%3D%3D",
+    "MISSING - 150 mAh curved Li-Po cell volume price, silicone / textile strap unit price, Oura Ring 4 / 5 MCU, nRF54L15 pricing, Whoop 5.0 water rating (IP68 / 10 m): not searched before the session-wide budget was exhausted (unverifiable, search budget).",
+    "STALE - Ultrahuman Ring AIR battery life: Nordic's 2023 'up to 5 days' is superseded by Ultrahuman's current 'up to 6 days' claim after a firmware update it says adds about 35 percent battery life (secondary). https://blog.ultrahuman.com/blog/maximizing-your-ultrahuman-ring-battery-life/",
+    "STALE / CAUTION - nRF52840 radio currents: the 4.8 mA TX (0 dBm) / 4.6 mA RX figures are DC/DC-at-3 V values; Nordic's product brief v3.0 lists 6.40 mA / 6.26 mA under its stated condition. CPU 52 uA/MHz, System ON 1.5 uA and System OFF 0.4 uA were not re-verified (search budget). https://www.mouser.com/datasheet/2/297/nrf52840_soc_v3_0-2942478.pdf",
+    "INFERENCE - Polar Loop SoC: Polar's manual lists a 64 MHz processor, 1.3 MB memory, 16 MB storage and Bluetooth 5.1, consistent with an nRF52840-class SoC plus 16 MB external flash; the part is not named. https://support.polar.com/e_manuals/polar-loop/polar-loop-user-manual-english/technical-specifications.htm",
+    "STALE - BMI270 datasheet: the file cites the vendor product page; the current datasheet is rev 1.6 (March 2026) with A+G Performance 970 uA / Normal 685 uA / Low Power 420 uA at 25 Hz. https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmi270-ds000.pdf"
+  ],
+  "summary": "23 WebSearch queries ran before the session-wide budget (200/200) was exhausted; WebFetch was not attempted. 14 checks: 9 confirmed, 3 corrected, 2 unverifiable, 0 refuted. The most consequential correction: Whoop 4.0 was not an nRF52840-only design - TechInsights' teardown names a 120 MHz Maxim MAX32652 as the application MCU with a MAX86171 AFE, MAX77818 PMIC and MAX6631 temperature sensor, the nRF52840 being the BLE SoC - so the file's premise that the 4.0 proves a lone nRF52840 can run a Whoop-class band is unsupported (Ultrahuman Ring AIR, and by inference Polar Loop, are the better single-nRF52840 precedents, and the open question about fitting the rep classifier into 256 KB RAM becomes more pressing). Other corrections: the Sila energy-density gain is 17 percent, not about 20; BMI270's 685 uA is Normal mode (Performance mode is 970 uA). Whoop's own material confirms the 26 Hz sampling claim and supplies the missing 14+ day 5.0 battery benchmark; Helio Strap (232 mAh / 10 days, plus gyro, 5 ATM, 20 g) and Polar Loop (170 mAh / 8 days / 29 g / 30 m) now rest on vendor spec sheets rather than reviews. New price anchors: BQ25180 US$1.58-1.72 at volume tiers (the BOM charger line is 10-50 percent low), MAX86171 'from US$2.16' at LCSC (tier unconfirmed), GH3220 US$2.53 corroborated by a second seller, Ambiq 5.0 MCU about US$2.67 ASP (secondary), nRF52840 US$7.35-7.50 at Mouser qty 1 (Digi-Key US$6.78 / US$4.07 reel not re-observed). Still open: Whoop strap cell mAh (about 190 mAh derived for the 4.0 from 258 Wh/kg x 2.8 g), the Whoop 5.0 Ambiq SKU, Helio Strap and Oura MCUs, nPM1100 / cell / strap volume prices, and the nRF52840 CPU and sleep currents."
+}

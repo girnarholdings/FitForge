@@ -1,0 +1,122 @@
+{
+  "lens": "rep-detection-science",
+  "checks": [
+    {
+      "claim": "RecoFit (CHI 2014): >95% precision/recall for finding exercise periods; 99% / 98% / 96% recognition on circuits of 4 / 7 / 13 exercises; final study 114 participants / 146 sessions; public dataset >200 participants, accelerometer+gyroscope at 50 Hz.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Microsoft Research abstract and the ACM DL record state precision and recall >95% for identifying exercise periods, recognition of 99%, 98% and 96% on circuits of 4, 7 and 13 exercises, and cross-validation plus a final-system study totalling 114 participants over 146 sessions. The microsoft/Exercise-Recognition-from-Wearable-Sensors README confirms accelerometer and gyroscope recordings from over 200 participants (independent of the paper page).",
+      "source_url": "https://www.microsoft.com/en-us/research/publication/recofit-using-wearable-sensor-find-recognize-count-repetitive-exercises/"
+    },
+    {
+      "claim": "RecoFit repetition counting is 'accurate to ±1 rep' (headline states it without qualification; the file flagged the '93% of sets' figure as unverified).",
+      "verdict": "corrected",
+      "corrected_value": "Counting accurate to ±1 repetition 93% of the time (i.e., 7% of sets miss by more than 1 rep), per the CHI 2014 abstract.",
+      "evidence": "The Semantic Scholar / Microsoft Research author-copy abstract wording is 'counting that is accurate to ±1 repetition 93% of the time'. The research file's unqualified '±1' overstates; the 93% figure quoted in the earlier brief is correct and should be reinstated.",
+      "source_url": "https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/Morris_Workout_CHI_2014.pdf"
+    },
+    {
+      "claim": "MiLift (IEEE TMC 2018, 22 users, COTS smartwatch): >90% average precision/recall for cardio classification, weightlifting session detection and type classification; MEDIAN rep-count error 1.12 reps on a MEDIAN 9.65-rep set.",
+      "verdict": "corrected",
+      "corrected_value": "Average (mean) error of 1.12 reps out of an average of 9.65 reps per set - the abstract says 'average', not 'median'. Also: battery life extended up to 8.25x (19.13 h) vs prior approaches; TMC vol. 17 no. 7, pp. 1609-1622.",
+      "evidence": "The ResearchGate/Semantic Scholar abstract: 'A study of 22 users shows that MiLift can achieve above 90% average precision and recall for cardio workout classification, weightlifting session detection, and weightlifting type classification. MiLift can also count repetitions of weightlifting exercises with an average error of 1.12 reps (out of an average of 9.65)'. Precision/recall and user count confirmed; the 'median' wording in the file is wrong (it changes the interpretation: mean error is more sensitive to badly miscounted sets).",
+      "source_url": "https://www.researchgate.net/publication/321236091_MiLift_Efficient_Smartwatch-Based_Workout_Tracking_Using_Automatic_Segmentation"
+    },
+    {
+      "claim": "MM-Fit (IMWUT 2020): exercise recognition on unseen subjects 96% with all modalities, 94% smartwatch-only, 85% smartphone-only, 82% earbud-only; 10 exercise classes.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "ACM DL abstract (IMWUT 4(4):168, Dec 2020) and the mmfit.github.io dataset page both state 96% across all modalities on unseen subjects, 94% smartwatch only, 85% smartphone only and 82% earbud only; the baseline is a CNN-based multimodal architecture for segmentation, recognition and repetition counting.",
+      "source_url": "https://dl.acm.org/doi/10.1145/3432701"
+    },
+    {
+      "claim": "WEAR (IMWUT 2024): 22 participants, 18 outdoor workout activities, 11 locations, four Bangle.js watches (both wrists and ankles) at 50 Hz ±8 g; best inertial-only F1 86.20 (shallow DeepConvLSTM, 1 s) and mAP 88.36 (ActionFormer, 1 s); headline: right-wrist-only F1 58-67 vs 68-77 with right ankle added, mAP 28-35 vs 47-61 for DeepConvLSTM-class models; licence CC BY-NC-SA 4.0.",
+      "verdict": "corrected",
+      "corrected_value": "Per supplementary Table 9 (all clip lengths 0.5/1/2 s): right-wrist-only F1 58.38-66.64 and DeepConvLSTM-class mAP 27.56-34.50; right wrist + right ankle F1 68.06-74.91 and DeepConvLSTM-class mAP 45.66-51.36; ALL FOUR sensors F1 64.57-77.10 and DeepConvLSTM-class mAP 52.15-61.25. The headline's '68-77' and '47-61' upper bounds come from the all-four-sensor column, not the wrist+ankle column. The 1-s rows quoted in data_points (Shallow DeepConvLSTM 61.97/29.56 -> 73.54/49.49 -> 75.44/59.14; A-and-D 66.64/33.92 -> 72.14/46.20 -> 74.67/56.44; TriDet 63.62/73.80 -> 74.91/81.01 -> 70.36/76.86; ActionFormer 61.62/72.80 -> 73.13/77.88 -> 68.40/75.01) are exact.",
+      "evidence": "Verified directly against supplementary_material.pdf in the authors' mariusbock/wear repository (git clone, text-extracted): Table 4 gives Shallow DeepConvLSTM 1 s P 90.10 / R 86.10 / F1 86.20 (avg mAP 71.09) and ActionFormer 1 s avg mAP 88.36; Table 9 gives the RW / RW+RA / all columns listed above and section C.3 states wrist-only data 'significantly decreases predictive performance across all algorithms and metrics' with the ankle bringing results 'mostly on par' with all four sensors; Table 11 confirms all inertial models suffer at 25 Hz and 10 Hz. arXiv 2304.05088 / ACM DL abstracts and README confirm 22 participants, 18 activities, 11 locations, Bangle.js 50 Hz ±8 g, and the README states the CC BY-NC-SA 4.0 licence (no commercial use).",
+      "source_url": "https://github.com/mariusbock/wear"
+    },
+    {
+      "claim": "Apple Watch Sport + StrengthControl app (Sensors 2021): 30 recreationally trained athletes, 4 sets each of barbell deadlift, bench press and back squat at 60-80% estimated 1RM; correct exercise recognised in 88.4% of 363 sets; repetition count not significantly different from truth for back squat (p = 0.68) and deadlift (p = 0.09) but not bench press.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "PMC8471343 abstract (Oberhofer, Erni, Sayers, Huber, Luethy, Lorenzetti; Swiss Federal Institute of Sport Magglingen): thirty recreationally trained athletes, four consecutive sets of the three barbell lifts at 60-80% estimated 1RM with maximal velocity, Apple Watch Sport analysed by the iOS app StrengthControl with GymAware as velocity reference; 'the correct strength exercise was recognised in 88.4% of all the performed sets (N = 363) with accurate repetition count for the barbell back squat (p = 0.68) and the barbell deadlift (p = 0.09)'.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8471343/"
+    },
+    {
+      "claim": "VBT from IMU: 2021 systematic review screened 161 records -> 22 studies, 8 IMU models, 7 valid and reliable vs linear transducers; Vmaxpro mean concentric velocity ICC 0.91-0.96 with limits of agreement < 0.12 m/s and small systematic bias in squat and hip thrust; in the free-weight back squat and power clean GymAware was most valid/reliable while Beast Sensor and Bar Sensei were least valid (Sports 2020).",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Clemente et al. (Sensors 2021, PMC8038306): 161 records identified, 22 fully reviewed, eight IMU models of which seven 'can be considered valid and reliable'. Held et al. (IJERPH 2021, PubMed 34501761 / PMC8431394): 19 trained males, squats and hip thrusts vs Speed4Lift linear transducer; ICC 0.91-0.96, bias 0.01 ± 0.04 (squat) and 0.01 ± 0.05 m/s (hip thrust), LoA < 0.12 m/s; note reliability ICCs were only 0.55-0.91 (LoA < 0.16 m/s), so 'good within- and between-day reliability' in the file is generous. Weakley et al. (Sports 2020, PMC7404723 / PubMed 32629842): six devices; GymAware most reliable (CV < 10%, TE < 0.11 m/s) and most valid (LoA -0.03 to 0.03 m/s); Beast Sensor and Bar Sensei least reliable (CV 5.1-119.9%, TE 0.08-0.48 m/s) and least valid (LoA -0.36 to 0.46 m/s); authors conclude IMUs showed poorer reliability and validity than LPTs and smartphone apps.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8038306/"
+    },
+    {
+      "claim": "STMicroelectronics in-sensor 'Gym activity recognition' example: LSM6DSOX accelerometer-only ±8 g at 26 Hz ultra-low-power, IIR1 low-pass, 4 features (mean, peak-to-peak, min, max) on 78-sample / 3-s windows, one ~30-node decision tree, classes none / bicep curls / lateral raises / squats, separate left/right-wrist configs; LSM6DSV80X variant at 30 Hz with 90-sample windows; MLC overhead 'about 3.1 µA' taken from the ASM330LHHX tow-detection example (12.5 Hz).",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Verified against the primary READMEs in a sparse git clone of STMicroelectronics/STMems_Machine_Learning_Core: the lsm6dsox Gym activity recognition README states ±8 g, 26 Hz ODR, ultra-low-power mode, four features (mean, peak-to-peak, min, max) with one IIR1 low-pass filter, MLC at 26 Hz on windows of 78 samples (3 s), 'one decision tree with around 30 nodes', no meta-classifier, classes 0/4/8/12 = no activity / bicep curls / lateral raises / squats, wristband on left or right hand; the lsm6dsv80x variant README states 30 Hz, low-power mode 1, 90-sample (3 s) windows; the asm330lhhx Tow detection README states 'The additional current consumption of the MLC is just 3.1 µA' at 12.5 Hz. No accuracy figure is published for the gym example, as the file already notes. Web search only confirmed the file names (budget exhausted before the README query ran).",
+      "source_url": "https://github.com/STMicroelectronics/STMems_Machine_Learning_Core/tree/master/application_examples/lsm6dsox/Gym%20activity%20recognition"
+    },
+    {
+      "claim": "BLE bandwidth: Nordic's throughput sample measures 1,504 kbps (3,762,990 bytes in 20.003 s) with LE 2M PHY and 251-byte data length; a 6-axis int16 IMU at 50 Hz is 600 B/s = 4.8 kbps (<0.4% of that link), 9.6 kbps at 100 Hz, 14.4 kbps for 9-axis at 100 Hz; a 60-min session is 2.16 MB (50 Hz) or 4.32 MB (100 Hz).",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "The nRF Connect SDK Bluetooth: Throughput sample documentation (nrfconnectdocs.nordicsemi.com and the sdk-nrf README.rst) reports 3,762,990 bytes (3,674 KB) sent in 20,003 ms at 1504 kbps with LE 2M PHY and data length 251. Arithmetic re-checked: 6 axes x 2 B x 50 Hz = 600 B/s = 4.8 kbps; 600 / 188,000 B/s = 0.32%; 100 Hz -> 9.6 kbps; 9 axes x 2 B x 100 Hz = 1,800 B/s = 14.4 kbps; 600 B/s x 3,600 s = 2.16 MB, 4.32 MB at 100 Hz. Caveat (reasoning, not a searched number): 1,504 kbps is a Nordic-to-Nordic lab maximum; a phone link with a 185-byte iOS MTU and 15-30 ms intervals yields far less, but still one to two orders of magnitude above the IMU stream, so the conclusion stands.",
+      "source_url": "https://nrfconnectdocs.nordicsemi.com/ncs/latest/nrf/samples/bluetooth/throughput/README.html"
+    },
+    {
+      "claim": "WHOOP vs polysomnography: Miller et al. 2020 - 2-stage agreement 89%, sleep sensitivity 95%, wake specificity 51%, kappa 0.49; 4-stage agreement 64%, sensitivities light 62% / SWS 68% / REM 70% / wake 51%, kappa 0.47. Miller et al. 2021 WHOOP-AUTO - agreement 86% (2-stage) and 63% (4-stage), sleep sensitivity 90%, wake sensitivity 60%.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "PubMed 32713257 / J Sports Sci 38(22) abstract: 12 healthy adults, 86 nights scored in 30-s epochs; 2-stage agreement 89%, sensitivity to sleep 95%, specificity for wake 51%, Cohen's kappa 0.49; 4-stage agreement 64%, sensitivities 62% / 68% / 70% / 51%, kappa 0.47 - with the qualifier that WHOOP is reasonable for 2-stage estimation 'if accurate bedtimes are manually entered'. Biosensors 2021 11(6):185 (PMC8226553) abstract: WHOOP-AUTO agreement 86% (2-stage) and 63% (4-stage). The 90% / 60% WHOOP-AUTO sensitivities were not re-surfaced before the search budget ran out, so those two sub-figures remain as in the file (unverified this pass). The 2020 study's WHOOP-sponsored author position is a disclosed conflict of interest.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/32713257/"
+    },
+    {
+      "claim": "SLEEP Advances 2025 six-device PSG study (includes WHOOP 4.0): sleep-epoch sensitivity >90% for all devices; wake specificity 29.39% to 52.15%.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "SLEEP Advances 6(2): zpaf021 (PMC12038347): 62 adults (52 M / 10 F, 46.0 ± 12.6 y), one PSG night wearing 2-4 of Fitbit Charge 5, Fitbit Sense, Withings ScanWatch, Garmin Vivosmart 4, WHOOP 4.0 and Apple Watch Series 8; all devices detected >90% of sleep epochs but showed lower specificity (29.39%-52.15%); most devices differed significantly from PSG for TST, sleep efficiency, WASO and light sleep. Per-device WHOOP 4.0 values still not extracted.",
+      "source_url": "https://academic.oup.com/sleepadvances/article/6/2/zpaf021/8090472"
+    },
+    {
+      "claim": "Self-supervised pretraining on UK Biobank (npj Digital Medicine 2024, ResNet): fine-tuning all layers lifts mean F1 from 0.605 to 0.789 on PAMAP2 (+30.4%), 0.684 to 0.810 on WISDM (+18.4%), 0.705 to 0.792 REALWORLD, 0.383 to 0.595 Opportunity, 0.414 to 0.829 ADL, 0.696 to 0.796 Rowlands, 0.708 to 0.726 Capture-24.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Verified against the authors' OxWearables/ssl-wearables README table (git clone): Trained-from-scratch / Fine-tune-all / Improvement% = Capture-24 .708 / .726 / 2.5; Rowlands .696 / .796 / 14.4; WISDM .684 / .810 / 18.4; REALWORLD .705 / .792 / 12.3; Opportunity .383 / .595 / 55.4; PAMAP2 .605 / .789 / 30.4; ADL .414 / .829 / 100.0 - every value matches the file. Independent corroboration: the npj Digital Medicine abstract (s41746-024-01062-3) reports F1 relative improvements of 2.5-130.9% (median 24.4%) across eight benchmarks, and RelCon (arXiv 2411.18822) cites the same model's PAMAP2 fine-tuned F1 as 78.9 ± 5.4. Note the abstract's 130.9% upper bound exceeds the README's 100% maximum, so the paper's own table is not identical to the README table; cite the README for these exact values.",
+      "source_url": "https://github.com/OxWearables/ssl-wearables"
+    },
+    {
+      "claim": "LIMU-BERT-X (MobiCom 2025 experience paper): pretrained on 1.43 million hours of IMU data, >90% HAR accuracy, deployed to 500,000 couriers across 367 cities, 7.5 billion on-device predictions per day, 0.44 billion RMB annual savings.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "The arXiv paper 'Experience Paper: Adopting Activity Recognition in On-demand Food Delivery Business' (arXiv 2509.24303, accepted at ACM MobiCom 2025) states the model was pretrained on 1.43 million hours of real-world sensor data, achieves >90% HAR accuracy nationwide, is deployed for 500,000 couriers across 367 cities, serves 7.5 billion on-device predictions per day, and contributes to 0.44 billion RMB annual savings - matching the WANDS-HKUST README. All figures are self-reported by the authors/company; no third-party audit exists.",
+      "source_url": "https://arxiv.org/html/2509.24303"
+    },
+    {
+      "claim": "Metric-based few-shot repetition counting for unseen exercises (arXiv 2410.00407) achieves about 0.7 reps/set MAE and counts 74% of sets exactly.",
+      "verdict": "unverifiable",
+      "corrected_value": "unverifiable (search budget)",
+      "evidence": "The arXiv abstract (2410.00407, also titled 'Metric-Based Few-Shot Learning for Exercise Repetition Counting with IMU Data' in v1) confirms the method (single IMU, metric-based few-shot classification of peak patterns, pretrain-then-fine-tune) but does not state any MAE or exact-count percentage; the 0.7 / 74% numbers exist only in a search-engine summary that aggregated several papers, and the search budget was exhausted before a second-phrasing query could run. Treat as unattributed until the PDF's results table is read.",
+      "source_url": "https://arxiv.org/abs/2410.00407"
+    }
+  ],
+  "stale_or_missing": [
+    "PRIMARY SOURCE for LIMU-BERT-X now exists and should replace the README citation: 'Experience Paper: Adopting Activity Recognition in On-demand Food Delivery Business' (arXiv 2509.24303, MobiCom 2025). Related 2026 follow-up from the same domain: 'GenHAR: Generalizing Cross-domain Human Activity Recognition for Last-mile Delivery' (arXiv 2605.22086).",
+    "MISSED (TinyML): 'TinierHAR: Towards Ultra-Lightweight Deep Learning Models for Efficient Human Activity Recognition on Edge Devices' (arXiv 2507.07949, 2025) - directly relevant to the open question on model size/latency for an MCU-class band; numbers not extracted (budget).",
+    "MISSED (wrist SSL, 2026): 'Bio-Inspired Self-Supervised Learning for Wrist-worn IMU Signals' (arXiv 2603.10961) and 'Differentially Private Fine-Tuning of Self-Supervised Learning Models for HAR on Wearables' (Springer LNCS, 978-3-032-16708-8_1) - both post-date the lens's SSL references.",
+    "MISSED (surveys that supersede the Awesome-IMU-Sensing list): 'Foundation Models Defining A New Era In Sensor-based Human Activity Recognition: A Survey And Outlook' (arXiv 2604.02711, 2026); 'Self-supervised Learning for Accelerometer-based Human Activity Recognition: A Survey' (IMWUT, doi 10.1145/3699767, 2024); 'Towards Generalizable Human Activity Recognition: A Survey' (arXiv 2508.12213, 2025).",
+    "MISSED (WEAR follow-up): 'Detecting Informative Channels: ActionFormer' (arXiv 2505.20739, 2025) re-analyses which inertial channels matter on WEAR-class TAL models - relevant to the wrist-vs-ankle placement argument.",
+    "MISSED (efficient/sequence HAR 2024): P2LHAP Patch-to-Label Seq2Seq Transformer for HAR segmentation and forecasting (arXiv 2403.08214); HARMamba lightweight bidirectional-Mamba HAR (arXiv 2403.20183); 'Deep Adversarial Learning with Activity-Based User Discrimination Task for HAR' (arXiv 2410.12819) and 'Feature Anchors for Time-Series Sensor-Based HAR' (arXiv 2604.25092, 2026).",
+    "MISSED (rep counting, older but uncited): ExerSense real-time IMU segmentation/classification/counting (arXiv 2004.10026); 'Deep learning approaches for workout repetition counting and validation' (Pattern Recognition Letters 2021, S016786552100324X); 'A Multipurpose Wearable Sensor-Based System for Weight Training' (MDPI Automation 2022, 2673-4052/3/1/7); 'Hang-Time HAR' wrist-worn basketball IMU dataset (Sensors 2023, PMC10346876) as another wrist-only sports benchmark.",
+    "MISSED (sleep validation newer than the lens's JMIR 2024 review): 'Performance of consumer wrist-worn sleep tracking devices compared to polysomnography: a meta-analysis' (PMC11874098 / PubMed 39484805, late 2024) gives pooled estimates; 'Validity and clinical utility of a wrist-worn device against polysomnography' (PMC12483222, 2025); WHOOP-authored preprint 'Accuracy, Utility and Applicability of the WHOOP Wearable...' (medRxiv 2024.01.04.24300784).",
+    "GAP (WHOOP HRV/HR vs ECG): the candidate paper exists - Bellenger et al., 'Wrist-Based Photoplethysmography Assessment of Heart Rate and Heart Rate Variability: Validation of WHOOP', Sensors 2021, 21, 3571 (a published Correction is PMC9031712) - and Miller et al. 2022 'A Validation of Six Wearable Devices for Estimating Sleep, Heart Rate and Heart Rate Variability in Healthy Adults' (PMC9412437) covers WHOOP and Oura HR/HRV; bias/LoA numbers NOT retrieved (search budget exhausted before the query ran).",
+    "GAP (PPG heart rate during resistance training: WHOOP / Apple Watch / Polar Verity Sense): NOT SEARCHED - the three planned queries (Boudreaux 2018 MSSE; Polar Verity Sense/OH1 during strength exercise; Apple Watch/WHOOP HR during lifting 2023-2025) were refused by the exhausted search budget. Remains an open question exactly as the lens states.",
+    "GAP (Oura HRV validation): NOT SEARCHED (search budget). Only incidental lead: Miller et al. 2022 six-device study (PMC9412437) includes Oura.",
+    "GAP (peer-reviewed validation of Garmin auto rep counting): NOT SEARCHED (search budget); not found in any incidental result. No peer-reviewed accuracy figure for Garmin strength-training rep counting surfaced in this or the earlier session.",
+    "GAP (peer-reviewed validation of Amazfit/Zepp/Huawei auto rep counting): NOT SEARCHED (search budget); nothing surfaced incidentally.",
+    "GAP (few-shot / personalised calibration numbers): arXiv 2508.15413 on-device few-shot personalisation on RecGym and arXiv 2410.00407 few-shot rep counting - quantitative gains NOT verified (budget); ZeroHAR (AAAI 2025) and other context-aware HAR 2025-2026 work NOT re-searched (budget).",
+    "GAP (new 2025-2026 wrist-IMU gym datasets): NOT SEARCHED (budget). Incidental only: WatchHAR (arXiv 2509.04736, already in the lens) and the Scientific Data 2026 sensor-layout dataset (s41597-026-06710-9, in the lens sources but with no numbers extracted).",
+    "PROCESS NOTE: WebSearch budget (200/200) was exhausted after 20 verification queries, so the second-phrasing searches for MiLift, WEAR Table 9, ST MLC and ssl-wearables could not run; those four were instead verified against primary author/vendor repositories via anonymous git clone (ST README, WEAR supplementary PDF, ssl-wearables README) - all three primary sources are archived in the session scratchpad under clones/."
+  ],
+  "summary": "14 load-bearing claims checked: 10 confirmed, 3 corrected, 1 unverifiable, 0 refuted. The three corrections are wording/range errors that matter for interpretation, not reversals: (1) RecoFit's rep counting is accurate to ±1 rep in 93% of cases, not unconditionally; (2) MiLift's 1.12-of-9.65 rep error is a MEAN, not a median; (3) the WEAR headline's 'wrist+ankle' upper bounds (F1 77, mAP 61) actually belong to the all-four-sensor column - the correct wrist+ankle ranges are F1 68-75 and mAP 46-51, with the per-model 1-s numbers in data_points exact. Everything else held up against primary sources: RecoFit 99/98/96% and 114/146 (Microsoft Research + ACM DL), MM-Fit 96/94/85/82% (ACM DL + dataset site), Apple Watch/StrengthControl 88.4% of 363 sets with p=0.68/0.09 (PMC8471343), the VBT trio (PMC8038306, PMC8431394, PMC7404723), ST MLC config and the 3.1 µA MLC overhead (vendor READMEs), Nordic 1,504 kbps and the IMU bandwidth arithmetic (re-computed), WHOOP 2020/2021 PSG numbers (PubMed/PMC), the 2025 six-device 29-52% wake specificity (SLEEP Advances), the ssl-wearables F1 table (author README) and LIMU-BERT-X's deployment figures (arXiv 2509.24303, self-reported). The few-shot rep-counting '0.7 reps MAE / 74% exact' figure remains unattributed. Caveats worth carrying forward: Vmaxpro's between-day reliability ICC is only 0.55-0.91; WHOOP's 2020 result required manually entered bedtimes; WEAR is CC BY-NC-SA (no commercial training). The search budget died before the gap queries (PPG-during-lifting, WHOOP/Oura HRV numbers, Garmin/Amazfit rep-count validation, 2025-2026 datasets), so those stay open; incidental finds (TinierHAR, GenHAR, the 2026 FM-for-HAR survey, the PSG meta-analysis, Bellenger 2021 / Miller 2022 HRV papers) are listed as leads."
+}
