@@ -1,0 +1,186 @@
+{
+  "lens": "india-policy-trade",
+  "checks": [
+    {
+      "claim": "Supreme Court, Learning Resources, Inc. v. Trump (No. 24-1287): IEEPA does not authorize tariffs; decided 2026-02-20, 6-3, argued 2025-11-05",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Justia (607 U.S. ___ (2026)), Cornell LII, Brennan Center and the Supreme Court Case Tracker all give decided February 20, 2026, argued November 5, 2025, 6-3, holding IEEPA's 'regulate ... importation' language does not include the power to impose tariffs. The research file's CRS LSB11398 citation (congress.gov) is the government source.",
+      "source_url": "https://supreme.justia.com/cases/federal/us/607/24-1287/"
+    },
+    {
+      "claim": "IEEPA reciprocal and fentanyl duties ceased for all countries (incl. India, China) from 12:01 a.m. ET 2026-02-24",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "White & Case reports the US terminated IEEPA-based tariffs after the ruling; USITC HTS notices reference an Executive Order (14389) of 2026-02-20 modifying the IEEPA additional-duty provisions, and the replacement Section 122 surcharge (Proclamation 11012) took effect 2026-02-24, the same date. The exact 12:01 a.m. 2026-02-24 cut-off itself was only seen in secondary sources (Blooming Global, White & Case).",
+      "source_url": "https://www.whitecase.com/insight-alert/united-states-terminates-ieepa-based-tariffs-following-supreme-court-decision"
+    },
+    {
+      "claim": "Section 122 surcharge: 10% ad valorem on virtually all imports from 2026-02-24, expired 2026-07-24 (150-day statutory cap); the announced 15% was never enacted",
+      "verdict": "confirmed",
+      "corrected_value": "Proclamation 11012 (signed 2026-02-20), Federal Register FR Doc 2026-03824 published 2026-02-25; 10% effective 2026-02-24; lapsed 12:01 a.m. EDT 2026-07-24",
+      "evidence": "Federal Register document 2026-03824 'Imposing a Temporary Import Surcharge To Address Fundamental International Payments Problems' imposes a 10% ad valorem surcharge effective February 24, 2026 under 19 U.S.C. 2132 (max 15%, max 150 days). Law-firm sources (Skadden, PwC, Ward and Smith) report the CIT struck the surcharge down in May 2026 with an appeal pending and limited practical effect; all trackers agree it expired at 12:01 a.m. EDT on July 24, 2026, replaced the same minute by the Section 301 forced-labor duties.",
+      "source_url": "https://www.federalregister.gov/documents/2026/02/25/2026-03824/imposing-a-temporary-import-surcharge-to-address-fundamental-international-payments-problems"
+    },
+    {
+      "claim": "From 2026-07-24 new Section 301 duties of 10% / 12.5% apply to products of ~60 economies (forced-labor import-ban investigations)",
+      "verdict": "confirmed",
+      "corrected_value": "USTR Notice of Actions published 2026-07-28 at 91 FR 47318 (FR Doc 2026-15181; USTR-2026-0265/0266); effective 12:01 a.m. ET 2026-07-24; HTSUS headings 9903.05.20-9903.05.84 (one per economy) plus exemption headings 9903.05.85-9903.05.99 and 9903.06.01-9903.06.21; CBP guidance CSMS #69326983 (2026-07-23)",
+      "evidence": "USTR's July 2026 fact sheet and press release confirm an additional 10% or 12.5% ad valorem duty on all products of the 60 investigated economies (about 99% of US imports), subject to Annex I/II exemptions; 10% for partners that committed to adopt and enforce forced-labor import bans, 12.5% for the rest, with EU/Taiwan (10%) and Japan/Korea/Switzerland (12.5%) on 'net of MFN' combined rates. The proposed action was published 2026-06-05 (FR Doc 2026-11296); 471 HTS subheadings were added to the exemption list after comment.",
+      "source_url": "https://ustr.gov/about/policy-offices/press-office/fact-sheets/2026/july/fact-sheet-ustr-section-301-action-response-failure-60-economies-ban-imports-produced-forced-labor"
+    },
+    {
+      "claim": "India-origin goods pay a bilateral-deal rate of 15% (blog) or 18% (Feb 2026 interim deal) under the post-24-July-2026 regime",
+      "verdict": "corrected",
+      "corrected_value": "10% flat additional ad valorem (on top of MFN) under the Section 301 forced-labor action from 2026-07-24 - unless the product is on the Annex II exemption list (8517.62.00 is; see next check). The 18% was an IEEPA reciprocal rate void since 2026-02-24; the 15% figure appears in no government document",
+      "evidence": "The USTR fact sheet lists India among the 17 economies at the 10% tier (Argentina, Bangladesh, Cambodia, Canada, Ecuador, El Salvador, Guatemala, Honduras, India, Indonesia, Jordan, Malaysia, Mexico, Pakistan, Sri Lanka, Trinidad and Tobago, UK). India's PIB release (26 Jul 2026) confirms India was placed in the lower 10% tier (down from the 12.5% proposed on 2 June 2026) and that pharmaceuticals, smartphones and other specified products remain outside the duty (~45% of India's US exports). During the Section 122 window (24 Feb-24 Jul 2026) India paid the same 10% as everyone else (secondary trackers). No USTR/Federal Register document imposes a 15% or 18% India rate after the IEEPA duties ended.",
+      "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2289348&reg=3&lang=1"
+    },
+    {
+      "claim": "Whether electronics / HTS 8517.62 have an exemption under the Section 301 forced-labor action (previously 'not found')",
+      "verdict": "corrected",
+      "corrected_value": "YES - 8517.62.00 is on the general product-exclusion list (U.S. Note 52(b), reported under HTSUS 9903.05.86), so a fitness band classified in 8517.62.00 pays NO forced-labor Section 301 duty whether India- or China-origin. 9031.80.80 is NOT on the list (only 9031.80.40, 9031.90.45 and 9031.90.54 from heading 9031 appear)",
+      "evidence": "CBP's 39-page 'Section 301 Forced Labor HTS List' attached to CSMS #69326983 (the note 52(b) exclusion list of ~2,120 subheadings, of which 863 are exempt as entered) is indexed as containing 8517.13.00, 8517.62.00 and 8471.30; independent secondary summaries agree the note 52(b) list covers computers (8471), smartphones (8517.13) and networking/telecom equipment (8517.62), and PIB confirms smartphones are exempt for India. Caveat: the annex was not read line-by-line (federalregister.gov and ustr.gov are egress-blocked) - confirm the 8517.62.00 line in the CBP PDF before filing, and note the exemption is lost if CBP classifies a screenless band in 9031.80.",
+      "source_url": "https://content.govdelivery.com/attachments/USDHSCBP/2026/07/23/file_attachments/3723786/Forced%20Labor%20HTS%20LIST.pdf"
+    },
+    {
+      "claim": "China-origin 8517.62.00 goods: Section 301 List 4A +7.5% (9903.88.15) still in force in 2026, and the new forced-labor tier for China is 12.5%, stacked on existing China 301 duties",
+      "verdict": "confirmed",
+      "corrected_value": "China = 12.5% tier (not on USTR's 10% list); List 4A 7.5% unchanged; BUT for 8517.62.00 the 12.5% does not apply because the subheading is on the note 52(b) exclusion list, so a China-origin band in 8517.62.00 pays MFN Free + 7.5% = 7.5% total. If classified 9031.80.80 instead: MFN (1.7%, see below) + List 1 25% (9903.88.01) + 12.5% forced-labor = ~39.2%",
+      "evidence": "USTR fact sheet: 12.5% for economies that failed to adopt a forced-labor import ban; China is not among the 17 economies at 10%. CSMS #69326983 states the new duties apply in addition to MFN and are reported alongside other trade-remedy headings; U.S. Note 52's exemptions (in-transit, USMCA/CAFTA-DR, Chapter 98, civil aircraft, pharma, Section 232-covered articles, donations, informational materials, note 52(b) products) contain no carve-out for goods already under China Section 301 duties, and Holland & Knight, C.H. Robinson and Zonos all state the duty stacks on Lists 1-4A. NY N311614 (2020-05-27) confirms 8517.62.00 products of China carry 7.5% under 9903.88.15; no 2026 modification of that rate was found.",
+      "source_url": "https://content.govdelivery.com/accounts/USDHSCBP/bulletins/421d887"
+    },
+    {
+      "claim": "US MFN (general) duty rate for HTS 8517.62.00 is Free",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "HTSUS 8517.62.00 ('Machines for the reception, conversion and transmission or regeneration of voice, images or other data, including switching and routing apparatus: Other') carries a General rate of Free in the 2026 HTS; CBP rulings H313242 and N336394 restate the Free rate.",
+      "source_url": "https://hts.usitc.gov/search?query=8517.62"
+    },
+    {
+      "claim": "Alternative classification 9031.80 (other measuring instruments): MFN rate and Section 301 status",
+      "verdict": "unverifiable",
+      "corrected_value": "Best available: 9031.80.80 general rate 1.7% (one tariff database says Free - conflict not resolved on hts.usitc.gov); products of China in 9031.80.80/9031.90.91 are on Section 301 List 1 at 25% (9903.88.01); 9031.80.80 is not on the forced-labor exemption list",
+      "evidence": "NY N339661 (2024-05-09) classifies Whoop bands from China in 9031.90.9195 with 9903.88.01 (+25%), which implies CBP treats the screenless Whoop device itself as an apparatus of heading 9031, not 8517.62 - so the research file's assumption that a screenless HR/HRV band 'will follow the Fitbit line into 8517.62.0090' is not safe. Secondary tariff databases (UNIS, wove, faqs.org) disagree on the 9031.80.80 general rate (1.7% vs Free); the USITC page did not render the rate in search. A binding ruling request (19 CFR 177) is recommended.",
+      "source_url": "https://rulings.cbp.gov/ruling/n339661"
+    },
+    {
+      "claim": "US-India interim trade deal (Feb 2026) cut the reciprocal rate to 18% and removed the 25% Russian-oil penalty (EO 14329) effective 2026-02-07",
+      "verdict": "confirmed",
+      "corrected_value": "Both facts confirmed by the White House fact sheet 'The United States and India Announce Historic Trade Deal' (Feb 2026); the 18% was IEEPA-based and stopped being collected on 2026-02-24, so it has no bearing on the September 2026 stack",
+      "evidence": "White House fact sheet and US-India Joint Statement (Feb 2026) record the reduction of the reciprocal tariff on Indian goods to 18% and the removal of the additional 25% duty in recognition of India's commitment on Russian oil; EO 14329's implementation notice (FR 2025-16419) was verified in the earlier session.",
+      "source_url": "https://www.whitehouse.gov/fact-sheets/2026/02/fact-sheet-the-united-states-and-india-announce-historic-trade-deal/"
+    },
+    {
+      "claim": "HQ H279898 (2017-04-05): Fitbit wearable fitness trackers classified 8517.62.00 by GRI 3(b), Bluetooth transceiver imparts essential character",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "rulings.cbp.gov lists H279898 'Tariff Classification of various Fitbit wearable fitness trackers'; the classification in 8517.62.00 was read from the ruling text in the earlier session and is consistent with N291933 and N311614. Related: HQ H273382 (Garmin VivoActive HR) also exists on CROSS.",
+      "source_url": "https://rulings.cbp.gov/ruling/H279898"
+    },
+    {
+      "claim": "NY N291933: fitness trackers/monitors and replacement wrist bands from China -> 8517.62.0090 (trackers), bands classified separately",
+      "verdict": "corrected",
+      "corrected_value": "Ruling dated 2017-11-28; trackers classified 8517.62.0050 (the 2017 statistical suffix; the same 'Other' line is 8517.62.0090 in the current HTS) and replacement bands 9113.90.8000",
+      "evidence": "The CROSS mirror (customsmobile) shows N291933 issued November 28, 2017 with HTSUS 8517.62.0050 and 9113.90.8000; the CROSS search for 9113.90.8000 returns the same ruling.",
+      "source_url": "https://www.customsmobile.com/rulings/docview?doc_id=NY+N291933&highlight=9113.90*"
+    },
+    {
+      "claim": "NY N311614: electronic smart watch from China -> 8517.62.00 with Section 301 List 4A 7.5% (9903.88.15)",
+      "verdict": "confirmed",
+      "corrected_value": "Dated 2020-05-27; product was the Suunto 7 GPS sports/smart watch; 8517.62.0090 + 9903.88.15 (7.5%) per U.S. Note 20 to Subchapter III, Chapter 99",
+      "evidence": "rulings.cbp.gov N311614 text: products of China classified under subheading 8517.62.00, unless specifically excluded, are subject to an additional 7.5 percent ad valorem rate of duty, reported under 9903.88.15.",
+      "source_url": "https://rulings.cbp.gov/ruling/N311614"
+    },
+    {
+      "claim": "NY N339661 classification (Whoop-type screenless band)",
+      "verdict": "confirmed",
+      "corrected_value": "N339661 (2024-05-09): Whoop Bands from China -> 9031.90.9195 (parts/accessories of heading 9031 instruments) + 9903.88.01 (Section 301 List 1, +25%)",
+      "evidence": "CROSS text: the Whoop is a battery-operated fitness performance tracker (sensor, PCBA with radio module, battery in a polycarbonate housing); the bands fit only the Whoop device and are classified 9031.90.9195, with products of China under that subheading subject to an additional 25% under 9903.88.01. Consequence: CBP treats the Whoop device as a heading-9031 measuring instrument, i.e. the 9031.80 line (not 8517.62) is the live risk for a screenless band.",
+      "source_url": "https://rulings.cbp.gov/ruling/n339661"
+    },
+    {
+      "claim": "Section 232 semiconductors: Proclamation 11002 (2026-01-14) imposed 25% only on a narrow set of advanced logic semiconductors from 2026-01-15; negotiation report due ~2026-04-14 (90 days); data-center review by 2026-07-01; broader derivative-product tariffs reserved",
+      "verdict": "confirmed",
+      "corrected_value": "Signed 2026-01-14, effective 12:01 a.m. EST 2026-01-15, published 2026-01-20 as FR Doc 2026-01052; 25% on advanced logic chips meeting TPP/bandwidth thresholds (H200/MI325X class, incl. when in 8471.50/8471.80/8473.30 articles) with six exemption categories (US data centers, R&D, startups, repairs, non-data-center consumer/industrial uses, public sector); 90-day negotiation update (~2026-04-14), 180-day window for agreements (~2026-07-13), data-center market update by 2026-07-01. Phase 2 (broader semis/derivatives) was NOT proclaimed as of 2026-09-14: Commerce's July report is not public and Secretary Lutnick 'confirmed' Phase 2 in early September (secondary, TechTimes 2026-09-03)",
+      "evidence": "White House proclamation and fact sheet (Jan 2026), Federal Register 2026-01052 and the govinfo/American Presidency Project text of Proclamation 11002 confirm the rate, scope, exemptions and the 90-day/180-day/July 1 deadlines; no Federal Register or whitehouse.gov Phase 2 proclamation was found through 2026-09-14. A 40-55 nm BLE SoC in a fitness band is outside the covered 'advanced' chip definition.",
+      "source_url": "https://www.federalregister.gov/documents/2026/01/20/2026-01052/adjusting-imports-of-semiconductors-semiconductor-manufacturing-equipment-and-their-derivative"
+    },
+    {
+      "claim": "US $800 de minimis suspended for all countries from 2025-08-29 under EO 14324 (2025-07-30); whether the IEEPA-based suspension survived the SCOTUS ruling was open",
+      "verdict": "confirmed",
+      "corrected_value": "Suspension effective 2025-08-29 (EO 14324) - confirmed; it survived the ruling: EO 14388 (2026-02-20) kept the suspension on separate footing, CBP published two interim final rules on 2026-06-24 (FR Docs 2026-12670 and 2026-12669) codifying an indefinite suspension under 19 U.S.C. 1321(b), and the CIT upheld the rescission on 2026-08-13 (Axle of Dearborn; secondary)",
+      "evidence": "Federal Register 2026-12670 'Indefinite Suspension of the De Minimis Exemption for Merchandise Arriving Through All Modes Other Than the International Postal Network' and 2026-12669 (mail shipments / new postal informal entry) codify the suspension; Troutman and Alvarez & Marsal report the 2026-08-13 CIT decision. DTC single-unit shipments from India cannot use de minimis; the OBBBA 2027-07-01 statutory repeal date was not re-verified.",
+      "source_url": "https://www.federalregister.gov/documents/2026/06/24/2026-12670/indefinite-suspension-of-the-de-minimis-exemption-for-merchandise-arriving-through-all-modes-other"
+    },
+    {
+      "claim": "FDA revised 'General Wellness: Policy for Low Risk Devices' guidance on 2026-01-06 (supersedes the 2019 version); non-invasive sensing wearables with wellness claims remain outside device regulation",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "FDA's own CDRH Town Hall page (held 2026-02-11) states the final guidance was reissued on January 6, 2026; the updates clarify that products using non-invasive sensing and providing certain user notifications can be low-risk general wellness products, with three new examples. Law-firm alerts (Covington, Faegre Drinker, Troutman) agree.",
+      "source_url": "https://www.fda.gov/medical-devices/medical-devices-news-and-events/town-hall-refresh-general-wellness-policy-low-risk-devices-02112026"
+    },
+    {
+      "claim": "RoDTEP: rates generally 0.3-4.3% of FOB; DGFT Notification 60/2025-26 cut rates/caps to 50% for chapters 25+ then restored for 23 Feb-31 Mar 2026 exports; rate for HS 8517.62 not found; whether operative in FY2026-27 unknown",
+      "verdict": "corrected",
+      "corrected_value": "Scheme IS operative in FY2026-27 but only until 2026-09-30: DGFT Notification 74/2025-26 (2026-03-31) extended RoDTEP from 2026-04-01 to 2026-09-30 with Appendix 4R/4RE rates and caps unchanged; Notification 66/2025-26 (2026-03-23) had restored full rates (superseding the 50% cut in 60/2025-26 of 2026-02-23). The 8517.62 line rate remains not found",
+      "evidence": "Taxguru, FIEO, CITI and The Tax Corp report DGFT Notification No. 74/2025-26 dated 31 March 2026 extending the scheme to 30 September 2026 with existing rates; All India Radio (newsonair, 2026-03-24) reports the government restoring RoDTEP rates and caps. All are secondary reports of DGFT notifications - the notifications themselves (dgft.gov.in) were not fetchable. The 0.3-4.3% band is consultancy data (Afleo). Nothing found on extension beyond 2026-09-30 - it lapses in 16 days unless renewed.",
+      "source_url": "https://www.dgft.gov.in/CP/?opt=RoDTEP"
+    },
+    {
+      "claim": "PMP wearables duty ladder: graded BCD structure for wearable/hearable inputs (PCBA, charger, battery, display) from Budget 2022-23; FY2025-26 / FY2026-27 rates not retrieved; 'PCBA 15%' anchor unverified",
+      "verdict": "unverifiable",
+      "corrected_value": "Structure confirmed from Budget 2022-23 coverage (secondary): finished smart watches BCD 20%, components graded 0-15% over FY23-FY26 under Notification 12/2022-Customs (e.g. USB cables for hearables 10%->15% from 2025-04-01; hearables 15%->20%). The FY2026-27 position of each wearable input (post-March 2026 ladder end) was not found; Budget 2026-27 (2026-02-01) explicitly excluded smartwatch display assemblies from its new display-component BCD exemptions",
+      "evidence": "Global Trade Alert (state act 62057), KNN India and Business Standard describe the Budget 2022-23 PMP for wrist wearables/hearables/smart meters with 20% on finished goods and 0-15% graded component duties FY23-FY26; India Briefing summarises the 2026-02 CBIC exemption notification excluding wrist-wearable display assemblies. No CBIC notification text was retrievable to confirm the current PCBA rate.",
+      "source_url": "https://globaltradealert.org/state-act/62057/india-phased-manufacturing-program-for-the-manufacture-of-hearable-devices-budget-2022-2023"
+    },
+    {
+      "claim": "DPDP Act 2023 Rules notified November 2025; phased commencement over 12-18 months; penalties up to Rs 250 crore",
+      "verdict": "confirmed",
+      "corrected_value": "Rules notified 2025-11-13 (Gazette publication 2025-11-14) with an 18-month phased timeline: Rules 1, 2 and 17-21 (Data Protection Board) in force at notification; remaining provisions in two tranches on 2026-11-14 and 2027-05-14",
+      "evidence": "PIB press releases 'DPDP Rules, 2025 Notified' and 'Government notifies DPDP Rules to empower citizens and protect privacy' (Nov 2025) confirm notification and the 18-month phased compliance period and the digital four-member Data Protection Board; Shardul Amarchand Mangaldas and PwC India give the 13/14 Nov 2025, 14 Nov 2026 and 14 May 2027 dates. The Rs 250 crore cap is in the Act's Schedule (not re-verified this session).",
+      "source_url": "https://www.pib.gov.in/PressReleasePage.aspx?PRID=2190014&reg=3&lang=2"
+    },
+    {
+      "claim": "BIS CRS covers smart watches under the Electronics and IT Goods (Requirements for Compulsory Registration) Order, safety standard IS 13252 (Part 1) with IEC 62368-1 transition; order dates not verified",
+      "verdict": "confirmed",
+      "corrected_value": "Smart watches are on the BIS list of products under compulsory registration against IS 13252 (Part 1):2010; brought in by S.O. 2742(E) of 2017-08-17, effective 2018-02-17 (secondary: certification consultants), re-notified under the 2021 Order; BIS published 'Guidelines for Implementation of Migration to IS/IEC 62368-1:2023' dated 2026-03-09 (crsbis.in)",
+      "evidence": "bis.gov.in Annexure-2 (list of products notified for compulsory registration, March 2025) lists Smart Watches under IS 13252 (Part 1):2010; the MeitY 2012 Order text and crsbis.in product list/guidelines are the primary references. Registration is per brand/model family, valid two years, R-number marked on the product. Whether a screenless band is treated as a 'smart watch' for CRS scope is a BIS scope-confirmation question, not settled by any document found.",
+      "source_url": "https://www.bis.gov.in/wp-content/uploads/2025/03/temp_2131689472.pdf"
+    },
+    {
+      "claim": "WPC ETA for licence-exempt 2.4 GHz BLE is by self-declaration on Saral Sanchar; no WPC import licence for licence-exempt equipment; fee not found",
+      "verdict": "confirmed",
+      "corrected_value": "Self-declaration ETA per DoT Office Memorandum R-11017/01/2018-PP(part-1) of 2024-09-09 for all licence-exempt bands (2.4 GHz Bluetooth/Wi-Fi included), processed on Saral Sanchar with the fee paid via Bharatkosh; CBIC Instruction 24/2024-Customs (2024-10-22) tells customs to accept ETA-SD for licence-exempt imports. Fee amount still not found",
+      "evidence": "Granite River Labs, SIACC and C-PRAV describe the ETA-SD scheme and cite the 2024-09-09 DoT OM; a mirror of CBIC Instruction 24/2024 (22.10.2024) on issuance of ETA for licence-exempt equipment confirms the customs side. Primary DoT/CBIC pages were not fetchable.",
+      "source_url": "https://worldtradescanner.com/24-CBIC%20Instruction-22.10.2024.htm"
+    },
+    {
+      "claim": "E-Waste (Management) Rules 2022: producer EPR registration on the CPCB portal; recycling targets 60% FY24, 60% FY25, 70% FY26, 80% FY27 onward",
+      "verdict": "corrected",
+      "corrected_value": "Schedule III targets: 60% for 2023-24 and 2024-25; 70% for 2025-26 AND 2026-27; 80% from 2027-28 onward (not from FY27)",
+      "evidence": "CPCB's FAQs under the E-Waste (Management) Rules, 2022 (23 Jan 2024) state the targets are stable for two years each: 60% (2023-24, 2024-25), 70% (2025-26, 2026-27), 80% (2027-28, 2028-29 and onward), computed on the quantity placed on the market in year Y-X (X = average product life), met by buying EPR certificates from registered recyclers. The 2024 EPR-certificate floor-price amendment was not checked.",
+      "source_url": "https://cpcb.nic.in/uploads/Projects/E-Waste/FAQ_ewaste_23012024.pdf"
+    },
+    {
+      "claim": "US Merchandise Processing Fee 0.3464% with FY2026 minimum ~$33.58 / maximum ~$651.50 (recollection)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Federal Register 2025-13869 (CBP Dec. 25-10, published 2025-07-23): COBRA fees adjusted for inflation for FY2026 effective 2025-10-01; the MPF ad valorem rate stays 0.3464%, minimum $33.58, maximum $651.50. FY2027 values (effective 2026-10-01) were not checked.",
+      "source_url": "https://www.federalregister.gov/documents/2025/07/23/2025-13869/customs-user-fees-to-be-adjusted-for-inflation-in-fiscal-year-2026-cbp-dec-25-10"
+    }
+  ],
+  "stale_or_missing": [
+    "RoDTEP rate for HS 8517.62 (Appendix 4R line 85176290): still not found - DGFT portal not fetchable and no secondary source quotes the line. Bigger issue: RoDTEP was only extended to 2026-09-30 (DGFT Notification 74/2025-26 of 2026-03-31); as of 2026-09-14 no extension beyond that date was found, so any FY27 landed-cost model should treat RoDTEP as zero after 30 Sep 2026 until a new notification appears.",
+    "All-Industry-Rate duty drawback for 8517: not found. The governing schedule is CBIC Notification 77/2023-Customs (N.T.) of 2023-10-20 as amended (2024-05-03 and 2025-04-17 amendments reported); the 8517 rate/cap line and any FY2025-26 revision were not retrievable. Brand-rate drawback (Rules 6/7, Drawback Rules 2017) remains the fallback.",
+    "FY2026-27 PMP ladder for wearable inputs (PCBA, charger, battery, display, sensors): not found. Only the Budget 2022-23 framework (finished smart watches 20%; components graded 0-15% FY23-FY26, Notification 12/2022-Customs) and the Budget 2026-27 note excluding smartwatch display assemblies from new exemptions were located. The 'PCBA 15%' anchor remains unverified - pull the current Notification 50/2017-Cus / 11-12/2022-Cus entries from cbic.gov.in.",
+    "India-US air freight (secondary, Sept 2026): general cargo India->USA typically USD 3-5/kg for 150-500 kg consignments (ship4wd; Freightos India-US route page updated Sept 2026), Asia->North America standard USD 3.50-6.50/kg (FreightAmigo); TAC Index reports India ex-origin spot rates elevated year-on-year in 2026; add fuel (20-40% of base), security, THC and peak-season (+20-40%) surcharges. Consistent with the research file's USD 3-10/kg sensitivity band.",
+    "India-US courier for 1-10 kg parcels (secondary aggregators, April 2026 indicative): DHL Express Worldwide ~INR 2,432 (0.5 kg), ~INR 3,700 (1 kg), ~INR 6,500-7,000 (5 kg), ~INR 9,500-12,500 (10 kg); FedEx International Priority ~INR 3,500-3,900 (1 kg), ~INR 6,600 (5 kg), ~INR 9,800 (10 kg); add 18% GST and 15-25% fuel surcharge; >10 kg bulk INR 500-700/kg express, INR 300-500/kg economy (clickpost.ai, cargocharges.com). Published carrier tariffs were not retrieved.",
+    "9031.80.80 MFN rate: secondary databases conflict (1.7% vs Free); resolve on hts.usitc.gov. Because NY N339661 puts Whoop bands in 9031.90.9195 (implying the Whoop device is a heading-9031 instrument, List 1 25% for China and NOT on the forced-labor exemption list), the project should obtain a binding ruling for a screenless band rather than assume 8517.62.",
+    "Section 232 semiconductors Phase 2: Commerce's July 1, 2026 report delivered but unpublished; Phase 2 'confirmed' by Commerce in early September 2026 (press), but no proclamation found through 2026-09-14 - rates, derivative scope (finished electronics?) and timing unknown. Also unchecked: Federal Register 2026-15961 (2026-08-06) requesting comments on additional steel/aluminum/copper derivative articles under Section 232 - check whether any 8517.62 or 9031 line is proposed.",
+    "Section 122 window (2026-02-24 to 2026-07-24): whether 8517.62.00 was exempt from the 10% surcharge (Proclamation 11012 annexes) was not checked; relevant only to refund/history, not to the September 2026 stack. The May 2026 CIT decision striking Section 122 and its appeal/refund status are known only from law-firm summaries.",
+    "Section 232 polysilicon action (2026-08-06, 15% + minimum import prices from 2026-12-04), the WHOOP July 2025 FDA warning letter, India's BCD on finished smart watches and the post-Sept-2025 GST rate, WPC ETA fee amount, and the 2024 e-waste EPR floor price were not re-verified this session.",
+    "Statistical-suffix note: N291933 (2017) used 8517.62.0050 for the 'Other' line; current HTS uses 8517.62.0090 (N311614, 2020). Use 8517.62.0090 on entries."
+  ],
+  "summary": "Resolved: as of 2026-09-14 the US duty stack on a fitness band in HTS 8517.62.00 is MFN Free + NO forced-labor Section 301 duty for India (India is in the 10% tier under 91 FR 47318 / CSMS #69326983 effective 2026-07-24, but 8517.62.00 is on the U.S. Note 52(b) exemption list reported under 9903.05.86) = 0%; China-origin = Free + List 4A 7.5% (9903.88.15), the 12.5% China tier likewise not applying to 8517.62.00 = 7.5%. The 15%/18% India figures are wrong: 18% was an IEEPA rate void from 2026-02-24 (SCOTUS Learning Resources v. Trump, 2026-02-20) and 15% appears in no government document; Section 122's 10% surcharge (Proclamation 11012, FR 2026-03824) ran 2026-02-24 to 2026-07-24. Biggest classification risk: NY N339661 treats Whoop-type screenless bands as heading-9031 goods (9031.90.9195 + List 1 25%), and 9031.80.80 is not on the exemption list, so a screenless band could face MFN ~1.7% + 10% (India) or ~1.7% + 25% + 12.5% (China) - get a binding ruling. Other checks: SCOTUS date, Section 122, Proclamation 11002 facts (90-day/180-day/July 1 deadlines; Phase 2 not yet proclaimed), de minimis (EO 14324 2025-08-29, survived via EO 14388 and CBP IFRs of 2026-06-24), FDA wellness guidance (2026-01-06), DPDP Rules (2025-11-13/14, phased to 2027-05-14), BIS CRS smart watches (IS 13252 Pt 1), WPC ETA self-declaration, FY2026 MPF ($33.58/$651.50) confirmed; CPCB EPR targets corrected (70% for FY27, 80% from FY28); RoDTEP found operative only to 2026-09-30 with the 8517.62 line rate, AIR drawback rate and FY27 PMP ladder still missing. federalregister.gov and ustr.gov were egress-blocked, so annex text was established from CBP's attachment index plus corroborating summaries - confirm the 8517.62.00 line in the CBP PDF before filing."
+}

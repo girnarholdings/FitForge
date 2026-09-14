@@ -1,0 +1,141 @@
+{
+  "lens": "competitors-biz",
+  "checks": [
+    {
+      "claim": "Whoop closed a $575M Series G at a $10.1B valuation in March 2026, led by Collaborative Fund; $1.1B annualized bookings for 2025 (+103% YoY); 2.5M+ members; cash-flow positive",
+      "verdict": "confirmed",
+      "corrected_value": "Minor precision: announced 31 March 2026 (BusinessWire/TechCrunch dated 2026-03-31); Whoop's wording is 'exited 2025 at a $1.1B bookings run rate, up 103% YoY' (a run rate, not FY bookings). Participant list in the release: Collaborative Fund (lead), Qatar Investment Authority, Mubadala, Mayo Clinic, Macquarie Capital, IVP, Foundry, plus Ronaldo/LeBron/McIlroy.",
+      "evidence": "BusinessWire release 'WHOOP Raises $575 Million at $10.1 Billion Valuation to Advance Global Health Platform' (2026-03-31) and whoop.com press center confirm $575M, $10.1B, 2.5M members and the $1.1B bookings run rate up 103%. TechCrunch (2026-03-31) independently reports the valuation tripled to $10B.",
+      "source_url": "https://www.businesswire.com/news/home/20260331399622/en/WHOOP-Raises-$575-Million-at-$10.1-Billion-Valuation-to-Advance-Global-Health-Platform"
+    },
+    {
+      "claim": "Whoop pricing is $199 (One) / $239 (Peak) / $359 (Life) per year with hardware bundled",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "whoop.com Peak and Life plan pages plus multiple 2026 comparison pages (Engadget on the $359 Life tier; TrackerVS 'WHOOP Pricing 2026: $199-$359/yr') list One $199/yr, Peak $239/yr, Life $359/yr in 2026.",
+      "source_url": "https://www.whoop.com/us/en/life/"
+    },
+    {
+      "claim": "FDA warning letter to WHOOP, Inc. (Blood Pressure Insights) is dated 14 July 2025 (MARCS-CMS 709755), not Sept 2025; FDA closed it out in June 2026 (reported 2026-06-23, primary closeout letter not seen)",
+      "verdict": "corrected",
+      "corrected_value": "Warning-letter date 2025-07-14 is correct. The close-out is now a PRIMARY document: FDA posted 'WHOOP, Inc. - 709755 - 06/17/2026' (close-out letter dated 17 June 2026), stating FDA no longer intends to enforce because Whoop modified the product and labeling consistent with FDA's updated General Wellness guidance. Upgrade confidence from 'secondary' to 'verified' and date from '2026-06 (reported 06-23)' to 2026-06-17.",
+      "evidence": "fda.gov hosts both the 07/14/2025 warning letter (whoop-inc-709755-07142025) and the 06/17/2026 close-out letter (whoop-inc-709755-06172026). MobiHealthNews 'FDA closes warning letter to Whoop' corroborates the close-out rationale.",
+      "source_url": "https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/whoop-inc-709755-06172026"
+    },
+    {
+      "claim": "May 2025: Whoop asked existing members to pay $49 (5.0) / $79 (MG) one-time upgrade fee or extend 12 months; reversed on 2025-05-10: >12 months remaining = free upgrade, <12 months must extend, fees refunded",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Android Authority, TechRadar and Whoop's own support article 'Upgrades' describe the $49/$79 fee-or-extend policy and the 10 May 2025 reversal (free 5.0 upgrade with 12+ months left; refunds for fees already charged; <12 months can extend at no extra cost). Bloomberg/TechCrunch coverage dated 2025-05-09/11 matches.",
+      "source_url": "https://www.androidauthority.com/whoop-free-upgrade-backlash-3556183/"
+    },
+    {
+      "claim": "Oura: >$500M revenue in 2024, ~$1B expected 2025, $900M+ Series E at $11B led by Fidelity (Oct 14 2025), up from $200M at $5.2B (Dec 2024); 5.5M rings sold cumulatively (Sept 2025) vs 2.5M in June 2024",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "CNBC (2025-10-14), Fierce Healthcare and TechCrunch (2025-10-14) all report the $900M Fidelity-led round at ~$11B, >$500M 2024 revenue (more than double 2023), $1B expected for 2025, 5.5M rings since 2015 vs 2.5M announced June 2024, and the $5.2B December 2024 mark.",
+      "source_url": "https://www.cnbc.com/2025/10/14/oura-ringmaker-valuation-fundraise.html"
+    },
+    {
+      "claim": "Amazfit Helio Strap launched 24 June 2025 at $99 with no subscription",
+      "verdict": "corrected",
+      "corrected_value": "Official MSRP is $99.99 (BusinessWire release 2025-06-24; Android Authority; Garmin Rumors). '$99' is a rounded figure. Launch date 24 June 2025 and no-subscription model confirmed. (Balance 2 was $299.99; bundle $379.99.)",
+      "evidence": "BusinessWire 'Amazfit Introduces Balance 2 Smartwatch and Helio Strap...' (2025-06-24) lists Helio Strap at $99.99 USD, available via amazfit.com, Amazon and retailers; DC Rainmaker's review headline '$99 & No Sub Fee' uses the rounded price.",
+      "source_url": "https://www.businesswire.com/news/home/20250624910772/en/Amazfit-Introduces-Balance-2-Smartwatch-and-Helio-Strap-for-Smarter-Training-Better-Recovery-and-Peak-Performance"
+    },
+    {
+      "claim": "Polar Loop launched 3 Sept 2025 at $199.99 / GBP 149.50, no subscription, shipping from 10 Sept 2025, up to 8-day battery",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Polar's own media-room release and Wareable/Forbes (2025-09-04) confirm the 3 Sept 2025 announcement, $199.99/GBP149.50 pre-order price, one-time purchase with no monthly fees, 10 Sept shipping and up to 8 days battery.",
+      "source_url": "https://www.polar.com/en/media-room/polar-launches-polar-loop-first-screen-free-subscription-free-wearable"
+    },
+    {
+      "claim": "Garmin Index Sleep Monitor announced 18 June 2025 at $169.99; upper-arm screenless band, 7 nights battery, two sizes",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Garmin newsroom release (mirrored on Nasdaq, dated 2025-06-18) gives a suggested retail price of $169.99, up to 7 nights battery, upper-arm wear, S-M and L-XL sizes; Best Buy listings corroborate the SKU and price.",
+      "source_url": "https://www.nasdaq.com/press-release/rest-easy-index-sleep-monitor-smart-sleep-band-garmin-2025-06-18"
+    },
+    {
+      "claim": "Fitbit 10-K gross margins: 43% (2017), 40% (2018), 29.8% GAAP / 31.2% non-GAAP (2019), eroded by smartwatch mix, promotions and tariffs",
+      "verdict": "corrected",
+      "corrected_value": "FY2019 29.8% GAAP / 31.2% non-GAAP is exact (FY2019 10-K). FY2018 was 39.9% GAAP / 40.9% non-GAAP (FY2018 10-K), not a flat '40%'. The FY2018 10-K states non-GAAP GM fell 250 bp YoY on smartwatch mix, which puts FY2017 at ~43.4% non-GAAP (~42.7% GAAP) - so '43%' is the non-GAAP figure; label it as such. Drivers (smartwatch mix 44%->50% of revenue, promotions, tariffs, no warranty-accrual release) confirmed.",
+      "evidence": "SEC EDGAR Fitbit FY2019 10-K: 'GAAP gross margin was 29.8%, and non-GAAP gross margin was 31.2%... driven by the shift in device mix towards smartwatches, higher promotions, tariffs, and the absence of a benefit from the release of warranty accruals'. FY2018 10-K / BusinessWire FY18 results: GAAP GM 39.9%, non-GAAP 40.9%, down 250 bp YoY.",
+      "source_url": "https://www.sec.gov/Archives/edgar/data/1447599/000144759920000016/fit-20191231.htm"
+    },
+    {
+      "claim": "Amazon Halo discontinuation announced 2023-04-26; service ended 2023-07-31; all user health data deleted; refunds issued",
+      "verdict": "confirmed",
+      "corrected_value": "Precision: refunds covered devices bought in the prior 12 months plus unused prepaid subscription fees (not all purchases); data was deleted after 1 Aug 2023 and devices stopped working on 1 Aug.",
+      "evidence": "Amazon's own notice 'Amazon discontinues Amazon Halo effective July 31' plus GeekWire/Android Police (April 26-27, 2023) confirm the April 26 announcement, July 31 shutdown, 12-month refund window, prepaid-subscription refunds and post-Aug-1 data deletion.",
+      "source_url": "https://www.aboutamazon.com/news/company-news/amazon-halo-discontinued"
+    },
+    {
+      "claim": "Atlas Wristband raised >$500K on Indiegogo (2014), shipped 2015, was acquired by Peloton and its next product (Multi-Trainer 3) was cancelled with refunds; acquisition date unknown",
+      "verdict": "confirmed",
+      "corrected_value": "Fills the gap: the Peloton buyout was completed in late 2020 and confirmed publicly in March 2021 (Wareable, Connect the Watts, Peloton Buddy). Multi-Trainer 3 was still in testing (no retail units) when cancelled; eligible backers were offered refunds; founder Peter Li's team moved to Peloton AI/computer-vision projects.",
+      "evidence": "Wareable 'Peloton acquires Atlas Wearables' and Connect the Watts (2021-03-22, updated 'confirmed') report the late-2020 acquisition, the MT3 cancellation and refund emails; the >$500K 2014 Indiegogo campaign and 2015 launch are repeated in the same coverage.",
+      "source_url": "https://www.wareable.com/wearable-tech/peloton-acquires-atlas-wearables-8366"
+    },
+    {
+      "claim": "IDC: global wrist-worn shipments Q1 2025 = 45.6M units (+10.5% YoY), smartwatches 34.8M (+4.8%)",
+      "verdict": "confirmed",
+      "corrected_value": "Additional context from the same release: wristbands 10.8M (+34.0%), China 17.6M (+37.6%) on subsidies, Huawei #1 globally.",
+      "evidence": "IDC press release prAP53613925 'Global Wrist-Worn Device Shipments Grew 10.5% in Q1 2025' (mirrored by I-Connect007, EMSNow, FoneArena) gives 45.6M total, 34.8M smartwatches (+4.8%), 10.8M wristbands (+34%).",
+      "source_url": "https://my.idc.com/getdoc.jsp?containerId=prAP53613925"
+    },
+    {
+      "claim": "Smart ring market grew ~77% in 2025 to ~4.4M units; H1 2025 share Oura 74%, Ultrahuman 9%, Samsung 9%, RingConn 5% (attribution ambiguous Counterpoint/Omdia)",
+      "verdict": "corrected",
+      "corrected_value": "Share table is Counterpoint (Oura 74 / Ultrahuman 9 / Samsung 9 / RingConn 5, H1 2025) and IDC also puts Oura at ~74% of full-year 2025 shipments. Growth and volume differ by analyst: Counterpoint estimates +77% YoY for 2025; IDC (via Bloomberg, 2026-01-05) says ~4.3M units and +49%; Omdia said 1.6M in H1 2025 and '>4M' for the year. Use '~4.3M units, +49% (IDC) to +77% (Counterpoint)' rather than '4.4M, +77%'. The North America ~2.6M figure was not found.",
+      "evidence": "Counterpoint report page 'From Niche to Necessity' states the 77% 2025 growth estimate and the 74/9/9/5 H1-2025 split; Bloomberg 'Smart Rings Poised For 2026 Growth, Oura Set to Lead' (IDC data) reports ~4.3M units in 2025, Oura ~74% and a 49% jump; Omdia blog (Nov 2025) gives 0.85M (2023), 1.8M (2024), 1.6M (H1 2025), >4M projected 2025.",
+      "source_url": "https://www.bloomberg.com/news/articles/2026-01-05/smart-rings-poised-for-2026-growth-oura-set-to-lead"
+    },
+    {
+      "claim": "India smart rings are the bright spot: Ultrahuman 30.4% domestic share, Gabit 18.3%, Ring AIR INR 28,499 with no subscription (attribution ambiguous)",
+      "verdict": "corrected",
+      "corrected_value": "Numbers hold but the framing is wrong. Source is IDC (March 2026, via TechCrunch): Ultrahuman 30.4%, Gabit 18.3% - of an Indian smart-ring market whose shipments FELL 30.6% YoY in 2025 with ASP down 8.7% to $160; IDC expects India ring growth to stay muted while US/global grow double-digit. So India rings are not a bright spot; they are a shrinking, price-compressing niche. INR 28,499 one-time / no-subscription price for Ring AIR is confirmed (Smartprix, Flipkart, ultrahuman.com/in).",
+      "evidence": "TechCrunch (2026-03-17/24): 'Smart ring shipments in India declined 30.6% year-over-year in 2025, even as Ultrahuman led the market with a 30.4% share, followed by Gabit at 18.3%, per a recent IDC report... ASPs fell 8.7% to $160'. Smartprix/Flipkart list Ring Air from Rs 28,499, one-time purchase, no subscription.",
+      "source_url": "https://techcrunch.com/2026/03/17/oura-enters-indias-smart-ring-market-with-the-ring-4/"
+    },
+    {
+      "claim": "CBP ruling NY N339661 (2024-05-09) classifies Whoop Bands from China under HTSUS 9031.90.9195 + 9903.88.01 (Section 301)",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "rulings.cbp.gov N339661 'The tariff classification of Whoop Bands from China', issued May 9, 2024 to Whoop Inc. (Boston), tariff numbers 9031.90.9195 and 9903.88.01; the ruling describes the sensor/PCBA/battery module in a polycarbonate housing attached to wristbands.",
+      "source_url": "https://rulings.cbp.gov/ruling/n339661"
+    },
+    {
+      "claim": "IDC: India wearables shrank 4.0% to 114.2M units in 2025 (second straight decline); smartwatches -17.6%; boAt 29.2% share; earwear 84.7M units at $17.5 ASP",
+      "verdict": "confirmed",
+      "corrected_value": "Added precision: smartwatches fell to 28.9M units while smartwatch ASP rose 11.7% ($23.8 -> $26.5); earwear +1.4% to 84.7M. boAt 29.2% (from 27.6% in 2024) is reported by FoneArena/BizTechReports from the IDC release and is consistent with IDC's own 2024 figure (27.6%).",
+      "evidence": "IDC Asia/Pacific post and The Tech Outlook / FoneArena / BizTechReports (April 2026) report 114.2M units, -4.0% YoY, smartwatch -17.6% to 28.9M, earwear +1.4% to 84.7M; IDC's prAP53199725 gives boAt 27.6% for 2024 as the base.",
+      "source_url": "https://www.fonearena.com/blog/476987/indian-wearable-shipments-2025.html"
+    },
+    {
+      "claim": "Whoop total capital raised to date ~$979M (secondary)",
+      "verdict": "confirmed",
+      "corrected_value": "Still secondary: Tracxn and Crunchbase-derived pages give $979M total (round counts differ: 8 vs 11 rounds). No primary filing.",
+      "evidence": "Tracxn 'Whoop - 2026 Funding Rounds' and Getlatka both state $979M total raised including the $575M Series G; whoop.com's Series G release does not state a cumulative total.",
+      "source_url": "https://tracxn.com/d/companies/whoop/__mG8pDMm_crUH9HckmN4Kw7ZEHu-NiVNU_cywdWMo-aA/funding-and-investors"
+    }
+  ],
+  "stale_or_missing": [
+    "STALE (major): Oura filed an S-1 for a Nasdaq IPO (ticker OURA) on 2026-09-03. Nine months to 30 June 2026: revenue $1.21B (+74% YoY; ~$1.4B TTM), 5.0M paid members (vs 2.5M a year earlier), 3.6M rings sold TTM, gross margin 55% (vs 51%) with 89% membership gross margin, S&M $103M, net income $60.8M before a $985M deemed dividend (reported net loss to common $924.3M); weighted-average 12-month paid-member retention ~85% (cohorts 81% FY2023 -> 87% recent); early investors sold $1B+ in secondaries; Bloomberg reports a >$16B target valuation. Supersedes the research's 2024/2025 Oura figures and its ~11x EV/revenue derivation. https://www.sec.gov/Archives/edgar/data/2133022/000119312526381855/d119865ds1.htm ; https://the5krunner.com/2026/09/04/oura-ipo-s1-revenue/ ; https://thenextweb.com/news/oura-ipo-filing-924m-loss-preferred-share-buyback",
+    "MISSING (major): Google Fitbit Air - a $99.99 screenless band (Stephen Curry edition $129.99) announced 2026-05-07, pre-orders same day, shipping 2026-05-26; 24/7 HR, AFib alerts, ~1-week battery, Google Health app; explicitly positioned as Google's answer to Whoop. Not in the research at all; the $99 no-subscription floor now includes a Google-backed entrant with a huge installed app base. https://www.androidcentral.com/wearables/fitbit/google-fitbit-air-launch-specs-price ; https://www.forbes.com/sites/forbes-personal-shopper/2026/05/07/google-fitbit-air-launch-2026/",
+    "STALE (partly): Whoop Strength Trainer. Feb 2026 'Passive MSK' update automatically estimates musculoskeletal load from wrist motion for strength activities with no logging, and auto-detect/auto-classify of strength/functional training was improved (larger dataset, new ML models); an AI workout builder parses sets/reps from text prompts or screenshots; Whoop's Sept 2026 roadmap adds automatic 1RM estimation from logged weighted exercises in Nov 2026. Still NO automatic rep counting or exercise identification found, so the rep/exercise-detection gap stands, but the headline's 'muscular load requires user logging' is now stale. https://the5krunner.com/2026/02/28/new-whoop-strength-trainer-update/ ; https://www.whoop.com/us/en/thelocker/2026-whats-new/ ; https://gadgetsandwearables.com/2026/09/05/whoop-custom-journal-workout-tracking-update/",
+    "NEW (2026): Amazfit Helio Strap Pro - announced 2026-06-18 (BusinessWire), $199.99, pre-orders 2026-06-19, shipping 2026-06-25; a multi-point body-worn system (upper-arm 'Helio Core Motion HR' + waist-mounted motion sensor + Pro clip, wristband, armband) aimed at HYROX/hybrid training - i.e., Zepp is already moving screenless bands toward movement intelligence. https://www.businesswire.com/news/home/20260618031434/en/Amazfit-Introduces-Helio-Strap-Pro-Bringing-Body-Worn-Movement-Intelligence-to-HYROX-and-Hybrid-Training ; https://gadgetsandwearables.com/2026/06/19/amazfit-helio-strap-pro-buy/",
+    "PENDING (2026): Amazfit Helio Strap 2 - confirmed for late 2026 (FCC filings April 2026, models A2671/A2672, 180-day confidentiality => Aug-Nov 2026 launch window); no official price; commentary speculates it will not exceed $99.99 given Fitbit Air. Helio Ring 2 also confirmed for H2 2026. https://the5krunner.com/2026/06/06/amazfit-helio-strap-2/ ; https://gadgetsandwearables.com/2026/05/28/amazfit-helio-strap-2-fcc/",
+    "NOT STALE: 'Polar Loop 2' - no distinct 2026 product found. Wareable's Feb 2026 'Polar Loop (Gen 2) review' and retailer listings ('Polar Loop 2') refer to the Sept 2025 device at $199.99 / GBP 149.50 / AU$299; reviewers call its activity-tracking software the weak point. https://www.wareable.com/fitness-trackers/polar-loop-gen-2-review",
+    "STALE (pricing): Whoop US prices unchanged since the May 2025 relaunch ($199/$239/$359); FX-driven increases in some international markets in Oct 2025; in May 2026 Whoop began testing UNBUNDLED pricing in select markets (Australia: WHOOP 5.0 device AUD$139 + AUD$300/yr membership for new members) - not in the US. CEO Will Ahmed said Series G is the last private round and an IPO is the next step (18-24 months); no Whoop S-1 found as of 2026-09-14. https://gadgetsandwearables.com/2026/05/25/whoop-price-testing/ ; https://finance.yahoo.com/news/whoop-ceo-after-raising-575-million-our-next-step-is-an-ipo-160340411.html",
+    "STALE (India rings): IDC (March 2026) - India smart-ring shipments fell 30.6% YoY in 2025, ASP -8.7% to $160; Ultrahuman 30.4%, Gabit 18.3%. Oura entered India with the Ring 4 (TechCrunch 2026-03-17) and Ultrahuman re-entered the US with the Ring Pro after CBP cleared it (TechCrunch 2026-03-24), which partly resolves the research's open ITC/Oura-v-Ultrahuman question. https://techcrunch.com/2026/03/17/oura-enters-indias-smart-ring-market-with-the-ring-4/ ; https://techcrunch.com/2026/03/24/ultrahuman-ramps-up-u-s-push-with-ring-pro-as-oura-tightens-grip/",
+    "STALE (ring totals): full-year 2025 smart rings per IDC ~4.3M units (+49%), Oura ~74% share; Counterpoint's +77% is a different analyst's estimate; Omdia's series is 0.85M (2023) -> 1.8M (2024) -> 1.6M (H1 2025) -> >4M (2025). Replace '~4.4M, +77%' with a range and name the analyst. https://www.bloomberg.com/news/articles/2026-01-05/smart-rings-poised-for-2026-growth-oura-set-to-lead ; https://omdia.tech.informa.com/blogs/2025/nov/empowering-the-health-and-fitness-ecosystem-with-smart-rings",
+    "FILLED (open question FORT): Y Combinator W26 company; screenless wrist band claiming automatic rep/set/rest detection, proximity-to-failure, rep velocity, per-muscle volume; pre-orders $289 early-bird (first 1,000) then $309 including first-year subscription, retail $349 after pre-orders, software $80/yr thereafter; ship date slipped from Q3 2026 to Q2 2027 (July 2026 coverage). Direct evidence of a venture-backed entrant on the exact rep-detection gap - and of how hard shipping it is. https://the-gadgeteer.com/2026/07/25/fort-wearable-screenless-strength-band/ ; https://newatlas.com/wearables/fort-strength-training-fitness-tracker/ ; https://www.ycombinator.com/companies/fort",
+    "GAP (subscription churn): Whoop discloses no churn rate - only 'record low churn' and '>50% of members still use the device daily at 18 months' (Fitt Insider / Growth Classics, undated); Sacra's page in search snippets shows no churn estimate. Only primary datapoint is Oura's S-1: ~85% weighted-average 12-month paid-member retention (about 15% annual churn), improving by cohort from ~81% (FY2023) to ~87%. https://www.sec.gov/Archives/edgar/data/2133022/000119312526381855/d119865ds1.htm ; https://growthclassics.beehiiv.com/p/whoop-3-6-billion-growth-story",
+    "GAP (DTC wearable CAC): no primary CAC figure found for any wearable brand. Best proxy is Oura's S-1: S&M of $103M over nine months against roughly 2.5M net paid-member adds YoY - a blended S&M-per-net-add on the order of tens of dollars (rough, not a true CAC; hardware revenue subsidises acquisition). Blog-grade benchmarks only: DTC fitness paid CAC ~$67 (2026), 'hardware-only wearable CAC $50-150 per customer' - low reliability. https://www.sec.gov/Archives/edgar/data/2133022/000119312526381855/d119865ds1.htm ; https://www.digitalapplied.com/blog/customer-acquisition-cost-benchmarks-2026-industry",
+    "GAP (return / warranty rates): no wearable-specific return-rate dataset found. Proxies: online electronics return rate ~11% (5-15% range; 2026 e-commerce benchmark blogs); SquareTrade-cited ~12% wearable failure rate within two years (blog-cited, primary not seen). Best PRIMARY base rate for warranty cost: Fitbit FY2015 10-K - warranty reserve $40.2M (2% of revenue) and $55.6M charged to cost of revenue in 2015 (~3% of revenue). https://www.sec.gov/Archives/edgar/data/0001447599/000144759916000018/fitbit1231201510k.htm ; https://eightx.co/blog/average-electronics-return-rate-benchmarks",
+    "FILLED (open question, Whoop 4.0-era price): TechCrunch's 2018 story 'Super wearable WHOOP launches $30 subscription service - wearable totally included' confirms the $30/month, hardware-included origin of the model that the research could not verify. https://techcrunch.com/?p=1640413"
+  ],
+  "summary": "17 load-bearing claims re-checked with 38 independent WebSearch queries (WebFetch/curl egress-blocked; no budget error hit). Verdicts: 12 confirmed, 5 corrected, 0 unverifiable, 0 refuted. Core Whoop facts hold (Series G $575M at $10.1B on 2026-03-31; $199/$239/$359 tiers; $49/$79 upgrade-fee reversal on 2025-05-10; FDA letter 2025-07-14; CBP N339661 HTS 9031.90.9195+9903.88.01). Corrections: (1) FDA close-out is now a primary fda.gov letter dated 2026-06-17 (not just 'reported 06-23'); (2) Helio Strap MSRP is $99.99 not $99; (3) Fitbit FY2018 GM was 39.9% GAAP/40.9% non-GAAP and '43%' for 2017 is the non-GAAP figure; (4) 2025 smart-ring volume/growth mixes analysts - IDC says ~4.3M units +49%, Counterpoint +77%; (5) the 'India rings are the bright spot' framing is wrong - IDC has Indian ring shipments down 30.6% in 2025 with ASP down 8.7% to $160, even though Ultrahuman's 30.4% share and INR 28,499 no-sub price are right. Biggest staleness: Oura's 2026-09-03 S-1 (9-mo revenue $1.21B +74%, 5.0M paid members, 55% GM, 89% membership GM, ~85% 12-month retention, S&M $103M) replaces every Oura number and is the only primary churn/CAC-proxy source found; Google's Fitbit Air ($99.99 screenless band, May 2026) is entirely missing and materially changes the price-floor argument; Whoop's Feb 2026 Passive MSK update makes strength load automatic (no logging) though rep/exercise identification is still absent; Amazfit Helio Strap Pro ($199.99, June 2026) and FORT ($349 retail + $80/yr, slipped to Q2 2027) show the segment moving toward movement intelligence. Gaps remain for wearable-specific return rates and any primary DTC CAC figure."
+}
