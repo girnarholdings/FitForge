@@ -1,0 +1,223 @@
+{
+  "lens": "policy-supplement",
+  "headline_findings": [
+    "US tariff timeline after the IEEPA ruling: a Section 122 balance-of-payments surcharge of 10% ran from 24 Feb 2026 to 24 Jul 2026 (150-day statutory life; the announced rise to 15% was never enacted; the Court of International Trade struck Section 122 tariffs down in May 2026 but practical impact was limited). [secondary: Skadden May 2026; tariff-tool blogs]",
+    "Replacement in force since 24 Jul 2026: new Section 301 duties of 10% / 12.5% on products of roughly 60 economies (about 99.4% of US imports; 10% for economies with at least partial forced-labor import protections, 12.5% for the rest). [secondary: tariffstool.com / tarifftax.org blogs; verify against the Federal Register]",
+    "India is treated as a bilateral-deal country: blog sources say the bilateral deal rate (15%, i.e. 5 points above the 10% standard surcharge) replaces the surcharge for India-origin goods; the India policy lens separately found an interim US-India deal (2 Feb 2026) that cut the reciprocal rate to 18%. The two figures conflict; the India-origin US duty for HTS 8517.62 as of Sept 2026 is therefore ⚠ 15-18% (blog-grade) and must be verified against the Federal Register / CBP CSMS before any landed-cost decision. Whether the April 2025 electronics exemption for 8517.62 carries over to the Section 122/301 regime was not found. [estimate]",
+    "FDA issued a revised General Wellness Policy for Low Risk Devices on 6 Jan 2026 (supersedes Sept 2019). Wearables that estimate physiological parameters qualify if non-invasive, not intended for diagnosis/treatment, not a substitute for a cleared device, no outputs that guide clinical management, and no clinically-mimicking values unless validated. A screenless HR/HRV/sleep/readiness band fits; SpO2 or blood-pressure \"insights\" framed clinically do not. [verified via multiple law-firm alerts: Covington, Faegre Drinker, Troutman, ArentFox Schiff]",
+    "India export incentive: RoDTEP rates generally 0.3%-4.3% of FOB; DGFT Notification 60/2025-26 cut rates/caps to 50% for chapters 25+ (then restored to pre-23 Feb 2026 levels for exports between 23 Feb and 31 Mar 2026); the specific rate for HS 8517.62 was not found (consult DGFT Appendix 4R). [secondary: Afleo, efiletax]",
+    "Ultrahuman's first India factory: a search snippet places the first UltraFactory in Bengaluru in 2022; no source found for an Indore plant. Treat 'Indore' as unconfirmed. [secondary; not found for Indore]",
+    "Predictable Designs (John Teel): certification cost for an electronic product ranges from a few thousand dollars to about $50,000, driven mainly by how wireless is implemented (module vs custom radio); recommends funding certification and the first run via pre-orders/Kickstarter. [secondary: predictabledesigns.com]",
+    "Probe search (subagent, 14 Sep 2026): tariff-tracker blogs state that during the Section 122 window (24 Feb-24 Jul 2026) India-origin goods paid the same 10% as everyone else, not the 18% negotiated in the 2 Feb 2026 interim deal; after 24 Jul 2026 the Section 301 country-tier regime (10%/12.5%) applies with bilateral-deal countries possibly on a 15% deal rate. Net: the India-origin surcharge for Sept 2026 is ⚠ somewhere in 10-18% depending on source; the White House US-India Joint Statement (Feb 2026) and CBP CSMS messages are the primary documents to check. [secondary/blog: tariffstool.com India tariff page; Global Trade Alert S122 report; verified existence: whitehouse.gov joint statement]"
+  ],
+  "data_points": [
+    {
+      "metric": "Section 122 surcharge rate and window",
+      "value": "10",
+      "unit": "% ad valorem, 24 Feb 2026 to 24 Jul 2026",
+      "date": "2026",
+      "confidence": "secondary",
+      "source_title": "Skadden: US Trade Court Strikes Down Section 122 Tariffs (May 2026)",
+      "source_url": "https://www.skadden.com/insights/publications/2026/05/us-trade-court-strikes-down-section-122-tariffs",
+      "note": "Announced 15% never enacted."
+    },
+    {
+      "metric": "Section 301 replacement duties from 24 Jul 2026",
+      "value": "10 / 12.5",
+      "unit": "% two-tier on ~60 economies",
+      "date": "2026-07-24",
+      "confidence": "secondary",
+      "source_title": "TariffsTool: Section 301 replacing Section 122",
+      "source_url": "https://www.tariffstool.com/guides/section-301-replacing-section-122",
+      "note": "Blog-grade; verify in Federal Register."
+    },
+    {
+      "metric": "India-origin US duty surcharge, Sept 2026",
+      "value": "15 (blog) vs 18 (policy lens interim deal)",
+      "unit": "% ⚠ conflicting",
+      "date": "2026",
+      "confidence": "estimate",
+      "source_title": "TariffsTool: Section 122 expires July 24, 2026",
+      "source_url": "https://www.tariffstool.com/guides/section-122-expires-july-24-2026-importer-playbook",
+      "note": "Must verify; electronics exemption carry-over unknown."
+    },
+    {
+      "metric": "FDA General Wellness guidance revision date",
+      "value": "6 Jan 2026",
+      "unit": "supersedes Sept 2019 version",
+      "date": "2026-01-06",
+      "confidence": "verified",
+      "source_title": "Covington: FDA Issues Revised Guidance on General Wellness Products",
+      "source_url": "https://www.cov.com/en/news-and-insights/insights/2026/01/fda-issues-revised-guidance-on-general-wellness-products",
+      "note": "Multiple law-firm alerts agree."
+    },
+    {
+      "metric": "RoDTEP general rate band",
+      "value": "0.3 to 4.3",
+      "unit": "% of FOB",
+      "date": "2025-2026",
+      "confidence": "secondary",
+      "source_title": "Afleo: RoDTEP Scheme 2026",
+      "source_url": "https://afleo.com/rodtep-scheme/",
+      "note": "HS 8517.62-specific rate not found."
+    },
+    {
+      "metric": "RoDTEP cut",
+      "value": "50",
+      "unit": "% of notified rates (DGFT Notification 60/2025-26), restored for 23 Feb-31 Mar 2026 exports",
+      "date": "2025-2026",
+      "confidence": "secondary",
+      "source_title": "efiletax: RoDTEP rates updated from May 1, 2025",
+      "source_url": "https://www.efiletax.in/blog/rodtep-rates-updated-from-may-1-2025-key-changes-explained/",
+      "note": ""
+    },
+    {
+      "metric": "Ultrahuman first UltraFactory (India) location",
+      "value": "Bengaluru, 2022",
+      "unit": "",
+      "date": "2022",
+      "confidence": "secondary",
+      "source_title": "Search snippet (BioSpectrum India / Ultrahuman coverage)",
+      "source_url": "https://www.biospectrumindia.com/news/90/24537/ultrahuman-plants-flag-in-us-with-manufacturing-facility-to-make-wearable-rings.html",
+      "note": "Indore not found in any source."
+    },
+    {
+      "metric": "Certification cost range (Predictable Designs)",
+      "value": "few thousand to ~50,000",
+      "unit": "USD",
+      "date": "2025",
+      "confidence": "secondary",
+      "source_title": "Predictable Designs: How Much Does It Cost to Certify an Electronic Product?",
+      "source_url": "https://predictabledesigns.com/certification-costs-what-it-really-takes/",
+      "note": ""
+    },
+    {
+      "metric": "India-origin US surcharge during Section 122 window",
+      "value": "10",
+      "unit": "% (same as all countries; 18% deal rate not applied)",
+      "date": "2026-02-24 to 2026-07-24",
+      "confidence": "secondary",
+      "source_title": "TariffsTool: India Tariff — 10% Rate (Was 18% IEEPA) 2026",
+      "source_url": "https://www.tariffstool.com/guides/india-tariff",
+      "note": "Blog-grade tracker."
+    }
+  ],
+  "detailed_notes": "# Policy supplement (main-session searches, 2026-09-14)\n\n## US tariff regime, Sept 2026 (best available)\n1. IEEPA tariffs ended after the Supreme Court ruling (see india-policy-trade lens: collection stopped 24 Feb 2026).\n2. Section 122 surcharge: 10% from 24 Feb 2026, expired 24 Jul 2026 (150 days). Announced 15% never enacted. CIT struck the surcharge down in May 2026 (Skadden) with limited practical effect.\n3. From 24 Jul 2026: Section 301 duties of 10% / 12.5% on ~60 economies (tariff-tool blogs). Bilateral-deal countries, India included, get their deal rate instead; one blog states 15% for India; the India policy lens found an 18% interim-deal reciprocal rate (Feb 2026). CONFLICT: use ⚠ 15-18% and verify.\n4. China-origin fitness bands (HTS 8517.62.00): Section 301 List 4A 7.5% survives, plus whatever the 2026 Section 301 country tier adds; Whoop's own imports are classified under 9031.90.9195 with 9903.88.01 (competitors lens). Origin is decided by substantial transformation: populate the PCBA in India to obtain India origin.\n5. HTS 8517.62.00 was exempt from the IEEPA reciprocal tariff (April 2025 electronics exemption). Whether any exemption exists under the Section 122/301 regime: not found.\n\n## FDA\nRevised General Wellness Policy for Low Risk Devices, 6 Jan 2026. A band that reports HR, HRV, sleep, skin temperature trend, strain and readiness with wellness framing is outside device regulation (no 510(k), no registration). Do not present SpO2 or blood-pressure outputs as clinical values. Whoop's July 2025 warning letter (Blood Pressure Insights) is the cautionary case (competitors lens).\n\n## India export side\nRoDTEP 0.3-4.3% of FOB (rate for 8517.62 not found); exports zero-rated under GST with ITC refund (policy lens, structural).\n\n## Ultrahuman\nFirst UltraFactory: Bengaluru, 2022 (snippet). Indore: not found. The US Plano, TX plant (2024) is modelled on it.\n\n## Certification budget anchor\nPredictable Designs: a few thousand dollars to ~USD 50k, wireless implementation is the swing factor. Consistent with the MarkReady module-route figure (USD 3-10k) in the India supplement.",
+  "open_questions": [
+    "Federal Register citation for the 24 Jul 2026 Section 301 country-tier action and the India bilateral rate (15% or 18%).",
+    "Whether HTS 8517.62 (or 9031.80) has an exemption under the Section 301 country-tier duties.",
+    "DGFT Appendix 4R RoDTEP rate for 8517.62."
+  ],
+  "sources": [
+    {
+      "title": "Skadden: US Trade Court Strikes Down Section 122 Tariffs, but Ruling’s Fate Is Uncertain (May 2026)",
+      "url": "https://www.skadden.com/insights/publications/2026/05/us-trade-court-strikes-down-section-122-tariffs",
+      "type": "law firm"
+    },
+    {
+      "title": "TariffsTool: Section 122 Expires July 24, 2026: Rates After + 3 Scenarios",
+      "url": "https://www.tariffstool.com/guides/section-122-expires-july-24-2026-importer-playbook",
+      "type": "blog"
+    },
+    {
+      "title": "TariffsTool: Section 301 Replacing Section 122: 12.5% on 46 Countries",
+      "url": "https://www.tariffstool.com/guides/section-301-replacing-section-122",
+      "type": "blog"
+    },
+    {
+      "title": "TariffTax: Section 122 Expires in July: What Happens When the Clock Runs Out?",
+      "url": "https://www.tarifftax.org/analysis/section-122-what-comes-next",
+      "type": "blog"
+    },
+    {
+      "title": "Singapore MTI: Media statement on the US latest implementation of Section 122 tariffs",
+      "url": "https://www.mti.gov.sg/newsroom/media-statement-on-the-us--latest-implementation-of-section-122-tariffs",
+      "type": "government"
+    },
+    {
+      "title": "Covington: FDA Issues Revised Guidance on General Wellness Products (Jan 2026)",
+      "url": "https://www.cov.com/en/news-and-insights/insights/2026/01/fda-issues-revised-guidance-on-general-wellness-products",
+      "type": "law firm"
+    },
+    {
+      "title": "Faegre Drinker: Key Updates in FDA’s 2026 General Wellness and CDS Software Guidance",
+      "url": "https://www.faegredrinker.com/en/insights/publications/2026/1/key-updates-in-fdas-2026-general-wellness-and-clinical-decision-support-software-guidance",
+      "type": "law firm"
+    },
+    {
+      "title": "Troutman Pepper Locke: FDA’s 2026 Guidance on General Wellness Devices",
+      "url": "https://www.troutman.com/insights/fdas-2026-guidance-on-general-wellness-devices-policy-for-low-risk-devices/",
+      "type": "law firm"
+    },
+    {
+      "title": "Womble Bond Dickinson: FDA’s 2026 General Wellness Policy and Wearable Devices",
+      "url": "https://www.womblebonddickinson.com/us/insights/blogs/fdas-2026-general-wellness-policy-and-what-it-means-manufacturers-wearable-devices",
+      "type": "law firm"
+    },
+    {
+      "title": "FDA: General Wellness: Policy for Low Risk Devices (guidance PDF)",
+      "url": "https://www.fda.gov/media/90652/download",
+      "type": "government"
+    },
+    {
+      "title": "Afleo: RoDTEP Scheme 2026 rates & claim guide",
+      "url": "https://afleo.com/rodtep-scheme/",
+      "type": "consultancy"
+    },
+    {
+      "title": "efiletax: RoDTEP rates updated from May 1, 2025",
+      "url": "https://www.efiletax.in/blog/rodtep-rates-updated-from-may-1-2025-key-changes-explained/",
+      "type": "consultancy"
+    },
+    {
+      "title": "BioSpectrum India: Ultrahuman plants flag in US with manufacturing facility",
+      "url": "https://www.biospectrumindia.com/news/90/24537/ultrahuman-plants-flag-in-us-with-manufacturing-facility-to-make-wearable-rings.html",
+      "type": "press"
+    },
+    {
+      "title": "Predictable Designs: How Much Does It Cost to Certify an Electronic Product?",
+      "url": "https://predictabledesigns.com/certification-costs-what-it-really-takes/",
+      "type": "expert blog"
+    },
+    {
+      "title": "Predictable Designs: Complete cost guide, developing and manufacturing an electronic product",
+      "url": "https://predictabledesigns.com/how-much-does-it-cost-to-develop-and-manufacture-new-electronic-product/",
+      "type": "expert blog"
+    },
+    {
+      "title": "White House: United States-India Joint Statement (Feb 2026)",
+      "url": "https://www.whitehouse.gov/briefings-statements/2026/02/united-states-india-joint-statement/",
+      "type": "government"
+    },
+    {
+      "title": "Global Trade Alert: From IEEPA to Section 122: What Changed on 20 February 2026",
+      "url": "https://globaltradealert.org/blog/from-ieepa-to-section-122",
+      "type": "policy tracker"
+    },
+    {
+      "title": "Global Trade Alert: Section 122 in effect: what the US tariff regime looks like now",
+      "url": "https://globaltradealert.org/reports/S122-US-Tariff-Estimates",
+      "type": "policy tracker"
+    },
+    {
+      "title": "India Briefing: US-India Strike Interim Trade Deal, Cut Tariffs to 18%",
+      "url": "https://www.india-briefing.com/news/us-india-interim-trade-agreement-18-percent-tariff-42514.html/",
+      "type": "press"
+    },
+    {
+      "title": "Morgan Lewis: US-India Trade Deal Cuts Tariffs, Eases Tensions (Feb 2026)",
+      "url": "https://www.morganlewis.com/pubs/2026/02/us-india-trade-deal-cuts-tariffs-eases-tensions",
+      "type": "law firm"
+    },
+    {
+      "title": "TariffsTool: India Tariff — 10% Rate (Was 18% IEEPA) 2026",
+      "url": "https://www.tariffstool.com/guides/india-tariff",
+      "type": "blog"
+    },
+    {
+      "title": "Zonos: US Import Tariff Tracker",
+      "url": "https://zonos.com/docs/guides/us-tariff-changes",
+      "type": "vendor tracker"
+    }
+  ]
+}
