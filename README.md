@@ -398,6 +398,9 @@ Contributions welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 | [`docs/RESEARCH-FOOD.md`](./docs/RESEARCH-FOOD.md) | Food databases + natural-language food parsing |
 | [`docs/RESEARCH-KB.md`](./docs/RESEARCH-KB.md) | Coach knowledge base + routing thresholds |
 | [`docs/RESEARCH-ONBOARDING.md`](./docs/RESEARCH-ONBOARDING.md) | Onboarding research prewalk |
+| [`docs/RESEARCH-WEARABLE.md`](./docs/RESEARCH-WEARABLE.md) | FitForge Band prewalk: wearable hardware, BLE/HealthKit integration, India-first vs China manufacturing cost |
+| [`docs/RESEARCH-ADAPTIVE.md`](./docs/RESEARCH-ADAPTIVE.md) | Self-adapting programs: what sleep and HRV can really drive, missed-day resequencing, and where the Start button belongs |
+| [`docs/PLAN-CROSS-DEVICE.md`](./docs/PLAN-CROSS-DEVICE.md) | The build plan: one engine across Safari, iPhone and Apple Watch — sync rewrite, native surfaces, catalog expansion, per-device UX |
 | [`docs/POSE-AUDIT.md`](./docs/POSE-AUDIT.md) | Audit record for every exercise illustration |
 | [`docs/api.md`](./docs/api.md) | REST resources, views and RPC surface (backend scaffold) |
 | [`docs/decisions/`](./docs/decisions) | Architecture Decision Records |

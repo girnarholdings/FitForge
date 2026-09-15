@@ -1,0 +1,157 @@
+{
+  "lens": "software-integration",
+  "checks": [
+    {
+      "claim": "Web Bluetooth is Chromium-only with ~76% global browser support (caniuse, Apr 2026) and is absent from every Safari incl. iOS/iPadOS in 2026 (Chrome 56+/70+ on Windows, Edge 79+, Opera 43+, Samsung Internet 6.2+).",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "TestMu's 2026 support guide (citing caniuse) puts global Web Bluetooth support near 76% as of April 2026 with Chrome 56+ (70+ on Windows), Edge 79+, Opera 43-122 and Samsung Internet 6.2-29, and Firefox/Safari unsupported; a 2026 PWA guide states Safari on macOS, iPadOS and iOS supports Web Bluetooth in no version including iOS 26, with only the iOSWebBLE extension polyfill as a workaround. WebKit's Safari 26.4 and 26.5 feature posts surfaced with no Web Bluetooth entry. The raw percentage could not be extracted from caniuse.com itself, so the 76% is corroborated only at secondary level.",
+      "source_url": "https://www.testmuai.com/learning-hub/web-bluetooth-browser-support/"
+    },
+    {
+      "claim": "The Capacitor community bluetooth-le plugin needs NSBluetoothAlwaysUsageDescription and bluetooth-central in UIBackgroundModes for background use, has no CoreBluetooth state-restoration support, and a woken app gets only ~5-6 s before termination.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Discussion #679 in capacitor-community/bluetooth-le states that with the plugin's default approach the app is not correctly reloaded if iOS pauses it because there is no iOS state-restoration support, and that after adding bluetooth-central to UIBackgroundModes the app has about 5-6 seconds to respond to a Bluetooth event before termination; the 7.x README documents the bluetooth-central background-mode requirement. Polar BLE SDK issue #293 shows the same gap in another SDK.",
+      "source_url": "https://github.com/capacitor-community/bluetooth-le/discussions/679"
+    },
+    {
+      "claim": "Android 12+ (API 31) requires runtime BLUETOOTH_SCAN, BLUETOOTH_CONNECT and BLUETOOTH_ADVERTISE; declaring usesPermissionFlags=neverForLocation on BLUETOOTH_SCAN yields scan results even with location services off.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Android's Bluetooth permissions page states that apps targeting Android 12 (API 31) or higher must declare BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE and BLUETOOTH_CONNECT as applicable, and that on Android 12+ apps declaring neverForLocation can get Bluetooth scanning results even when location services are off; Punch Through and other 2024-2026 guides restate the same.",
+      "source_url": "https://developer.android.com/develop/connectivity/bluetooth/bt-permissions"
+    },
+    {
+      "claim": "Measured BLE 5 throughput at 2M PHY with 251-byte DLE reached 1,373 kbps between two nRF52840-DKs (Nordic DevZone), so 14 days of 1 Hz 2-byte HR (~2.4 MB) drains in ~14 s at that rate and ~97-100 s at a conservative 200 kbps phone-side budget.",
+      "verdict": "corrected",
+      "corrected_value": "The 1,373 kbps measurement is real (DevZone thread 121341: nRF52840-DK, LE 2M PHY, TX/RX data length 251 B, connection interval 320), but the thread's headline setup is an nRF5340DK peripheral with an nRF52 dongle central, not two nRF52840-DKs. The derived drain time is a link-rate ceiling, not a phone-side estimate: WHOOP support says syncing 24 h of strap data takes ~45-60 min over BLE (i.e. roughly 10-14 h for 14 days, albeit with a far richer payload than 1 Hz HR). Treat 200 kbps as an upper bound, not a conservative budget, until measured with a phone and a real board.",
+      "evidence": "Nordic DevZone confirms 1373 kbps with the nRF52840-DK at 2M PHY, data length 251 and connection interval 320; Memfault restates DLE's 251-byte PDU limit and 247-byte optimum MTU. WHOOP support states a full day (24 hours) of data takes approximately 45 minutes and may take up to 1 hour to sync, which contradicts the planning assumption that a phone-side drain of a multi-day log completes in seconds.",
+      "source_url": "https://devzone.nordicsemi.com/f/nordic-q-a/121341/how-to-reach-maximum-ble-throughput-at-2m-phy-with-nrf5340dk-peripheral-and-nrf52-dongle-central"
+    },
+    {
+      "claim": "WHOOP's strap stores up to 14 days of unsynced data and catches up over Bluetooth when the phone is near (support.whoop.com), so an on-device log should be sized at >=14 days.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "WHOOP's current 'Why is my WHOOP Catching Up?' article states the device stores up to 14 days of unsynced data and syncs oldest-to-newest once reconnected. Caveat: WHOOP's older 'Data Catching Up' (iOS/Android) articles say the strap stores up to 3 days, so 14 days applies to current hardware/firmware; WHOOP also notes the app must stay open in the background and that syncing 24 h of data takes ~45-60 min.",
+      "source_url": "https://support.whoop.com/hc/en-us/articles/4414916912027-Why-is-my-WHOOP-Catching-Up-"
+    },
+    {
+      "claim": "WHOOP public API v2 is rate-limited to 100 requests/min and 10,000 requests/day per app, with increases requested via the Developer Dashboard (research only had third-party citations).",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "WHOOP's official API Rate Limiting page states limits of 100 requests per 60 seconds and 10,000 requests per 86,400 seconds, defaulting per client, and that developers can request increased limits via the Developer Dashboard. The '~60-80 connected users' capacity figure remains a third-party derivation, not a WHOOP statement.",
+      "source_url": "https://developer.whoop.com/docs/developing/rate-limiting/"
+    },
+    {
+      "claim": "Health Connect's ExerciseSegment carries startTime, endTime, segmentType, repetitions, weight, setIndex and rateOfPerceivedExertion (with per-exercise constants such as BENCH_PRESS = 5 and session type STRENGTH_TRAINING = 70), giving set-level strength data a first-class Android sink.",
+      "verdict": "confirmed",
+      "corrected_value": "Field set confirmed, with a gating qualification the research flagged as open: weight, setIndex and rateOfPerceivedExertion were added in androidx health-connect-client 1.2.0-alpha (range annotations landed in 1.2.0-alpha05) and announced with Android 16 QPR2 Beta 2 (Sept 2025); Google says to check FEATURE_EXPANDED_EXERCISE_RECORD availability before writing them because Health Connect updates independently of the platform. Only repetitions is safe to assume on older Health Connect builds. The numeric constants (5, 70) were not re-verified by search.",
+      "evidence": "The Android Developers blog (Android 16 QPR2 Beta 2) announces recording and reading weight, set index and RPE for exercise segments; the androidx Health Connect release notes list 1.2.0-alpha05 adding @IntRange/@FloatRange annotations to ExerciseSegment repetitions, setIndex and rateOfPerceivedExertion; the Health Connect workouts guide shows conditionally adding weight/setIndex/RPE when the expanded exercise feature is available.",
+      "source_url": "https://developer.android.com/jetpack/androidx/releases/health-connect"
+    },
+    {
+      "claim": "Google Fit APIs (incl. REST) are supported only until the end of 2026 with no exact shutdown day, and new signups closed 1 May 2024, so Android health plumbing must target Health Connect.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "developers.google.com/fit and the Android Fit migration guide state that the Google Fit APIs, including the REST API, are deprecated in 2026 and supported only until the end of 2026, that developers cannot sign up as of May 1, 2024, and that Health Connect (mobile) or the Google Health API (cloud) are the replacements; no exact shutdown day is published.",
+      "source_url": "https://developers.google.com/fit"
+    },
+    {
+      "claim": "Terra API Quick Start costs $399/mo billed annually and includes 100,000 credits (~500 active authentications).",
+      "verdict": "corrected",
+      "corrected_value": "$499 per month on an annual plan, including 100,000 credits per month that reset each billing period and do not roll over; additional usage from $0.005 per credit; Streaming API and Lab Reports API are paid add-ons. Source: https://tryterra.co/pricing (also https://docs.tryterra.co/health-and-fitness-api/pricing).",
+      "evidence": "Terra's own pricing page and docs list the Quick Start plan at $499/month on an annual plan with 100,000 credits per month and $0.005 per additional credit; the $399 figure in the research came from a competitor (Sahha) comparison page.",
+      "source_url": "https://tryterra.co/pricing"
+    },
+    {
+      "claim": "Junction (formerly Vital) charges $0.50 per user per month with a $300 monthly minimum.",
+      "verdict": "corrected",
+      "corrected_value": "Junction's pricing page describes a Launch plan at a flat $300/month covering up to 500 connected users, billed monthly with no annual contract, and Enterprise plans (unlimited users, volume discounts) above that; no $0.50-per-user rate is published. Source: https://www.junction.com/pricing (tryvital.com/pricing redirects there).",
+      "evidence": "Junction's pricing page states the Launch plan covers wearables and device connections for up to 500 users for a flat $300 a month and is billed monthly; the $0.50/user framing appears only on Sahha's competitor comparison page. The effective per-user cost at 500 users is $0.60, and far higher at FitForge's likely early volumes.",
+      "source_url": "https://www.junction.com/pricing"
+    },
+    {
+      "claim": "ROOK Core costs $399/mo for 750 active users; ROOKScore +$249/mo, granular data +$249/mo, webhooks +$99/mo.",
+      "verdict": "corrected",
+      "corrected_value": "ROOK's own pricing page confirms pricing starts at $399/month with no free tier, but describes the Core plan as supporting up to 5,000 active users; the '750 active users' figure and the $249/$249/$99 add-on prices are stated only on Sahha's competitor page (which says verified July 2026). Treat the included-user count and add-on prices as unconfirmed until quoted by ROOK. Source: https://www.tryrook.io/pricing",
+      "evidence": "tryrook.io/pricing snippet: the Core plan 'supports up to 5,000 active users' and pricing 'starts at $399 per month'. Sahha's Spike-alternatives page: 'Core $399/month for up to 750 active users; ROOKScore $249/month add-on on Core, granular data another $249/month, webhooks another $99/month'.",
+      "source_url": "https://www.tryrook.io/pricing"
+    },
+    {
+      "claim": "Bluetooth SIG Declaration ID (product qualification) fees are Adopter $12,000 and Associate $6,000 (third-party notes; official fee page not fetched).",
+      "verdict": "unverifiable",
+      "corrected_value": "unverifiable (search budget for the exact 2026 amounts). What was established: the official schedule is at https://www.bluetooth.com/fee-schedule/; a new schedule with an increase in all existing member fees took effect 01 March 2026 (Adopter membership still $0); Receipt Numbers purchased by Adopter/Contributing Adopter members on or after 9 Sep 2025 expire 6 months after payment. The most widely cited official-derived figures found (Infineon KB, AGC) are Adopter $8,000 and Associate/Promoter $4,000 per declaration, which predate the 2026 increase; the $12,000/$6,000 figures were not visible in any 2026 snippet.",
+      "evidence": "support.bluetooth.com article 'Bluetooth SIG Schedule of Dues and Fee Changes Effective 01 March 2026' documents a board-approved increase in all existing member fees; Infineon's KB states USD 4,000 per declaration for Associate/Promoter and USD 8,000 for Adopter members; Nordic DevZone thread 126424 ('Bluetooth SIG Fees') discusses the fees but no amounts appeared in the snippet.",
+      "source_url": "https://support.bluetooth.com/hc/en-us/articles/360058202612-Bluetooth-SIG-Schedule-of-Dues-and-Fee-Changes-Effective-01-March-2026"
+    },
+    {
+      "claim": "The Bluetooth SIG Innovation Incentive Program lets companies under $1M/yr revenue buy a first declaration for ~$2,500.",
+      "verdict": "corrected",
+      "corrected_value": "The IIP historically allowed qualifying members (under USD 1M annual revenue) to buy up to two declarations at USD 2,500 each (vs USD 8,000), but Ezurio (Laird) reports the program was quietly stopped in February 2020; pages still describing it (Infineon KB, AGC) appear stale. Do not budget on the $2,500 rate without confirming current eligibility on bluetooth.com/fee-schedule. Source: https://www.ezurio.com/resources/blog/bluetooth-sig-changes-everyone-pays",
+      "evidence": "Infineon KB and AGC describe two declarations at USD 2,500 each for companies earning under one million USD annually; Ezurio's 'Bluetooth SIG Changes - Everyone Pays!' blog states the Innovation Incentive Program was quietly stopped in February 2020. The research already noted a conflicting third-party claim of $2,500 Adopter dues, which the official schedule (Adopter $0) refutes.",
+      "source_url": "https://www.ezurio.com/resources/blog/bluetooth-sig-changes-everyone-pays"
+    },
+    {
+      "claim": "Using a pre-certified nRF52840 module under 47 CFR 15.212 leaves the end product with Part 15B SDoC testing (~$1.5-4k per SKU; labs quote 3-6 weeks and $3-8k per device) plus 'Contains FCC ID' labeling, saving the ~$5-15k intentional-radiator work.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "MarkReady's 2026 FCC certification cost guide: with a pre-certified module the module's FCC ID covers intentional emissions and the host device only needs Part 15B unintentional-emissions testing via SDoC at $1,500-5K (another 2026 source: $800-5,000), versus $8,000+ for custom RF designs; F2 Labs confirms a finished product using an approved transmitter module must display that module's FCC ID per 15.212(a)(1)(vi)(A). The $60 grantee-code fee was not re-verified (search budget).",
+      "source_url": "https://markready.io/learn/fcc-certification-cost"
+    },
+    {
+      "claim": "The FTC Health Breach Notification Rule amendments were finalized 26 Apr 2024, published as 89 FR 47028 (doc 2024-10855, 30 May 2024), effective 29 Jul 2024, and expressly cover non-HIPAA health apps and connected devices.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Federal Register document 2024-10855 (89 FR 47028, published May 30, 2024) carries an effective date of July 29, 2024; the FTC's April 2024 business-guidance blog and Jones Day, Venable and Alston & Bird summaries confirm the amended rule expressly reaches websites, mobile apps and internet-connected devices offering personal health records outside HIPAA, and treats unauthorized disclosures (not just intrusions) as breaches.",
+      "source_url": "https://www.federalregister.gov/documents/2024/05/30/2024-10855/health-breach-notification-rule"
+    },
+    {
+      "claim": "India's DPDP Rules 2025 were notified 13 Nov 2025 with full compliance due 13 May 2027 (18 months).",
+      "verdict": "confirmed",
+      "corrected_value": "Notification confirmed (gazette dated 13 Nov 2025; PIB release). Phased commencement per S&R Associates: 14 Nov 2025 (Board and immediate provisions), 14 Nov 2026 (Consent Manager provisions) and 14 May 2027 (substantive obligations); several firms give 13 May 2027, so the final deadline is 13/14 May 2027 depending on the source, and the research omits the Nov 2026 milestone.",
+      "evidence": "EY, Shardul Amarchand Mangaldas, S&R Associates and the PIB release confirm MeitY notified the DPDP Rules on 13 November 2025 with an 18-month phased implementation ending mid-May 2027.",
+      "source_url": "https://www.snrlaw.in/indias-digital-personal-data-protection-regime-takes-effect/"
+    },
+    {
+      "claim": "FDA reissued 'General Wellness: Policy for Low Risk Devices' on 6 Jan 2026 focused on non-invasive physiologic-sensing wearables; HR/HRV/sleep/readiness stay wellness while disease-oriented claims remain device territory.",
+      "verdict": "confirmed",
+      "corrected_value": "",
+      "evidence": "Covington, Womble Bond Dickinson, Troutman Pepper Locke and Faegre Drinker report FDA issued the revised General Wellness guidance on January 6, 2026, superseding the September 2019 version, adding wearable and sensor examples (including non-invasive estimates of metrics such as blood pressure and glucose) with conditions: non-invasive, no safety-risk technology, no diagnosis/treatment or clinical-management claims, no substitute for cleared devices, and no clinically-mimicking values unless validated; FDA held a town hall on 11 Feb 2026.",
+      "source_url": "https://www.cov.com/en/news-and-insights/insights/2026/01/fda-issues-revised-guidance-on-general-wellness-products"
+    },
+    {
+      "claim": "Movesense dev-kit/sensor price, MOQ, sensor set and country of manufacture (research: not found; platform is nRF52832 Whiteboard with MD/HR+/HR2 variants).",
+      "verdict": "unverifiable",
+      "corrected_value": "movesense.com lists the Movesense HR2 sensor, HR+ Developer Kit ('Developer Kit 2.0'), MD Developer Kit (MDR) and a newer Movesense Flash sensor plus Flash Developer Kit; prices are not published (volume-based pricing, contact sales@movesense.com) and developer kits are sold to business customers only; MOQ and manufacturing country were not found.",
+      "evidence": "Movesense product and shop pages (HR2, HR+ Developer Kit, MD Developer Kit, Flash, Flash Developer Kit) surfaced in two searches but no price appeared in any snippet; the pages state pricing is based on volume discounts and that the developer kit is available for business customers only.",
+      "source_url": "https://www.movesense.com/shop/"
+    },
+    {
+      "claim": "Third-party wearable APIs remain available for direct integration as described: Fitbit Web API alive in 2026; Oura v2, Garmin Health, Polar AccessLink v3 and Ultrahuman Partner API endpoints/rate limits; Spike API acquired by Raintree Systems in July 2026.",
+      "verdict": "unverifiable",
+      "corrected_value": "unverifiable (search budget): the session's WebSearch quota was exhausted before the Fitbit, WHOOP v1-sunset, Oura, Garmin, Polar, Ultrahuman and Spike/Raintree queries executed; these claims remain single-sourced to client code and Sahha's comparison pages.",
+      "evidence": "No independent evidence gathered this session.",
+      "source_url": "not fetched"
+    }
+  ],
+  "stale_or_missing": [
+    "WebKit/Safari 2026: Safari 26.4 and 26.5 feature posts on webkit.org list no Web Bluetooth, and 2026 PWA guides state Safari on macOS/iOS/iPadOS supports it in no version (incl. iOS 26) - the research finding is current. Apple's formal WebKit standards-position and any iOSWebBLE extension changes were not re-checked (search budget). https://webkit.org/blog/17938/webkit-features-for-safari-26-5/ ; https://instantpwa.com/answers/pwa-bluetooth-access",
+    "Bluetooth SIG fee schedule changed: a board-approved increase in all existing member fees took effect 01 March 2026 (Adopter membership still $0), and Receipt Numbers bought by Adopter/Contributing Adopter members on or after 9 Sep 2025 expire 6 months after payment. The research's $12,000/$6,000 figures are uncorroborated and pre-date this; re-price from https://www.bluetooth.com/fee-schedule/ and https://support.bluetooth.com/hc/en-us/articles/360058202612-Bluetooth-SIG-Schedule-of-Dues-and-Fee-Changes-Effective-01-March-2026",
+    "Bluetooth SIG Innovation Incentive Program: Ezurio reports it was quietly stopped in Feb 2020 while Infineon/AGC pages still describe $2,500 declarations (up to two) for companies under $1M revenue - status unresolved, do not budget on it. https://www.ezurio.com/resources/blog/bluetooth-sig-changes-everyone-pays",
+    "Terra pricing is stale: Quick Start is $499/mo on an annual plan (100,000 credits/mo, $0.005/credit overage), not $399. https://tryterra.co/pricing",
+    "Junction (ex-Vital) pricing model is stale: a flat $300/mo Launch plan for up to 500 connected users, billed monthly, with Enterprise above - not $0.50/user with a $300 minimum. https://www.junction.com/pricing",
+    "ROOK: its own pricing page describes Core as supporting up to 5,000 active users from $399/mo; the 750-user allowance and $249/$249/$99 add-ons come only from Sahha's competitor page (dated July 2026). https://www.tryrook.io/pricing",
+    "Health Connect expanded exercise fields: weight/setIndex/rateOfPerceivedExertion on ExerciseSegment shipped in androidx health-connect-client 1.2.0-alpha (annotations in alpha05) and were announced with Android 16 QPR2 Beta 2 (Sept 2025); writes must be gated on FEATURE_EXPANDED_EXERCISE_RECORD availability - this answers the research's open question. https://android-developers.googleblog.com/2025/09/android-16-qpr2-beta-2-is-here.html ; https://developer.android.com/jetpack/androidx/releases/health-connect",
+    "WHOOP storage/sync: older WHOOP 'Data Catching Up' articles say the strap stores up to 3 days while the current 'Why is my WHOOP Catching Up?' article says 14 days; WHOOP also states syncing 24 h of data takes ~45-60 min - a real-world phone-side sync-rate datapoint missing from the research that undercuts the 14 s / 97 s drain estimate. https://support.whoop.com/hc/en-us/articles/4414916912027-Why-is-my-WHOOP-Catching-Up- ; https://support.whoop.com/hc/en-us/articles/360037570874-Data-Catching-Up-iOS",
+    "Movesense 2026: movesense.com now lists a Movesense Flash sensor and Flash Developer Kit alongside HR2, the HR+ Developer Kit and the MD Developer Kit; prices are not published (volume pricing via sales@movesense.com), developer kits are business-customer only; MOQ and country of manufacture not found. https://www.movesense.com/shop/ ; https://www.movesense.com/product/movesense-flash-developer-kit/",
+    "DPDP phasing: commencement dates are 14 Nov 2025, 14 Nov 2026 (Consent Manager provisions) and 14 May 2027 (substantive obligations) per S&R Associates; the research omits the Nov 2026 milestone and sources differ between 13 and 14 May 2027 for the final deadline. https://www.snrlaw.in/indias-digital-personal-data-protection-regime-takes-effect/ ; https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf",
+    "Fitbit Web API deprecation status in 2026: not found (search budget exhausted before the query ran); the research's 'alive' status rests only on 2026-dated GitHub projects.",
+    "WHOOP API v1 sunset date and 2026 v2 changes: not found (search budget); the official rate-limit page is confirmed current at https://developer.whoop.com/docs/developing/rate-limiting/",
+    "Spike API acquisition by Raintree Systems (Jul 2026): not found (search budget) - remains single-sourced to Sahha's comparison page.",
+    "Oura API v2, Garmin Health API partner access/cost, Polar AccessLink v3 and Ultrahuman Partner API onboarding and rate limits: not found (search budget); still sourced only from third-party client code.",
+    "Gap: no phone-side (iOS/Android) BLE throughput measurement exists in the research or was found; the only number is DK-to-DK 1,373 kbps, and WHOOP's ~45-60 min per day of data suggests planning numbers must be measured, not derived.",
+    "Gap: the caniuse ~76% figure is corroborated only via TestMu's guide citing caniuse (April 2026); the live caniuse number was not extracted."
+  ],
+  "summary": "19 load-bearing claims checked with independent WebSearch queries before the session's search quota ran out (200/200). Platform and regulatory claims hold up well: Web Bluetooth's Chromium-only status and Safari/iOS absence through iOS 26, Capacitor bluetooth-le's missing state restoration, Android 12+ permissions, WHOOP's 14-day on-strap storage (with a 3-day caveat in older articles) and official 100/min + 10,000/day API limits, Health Connect's ExerciseSegment fields (now known to be gated behind androidx 1.2.0-alpha and FEATURE_EXPANDED_EXERCISE_RECORD), Google Fit's end-of-2026 sunset, FCC modular-approval economics, the FTC HBNR dates, DPDP Rules timing and FDA's 6 Jan 2026 wellness guidance are all confirmed on primary or near-primary sources. Five corrections: Terra Quick Start is $499/mo not $399; Junction is a flat $300/mo Launch plan for up to 500 users, not $0.50/user; ROOK's own page says Core supports up to 5,000 users (750 is Sahha's number); the SIG Innovation Incentive Program is reported discontinued since Feb 2020; and the 14 s / 97 s log-drain estimate is a link-rate ceiling contradicted by WHOOP's real-world 45-60 min per day of data. Three items remain unverifiable: the exact post-1 March 2026 Bluetooth SIG Declaration ID fees (a fee increase is confirmed, amounts not extracted), Movesense pricing/MOQ (not published; business-only dev kits; new Flash product line), and the Fitbit/Oura/Garmin/Polar/Ultrahuman/Spike availability claims (search budget). Nothing was outright refuted."
+}
